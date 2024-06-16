@@ -57,7 +57,7 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(thirdparty/LLGL)
 add_subdirectory(thirdparty/glm)
-add_subdirectory(thirdparty/glfw-3.3.9)
+add_subdirectory(thirdparty/glfw)
 add_subdirectory(thirdparty/STB)
 # add_subdirectory(thirdparty/FastNoiseLite)
 # add_subdirectory(thirdparty/freetype-2.13.2)
