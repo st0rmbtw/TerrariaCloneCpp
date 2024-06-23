@@ -1,6 +1,6 @@
 #include "input.hpp"
 
-struct InputState {
+static struct InputState {
     std::unordered_set<Key> keyboard_pressed;
     std::unordered_set<Key> keyboard_just_pressed;
     std::unordered_set<Key> keyboard_just_released;
@@ -11,10 +11,7 @@ struct InputState {
     std::vector<float> mouse_scroll_events;
     glm::vec2 mouse_screen_position;
     bool mouse_over_ui = false;
-};
-
-static InputState input_state;
-
+} input_state;
 
 void KeyboardInput::press(Key key) {
     if (input_state.keyboard_pressed.insert(key).second) {

@@ -5,13 +5,14 @@ LLGL::VertexFormat SpriteVertexFormat() {
     static LLGL::VertexFormat vertexFormat;
 
     if (vertexFormat.attributes.empty()) {
-#if defined(BACKEND_OPENGL)
+#if defined(BACKEND_OPENGL) || defined(BACKEND_VULKAN)
         vertexFormat.AppendAttribute({"a_transform_col_0", LLGL::Format::RGBA32Float});
         vertexFormat.AppendAttribute({"a_transform_col_1", LLGL::Format::RGBA32Float});
         vertexFormat.AppendAttribute({"a_transform_col_2", LLGL::Format::RGBA32Float});
         vertexFormat.AppendAttribute({"a_transform_col_3", LLGL::Format::RGBA32Float});
         vertexFormat.AppendAttribute({"a_uv_offset_scale", LLGL::Format::RGBA32Float});
         vertexFormat.AppendAttribute({"a_color", LLGL::Format::RGBA32Float});
+        vertexFormat.AppendAttribute({"a_texture_index", LLGL::Format::R32SInt});
 #elif defined(BACKEND_D3D11)
         vertexFormat.AppendAttribute({"Transform", 0, LLGL::Format::RGBA32Float});
         vertexFormat.AppendAttribute({"Transform", 1, LLGL::Format::RGBA32Float});

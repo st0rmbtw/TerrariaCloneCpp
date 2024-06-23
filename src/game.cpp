@@ -9,13 +9,11 @@
 #include "input.hpp"
 #include "ui.hpp"
 
-struct GameState {
+static struct GameState {
     float delta_time;
     GLFWwindow *window;
     Camera camera;
-};
-
-static GameState g;
+} g;
 
 void update();
 void render();
@@ -105,12 +103,12 @@ bool Game::Init() {
     const auto resolution = LLGL::Extent2D(window_size.width * resScale, window_size.height * resScale);
 
     GLFWwindow *window = create_window(window_size);
-    if (window == nullptr) return -1;
+    if (window == nullptr) return false;
 
     LLGL::Log::RegisterCallbackStd();
 
-    if (!Renderer::Init(window, resolution)) return -1;
-    if (!Assets::load()) return -1;
+    if (!Renderer::Init(window, resolution)) return false;
+    if (!Assets::Load()) return false;
 
     g.window = window;
     g.camera.set_viewport({resolution.width, resolution.height});
@@ -186,6 +184,7 @@ void render() {
 }
 
 void Game::Destroy() {
+    Assets::Unload();
     Renderer::Terminate();
     glfwTerminate();
 }

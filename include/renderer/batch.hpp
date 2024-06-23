@@ -8,8 +8,8 @@
 #include <LLGL/LLGL.h>
 
 #include "renderer/assets.hpp"
-// #include "texture.h"
 #include "math/rect.hpp"
+#include "types/texture.hpp"
 
 constexpr size_t MAX_QUADS = 5000;
 constexpr size_t MAX_VERTICES = MAX_QUADS * 4;
@@ -32,9 +32,10 @@ public:
     virtual void init() = 0;
     virtual void render() = 0;
     virtual void update_buffers() = 0;
+    virtual void set_buffers() = 0;
 
     virtual void begin() = 0;
-    virtual void clean() = 0;
+    virtual void terminate() = 0;
 
     inline bool is_empty() { return m_index_count == 0; }
     inline bool is_full() { return m_index_count >= MAX_INDICES; }
@@ -60,7 +61,7 @@ public:
     }
 
 protected:
-    std::vector<int> m_textures;
+    std::vector<const Texture*> m_textures;
     glm::mat4 m_camera_projection = glm::mat4(1.0);
     glm::mat4 m_screen_projection = glm::mat4(1.0);
     glm::mat4 m_camera_view = glm::mat4(1.0);
@@ -70,17 +71,20 @@ protected:
     size_t m_index_count = 0;
     LLGL::Buffer* m_vertex_buffer = nullptr;
     LLGL::Buffer* m_index_buffer = nullptr;
+    LLGL::Buffer* m_constant_buffer = nullptr;
     LLGL::PipelineState* m_pipeline = nullptr;
+    LLGL::ResourceHeap* m_resource_heap = nullptr;
 };
 
 class RenderBatchSprite : public RenderBatch {
 public:
-    void draw_sprite(const glm::mat4& transform, const glm::vec4& color, const glm::vec4& outline_color, float outline_thickness, const math::Rect& aabb, const glm::vec4& uv_offset_scale, bool ui);
+    void draw_sprite(const glm::mat4& transform, const glm::vec4& color, const glm::vec4& outline_color, float outline_thickness, const math::Rect& aabb, const glm::vec4& uv_offset_scale, const Texture* sprite_texture, bool ui);
     void init() override;
     void update_buffers() override;
     void render() override;
+    void set_buffers() override;
     void begin() override;
-    void clean() override;
+    void terminate() override;
 private:
     SpriteVertex* m_buffer = nullptr;
     SpriteVertex* m_buffer_ptr = nullptr;
@@ -91,9 +95,9 @@ public:
     void draw_glyph(const glm::mat4& transform, const glm::vec3& color, /* const Texture& font_texture, */ const glm::vec2& uv, const glm::vec2& size, bool ui);
 
     void init() override;
-    void render() override;
+    void render();
     void begin() override;
-    void clean() override;
+    void terminate() override;
 private:
     GlyphVertex* m_buffer = nullptr;
     GlyphVertex* m_buffer_ptr = nullptr;

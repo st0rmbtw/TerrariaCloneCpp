@@ -6,6 +6,7 @@
 #include <LLGL/LLGL.h>
 #include <LLGL/Utils/VertexFormat.h>
 #include <glm/glm.hpp>
+#include "types/texture.hpp"
 
 struct SpriteVertex {
     glm::vec4 transform_col_0;
@@ -14,6 +15,10 @@ struct SpriteVertex {
     glm::vec4 transform_col_3;
     glm::vec4 uv_offset_scale;
     glm::vec4 color;
+};
+
+struct SpriteUniforms {
+    glm::mat4 view_projection;
 };
 
 LLGL::VertexFormat SpriteVertexFormat(void);

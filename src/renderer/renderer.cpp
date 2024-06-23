@@ -10,6 +10,7 @@
 #include "renderer/assets.hpp"
 #include "renderer/batch.hpp"
 #include "assets.hpp"
+#include "utils.hpp"
 
 struct ShaderPipeline {
     LLGL::Shader* vs = nullptr; // Vertex shader
@@ -18,6 +19,15 @@ struct ShaderPipeline {
     LLGL::Shader* gs = nullptr; // Geometry shader
     LLGL::Shader* ps = nullptr; // Pixel shader (aka. fragment shader)
     LLGL::Shader* cs = nullptr; // Compute shader
+    
+    void Unload(const LLGL::RenderSystemPtr& context) {
+        if (vs != nullptr) context->Release(*vs);
+        if (hs != nullptr) context->Release(*hs);
+        if (ds != nullptr) context->Release(*ds);
+        if (gs != nullptr) context->Release(*gs);
+        if (ps != nullptr) context->Release(*ps);
+        if (cs != nullptr) context->Release(*cs);
+    }
 };
 
 struct Shaders {
@@ -26,49 +36,43 @@ struct Shaders {
     ShaderPipeline ninepatch_shader;
     ShaderPipeline postprocess_shader;
     ShaderPipeline font_shader;
-    // std::unique_ptr<ComputeShader> light_left_to_right;
-    // std::unique_ptr<ComputeShader> light_right_to_left;
-    // std::unique_ptr<ComputeShader> light_top_to_bottom;
-    // std::unique_ptr<ComputeShader> light_bottom_to_top;
-    // std::unique_ptr<ComputeShader> light_scan;
 };
 
-struct RendererState {
+static struct RendererState {
     LLGL::RenderSystemPtr context = nullptr;
     LLGL::SwapChain* swap_chain = nullptr;
     LLGL::CommandBuffer* command_buffer = nullptr;
     std::shared_ptr<CustomSurface> surface = nullptr;
-    Shaders shaders;
     RenderBatchSprite* sprite_batch = nullptr;
-};
+    Shaders shaders;
+    LLGL::RenderingLimits limits;
+    std::unordered_map<LLGL::SamplerDescriptor, LLGL::Sampler*, SamplerDescriptorHasher, SamplerDescriptorEqual> samplers;
+} renderer_state;
 
-static RendererState renderer_state = {};
-
-inline void SetUniformMat4(size_t index, const glm::mat4& value) {
-    renderer_state.command_buffer->SetUniforms(index, glm::value_ptr(value), sizeof(value));
-}
-
-inline void SetUniformVec4(size_t index, const glm::vec4& value) {
-    renderer_state.command_buffer->SetUniforms(index, glm::value_ptr(value), sizeof(value));
-}
-
-inline void SetUniformInt(size_t index, const int value) {
-    renderer_state.command_buffer->SetUniforms(index, &value, sizeof(value));
-}
+static constexpr uint32_t TEXTURES_COUNT = 32;
 
 inline LLGL::Shader* load_vertex_shader(const std::string& name, const LLGL::VertexFormat& vertexFormat) {
     LLGL::ShaderDescriptor shaderDesc;
 #if defined(BACKEND_OPENGL)
-    std::string path = "assets/shaders/glsl/" + name + ".vert";
+    std::string path = "assets/shaders/opengl/" + name + ".vert";
     shaderDesc = { LLGL::ShaderType::Vertex, path.c_str() };
 #elif defined(BACKEND_D3D11)
-    std::string path = "assets/shaders/hlsl/" + name + ".hlsl";
+    std::string path = "assets/shaders/d3d11/" + name + ".hlsl";
     shaderDesc = { LLGL::ShaderType::Vertex, path.c_str(), "VS", "vs_4_0" };
 #elif defined(BACKEND_METAL)
-    std::string path = "assets/shaders/msl/" + name + ".metal";
+    std::string path = "assets/shaders/metal/" + name + ".metal";
     shaderDesc = { LLGL::ShaderType::Vertex, path.c_str(), "VS", "1.1" };
     shaderDesc.flags |= LLGL::ShaderCompileFlags::DefaultLibrary;
+#elif defined(BACKEND_VULKAN)
+    std::string path = "assets/shaders/vulkan/" + name + ".vert.spv";
+    shaderDesc = { LLGL::ShaderType::Vertex, path.c_str() };
+    shaderDesc.sourceType = LLGL::ShaderSourceType::BinaryFile;
 #endif
+
+    if (!FileExists(path.c_str())) {
+        LLGL::Log::Errorf("Failed to find shader '%s'\n", path.c_str());
+        return nullptr;
+    }
 
 #if DEBUG
     shaderDesc.flags |= LLGL::ShaderCompileFlags::NoOptimization;
@@ -78,7 +82,8 @@ inline LLGL::Shader* load_vertex_shader(const std::string& name, const LLGL::Ver
 
     LLGL::Shader* shader = renderer_state.context->CreateShader(shaderDesc);
     if (shader->GetReport() != nullptr && shader->GetReport()->HasErrors()) {
-        LLGL::Log::Errorf("%s", shader->GetReport()->GetText());
+        LLGL::Log::Errorf("Failed to create a shader.\nFile: %s\nError: %s", path.c_str(), shader->GetReport()->GetText());
+        return nullptr;
     }
 
     return shader;
@@ -88,15 +93,19 @@ inline LLGL::Shader* load_fragment_shader(const std::string& name) {
     LLGL::ShaderDescriptor shaderDesc;
 
 #if defined(BACKEND_OPENGL)
-    std::string path = "assets/shaders/glsl/" + name + ".frag";
+    std::string path = "assets/shaders/opengl/" + name + ".frag";
     shaderDesc = { LLGL::ShaderType::Fragment, path.c_str() };
 #elif defined(BACKEND_D3D11)
-    std::string path = "assets/shaders/hlsl/" + name + ".hlsl";
+    std::string path = "assets/shaders/d3d11/" + name + ".hlsl";
     shaderDesc = { LLGL::ShaderType::Fragment, path.c_str(), "PS", "ps_4_0" };
 #elif defined(BACKEND_METAL)
-    std::string path = "assets/shaders/msl/" + name + ".metal";
+    std::string path = "assets/shaders/metal/" + name + ".metal";
     shaderDesc = { LLGL::ShaderType::Fragment, path.c_str(), "PS", "1.1" };
     shaderDesc.flags |= LLGL::ShaderCompileFlags::DefaultLibrary;
+#elif defined(BACKEND_VULKAN)
+    std::string path = "assets/shaders/vulkan/" + name + ".frag.spv";
+    shaderDesc = { LLGL::ShaderType::Fragment, path.c_str() };
+    shaderDesc.sourceType = LLGL::ShaderSourceType::BinaryFile;
 #endif
 
 #if DEBUG
@@ -105,15 +114,15 @@ inline LLGL::Shader* load_fragment_shader(const std::string& name) {
 
     LLGL::Shader* shader = renderer_state.context->CreateShader(shaderDesc);
     if (shader->GetReport() != nullptr && shader->GetReport()->HasErrors()) {
-        LLGL::Log::Errorf("%s", shader->GetReport()->GetText());
+        LLGL::Log::Errorf("Failed to create a shader.\nFile: %s\nError: %s", path.c_str(), shader->GetReport()->GetText());
+        return nullptr;
     }
 
     return shader;
 }
 
 bool load_shaders() {
-    LLGL::VertexFormat a = SpriteVertexFormat();
-    if ((renderer_state.shaders.sprite_shader.vs = load_vertex_shader("sprite", a)) == nullptr)
+    if ((renderer_state.shaders.sprite_shader.vs = load_vertex_shader("sprite", SpriteVertexFormat())) == nullptr)
         return false;
     if ((renderer_state.shaders.sprite_shader.ps = load_fragment_shader("sprite")) == nullptr)
         return false;
@@ -123,8 +132,22 @@ bool load_shaders() {
 
 bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution) {
     LLGL::Report report;
+
+    void* configPtr = nullptr;
+    size_t configSize = 0;
+
+#ifdef BACKEND_OPENGL
+    LLGL::RendererConfigurationOpenGL config;
+    config.majorVersion = 4;
+    config.minorVersion = 3;
+    configPtr = &config;
+    configSize = sizeof(config);
+#endif
+
     LLGL::RenderSystemDescriptor rendererDesc;
     rendererDesc.moduleName = BACKEND;
+    rendererDesc.rendererConfig = configPtr;
+    rendererDesc.rendererConfigSize = configSize;
 
 #if DEBUG
     rendererDesc.flags      = LLGL::RenderSystemFlags::DebugDevice;
@@ -163,6 +186,12 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution) {
         LLGL::ToString(renderer_state.swap_chain->GetColorFormat()),
         LLGL::ToString(renderer_state.swap_chain->GetDepthStencilFormat())
     );
+    LLGL::Log::Printf("Extensions:\n");
+    for (std::string extension : info.extensionNames) {
+        LLGL::Log::Printf("%s\n", extension.c_str());
+    }
+
+    renderer_state.limits = renderer_state.context->GetRenderingCaps().limits;
 
     if (!load_shaders()) return false;
 
@@ -180,19 +209,20 @@ void Renderer::Begin(const Camera& camera) {
     renderer_state.sprite_batch->begin();
     renderer_state.sprite_batch->set_projection_matrix(camera.get_projection_matrix());
     renderer_state.sprite_batch->set_view_matrix(camera.get_view_matrix());
-
-    const auto commands = Renderer::CommandBuffer();
-    const auto swap_chain = Renderer::SwapChain();
-
-    commands->Begin();
-    commands->BeginRenderPass(*swap_chain);
-    commands->Clear(LLGL::ClearFlags::Color, LLGL::ClearValue(0.0f, 0.0f, 0.0f, 1.0f));
-    commands->SetViewport(swap_chain->GetResolution());
 }
 
 void Renderer::Render() {
     const auto commands = Renderer::CommandBuffer();
     const auto swap_chain = Renderer::SwapChain();
+
+    commands->Begin();
+
+    renderer_state.sprite_batch->update_buffers();
+    renderer_state.sprite_batch->set_buffers();
+
+    commands->BeginRenderPass(*swap_chain);
+    commands->Clear(LLGL::ClearFlags::Color, LLGL::ClearValue(0.0f, 0.0f, 0.0f, 1.0f));
+    commands->SetViewport(swap_chain->GetResolution());
 
     renderer_state.sprite_batch->render();
 
@@ -216,9 +246,9 @@ void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer) {
 
     glm::vec2 size = glm::vec2(0.0f);
 
-    // if (sprite.texture() != nullptr) {
-    //     size = sprite.texture()->size();
-    // }
+    if (sprite.texture() != nullptr) {
+        size = GetTextureSize(sprite.texture()->texture);
+    }
 
     if (sprite.custom_size().is_some()) {
         size = sprite.custom_size().value();
@@ -231,10 +261,21 @@ void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer) {
     transform = glm::translate(transform, glm::vec3(-size * sprite.anchor(), 0.));
     transform = glm::scale(transform, glm::vec3(size, 1.0f));
 
-    renderer_state.sprite_batch->draw_sprite(transform, sprite.color(), sprite.outline_color(), sprite.outline_thickness(), sprite.aabb(), uv_offset_scale, /* sprite.texture(), */ false);
+    renderer_state.sprite_batch->draw_sprite(transform, sprite.color(), sprite.outline_color(), sprite.outline_thickness(), sprite.aabb(), uv_offset_scale, sprite.texture(), false);
 }
 
 void Renderer::Terminate(void) {
+    renderer_state.shaders.tilemap_shader.Unload(renderer_state.context);
+    renderer_state.shaders.sprite_shader.Unload(renderer_state.context);
+    renderer_state.shaders.ninepatch_shader.Unload(renderer_state.context);
+    renderer_state.shaders.postprocess_shader.Unload(renderer_state.context);
+    renderer_state.shaders.font_shader.Unload(renderer_state.context);
+
+    renderer_state.context->Release(*renderer_state.command_buffer);
+
+    renderer_state.sprite_batch->terminate();
+
+    renderer_state.context->Release(*renderer_state.swap_chain);
     LLGL::RenderSystem::Unload(std::move(renderer_state.context));
 }
 
@@ -269,9 +310,17 @@ void RenderBatchSprite::init() {
 
     m_index_buffer = CreateIndexBuffer(indices, LLGL::Format::R32UInt);
 
+    m_constant_buffer = renderer_state.context->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(SpriteUniforms)));
+
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
-    pipelineLayoutDesc.uniforms = {
-        LLGL::UniformDescriptor("u_view_projection", LLGL::UniformType::Float4x4) // 0
+    pipelineLayoutDesc.bindings = {
+        LLGL::BindingDescriptor(
+            "UniformBuffer",
+            LLGL::ResourceType::Buffer,
+            LLGL::BindFlags::ConstantBuffer,
+            LLGL::StageFlags::VertexStage,
+            0
+        ),
     };
 
     LLGL::PipelineLayout* pipelineLayout = renderer_state.context->CreatePipelineLayout(pipelineLayoutDesc);
@@ -292,10 +341,12 @@ void RenderBatchSprite::init() {
         if (report->HasErrors()) LLGL::Log::Errorf("%s", report->GetText());
     }
 
-    // m_textures = std::vector<int>(render_info.max_texture_slots, 0);
+    m_textures = std::vector<const Texture*>(TEXTURES_COUNT, 0);
+
+    // m_resource_heap = renderer_state.context->CreateResourceHeap(LLGL::ResourceHeapDescriptor(pipelineLayout, pipelineLayoutDesc.heapBindings.size()));
 }
 
-void RenderBatchSprite::draw_sprite(const glm::mat4& transform, const glm::vec4& color, const glm::vec4& outline_color, float outline_thickness, const math::Rect& aabb, const glm::vec4& uv_offset_scale, /* const Texture* sprite_texture, */ bool is_ui) {
+void RenderBatchSprite::draw_sprite(const glm::mat4& transform, const glm::vec4& color, const glm::vec4& outline_color, float outline_thickness, const math::Rect& aabb, const glm::vec4& uv_offset_scale, const Texture* sprite_texture, bool is_ui) {
     // if (!is_ui && !this->m_camera_frustum.intersects(aabb)) return;
     // if (is_ui && !this->m_ui_frustum.intersects(aabb)) return;
 
@@ -368,32 +419,27 @@ void RenderBatchSprite::update_buffers() {
 
     ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
     commands->UpdateBuffer(*m_vertex_buffer, 0, m_buffer, size);
+
+    SpriteUniforms uniforms;
+    uniforms.view_projection = m_camera_projection * m_camera_view;
+
+    commands->UpdateBuffer(*m_constant_buffer, 0, &uniforms, sizeof(uniforms));
+}
+
+void RenderBatchSprite::set_buffers() {
+    const auto commands = Renderer::CommandBuffer();
+
+    commands->SetVertexBuffer(*m_vertex_buffer);
+    commands->SetIndexBuffer(*m_index_buffer);
 }
 
 void RenderBatchSprite::render() {
     if (is_empty()) return;
 
     const auto commands = Renderer::CommandBuffer();
-    const auto swap_chain = Renderer::SwapChain();
 
-    // for (size_t i = 0; i < m_texture_index; i++) {
-    //     glBindTextureUnit(i, m_textures[i]);
-    // }
-
-    // int texture_indexes[render_info.max_texture_slots];
-    // for (size_t i = 0; i < render_info.max_texture_slots; i++) {
-    //     texture_indexes[i] = i;
-    // }
-
-    ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    commands->UpdateBuffer(*m_vertex_buffer, 0, m_buffer, size);
-    
-    commands->SetVertexBuffer(*m_vertex_buffer);
-    commands->SetIndexBuffer(*m_index_buffer);
     commands->SetPipelineState(*m_pipeline);
-
-    SetUniformMat4(0, m_camera_projection * m_camera_view);
-
+    commands->SetResource(0, *m_constant_buffer);
     commands->DrawIndexed(m_index_count, 0);
 
     m_index_count = 0;
@@ -404,9 +450,12 @@ void RenderBatchSprite::begin(void) {
     m_texture_index = 0;
 }
 
-void RenderBatchSprite::clean() {
-    delete m_vertex_buffer;
-    delete m_index_buffer;
+void RenderBatchSprite::terminate() {
+    renderer_state.context->Release(*m_vertex_buffer);
+    renderer_state.context->Release(*m_index_buffer);
+    renderer_state.context->Release(*m_constant_buffer);
+    renderer_state.context->Release(*m_pipeline);
+    // renderer_state.context->Release(*m_resource_heap);
 
     delete[] m_buffer;
 }

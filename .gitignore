@@ -2,3 +2,4 @@
 __MACOSX/
 out/
 out_release/
+build/

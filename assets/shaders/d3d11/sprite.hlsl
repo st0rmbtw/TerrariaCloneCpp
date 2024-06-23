@@ -1,4 +1,4 @@
-cbuffer ModelViewProjectionCB : register( b0 )
+cbuffer UniformBuffer : register( b0 )
 {
     float4x4 u_view_projection;
 };
@@ -34,6 +34,7 @@ OutputVS VS(InputVS inp)
 
 float4 PS(OutputVS inp) : SV_Target
 {
+    // return GetTextureStateByIndex(inp.texture_index).Sample(inp.texture_index == 0 ? SamplerLinear : SamplerNearest, inp.uv);
     return inp.color;
 };
 
