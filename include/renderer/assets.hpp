@@ -15,12 +15,15 @@ struct SpriteVertex {
     glm::vec4 transform_col_3;
     glm::vec4 uv_offset_scale;
     glm::vec4 color;
+    int has_texture;
+    int is_ui;
 };
 
 struct SpriteUniforms {
     glm::mat4 view_projection;
+    glm::mat4 screen_projection;
 };
 
-LLGL::VertexFormat SpriteVertexFormat(void);
+const LLGL::VertexFormat& SpriteVertexFormat(void);
 
 #endif

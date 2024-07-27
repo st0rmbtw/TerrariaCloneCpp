@@ -41,10 +41,6 @@ inline LLGL::SamplerDescriptor SamplerLinear() {
     return sampler_descriptor;
 }
 
-inline glm::uvec2 GetTextureSize(const LLGL::Texture* texture) {
-    return glm::uvec2(texture->GetDesc().extent.width, texture->GetDesc().extent.height);
-}
-
 struct SamplerDescriptorEqual {
     bool operator()(const LLGL::SamplerDescriptor& a, const LLGL::SamplerDescriptor& b) const noexcept {
         return a.addressModeU == b.addressModeU &&

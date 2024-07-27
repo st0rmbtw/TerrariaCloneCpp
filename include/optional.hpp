@@ -431,6 +431,7 @@ template <class T> struct optional_operations_base : optional_storage_base<T> {
 
   bool has_value() const { return this->m_has_value; }
 
+public:
   TL_OPTIONAL_11_CONSTEXPR T &get() & { return this->m_value; }
   TL_OPTIONAL_11_CONSTEXPR const T &get() const & { return this->m_value; }
   TL_OPTIONAL_11_CONSTEXPR T &&get() && { return std::move(this->m_value); }
@@ -685,7 +686,7 @@ public:
 /// destroyed. The initialization state of the contained object is tracked by
 /// the optional object.
 template <class T>
-class optional : private detail::optional_move_assign_base<T>,
+class optional : public detail::optional_move_assign_base<T>,
                  private detail::optional_delete_ctor_base<T>,
                  private detail::optional_delete_assign_base<T> {
   using base = detail::optional_move_assign_base<T>;
@@ -750,7 +751,7 @@ public:
     static_assert(detail::is_optional<result>::value,
                   "F must return an optional");
 
-    return has_value() ? detail::invoke(std::forward<F>(f), **this) : result(nullopt);
+    return is_some() ? detail::invoke(std::forward<F>(f), **this) : result(nullopt);
   }
 
   template <class F>
@@ -759,7 +760,7 @@ public:
     static_assert(detail::is_optional<result>::value,
                   "F must return an optional");
 
-    return has_value() ? detail::invoke(std::forward<F>(f), std::move(**this))
+    return is_some() ? detail::invoke(std::forward<F>(f), std::move(**this))
                        : result(nullopt);
   }
 
@@ -769,7 +770,7 @@ public:
     static_assert(detail::is_optional<result>::value,
                   "F must return an optional");
 
-    return has_value() ? detail::invoke(std::forward<F>(f), **this)
+    return is_some() ? detail::invoke(std::forward<F>(f), **this)
                        : result(nullopt);
   }
 
@@ -780,7 +781,7 @@ public:
     static_assert(detail::is_optional<result>::value,
                   "F must return an optional");
 
-    return has_value() ? detail::invoke(std::forward<F>(f), std::move(**this))
+    return is_some() ? detail::invoke(std::forward<F>(f), std::move(**this))
                        : result(nullopt);
   }
 #endif

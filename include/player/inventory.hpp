@@ -3,7 +3,7 @@
 #ifndef INVENTORY_HPP
 #define INVENTORY_HPP
 
-#include "item.hpp"
+#include "types/item.hpp"
 #include "optional.hpp"
 #include "common.h"
 

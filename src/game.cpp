@@ -165,18 +165,25 @@ void update() {
 void render() {
     Renderer::Begin(g.camera);
 
-    for (int i = 0; i < 6; i++) {
+    constexpr int rows = 3;
+    constexpr int columns = 5;
+    
+    for (int i = 0; i < rows * columns; i++) {
         Sprite sprite;
 
-        const float x = (i % 3) * 100.0f + 10.0f * (i % 3) - 100.0f;
-        const float y = (i / 3) * 100.0f + 10.0f * (i / 3) - 100.0f;
+        const float x = (i % columns) * 100.0f + 10.0f * (i % columns) - 100.0f;
+        const float y = (i / columns) * 100.0f + 10.0f * (i / columns) - 100.0f;
 
         sprite.set_position(glm::vec3(x, y, 1.0f));
-        sprite.set_color(glm::vec3((i / 5.0f), (i / 5.0f), 1.0f));
         sprite.set_custom_size(glm::vec2(100.0f));
+        sprite.set_texture(Assets::GetTexture(i % 2 == 0 ? AssetKey::TextureUiInventorySelected : AssetKey::TextureUiInventoryHotbar));
 
         Renderer::DrawSprite(sprite);
     }
+
+    TextureAtlasSprite sprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerLegs));
+    sprite.set_position(glm::vec2(0.0f));
+    Renderer::DrawAtlasSprite(sprite);
 
     UI::Render(g.camera);
 
@@ -184,7 +191,6 @@ void render() {
 }
 
 void Game::Destroy() {
-    Assets::Unload();
     Renderer::Terminate();
     glfwTerminate();
 }

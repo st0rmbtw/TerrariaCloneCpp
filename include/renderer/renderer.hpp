@@ -21,6 +21,8 @@ namespace Renderer {
     void Render();
 
     void DrawSprite(const Sprite& sprite, RenderLayer render_layer = RenderLayer::Main);
+    void DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer = RenderLayer::Main);
+    void FlushSpriteBatch(void);
 
     void Terminate(void);
 

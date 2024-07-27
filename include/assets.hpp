@@ -12,10 +12,10 @@
 #include "types/block.hpp"
 #include "types/wall.hpp"
 #include "types/texture_atlas.hpp"
-#include "types/texture_descriptor.hpp"
 #include "types/texture.hpp"
 
 enum AssetKey : uint8_t {
+    TextureStub,
     TextureTiles,
     TextureWalls,
     TextureParticles,
@@ -23,7 +23,7 @@ enum AssetKey : uint8_t {
     TexturePlayerHead,
     TexturePlayerHair,
     TexturePlayerChest,
-    TexturePlayerFeet,
+    TexturePlayerLegs,
     TexturePlayerLeftShoulder,
     TexturePlayerLeftHand,
     TexturePlayerRightArm,
@@ -59,20 +59,20 @@ struct AssetTextureAtlas {
 
 struct AssetTexture {
     std::string path;
-    TextureDescriptor descriptor;
+    int sampler;
 
-    AssetTexture(std::string path, TextureDescriptor descriptor = {}) :
+    AssetTexture(std::string path, int sampler = TextureSampler::Nearest) :
         path(path),
-        descriptor(descriptor) {}
+        sampler(sampler) {}
 };
 
 constexpr uint32_t PARTICLES_ATLAS_COLUMNS = 100;
 
 namespace Assets {
     bool Load();
-    void Unload();
-    const Texture* GetTexture(AssetKey key);
-    const TextureAtlas* GetTextureAtlas();
+    void DestroyTextures();
+    const Texture& GetTexture(AssetKey key);
+    const TextureAtlas& GetTextureAtlas(AssetKey key);
 };
 
 #endif

@@ -1,6 +1,7 @@
 cbuffer UniformBuffer : register( b0 )
 {
     float4x4 u_view_projection;
+    float4x4 u_screen_projection;
 };
 
 struct InputVS
@@ -8,7 +9,9 @@ struct InputVS
     column_major float4x4 transform : Transform;
     float4 uv_offset_scale : UvOffsetScale;
     nointerpolation float4 color : Color;
-    uint id : SV_VertexID;
+    nointerpolation uint id : SV_VertexID;
+    nointerpolation int has_texture : HasTexture;
+    nointerpolation int is_ui : IsUI;
 };
 
 struct OutputVS
@@ -16,6 +19,8 @@ struct OutputVS
     float4 position : SV_Position;
     nointerpolation float4 color : Color;
     float2 uv : UV;
+    nointerpolation int has_texture : HasTexture;
+    nointerpolation int is_ui : IsUI;
 };
 
 OutputVS VS(InputVS inp)
@@ -24,17 +29,24 @@ OutputVS VS(InputVS inp)
 
     float2 position = float2(inp.id & 0x1, (inp.id & 0x2) >> 1);
 
-    float4x4 MVP = mul(u_view_projection, inp.transform);
+    float4x4 MVP = inp.is_ui > 0 ? mul(u_screen_projection, inp.transform) : mul(u_view_projection, inp.transform);
     outp.position = mul(MVP, float4(position, 0.0, 1.0));
     outp.uv = position * inp.uv_offset_scale.zw + inp.uv_offset_scale.xy;
     outp.color = inp.color;
+    outp.has_texture = inp.has_texture;
 
 	return outp;
 }
 
+Texture2D Texture : register(t1);
+SamplerState Sampler : register(s2);
+
 float4 PS(OutputVS inp) : SV_Target
 {
-    // return GetTextureStateByIndex(inp.texture_index).Sample(inp.texture_index == 0 ? SamplerLinear : SamplerNearest, inp.uv);
-    return inp.color;
+    if (inp.has_texture > 0) {
+        return Texture.Sample(Sampler, inp.uv) * inp.color;
+    } else {
+        return inp.color;
+    }
 };
 
