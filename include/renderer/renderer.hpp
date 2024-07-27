@@ -8,6 +8,7 @@
 #include "renderer/defines.h"
 #include "renderer/camera.h"
 #include "types/sprite.hpp"
+#include "world/world.hpp"
 
 enum class RenderLayer : uint8_t {
     Main = 0,
@@ -16,7 +17,10 @@ enum class RenderLayer : uint8_t {
 };
 
 namespace Renderer {
+    bool InitEngine();
     bool Init(GLFWwindow* window, const LLGL::Extent2D& resolution);
+    void RenderWorld(const World& world);
+
     void Begin(const Camera& camera);
     void Render();
 

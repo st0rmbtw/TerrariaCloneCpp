@@ -24,6 +24,15 @@ struct SpriteUniforms {
     glm::mat4 screen_projection;
 };
 
+struct TilemapUniforms {
+    glm::mat4 projection;
+    glm::mat4 view;
+    glm::mat4 transform;
+};
+
 const LLGL::VertexFormat& SpriteVertexFormat(void);
+const LLGL::VertexFormat& TilemapVertexFormat(void);
+
+const LLGL::VertexFormat& TilemapGeometryVertexFormat(void);
 
 #endif

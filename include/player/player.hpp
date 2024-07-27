@@ -1,18 +1,18 @@
 #pragma once
 
-#include "optional.hpp"
 #ifndef PLAYER_HPP
 #define PLAYER_HPP
 
 #include <glm/glm.hpp>
 #include "common.h"
+#include "optional.hpp"
 
 #include "input.hpp"
-#include "render/camera.h"
-#include "render/texture_atlas_sprite.hpp"
+#include "renderer/camera.h"
 #include "types/sprite.hpp"
 #include "world/world.hpp"
 #include "time/timer.hpp"
+#include "time/time.hpp"
 #include "player/inventory.hpp"
 
 constexpr float PLAYER_WIDTH = 22.0f;
@@ -165,7 +165,7 @@ private:
     PlayerSprite hair;
     PlayerSprite head;
     PlayerSprite body;
-    PlayerSprite feet;
+    PlayerSprite legs;
     PlayerSprite left_hand;
     PlayerSprite left_shoulder;
     PlayerSprite right_arm;

@@ -1,4 +1,4 @@
-#version 430 core
+#version 330 core
 
 in vec2 v_uv;
 flat in vec4 v_color;

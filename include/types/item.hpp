@@ -37,6 +37,8 @@ struct Item {
     }
 };
 
+void init_items(void);
+
 extern Item ITEM_COPPER_PICKAXE;
 extern Item ITEM_COPPER_AXE;
 extern Item ITEM_COPPER_HAMMER;

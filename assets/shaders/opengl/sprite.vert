@@ -1,6 +1,5 @@
 #version 330
 
-
 layout(location = 0) in vec4 a_transform_col_0;
 layout(location = 1) in vec4 a_transform_col_1;
 layout(location = 2) in vec4 a_transform_col_2;

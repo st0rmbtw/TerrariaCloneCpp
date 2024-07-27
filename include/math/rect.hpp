@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef TERRARIA_RECT_HPP
-#define TERRARIA_RECT_HPP
+#ifndef TERRARIA_MATH_RECT_HPP
+#define TERRARIA_MATH_RECT_HPP
 
 #include <glm/glm.hpp>
 
@@ -111,7 +111,7 @@ public:
 };
 
 using Rect = _Rect<glm::float32>;
-using URect = _Rect<glm::uint>;
+using URect = _Rect<glm::uint32>;
 using IRect = _Rect<glm::int32>;
 
 }

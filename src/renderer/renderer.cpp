@@ -10,34 +10,9 @@
 #include "renderer/utils.hpp"
 #include "renderer/assets.hpp"
 #include "renderer/batch.hpp"
+#include "renderer/world_renderer.hpp"
 #include "assets.hpp"
 #include "utils.hpp"
-
-struct ShaderPipeline {
-    LLGL::Shader* vs = nullptr; // Vertex shader
-    LLGL::Shader* hs = nullptr; // Hull shader (aka. tessellation control shader)
-    LLGL::Shader* ds = nullptr; // Domain shader (aka. tessellation evaluation shader)
-    LLGL::Shader* gs = nullptr; // Geometry shader
-    LLGL::Shader* ps = nullptr; // Pixel shader (aka. fragment shader)
-    LLGL::Shader* cs = nullptr; // Compute shader
-    
-    void Unload(const LLGL::RenderSystemPtr& context) {
-        if (vs != nullptr) context->Release(*vs);
-        if (hs != nullptr) context->Release(*hs);
-        if (ds != nullptr) context->Release(*ds);
-        if (gs != nullptr) context->Release(*gs);
-        if (ps != nullptr) context->Release(*ps);
-        if (cs != nullptr) context->Release(*cs);
-    }
-};
-
-struct Shaders {
-    ShaderPipeline tilemap_shader;
-    ShaderPipeline sprite_shader;
-    ShaderPipeline ninepatch_shader;
-    ShaderPipeline postprocess_shader;
-    ShaderPipeline font_shader;
-};
 
 static struct RendererState {
     LLGL::RenderSystemPtr context = nullptr;
@@ -45,99 +20,20 @@ static struct RendererState {
     LLGL::CommandBuffer* command_buffer = nullptr;
     LLGL::CommandQueue* command_queue = nullptr;
     std::shared_ptr<CustomSurface> surface = nullptr;
-    RenderBatchSprite* sprite_batch = nullptr;
-    Shaders shaders;
     LLGL::RenderingLimits limits;
-    std::array<LLGL::Sampler*, 3> samplers;
-} renderer_state;
+    
+    RenderBatchSprite* sprite_batch = nullptr;
+    WorldRenderer world_renderer;
+} state;
 
 static constexpr uint32_t MAX_TEXTURES_COUNT = 32;
 
-inline LLGL::Shader* load_vertex_shader(const std::string& name, const LLGL::VertexFormat& vertexFormat) {
-    LLGL::ShaderDescriptor shaderDesc;
-#if defined(BACKEND_OPENGL)
-    std::string path = "assets/shaders/opengl/" + name + ".vert";
-    shaderDesc = { LLGL::ShaderType::Vertex, path.c_str() };
-#elif defined(BACKEND_D3D11)
-    std::string path = "assets/shaders/d3d11/" + name + ".hlsl";
-    shaderDesc = { LLGL::ShaderType::Vertex, path.c_str(), "VS", "vs_4_0" };
-#elif defined(BACKEND_METAL)
-    std::string path = "assets/shaders/metal/" + name + ".metal";
-    shaderDesc = { LLGL::ShaderType::Vertex, path.c_str(), "VS", "1.1" };
-    shaderDesc.flags |= LLGL::ShaderCompileFlags::DefaultLibrary;
-#elif defined(BACKEND_VULKAN)
-    std::string path = "assets/shaders/vulkan/" + name + ".vert.spv";
-    shaderDesc = { LLGL::ShaderType::Vertex, path.c_str() };
-    shaderDesc.sourceType = LLGL::ShaderSourceType::BinaryFile;
-#endif
+const LLGL::RenderSystemPtr& Renderer::Context(void) { return state.context; }
+LLGL::SwapChain* Renderer::SwapChain(void) { return state.swap_chain; }
+LLGL::CommandBuffer* Renderer::CommandBuffer(void) { return state.command_buffer; }
+const std::shared_ptr<CustomSurface>& Renderer::Surface(void) { return state.surface; }
 
-    if (!FileExists(path.c_str())) {
-        LLGL::Log::Errorf("Failed to find shader '%s'\n", path.c_str());
-        return nullptr;
-    }
-
-#if DEBUG
-    shaderDesc.flags |= LLGL::ShaderCompileFlags::NoOptimization;
-#endif
-
-    shaderDesc.vertex.inputAttribs = vertexFormat.attributes;
-
-    LLGL::Shader* shader = renderer_state.context->CreateShader(shaderDesc);
-    if (shader->GetReport() != nullptr && shader->GetReport()->HasErrors()) {
-        LLGL::Log::Errorf("Failed to create a shader.\nFile: %s\nError: %s", path.c_str(), shader->GetReport()->GetText());
-        return nullptr;
-    }
-
-    return shader;
-}
-
-inline LLGL::Shader* load_fragment_shader(const std::string& name) {
-    LLGL::ShaderDescriptor shaderDesc;
-
-#if defined(BACKEND_OPENGL)
-    std::string path = "assets/shaders/opengl/" + name + ".frag";
-    shaderDesc = { LLGL::ShaderType::Fragment, path.c_str() };
-#elif defined(BACKEND_D3D11)
-    std::string path = "assets/shaders/d3d11/" + name + ".hlsl";
-    shaderDesc = { LLGL::ShaderType::Fragment, path.c_str(), "PS", "ps_4_0" };
-#elif defined(BACKEND_METAL)
-    std::string path = "assets/shaders/metal/" + name + ".metal";
-    shaderDesc = { LLGL::ShaderType::Fragment, path.c_str(), "PS", "1.1" };
-    shaderDesc.flags |= LLGL::ShaderCompileFlags::DefaultLibrary;
-#elif defined(BACKEND_VULKAN)
-    std::string path = "assets/shaders/vulkan/" + name + ".frag.spv";
-    shaderDesc = { LLGL::ShaderType::Fragment, path.c_str() };
-    shaderDesc.sourceType = LLGL::ShaderSourceType::BinaryFile;
-#endif
-
-#if DEBUG
-    shaderDesc.flags |= LLGL::ShaderCompileFlags::NoOptimization;
-#endif
-
-    LLGL::Shader* shader = renderer_state.context->CreateShader(shaderDesc);
-    if (shader->GetReport() != nullptr && shader->GetReport()->HasErrors()) {
-        LLGL::Log::Errorf("Failed to create a shader.\nFile: %s\nError: %s", path.c_str(), shader->GetReport()->GetText());
-        return nullptr;
-    }
-
-    return shader;
-}
-
-bool load_shaders() {
-    if ((renderer_state.shaders.sprite_shader.vs = load_vertex_shader("sprite", SpriteVertexFormat())) == nullptr)
-        return false;
-    if ((renderer_state.shaders.sprite_shader.ps = load_fragment_shader("sprite")) == nullptr)
-        return false;
-
-    return true;
-}
-
-const LLGL::RenderSystemPtr& Renderer::Context(void) { return renderer_state.context; }
-LLGL::SwapChain* Renderer::SwapChain(void) { return renderer_state.swap_chain; }
-LLGL::CommandBuffer* Renderer::CommandBuffer(void) { return renderer_state.command_buffer; }
-const std::shared_ptr<CustomSurface>& Renderer::Surface(void) { return renderer_state.surface; }
-
-bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution) {
+bool Renderer::InitEngine() {
     LLGL::Report report;
 
     void* configPtr = nullptr;
@@ -161,22 +57,27 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution) {
     rendererDesc.debugger   = new LLGL::RenderingDebugger();
 #endif
 
-    renderer_state.context = LLGL::RenderSystem::Load(rendererDesc, &report);
-    LLGL::RenderSystemPtr& context = renderer_state.context;
+    state.context = LLGL::RenderSystem::Load(rendererDesc, &report);
 
     if (report.HasErrors()) {
         LLGL::Log::Errorf("%s", report.GetText());
         return false;
     }
 
+    return true;
+}
+
+bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution) {
+    LLGL::RenderSystemPtr& context = state.context;
+
     LLGL::SwapChainDescriptor swapChainDesc;
     swapChainDesc.resolution = resolution;
     swapChainDesc.fullscreen = FULLSCREEN ? true : false;
 
-    renderer_state.surface = std::make_shared<CustomSurface>(window, resolution);
+    state.surface = std::make_shared<CustomSurface>(window, resolution);
 
-    renderer_state.swap_chain = context->CreateSwapChain(swapChainDesc, renderer_state.surface);
-    renderer_state.swap_chain->SetVsyncInterval(VSYNC);
+    state.swap_chain = context->CreateSwapChain(swapChainDesc, state.surface);
+    state.swap_chain->SetVsyncInterval(VSYNC);
 
     const auto& info = context->GetRendererInfo();
 
@@ -191,61 +92,31 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution) {
         info.deviceName.c_str(),
         info.vendorName.c_str(),
         info.shadingLanguageName.c_str(),
-        LLGL::ToString(renderer_state.swap_chain->GetColorFormat()),
-        LLGL::ToString(renderer_state.swap_chain->GetDepthStencilFormat())
+        LLGL::ToString(state.swap_chain->GetColorFormat()),
+        LLGL::ToString(state.swap_chain->GetDepthStencilFormat())
     );
     LLGL::Log::Printf("Extensions:\n");
     for (std::string extension : info.extensionNames) {
         LLGL::Log::Printf("  %s\n", extension.c_str());
     }
 
-    renderer_state.limits = context->GetRenderingCaps().limits;
+    state.limits = context->GetRenderingCaps().limits;
 
-    if (!load_shaders()) return false;
+    state.command_buffer = context->CreateCommandBuffer();
+    state.command_queue = context->GetCommandQueue();
 
-    {
-        LLGL::SamplerDescriptor sampler_desc;
-        sampler_desc.addressModeU = LLGL::SamplerAddressMode::Clamp;
-        sampler_desc.addressModeV = LLGL::SamplerAddressMode::Clamp;
-        sampler_desc.addressModeW = LLGL::SamplerAddressMode::Clamp;
-        sampler_desc.magFilter = LLGL::SamplerFilter::Linear;
-        sampler_desc.minFilter = LLGL::SamplerFilter::Linear;
-        sampler_desc.mipMapFilter = LLGL::SamplerFilter::Linear;
-        sampler_desc.minLOD = 0.0f;
-        sampler_desc.maxLOD = 1.0f;
-        sampler_desc.maxAnisotropy = 1;
+    state.sprite_batch = new RenderBatchSprite();
+    state.sprite_batch->init();
 
-        renderer_state.samplers[TextureSampler::Linear] = context->CreateSampler(sampler_desc);
-    }
-
-    {
-        LLGL::SamplerDescriptor sampler_desc;
-        sampler_desc.addressModeU = LLGL::SamplerAddressMode::Clamp;
-        sampler_desc.addressModeV = LLGL::SamplerAddressMode::Clamp;
-        sampler_desc.addressModeW = LLGL::SamplerAddressMode::Clamp;
-        sampler_desc.magFilter = LLGL::SamplerFilter::Nearest;
-        sampler_desc.minFilter = LLGL::SamplerFilter::Nearest;
-        sampler_desc.mipMapFilter = LLGL::SamplerFilter::Nearest;
-        sampler_desc.minLOD = 0.0f;
-        sampler_desc.maxLOD = 1.0f;
-        sampler_desc.maxAnisotropy = 1;
-
-        renderer_state.samplers[TextureSampler::Nearest] = context->CreateSampler(sampler_desc);
-    }
-
-    renderer_state.command_buffer = context->CreateCommandBuffer();
-    renderer_state.command_queue = context->GetCommandQueue();
-
-    renderer_state.sprite_batch = new RenderBatchSprite();
-    renderer_state.sprite_batch->init();
+    state.world_renderer.Init();
 
     return true;
 }
 
 void Renderer::Begin(const Camera& camera) {
-    auto sprite_batch = renderer_state.sprite_batch;
+    auto sprite_batch = state.sprite_batch;
     const auto commands = Renderer::CommandBuffer();
-    const auto queue = renderer_state.command_queue;
+    const auto queue = state.command_queue;
     const auto swap_chain = Renderer::SwapChain();
 
     const glm::vec2 top_left = camera.position() + camera.get_projection_area().min;
@@ -262,20 +133,27 @@ void Renderer::Begin(const Camera& camera) {
     commands->Clear(LLGL::ClearFlags::Color, LLGL::ClearValue(0.854f, 0.584f, 0.584f, 1.0f));
     commands->SetViewport(swap_chain->GetResolution());
 
-    renderer_state.sprite_batch->begin();
-    renderer_state.sprite_batch->set_projection_matrix(camera.get_projection_matrix());
-    renderer_state.sprite_batch->set_view_matrix(camera.get_view_matrix());
-    renderer_state.sprite_batch->set_screen_projection_matrix(screen_projection);
-    renderer_state.sprite_batch->set_camera_frustum(camera_frustum);
-    renderer_state.sprite_batch->set_ui_frustum(ui_frustum);
+    state.sprite_batch->begin();
+    state.sprite_batch->set_projection_matrix(camera.get_projection_matrix());
+    state.sprite_batch->set_view_matrix(camera.get_view_matrix());
+    state.sprite_batch->set_screen_projection_matrix(screen_projection);
+    state.sprite_batch->set_camera_frustum(camera_frustum);
+    state.sprite_batch->set_ui_frustum(ui_frustum);
+
+    state.world_renderer.set_projection_matrix(camera.get_projection_matrix());
+    state.world_renderer.set_view_matrix(camera.get_view_matrix());
+}
+
+void Renderer::RenderWorld(const World& world) {
+    state.world_renderer.Render(world);
 }
 
 void Renderer::Render() {
     const auto commands = Renderer::CommandBuffer();
-    const auto queue = renderer_state.command_queue;
+    const auto queue = state.command_queue;
     const auto swap_chain = Renderer::SwapChain();
 
-    renderer_state.sprite_batch->render();
+    state.sprite_batch->render();
 
     commands->EndRenderPass();
     commands->End();
@@ -298,7 +176,7 @@ void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer) {
         uv_offset_scale.w *= -1.0;
     }
 
-    renderer_state.sprite_batch->draw_sprite(sprite, uv_offset_scale, sprite.texture(), render_layer == RenderLayer::UI);
+    state.sprite_batch->draw_sprite(sprite, uv_offset_scale, sprite.texture(), render_layer == RenderLayer::UI);
 }
 
 void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer) {
@@ -321,31 +199,28 @@ void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer ren
         uv_offset_scale.w *= -1.0;
     }
 
-    renderer_state.sprite_batch->draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), false);
+    state.sprite_batch->draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), false);
 }
 
 void Renderer::Terminate(void) {
-    renderer_state.command_queue->WaitIdle();
+    state.command_queue->WaitIdle();
 
-    renderer_state.shaders.tilemap_shader.Unload(renderer_state.context);
-    renderer_state.shaders.sprite_shader.Unload(renderer_state.context);
-    renderer_state.shaders.ninepatch_shader.Unload(renderer_state.context);
-    renderer_state.shaders.postprocess_shader.Unload(renderer_state.context);
-    renderer_state.shaders.font_shader.Unload(renderer_state.context);
+    Assets::DestroyShaders();
 
-    renderer_state.sprite_batch->terminate();
+    state.sprite_batch->terminate();
 
-    renderer_state.context->Release(*renderer_state.command_buffer);
-    renderer_state.context->Release(*renderer_state.swap_chain);
+    state.context->Release(*state.command_buffer);
+    state.context->Release(*state.swap_chain);
 
     Assets::DestroyTextures();
+    Assets::DestroySamplers();
 
-    LLGL::RenderSystem::Unload(std::move(renderer_state.context));
+    LLGL::RenderSystem::Unload(std::move(state.context));
 }
 
 void Renderer::FlushSpriteBatch(void) {
-    renderer_state.sprite_batch->render();
-    renderer_state.sprite_batch->clear_sprites();
+    state.sprite_batch->render();
+    state.sprite_batch->clear_sprites();
 }
 
 void RenderBatchSprite::init() {
@@ -368,11 +243,11 @@ void RenderBatchSprite::init() {
 
     LLGL::BufferDescriptor bufferDesc = LLGL::VertexBufferDesc(MAX_VERTICES * sizeof(SpriteVertex), SpriteVertexFormat());
     bufferDesc.debugName = "SpriteBatch VertexBuffer";
-    m_vertex_buffer = renderer_state.context->CreateBuffer(bufferDesc);
+    m_vertex_buffer = state.context->CreateBuffer(bufferDesc);
 
     m_index_buffer = CreateIndexBuffer(indices, LLGL::Format::R32UInt);
 
-    m_constant_buffer = renderer_state.context->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(SpriteUniforms)));
+    m_constant_buffer = state.context->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(SpriteUniforms)));
 
 
 #ifdef BACKEND_OPENGL
@@ -394,30 +269,30 @@ void RenderBatchSprite::init() {
         LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, samplerBinding),
     };
 
-    LLGL::PipelineLayout* pipelineLayout = renderer_state.context->CreatePipelineLayout(pipelineLayoutDesc);
+    LLGL::PipelineLayout* pipelineLayout = state.context->CreatePipelineLayout(pipelineLayoutDesc);
+
+    const ShaderPipeline& sprite_shader = Assets::GetShader(ShaderAssetKey::SpriteShader);
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
-    {
-        pipelineDesc.vertexShader = renderer_state.shaders.sprite_shader.vs;
-        pipelineDesc.fragmentShader = renderer_state.shaders.sprite_shader.ps;
-        pipelineDesc.pipelineLayout = pipelineLayout;
-        pipelineDesc.indexFormat = LLGL::Format::R32UInt;
-        pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleList;
-        pipelineDesc.renderPass = renderer_state.swap_chain->GetRenderPass();
-        pipelineDesc.blend = LLGL::BlendDescriptor {
-            .targets = {
-                LLGL::BlendTargetDescriptor {
-                    .blendEnabled = true,
-                    .srcColor = LLGL::BlendOp::SrcAlpha,
-                    .dstColor = LLGL::BlendOp::InvSrcAlpha,
-                    .srcAlpha = LLGL::BlendOp::Zero,
-                    .dstAlpha = LLGL::BlendOp::One
-                }
+    pipelineDesc.vertexShader = sprite_shader.vs;
+    pipelineDesc.fragmentShader = sprite_shader.ps;
+    pipelineDesc.pipelineLayout = pipelineLayout;
+    pipelineDesc.indexFormat = LLGL::Format::R32UInt;
+    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleList;
+    pipelineDesc.renderPass = state.swap_chain->GetRenderPass();
+    pipelineDesc.blend = LLGL::BlendDescriptor {
+        .targets = {
+            LLGL::BlendTargetDescriptor {
+                .blendEnabled = true,
+                .srcColor = LLGL::BlendOp::SrcAlpha,
+                .dstColor = LLGL::BlendOp::InvSrcAlpha,
+                .srcAlpha = LLGL::BlendOp::Zero,
+                .dstAlpha = LLGL::BlendOp::One
             }
-        };
-    }
+        }
+    };
 
-    m_pipeline = renderer_state.context->CreatePipelineState(pipelineDesc);
+    m_pipeline = state.context->CreatePipelineState(pipelineDesc);
 
     if (const LLGL::Report* report = m_pipeline->GetReport()) {
         if (report->HasErrors()) LLGL::Log::Errorf("%s", report->GetText());
@@ -556,7 +431,7 @@ void RenderBatchSprite::flush(const tl::optional<Texture>& texture, size_t verte
     commands->SetPipelineState(*m_pipeline);
     commands->SetResource(0, *m_constant_buffer);
     commands->SetResource(1, *t.texture);
-    commands->SetResource(2, *renderer_state.samplers[t.sampler]);
+    commands->SetResource(2, Assets::GetSampler(t.sampler));
     commands->DrawIndexed(m_index_count, 0, vertex_offset);
 
     m_index_count = 0;
@@ -570,10 +445,10 @@ void RenderBatchSprite::begin(void) {
 }
 
 void RenderBatchSprite::terminate() {
-    renderer_state.context->Release(*m_vertex_buffer);
-    renderer_state.context->Release(*m_index_buffer);
-    renderer_state.context->Release(*m_constant_buffer);
-    renderer_state.context->Release(*m_pipeline);
+    state.context->Release(*m_vertex_buffer);
+    state.context->Release(*m_index_buffer);
+    state.context->Release(*m_constant_buffer);
+    state.context->Release(*m_pipeline);
 
     delete[] m_buffer;
 }
