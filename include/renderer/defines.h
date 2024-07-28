@@ -5,14 +5,14 @@
     // #define BACKEND "Vulkan"
     // #define BACKEND_VULKAN
 
-    // #define BACKEND "Direct3D11"
-    // #define BACKEND_D3D11
+    #define BACKEND "Direct3D11"
+    #define BACKEND_D3D11
 // #elif defined(__MACH__)
 //     #define BACKEND "Metal"
 //     #define BACKEND_METAL
 // #else
-    #define BACKEND "OpenGL"
-    #define BACKEND_OPENGL
+    // #define BACKEND "OpenGL"
+    // #define BACKEND_OPENGL
 // #endif
 
 #define VSYNC 0

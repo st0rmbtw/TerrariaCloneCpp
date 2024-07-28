@@ -675,8 +675,11 @@ public:
 #define RETURN_VALUE() \
     if (is_some()) return this->m_value; \
     throw tl::bad_optional_access();
+    
+#define BAD_OPTIONAL_ACCESS() throw tl::bad_optional_access()
 #else
 #define RETURN_VALUE() return this->m_value;
+#define BAD_OPTIONAL_ACCESS() ((void)0)
 #endif
 
 /// An optional object is an object that contains the storage for another
@@ -2022,11 +2025,11 @@ public:
   /// Returns the contained value if there is one, otherwise throws bad_optional_access
   TL_OPTIONAL_11_CONSTEXPR T &value() {
     if (is_some()) return *this->m_value;
-    throw tl::bad_optional_access();
+    BAD_OPTIONAL_ACCESS();
   }
   TL_OPTIONAL_11_CONSTEXPR const T &value() const {
     if (is_some()) return *this->m_value;
-    throw tl::bad_optional_access();
+    BAD_OPTIONAL_ACCESS();
   }
 
   /// Returns the stored value if there is one, otherwise returns `u`

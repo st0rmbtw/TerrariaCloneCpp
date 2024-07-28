@@ -76,9 +76,6 @@ bool Game::Init() {
     const std::uint32_t resScale = (display != nullptr ? static_cast<std::uint32_t>(display->GetScale()) : 1u);
     const auto resolution = LLGL::Extent2D(window_size.width * resScale, window_size.height * resScale);
 
-    GLFWwindow *window = create_window(window_size);
-    if (window == nullptr) return false;
-
     LLGL::Log::RegisterCallbackStd();
 
     if (!Renderer::InitEngine()) return false;
@@ -87,7 +84,6 @@ bool Game::Init() {
 
     init_tile_rules();
 
-    g.window = window;
     g.camera.set_viewport({resolution.width, resolution.height});
 
     g.world.generate(200, 500, 0);
@@ -112,6 +108,11 @@ bool Game::Init() {
     };
 
     if (!Assets::LoadShaders(shader_defs)) return false;
+
+    GLFWwindow *window = create_window(window_size);
+    if (window == nullptr) return false;
+
+    g.window = window;
     
     if (!Renderer::Init(window, resolution)) return false;
 

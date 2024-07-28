@@ -3,7 +3,7 @@
 #ifndef TERRARIA_ASSETS_HPP
 #define TERRARIA_ASSETS_HPP
 
-#include <LLGL/LLGL.h>
+#include <LLGL/Sampler.h>
 #include <memory>
 #include <glm/glm.hpp>
 #include <unordered_map>

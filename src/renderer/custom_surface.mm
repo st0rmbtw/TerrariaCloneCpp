@@ -5,8 +5,15 @@ CustomSurface::CustomSurface(GLFWwindow * const window, const LLGL::Extent2D& si
     m_size(size),
     m_wnd(window) {}
 
+CustomSurface::CustomSurface(CustomSurface&& other) :
+    m_size(other.m_size),
+    m_wnd(other.m_wnd)
+{
+    other.m_wnd = nullptr;
+}
+
 CustomSurface::~CustomSurface() {
-    glfwDestroyWindow(m_wnd);
+    if (m_wnd) glfwDestroyWindow(m_wnd);
 }
 
 void CustomSurface::ResetPixelFormat() {

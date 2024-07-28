@@ -22,6 +22,7 @@
 class CustomSurface : public LLGL::Surface {
 public:
     CustomSurface(GLFWwindow * const window, const LLGL::Extent2D& size);
+    CustomSurface(CustomSurface&& other);
     ~CustomSurface();
 
     bool GetNativeHandle(void* nativeHandle, std::size_t nativeHandleSize) override;
@@ -34,7 +35,6 @@ public:
 private:
     LLGL::Extent2D m_size;
     GLFWwindow* m_wnd = nullptr;
-
 };
 
 #endif

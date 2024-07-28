@@ -1,7 +1,7 @@
 #version 330 core
 
-layout(location = 0) in vec2 a_atlas_pos;
-layout(location = 1) in vec2 a_position;
+layout(location = 0) in vec2 a_position;
+layout(location = 1) in vec2 a_atlas_pos;
 layout(location = 2) in uint a_tile_id;
 layout(location = 3) in uint a_tile_type;
 

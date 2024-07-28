@@ -10,8 +10,8 @@
 #define TILE_TYPE_WALL 1
 
 struct Vertex {
-    glm::vec2 atlas_pos;
     glm::vec2 position;
+    glm::vec2 atlas_pos;
     uint32_t tile_id;
     uint32_t tile_type;
 };
@@ -97,8 +97,8 @@ void RenderChunk::build_mesh(const World& world) {
                 const TextureAtlasPos atlas_pos = block->atlas_pos;
 
                 block_vertices.push_back(Vertex {
-                    .atlas_pos = glm::vec2(atlas_pos.x, atlas_pos.y),
                     .position = glm::vec2(x, y),
+                    .atlas_pos = glm::vec2(atlas_pos.x, atlas_pos.y),
                     .tile_id = static_cast<uint32_t>(block->type),
                     .tile_type = TILE_TYPE_BLOCK
                 });
@@ -111,8 +111,8 @@ void RenderChunk::build_mesh(const World& world) {
                 const TextureAtlasPos atlas_pos = wall->atlas_pos;
 
                 wall_vertices.push_back(Vertex {
-                    .atlas_pos = glm::vec2(atlas_pos.x, atlas_pos.y),
                     .position = glm::vec2(x, y),
+                    .atlas_pos = glm::vec2(atlas_pos.x, atlas_pos.y),
                     .tile_id = static_cast<uint32_t>(wall->type),
                     .tile_type = TILE_TYPE_WALL
                 });

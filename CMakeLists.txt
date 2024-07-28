@@ -28,7 +28,7 @@ if (RELEASE_BUILD)
         add_compile_options("-g0" "-O3" "-fomit-frame-pointer" "-ffast-math" "${BITCODE}")
     endif()
     set(DISABLE_FORCE_DEBUG_POSTFIX ON)
-    set(LLGL_BUILD_STATIC_LIB ON CACHE BOOL "")
+    # set(LLGL_BUILD_STATIC_LIB ON CACHE BOOL "")
 else()
     message("-- Build Type: Debug")
     if(MSVC)
@@ -64,7 +64,7 @@ add_subdirectory(thirdparty/FastNoiseLite)
 # add_subdirectory(thirdparty/freetype-2.13.2)
 
 unset(EXECUTABLE_OUTPUT_PATH CACHE)
-unset(LIBRARY_OUTPUT_PATH CACHE)
+set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR} CACHE STRING "" FORCE)
 
 file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.mm")
 

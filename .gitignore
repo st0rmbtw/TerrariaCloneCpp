@@ -3,3 +3,5 @@ __MACOSX/
 out/
 out_release/
 build/
+build_release/
+assets/shaders/vulkan/*.spv

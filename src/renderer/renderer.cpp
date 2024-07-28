@@ -13,6 +13,7 @@
 #include "renderer/world_renderer.hpp"
 #include "assets.hpp"
 #include "utils.hpp"
+#include "log.hpp"
 
 static struct RendererState {
     LLGL::RenderSystemPtr context = nullptr;
@@ -22,7 +23,7 @@ static struct RendererState {
     std::shared_ptr<CustomSurface> surface = nullptr;
     LLGL::RenderingLimits limits;
     
-    RenderBatchSprite* sprite_batch = nullptr;
+    RenderBatchSprite sprite_batch;
     WorldRenderer world_renderer;
 } state;
 
@@ -52,15 +53,15 @@ bool Renderer::InitEngine() {
     rendererDesc.rendererConfig = configPtr;
     rendererDesc.rendererConfigSize = configSize;
 
-#if DEBUG
-    rendererDesc.flags      = LLGL::RenderSystemFlags::DebugDevice;
-    rendererDesc.debugger   = new LLGL::RenderingDebugger();
-#endif
+// #if DEBUG
+//     rendererDesc.flags      = LLGL::RenderSystemFlags::DebugDevice;
+//     rendererDesc.debugger   = new LLGL::RenderingDebugger();
+// #endif
 
     state.context = LLGL::RenderSystem::Load(rendererDesc, &report);
 
     if (report.HasErrors()) {
-        LLGL::Log::Errorf("%s", report.GetText());
+        LOG_ERROR("%s", report.GetText());
         return false;
     }
 
@@ -81,23 +82,16 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution) {
 
     const auto& info = context->GetRendererInfo();
 
-    LLGL::Log::Printf(
-        "Renderer:             %s\n"
-        "Device:               %s\n"
-        "Vendor:               %s\n"
-        "Shading Language:     %s\n"
-        "Swap Chain Format:    %s\n"
-        "Depth/Stencil Format: %s\n",
-        info.rendererName.c_str(),
-        info.deviceName.c_str(),
-        info.vendorName.c_str(),
-        info.shadingLanguageName.c_str(),
-        LLGL::ToString(state.swap_chain->GetColorFormat()),
-        LLGL::ToString(state.swap_chain->GetDepthStencilFormat())
-    );
-    LLGL::Log::Printf("Extensions:\n");
+    LOG_INFO("Renderer:             %s", info.rendererName.c_str());
+    LOG_INFO("Device:               %s", info.deviceName.c_str());
+    LOG_INFO("Vendor:               %s", info.vendorName.c_str());
+    LOG_INFO("Shading Language:     %s", info.shadingLanguageName.c_str());
+    LOG_INFO("Swap Chain Format:    %s", LLGL::ToString(state.swap_chain->GetColorFormat()));
+    LOG_INFO("Depth/Stencil Format: %s", LLGL::ToString(state.swap_chain->GetDepthStencilFormat()));
+
+    LOG_INFO("Extensions:");
     for (std::string extension : info.extensionNames) {
-        LLGL::Log::Printf("  %s\n", extension.c_str());
+        LOG_INFO("  %s", extension.c_str());
     }
 
     state.limits = context->GetRenderingCaps().limits;
@@ -105,9 +99,7 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution) {
     state.command_buffer = context->CreateCommandBuffer();
     state.command_queue = context->GetCommandQueue();
 
-    state.sprite_batch = new RenderBatchSprite();
-    state.sprite_batch->init();
-
+    state.sprite_batch.init();
     state.world_renderer.Init();
 
     return true;
@@ -133,12 +125,12 @@ void Renderer::Begin(const Camera& camera) {
     commands->Clear(LLGL::ClearFlags::Color, LLGL::ClearValue(0.854f, 0.584f, 0.584f, 1.0f));
     commands->SetViewport(swap_chain->GetResolution());
 
-    state.sprite_batch->begin();
-    state.sprite_batch->set_projection_matrix(camera.get_projection_matrix());
-    state.sprite_batch->set_view_matrix(camera.get_view_matrix());
-    state.sprite_batch->set_screen_projection_matrix(screen_projection);
-    state.sprite_batch->set_camera_frustum(camera_frustum);
-    state.sprite_batch->set_ui_frustum(ui_frustum);
+    state.sprite_batch.begin();
+    state.sprite_batch.set_projection_matrix(camera.get_projection_matrix());
+    state.sprite_batch.set_view_matrix(camera.get_view_matrix());
+    state.sprite_batch.set_screen_projection_matrix(screen_projection);
+    state.sprite_batch.set_camera_frustum(camera_frustum);
+    state.sprite_batch.set_ui_frustum(ui_frustum);
 
     state.world_renderer.set_projection_matrix(camera.get_projection_matrix());
     state.world_renderer.set_view_matrix(camera.get_view_matrix());
@@ -153,7 +145,7 @@ void Renderer::Render() {
     const auto queue = state.command_queue;
     const auto swap_chain = Renderer::SwapChain();
 
-    state.sprite_batch->render();
+    state.sprite_batch.render();
 
     commands->EndRenderPass();
     commands->End();
@@ -176,7 +168,7 @@ void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer) {
         uv_offset_scale.w *= -1.0;
     }
 
-    state.sprite_batch->draw_sprite(sprite, uv_offset_scale, sprite.texture(), render_layer == RenderLayer::UI);
+    state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.texture(), render_layer == RenderLayer::UI);
 }
 
 void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer) {
@@ -199,7 +191,7 @@ void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer ren
         uv_offset_scale.w *= -1.0;
     }
 
-    state.sprite_batch->draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), false);
+    state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), false);
 }
 
 void Renderer::Terminate(void) {
@@ -207,7 +199,8 @@ void Renderer::Terminate(void) {
 
     Assets::DestroyShaders();
 
-    state.sprite_batch->terminate();
+    state.sprite_batch.terminate();
+    state.world_renderer.Terminate();
 
     state.context->Release(*state.command_buffer);
     state.context->Release(*state.swap_chain);
@@ -219,8 +212,8 @@ void Renderer::Terminate(void) {
 }
 
 void Renderer::FlushSpriteBatch(void) {
-    state.sprite_batch->render();
-    state.sprite_batch->clear_sprites();
+    state.sprite_batch.render();
+    state.sprite_batch.clear_sprites();
 }
 
 void RenderBatchSprite::init() {
@@ -295,7 +288,7 @@ void RenderBatchSprite::init() {
     m_pipeline = state.context->CreatePipelineState(pipelineDesc);
 
     if (const LLGL::Report* report = m_pipeline->GetReport()) {
-        if (report->HasErrors()) LLGL::Log::Errorf("%s", report->GetText());
+        if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
     }
 }
 

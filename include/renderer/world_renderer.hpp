@@ -20,6 +20,7 @@ private:
     glm::mat4 m_view_matrix;
 
     LLGL::Buffer* m_constant_buffer = nullptr;
+    LLGL::Buffer* m_transform_buffer = nullptr;
     LLGL::PipelineState* m_pipeline = nullptr;
 };
 

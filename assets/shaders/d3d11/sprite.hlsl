@@ -20,7 +20,6 @@ struct OutputVS
     nointerpolation float4 color : Color;
     float2 uv : UV;
     nointerpolation int has_texture : HasTexture;
-    nointerpolation int is_ui : IsUI;
 };
 
 OutputVS VS(InputVS inp)
