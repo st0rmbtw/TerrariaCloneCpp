@@ -6,7 +6,7 @@
 #include "renderer/assets.hpp"
 #include "assets.hpp"
 
-void WorldRenderer::Init() {
+void WorldRenderer::init() {
     m_constant_buffer = Renderer::Context()->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(TilemapUniforms)));
     m_transform_buffer = Renderer::Context()->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(glm::mat4)));
 
@@ -63,7 +63,7 @@ void WorldRenderer::Init() {
     m_pipeline = Renderer::Context()->CreatePipelineState(pipelineDesc);
 }
 
-void WorldRenderer::Render(const World& world) {
+void WorldRenderer::render(const World& world) {
     const auto commands = Renderer::CommandBuffer();
 
     TilemapUniforms uniforms = TilemapUniforms {
@@ -111,7 +111,7 @@ void WorldRenderer::Render(const World& world) {
     }
 }
 
-void WorldRenderer::Terminate() {
+void WorldRenderer::terminate() {
     Renderer::Context()->Release(*m_constant_buffer);
     Renderer::Context()->Release(*m_transform_buffer);
     Renderer::Context()->Release(*m_pipeline);

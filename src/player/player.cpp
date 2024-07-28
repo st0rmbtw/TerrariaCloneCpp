@@ -38,49 +38,49 @@ void spawn_particles_on_dig(const glm::vec2& position, BlockType type) {
     }
 }
 
-Player::Player() : 
-    hair(TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerHair))),
-    head(TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerHead))),
-    body(TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerChest))),
-    legs(TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerLegs))),
-    left_hand(TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerLeftHand))),
-    left_shoulder(TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerLeftShoulder))),
-    right_arm(TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerRightArm))),
-    left_eye(TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerLeftEye))),
-    right_eye(TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerRightEye))),
-    m_walk_anim_timer(Timer::Duration::zero(), TimerMode::Repeating),
-    m_walk_particles_timer(duration::seconds_float(1.0f / 20.0f), TimerMode::Repeating),
-    m_walk_animation_index(0)
-{
-    this->legs.set_walk_animation({ .offset = 6 });
-    this->legs.set_fly_animation({ .index = 5 });
+void Player::init() {
+    m_hair = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerHair));
+    m_head = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerHead));
+    m_body = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerChest));
+    m_legs = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerLegs));
+    m_left_hand = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerLeftHand));
+    m_left_shoulder = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerLeftShoulder));
+    m_right_arm = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerRightArm));
+    m_left_eye = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerLeftEye));
+    m_right_eye = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerRightEye));
+    m_walk_anim_timer = Timer(Timer::Duration::zero(), TimerMode::Repeating);
+    m_walk_particles_timer = Timer(duration::seconds_float(1.0f / 20.0f), TimerMode::Repeating);
+    m_walk_animation_index = 0;
 
-    this->left_shoulder.set_walk_animation({ .offset = 13 });
-    this->left_shoulder.set_fly_animation({ .index = 2 });
-    this->left_shoulder.set_use_item_animation({ .offset = 2 });
+    m_legs.set_walk_animation({ .offset = 6 });
+    m_legs.set_fly_animation({ .index = 5 });
 
-    this->left_hand.set_walk_animation({ .offset = 13 });
-    this->left_hand.set_fly_animation({ .index = 2 });
-    this->left_hand.set_use_item_animation({ .offset = 2 });
+    m_left_shoulder.set_walk_animation({ .offset = 13 });
+    m_left_shoulder.set_fly_animation({ .index = 2 });
+    m_left_shoulder.set_use_item_animation({ .offset = 2 });
 
-    this->right_arm.set_fly_animation({ .index = 13 });
-    this->right_arm.set_idle_animation({ .index = 14 });
-    this->right_arm.set_use_item_animation({ .offset = 15 });
+    m_left_hand.set_walk_animation({ .offset = 13 });
+    m_left_hand.set_fly_animation({ .index = 2 });
+    m_left_hand.set_use_item_animation({ .offset = 2 });
 
-    this->left_eye.set_walk_animation({ .offset = 6, .length = 14 });
-    this->right_eye.set_walk_animation({ .offset = 6, .length = 14 });
+    m_right_arm.set_fly_animation({ .index = 13 });
+    m_right_arm.set_idle_animation({ .index = 14 });
+    m_right_arm.set_use_item_animation({ .offset = 15 });
 
-    this->hair.sprite.set_color(glm::vec4(0.55, 0.23, 0.14, 1.0));
-    this->head.sprite.set_color(glm::vec4(0.92, 0.45, 0.32, 1.0));
-    this->body.sprite.set_color(glm::vec4(0.58, 0.55, 0.47, 1.0));
-    this->legs.sprite.set_color(glm::vec4(190.0 / 255.0, 190.0 / 255.0, 156.0 / 255.0, 1.0));
+    m_left_eye.set_walk_animation({ .offset = 6, .length = 14 });
+    m_right_eye.set_walk_animation({ .offset = 6, .length = 14 });
 
-    this->left_hand.sprite.set_color(glm::vec4(0.92, 0.45, 0.32, 1.0));
-    this->left_shoulder.sprite.set_color(glm::vec4(0.58, 0.55, 0.47, 1.0));
-    this->right_arm.sprite.set_color(glm::vec4(0.92, 0.45, 0.32, 1.0));
-    this->right_eye.sprite.set_color(glm::vec4(89.0 / 255.0, 76.0 / 255.0, 64.0 / 255.0, 1.0));
+    m_hair.sprite.set_color(glm::vec4(0.55, 0.23, 0.14, 1.0));
+    m_head.sprite.set_color(glm::vec4(0.92, 0.45, 0.32, 1.0));
+    m_body.sprite.set_color(glm::vec4(0.58, 0.55, 0.47, 1.0));
+    m_legs.sprite.set_color(glm::vec4(190.0 / 255.0, 190.0 / 255.0, 156.0 / 255.0, 1.0));
 
-    this->legs.sprite.set_color(glm::vec4(190.0 / 255.0, 190.0 / 255.0, 156.0 / 255.0, 1.0));
+    m_left_hand.sprite.set_color(glm::vec4(0.92, 0.45, 0.32, 1.0));
+    m_left_shoulder.sprite.set_color(glm::vec4(0.58, 0.55, 0.47, 1.0));
+    m_right_arm.sprite.set_color(glm::vec4(0.92, 0.45, 0.32, 1.0));
+    m_right_eye.sprite.set_color(glm::vec4(89.0 / 255.0, 76.0 / 255.0, 64.0 / 255.0, 1.0));
+
+    m_legs.sprite.set_color(glm::vec4(190.0 / 255.0, 190.0 / 255.0, 156.0 / 255.0, 1.0));
 }
 
 void Player::set_position(const World& world, const glm::vec2& position) {
@@ -89,11 +89,11 @@ void Player::set_position(const World& world, const glm::vec2& position) {
     keep_in_world_bounds(world);
 }
 
-void Player::horizontal_movement() {
+void Player::horizontal_movement(bool handle_input) {
     int8_t dir = 0;
 
-    if (KeyboardInput::Pressed(Key::A)) { dir -= 1; }
-    if (KeyboardInput::Pressed(Key::D)) { dir += 1; }
+    if (handle_input && KeyboardInput::Pressed(Key::A)) { dir -= 1; }
+    if (handle_input && KeyboardInput::Pressed(Key::D)) { dir += 1; }
 
     if (dir > 0) {
         m_direction = Direction::Right;
@@ -114,14 +114,14 @@ void Player::horizontal_movement() {
     m_velocity.x = glm::clamp(m_velocity.x, -MAX_WALK_SPEED, MAX_WALK_SPEED);
 }
 
-void Player::vertical_movement() {
+void Player::vertical_movement(bool handle_input) {
     if (do_jump && m_collisions.down) {
         m_jump = JUMP_HEIGHT;
         m_velocity.y = -JUMP_SPEED;
         m_jumping = true;
     }
 
-    if (KeyboardInput::Pressed(Key::Space)) {
+    if (handle_input && KeyboardInput::Pressed(Key::Space)) {
         if (m_jump > 0) {
             if (m_velocity.y == 0) {
                 m_jump = 0;
@@ -251,16 +251,16 @@ void Player::update_using_item_anim(void) {
     // -1..1
     rotation = rotation * 2.0 - 1.;
 
-    using_item.set_position(item_position);
-    using_item.set_rotation(Quat::from_rotation_z(rotation * direction * ITEM_ROTATION + direction * 0.5f));
-    using_item.set_anchor(m_direction == Direction::Left ? Anchor::BottomRight : Anchor::BottomLeft);
-    using_item.set_flip_x(m_direction == Direction::Left ? true : false);
+    m_using_item.set_position(item_position);
+    m_using_item.set_rotation(Quat::from_rotation_z(rotation * direction * ITEM_ROTATION + direction * 0.5f));
+    m_using_item.set_anchor(m_direction == Direction::Left ? Anchor::BottomRight : Anchor::BottomLeft);
+    m_using_item.set_flip_x(m_direction == Direction::Left ? true : false);
     
     m_using_item_visible = true;
 }
 
 void Player::update_sprites_index(const delta_time_t& delta_time) {
-    PlayerSprite* sprites[] = { &this->hair, &this->head, &this->body, &this->legs, &this->left_hand, &this->left_shoulder, &this->right_arm, &this->left_eye, &this->right_eye };
+    PlayerSprite* sprites[] = { &m_hair, &m_head, &m_body, &m_legs, &m_left_hand, &m_left_shoulder, &m_right_arm, &m_left_eye, &m_right_eye };
 
     switch (m_movement_state) {
     case MovementState::Walking: {
@@ -293,7 +293,7 @@ void Player::update_sprites_index(const delta_time_t& delta_time) {
     }
 
     if (m_swing_anim) {
-        PlayerSprite* use_item_sprites[] = { &this->left_hand, &this->left_shoulder, &this->right_arm };
+        PlayerSprite* use_item_sprites[] = { &m_left_hand, &m_left_shoulder, &m_right_arm };
 
         for (PlayerSprite* sprite : use_item_sprites) {
             sprite->sprite.set_index(sprite->use_item_animation.offset + m_swing_anim_index);
@@ -366,9 +366,9 @@ void Player::spawn_particles_grounded(void) const {
     }
 }
 
-void Player::fixed_update(const delta_time_t& delta_time, const World& world) {    
-    horizontal_movement();
-    vertical_movement();
+void Player::fixed_update(const delta_time_t& delta_time, const World& world, bool handle_input) {
+    horizontal_movement(handle_input);
+    vertical_movement(handle_input);
     gravity();
 
     m_velocity = check_collisions(world);
@@ -424,53 +424,53 @@ float Player::get_fall_distance(void) const {
 }
 
 void Player::update_sprites(void) {
-    this->hair.sprite
+    m_hair.sprite
         .set_flip_x(m_direction == Direction::Left)
         .set_position(m_position);
-    this->head.sprite
+    m_head.sprite
         .set_flip_x(m_direction == Direction::Left)
         .set_position(m_position);
-    this->body.sprite
+    m_body.sprite
         .set_flip_x(m_direction == Direction::Left)
         .set_position(m_position);
-    this->legs.sprite
+    m_legs.sprite
         .set_flip_x(m_direction == Direction::Left)
         .set_position(m_position);
-    this->left_hand.sprite
+    m_left_hand.sprite
         .set_flip_x(m_direction == Direction::Left)
         .set_position(m_position);
-    this->left_shoulder.sprite
+    m_left_shoulder.sprite
         .set_flip_x(m_direction == Direction::Left)
         .set_position(m_position);
-    this->right_arm.sprite
+    m_right_arm.sprite
         .set_flip_x(m_direction == Direction::Left)
         .set_position(m_position);
-    this->left_eye.sprite
+    m_left_eye.sprite
         .set_flip_x(m_direction == Direction::Left)
         .set_position(m_position);
-    this->right_eye.sprite
+    m_right_eye.sprite
         .set_flip_x(m_direction == Direction::Left)
         .set_position(m_position);
 }
 
-void Player::render(const Camera &camera) const {
-    Renderer::DrawAtlasSprite(this->head.sprite, RenderLayer::World);
+void Player::render(void) const {
+    Renderer::DrawAtlasSprite(m_head.sprite, RenderLayer::World);
 
-    Renderer::DrawAtlasSprite(this->right_arm.sprite, RenderLayer::World);
+    Renderer::DrawAtlasSprite(m_right_arm.sprite, RenderLayer::World);
 
-    Renderer::DrawAtlasSprite(this->hair.sprite, RenderLayer::World);
-    Renderer::DrawAtlasSprite(this->body.sprite, RenderLayer::World);
-    Renderer::DrawAtlasSprite(this->legs.sprite, RenderLayer::World);
+    Renderer::DrawAtlasSprite(m_hair.sprite, RenderLayer::World);
+    Renderer::DrawAtlasSprite(m_body.sprite, RenderLayer::World);
+    Renderer::DrawAtlasSprite(m_legs.sprite, RenderLayer::World);
 
-    Renderer::DrawAtlasSprite(this->left_eye.sprite, RenderLayer::World);
-    Renderer::DrawAtlasSprite(this->right_eye.sprite, RenderLayer::World);
+    Renderer::DrawAtlasSprite(m_left_eye.sprite, RenderLayer::World);
+    Renderer::DrawAtlasSprite(m_right_eye.sprite, RenderLayer::World);
 
     if (m_using_item_visible) {
-        Renderer::DrawSprite(this->using_item, RenderLayer::World);
+        Renderer::DrawSprite(m_using_item, RenderLayer::World);
     }
 
-    Renderer::DrawAtlasSprite(this->left_hand.sprite, RenderLayer::World);
-    Renderer::DrawAtlasSprite(this->left_shoulder.sprite, RenderLayer::World);
+    Renderer::DrawAtlasSprite(m_left_hand.sprite, RenderLayer::World);
+    Renderer::DrawAtlasSprite(m_left_shoulder.sprite, RenderLayer::World);
 }
 
 void Player::use_item(const Camera& camera, World& world) {
@@ -482,7 +482,7 @@ void Player::use_item(const Camera& camera, World& world) {
         m_swing_counter_max = item->swing_speed;
     }
 
-    using_item.set_texture(Assets::GetItemTexture(item->id));
+    m_using_item.set_texture(Assets::GetItemTexture(item->id));
     m_swing_anim = true;
 
     if (m_use_cooldown > 0) return;

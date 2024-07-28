@@ -137,6 +137,8 @@ void UI::Update(Inventory& inventory) {
 void UI::Render(const Camera& camera, const Inventory& inventory) {
     render_inventory(inventory);
 
+    Renderer::FlushSpriteBatch();
+
     Sprite sprite;
     sprite.set_custom_size(glm::vec2(25.0f));
     sprite.set_color(glm::vec3(1.0f, 0.0f, 0.0f));

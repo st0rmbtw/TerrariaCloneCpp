@@ -73,6 +73,13 @@ struct PlayerSprite {
     IdleAnimation idle_animation;
     UseItemAnimation use_item_animation;
 
+    PlayerSprite() :
+        sprite(),
+        walk_animation(),
+        fly_animation(),
+        idle_animation(),
+        use_item_animation() {}
+
     PlayerSprite(const TextureAtlasSprite& sprite, WalkAnimation walk_anim = {}, FlyAnimation fly_anim = {}, IdleAnimation idle_anim = {}, UseItemAnimation use_item_anim = {}) :
         sprite(sprite),
         walk_animation(walk_anim),
@@ -106,12 +113,12 @@ struct Collisions {
 
 class Player {
 public:
-    Player();
+    void init();
 
     void pre_update();
-    void fixed_update(const delta_time_t& delta_time, const World& world);
+    void fixed_update(const delta_time_t& delta_time, const World& world, bool handle_input);
     void update(const Camera& camera, World& world);
-    void render(const Camera& camera) const;
+    void render(void) const;
 
     void set_position(const World& world, const glm::vec2& position);
 
@@ -122,8 +129,8 @@ public:
     Inventory& inventory(void) { return m_inventory; }
     
 private:
-    void horizontal_movement();
-    void vertical_movement();
+    void horizontal_movement(bool handle_input);
+    void vertical_movement(bool handle_input);
     void gravity(void);
     glm::vec2 check_collisions(const World& world);
     void keep_in_world_bounds(const World& world);
@@ -162,16 +169,16 @@ private:
 
     MovementState m_movement_state;
 
-    PlayerSprite hair;
-    PlayerSprite head;
-    PlayerSprite body;
-    PlayerSprite legs;
-    PlayerSprite left_hand;
-    PlayerSprite left_shoulder;
-    PlayerSprite right_arm;
-    PlayerSprite left_eye;
-    PlayerSprite right_eye;
-    Sprite using_item;
+    PlayerSprite m_hair;
+    PlayerSprite m_head;
+    PlayerSprite m_body;
+    PlayerSprite m_legs;
+    PlayerSprite m_left_hand;
+    PlayerSprite m_left_shoulder;
+    PlayerSprite m_right_arm;
+    PlayerSprite m_left_eye;
+    PlayerSprite m_right_eye;
+    Sprite m_using_item;
 
     Inventory m_inventory;
 };

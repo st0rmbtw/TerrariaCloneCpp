@@ -8,9 +8,9 @@
 
 class WorldRenderer {
 public:
-    void Init();
-    void Render(const World& world);
-    void Terminate();
+    void init();
+    void render(const World& world);
+    void terminate();
 
     inline void set_projection_matrix(const glm::mat4& projection) { m_projection_matrix = projection; }
     inline void set_view_matrix(const glm::mat4& view) { m_view_matrix = view; }

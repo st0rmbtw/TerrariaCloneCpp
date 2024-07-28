@@ -263,27 +263,27 @@ void Assets::DestroyShaders() {
 }
 
 const Texture& Assets::GetTexture(AssetKey key) {
-    ASSERT(state.textures.find(key) != state.textures.end());
+    ASSERT(state.textures.find(key) != state.textures.end(), "Key not found");
     return state.textures[key];
 }
 
 const TextureAtlas& Assets::GetTextureAtlas(AssetKey key) {
-    ASSERT(state.textures_atlases.find(key) != state.textures_atlases.end());
+    ASSERT(state.textures_atlases.find(key) != state.textures_atlases.end(), "Key not found");
     return state.textures_atlases[key];
 }
 
 const Texture& Assets::GetItemTexture(size_t index) {
-    ASSERT(state.items.find(key) != state.items.end());
+    ASSERT(state.items.find(index) != state.items.end(), "Key not found");
     return state.items[index];
 }
 
 const ShaderPipeline& Assets::GetShader(ShaderAssetKey key) {
-    ASSERT(state.shaders.find(key) != state.shaders.end());
+    ASSERT(state.shaders.find(key) != state.shaders.end(), "Key not found");
     return state.shaders[key];
 }
 
 LLGL::Sampler& Assets::GetSampler(size_t index) {
-    ASSERT(state.samplers.find(key) != state.samplers.end());
+    ASSERT(index < state.samplers.size(), "Index is out of bounds");
     return *state.samplers[index];
 }
 

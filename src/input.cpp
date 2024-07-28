@@ -33,7 +33,7 @@ bool KeyboardInput::JustPressed(Key key) {
     return input_state.keyboard_just_pressed.count(key) > 0;
 }
 
-void KeyboardInput::clear() {
+void KeyboardInput::Clear() {
     input_state.keyboard_just_pressed.clear();
     input_state.keyboard_just_released.clear();
 }
@@ -59,7 +59,7 @@ bool MouseInput::JustPressed(MouseButton button) {
     return input_state.mouse_just_pressed.count(static_cast<uint8_t>(button)) > 0;
 }
 
-void MouseInput::clear() {
+void MouseInput::Clear() {
     input_state.mouse_just_pressed.clear();
     input_state.mouse_just_released.clear();
     input_state.mouse_scroll_events.clear();

@@ -72,7 +72,7 @@ namespace KeyboardInput {
     bool Pressed(Key key);
     bool JustPressed(Key key);
 
-    void clear();
+    void Clear();
 };
 
 namespace MouseInput {
@@ -88,7 +88,7 @@ namespace MouseInput {
     void set_screen_position(const glm::vec2& position);
     void set_mouse_over_ui(bool mouse_over_ui);
 
-    void clear();
+    void Clear();
 
     const glm::vec2& ScreenPosition(void);
     bool IsMouseOverUi(void);

@@ -100,7 +100,7 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution) {
     state.command_queue = context->GetCommandQueue();
 
     state.sprite_batch.init();
-    state.world_renderer.Init();
+    state.world_renderer.init();
 
     return true;
 }
@@ -137,7 +137,7 @@ void Renderer::Begin(const Camera& camera) {
 }
 
 void Renderer::RenderWorld(const World& world) {
-    state.world_renderer.Render(world);
+    state.world_renderer.render(world);
 }
 
 void Renderer::Render() {
@@ -200,7 +200,7 @@ void Renderer::Terminate(void) {
     Assets::DestroyShaders();
 
     state.sprite_batch.terminate();
-    state.world_renderer.Terminate();
+    state.world_renderer.terminate();
 
     state.context->Release(*state.command_buffer);
     state.context->Release(*state.swap_chain);

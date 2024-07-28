@@ -105,11 +105,15 @@ private:
 
 class TextureAtlasSprite : public BaseSprite {
 public:
+    TextureAtlasSprite() :
+        m_texture_atlas(),
+        m_index(0) {}
+
     TextureAtlasSprite(const TextureAtlas& texture_atlas) :
         m_texture_atlas(texture_atlas),
         m_index(0) {}
 
-    void set_index(size_t index) {m_index = index; }
+    void set_index(size_t index) { m_index = index; }
 
     size_t index(void) const { return m_index; }
     const TextureAtlas& atlas(void) const { return m_texture_atlas; }

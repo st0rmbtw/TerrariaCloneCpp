@@ -3,8 +3,11 @@
 layout(std140) uniform UniformBuffer {
     mat4 projection;
     mat4 view;
-    mat4 transform;
 } ubo;
+
+layout(std140) uniform TransformBuffer {
+    mat4 transform;
+} ubo2;
 
 in VS_OUT {
     vec2 atlas_pos;
@@ -51,7 +54,7 @@ void main() {
 
     vec2 start_uv = atlas_pos * (tex_size + padding);
 
-    mat4 mvp = ubo.projection * ubo.view * ubo.transform;
+    mat4 mvp = ubo.projection * ubo.view * ubo2.transform;
 
     gl_Position = mvp * gl_in[0].gl_Position;
     g_uv = start_uv;

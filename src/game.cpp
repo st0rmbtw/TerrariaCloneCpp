@@ -17,10 +17,18 @@ static struct GameState {
     Camera camera;
     World world;
     Player player;
+    bool free_camera = false;
 } g;
 
+void pre_update();
+void fixed_update(delta_time_t delta_time);
 void update();
 void render();
+
+glm::vec2 camera_follow_player();
+#if DEBUG
+glm::vec2 camera_free();
+#endif
 
 static void handle_keyboard_events(GLFWwindow* window, int key, int scancode, int action, int mods);
 static void handle_mouse_button_events(GLFWwindow* window, int button, int action, int mods);
@@ -116,6 +124,7 @@ bool Game::Init() {
     
     if (!Renderer::Init(window, resolution)) return false;
 
+    g.player.init();
     g.player.inventory().set_item(0, ITEM_COPPER_AXE);
     g.player.inventory().set_item(1, ITEM_COPPER_PICKAXE);
     g.player.inventory().set_item(2, ITEM_COPPER_HAMMER);
@@ -128,6 +137,8 @@ bool Game::Init() {
 
 void Game::Run() {
     double prev_tick = glfwGetTime();
+
+    float fixed_timer = 0;
     
     while (Renderer::Surface()->ProcessEvents()) {
         double current_tick = glfwGetTime();
@@ -137,11 +148,19 @@ void Game::Run() {
         delta_time_t dt(delta_time);
         Time::advance_by(dt);
 
+        pre_update();
+
+        fixed_timer += delta_time;
+        while (fixed_timer > Constants::FIXED_UPDATE_INTERVAL) {
+            fixed_update(delta_time_t(Constants::FIXED_UPDATE_INTERVAL));
+            fixed_timer -= Constants::FIXED_UPDATE_INTERVAL;
+        }
+
         update();
         render();
 
-        KeyboardInput::clear();
-        MouseInput::clear();
+        KeyboardInput::Clear();
+        MouseInput::Clear();
     }
 }
 
@@ -151,35 +170,43 @@ void Game::Destroy() {
     glfwTerminate();
 }
 
+void pre_update() {
+    g.player.pre_update();
+
+    if (KeyboardInput::JustPressed(Key::F)) g.free_camera = !g.free_camera;
+}
+
 void update() {
-    if (KeyboardInput::Pressed(Key::W)) {
-        glm::vec2 position = g.camera.position();
-        position.y -= 1000.0f * Time::delta_seconds();
-        g.camera.set_position(position);
+#if DEBUG
+    if (g.free_camera) {
+        g.camera.set_position(camera_free());
     }
-
-    if (KeyboardInput::Pressed(Key::S)) {
-        glm::vec2 position = g.camera.position();
-        position.y += 1000.0f * Time::delta_seconds();
-        g.camera.set_position(position);
-    }
-
-    if (KeyboardInput::Pressed(Key::A)) {
-        glm::vec2 position = g.camera.position();
-        position.x -= 1000.0f * Time::delta_seconds();
-        g.camera.set_position(position);
-    }
-
-    if (KeyboardInput::Pressed(Key::D)) {
-        glm::vec2 position = g.camera.position();
-        position.x += 1000.0f * Time::delta_seconds();
-        g.camera.set_position(position);
-    }
+#endif
 
     g.camera.update();
     g.world.update(g.camera);
+    g.player.update(g.camera, g.world);
 
     UI::Update(g.player.inventory());
+}
+
+void fixed_update(delta_time_t delta_time) {
+    const float dt = Time::delta_seconds();
+
+    // if (m_game_state == GameState::InGame) {
+        // ParticleManager::fixed_update();
+
+#if DEBUG
+        if (g.free_camera) {
+            g.player.fixed_update(delta_time, g.world, false);
+        } else {
+#endif
+            g.player.fixed_update(delta_time, g.world, true);
+            g.camera.set_position(camera_follow_player());
+#if DEBUG
+        }
+#endif
+    // }
 }
 
 void render() {
@@ -187,10 +214,72 @@ void render() {
 
     Renderer::RenderWorld(g.world);
 
+    g.player.render();
+
     UI::Render(g.camera, g.player.inventory());
 
     Renderer::Render();
 }
+
+glm::vec2 camera_follow_player() {
+    glm::vec2 position = g.player.position();
+
+    const float world_min_x = g.world.playable_area().min.x * Constants::TILE_SIZE;
+    const float world_max_x = g.world.playable_area().max.x * Constants::TILE_SIZE;
+    const float world_min_y = g.world.playable_area().min.y * Constants::TILE_SIZE;
+    const float world_max_y = g.world.playable_area().max.y * Constants::TILE_SIZE;
+
+    const math::Rect& camera_area = g.camera.get_projection_area();
+    
+    const float left = camera_area.min.x;
+    const float right = camera_area.max.x;
+
+    const float top = camera_area.min.y;
+    const float bottom = camera_area.max.y;
+
+    if (position.x + left < world_min_x) position.x = world_min_x - left;
+    if (position.x + right > world_max_x) position.x = world_max_x - right;
+
+    if (position.y + top < world_min_y) position.y = world_min_y - top;
+    if (position.y + bottom > world_max_y) position.y = world_max_y - bottom;
+
+    return position;
+}
+
+#if DEBUG
+glm::vec2 camera_free() {
+    float dt = Time::delta_seconds();
+    glm::vec2 position = g.camera.position();
+
+    float speed = 2000.0f;
+
+    if (KeyboardInput::Pressed(Key::LeftShift)) {
+        speed *= 2.0f;
+    }
+
+    if (KeyboardInput::Pressed(Key::LeftAlt)) {
+        speed /= 5.0f;
+    }
+
+    if (KeyboardInput::Pressed(Key::A)) {
+        position.x -= speed * dt;
+    }
+
+    if (KeyboardInput::Pressed(Key::D)) {
+        position.x += speed * dt;
+    }
+
+    if (KeyboardInput::Pressed(Key::W)) {
+        position.y -= speed * dt;
+    }
+
+    if (KeyboardInput::Pressed(Key::S)) {
+        position.y += speed * dt;
+    }
+
+    return position;
+}
+#endif
 
 static void handle_keyboard_events(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
