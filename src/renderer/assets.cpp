@@ -39,7 +39,7 @@ const LLGL::VertexFormat& SpriteVertexFormat() {
     return vertexFormat;
 }
 
-const LLGL::VertexFormat& TilemapVertexFormat(void) {
+const LLGL::VertexFormat& TilemapVertexFormat() {
     static LLGL::VertexFormat vertexFormat;
 
     if (vertexFormat.attributes.empty()) {

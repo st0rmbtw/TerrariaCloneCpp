@@ -1,65 +1,90 @@
-#pragma once
-
 #ifndef TERRARIA_MATH_RECT_HPP
 #define TERRARIA_MATH_RECT_HPP
+
+#pragma once
 
 #include <glm/glm.hpp>
 
 namespace math {
 
-template <class _Type>
-struct _Rect {
+template <class T> 
+struct rect {
 private:
-    using _Glm = glm::vec<2, _Type>;
+    using vec = glm::vec<2, T>;
 
 public:
-    _Glm min;
-    _Glm max;
+    vec min;
+    vec max;
 
-    _Rect() :
+    rect() :
         min(0.0f),
         max(0.0f) {}
 
-    _Rect(_Glm min, _Glm max) :
+    rect(vec min, vec max) :
         min(min),
         max(max) {}
     
-    inline constexpr static _Rect from_corners(_Glm p1, _Glm p2) noexcept {
-        return _Rect(glm::min(p1, p2), glm::max(p1, p2));
+    [[nodiscard]]
+    inline constexpr static rect from_corners(vec p1, vec p2) noexcept {
+        return rect(glm::min(p1, p2), glm::max(p1, p2));
     }
 
-    inline constexpr static _Rect from_top_left(_Glm origin, _Glm size) noexcept {
-        return _Rect(origin, origin + size);
+    [[nodiscard]]
+    inline constexpr static rect from_top_left(vec origin, vec size) noexcept {
+        return rect(origin, origin + size);
     }
 
-    inline constexpr static _Rect from_center_size(_Glm origin, _Glm size) noexcept {
-        const _Glm half_size = size * static_cast<_Type>(2);
-        return _Rect::from_center_half_size(origin, half_size);
+    [[nodiscard]]
+    inline constexpr static rect from_center_size(vec origin, vec size) noexcept {
+        const vec half_size = size * static_cast<T>(2);
+        return rect::from_center_half_size(origin, half_size);
     }
 
-    inline constexpr static _Rect from_center_half_size(_Glm origin, _Glm half_size) noexcept {
-        return _Rect(origin - half_size, origin + half_size);
+    [[nodiscard]]
+    inline constexpr static rect from_center_half_size(vec origin, vec half_size) noexcept {
+        return rect(origin - half_size, origin + half_size);
     }
 
-    inline constexpr _Type width() const noexcept { return this->max.x - this->min.x; }
-    inline constexpr _Type height() const noexcept { return this->max.y - this->min.y; }
-    inline constexpr _Type half_width() const noexcept { return this->width() / static_cast<_Type>(2); }
-    inline constexpr _Type half_height() const noexcept { return this->height() / static_cast<_Type>(2); }
+    [[nodiscard]]
+    inline constexpr T width() const noexcept { return this->max.x - this->min.x; }
 
-    inline constexpr _Glm center() const noexcept { return (this->min + this->max) / static_cast<_Type>(2); }
-    inline constexpr _Glm size() const noexcept { return _Glm(this->width(), this->height()); }
-    inline constexpr _Glm half_size() const noexcept { return _Glm(this->half_width(), this->half_height()); }
+    [[nodiscard]]
+    inline constexpr T height() const noexcept { return this->max.y - this->min.y; }
 
-    inline constexpr _Type left(void) const noexcept { return this->min.x; }
-    inline constexpr _Type right(void) const noexcept { return this->max.x; }
-    inline constexpr _Type bottom(void) const noexcept { return this->min.y; }
-    inline constexpr _Type top(void) const noexcept { return this->max.y; }
+    [[nodiscard]]
+    inline constexpr T half_width() const noexcept { return this->width() / static_cast<T>(2); }
 
-    inline constexpr _Rect<_Type> clamp(_Glm min, _Glm max) const {
-        return _Rect::from_corners(glm::max(this->min, min), glm::min(this->max, max));
+    [[nodiscard]]
+    inline constexpr T half_height() const noexcept { return this->height() / static_cast<T>(2); }
+
+    [[nodiscard]]
+    inline constexpr vec center() const noexcept { return (this->min + this->max) / static_cast<T>(2); }
+
+    [[nodiscard]]
+    inline constexpr vec size() const noexcept { return vec(this->width(), this->height()); }
+
+    [[nodiscard]]
+    inline constexpr vec half_size() const noexcept { return vec(this->half_width(), this->half_height()); }
+
+    [[nodiscard]]
+    inline constexpr T left() const noexcept { return this->min.x; }
+
+    [[nodiscard]]
+    inline constexpr T right() const noexcept { return this->max.x; }
+
+    [[nodiscard]]
+    inline constexpr T bottom() const noexcept { return this->min.y; }
+
+    [[nodiscard]]
+    inline constexpr T top() const noexcept { return this->max.y; }
+
+    [[nodiscard]]
+    inline constexpr rect<T> clamp(vec min, vec max) const {
+        return rect::from_corners(glm::max(this->min, min), glm::min(this->max, max));
     }
 
-    inline constexpr bool contains(const _Glm& point) const noexcept {
+    [[nodiscard]]
+    inline constexpr bool contains(const vec& point) const noexcept {
         return (
             point.x >= this->min.x &&
             point.y >= this->min.y &&
@@ -68,7 +93,8 @@ public:
         );
     }
 
-    inline bool intersects(const _Rect& other) const noexcept {
+    [[nodiscard]]
+    inline bool intersects(const rect& other) const noexcept {
         return (
             this->left() < other.right() &&
             this->right() > other.left() &&
@@ -77,42 +103,42 @@ public:
         );
     }
 
-    _Rect<_Type> operator/(const _Rect<_Type> &rhs) const noexcept {
+    rect<T> operator/(const rect<T> &rhs) const noexcept {
         return from_corners(this->min * rhs.min, this->max * rhs.max);
     }
 
-    _Rect<_Type> operator/(const _Type rhs) const noexcept {
+    rect<T> operator/(const T rhs) const noexcept {
         return from_corners(this->min / rhs, this->max / rhs);
     }
 
-    _Rect<_Type> operator*(const _Rect<_Type> &rhs) const noexcept {
+    rect<T> operator*(const rect<T> &rhs) const noexcept {
         return from_corners(this->min * rhs, this->max * rhs);
     }
 
-    _Rect<_Type> operator*(const _Type rhs) const noexcept {
+    rect<T> operator*(const T rhs) const noexcept {
         return from_corners(this->min * rhs, this->max * rhs);
     }
 
-    _Rect<_Type> operator+(const _Rect<_Type> &rhs) const noexcept {
+    rect<T> operator+(const rect<T> &rhs) const noexcept {
         return from_corners(this->min + rhs.min, this->max + rhs.max);
     }
 
-    _Rect<_Type> operator+(const _Type rhs) const noexcept {
+    rect<T> operator+(const T rhs) const noexcept {
         return from_corners(this->min + rhs, this->max + rhs);
     }
 
-    _Rect<_Type> operator-(const _Rect<_Type> &rhs) const noexcept {
+    rect<T> operator-(const rect<T> &rhs) const noexcept {
         return from_corners(this->min - rhs.min, this->max - rhs.max);
     }
 
-    _Rect<_Type> operator-(const _Type rhs) const noexcept {
+    rect<T> operator-(const T rhs) const noexcept {
         return from_corners(this->min - rhs, this->max - rhs);
     }
 };
 
-using Rect = _Rect<glm::float32>;
-using URect = _Rect<glm::uint32>;
-using IRect = _Rect<glm::int32>;
+using Rect = rect<glm::float32>;
+using URect = rect<glm::uint32>;
+using IRect = rect<glm::int32>;
 
 }
 

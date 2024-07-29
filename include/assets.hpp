@@ -1,7 +1,7 @@
-#pragma once
+#ifndef ASSETS_HPP
+#define ASSETS_HPP
 
-#ifndef TERRARIA_ASSETS_HPP
-#define TERRARIA_ASSETS_HPP
+#pragma once
 
 #include <LLGL/Sampler.h>
 #include <memory>
@@ -70,8 +70,8 @@ struct AssetTexture {
     std::string path;
     int sampler;
 
-    AssetTexture(std::string path, int sampler = TextureSampler::Nearest) :
-        path(path),
+    explicit AssetTexture(std::string path, int sampler = TextureSampler::Nearest) :
+        path(std::move(path)),
         sampler(sampler) {}
 };
 
@@ -79,7 +79,9 @@ struct ShaderDef {
     std::string name;
     std::string value;
     
-    ShaderDef(const std::string& name, const std::string& value) : name(name), value(value) {}
+    ShaderDef(std::string name, std::string value) :
+        name(std::move(name)),
+        value(std::move(value)) {}
 };
 
 constexpr uint32_t PARTICLES_ATLAS_COLUMNS = 100;

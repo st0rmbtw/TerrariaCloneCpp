@@ -22,6 +22,9 @@ static struct RendererState {
     LLGL::CommandQueue* command_queue = nullptr;
     std::shared_ptr<CustomSurface> surface = nullptr;
     LLGL::RenderingLimits limits;
+#if DEBUG
+    LLGL::RenderingDebugger* debugger = nullptr;
+#endif
     
     RenderBatchSprite sprite_batch;
     WorldRenderer world_renderer;
@@ -29,10 +32,11 @@ static struct RendererState {
 
 static constexpr uint32_t MAX_TEXTURES_COUNT = 32;
 
-const LLGL::RenderSystemPtr& Renderer::Context(void) { return state.context; }
-LLGL::SwapChain* Renderer::SwapChain(void) { return state.swap_chain; }
-LLGL::CommandBuffer* Renderer::CommandBuffer(void) { return state.command_buffer; }
-const std::shared_ptr<CustomSurface>& Renderer::Surface(void) { return state.surface; }
+const LLGL::RenderSystemPtr& Renderer::Context() { return state.context; }
+LLGL::SwapChain* Renderer::SwapChain() { return state.swap_chain; }
+LLGL::CommandBuffer* Renderer::CommandBuffer() { return state.command_buffer; }
+LLGL::CommandQueue* Renderer::CommandQueue() { return state.command_queue; }
+const std::shared_ptr<CustomSurface>& Renderer::Surface() { return state.surface; }
 
 bool Renderer::InitEngine() {
     LLGL::Report report;
@@ -53,10 +57,11 @@ bool Renderer::InitEngine() {
     rendererDesc.rendererConfig = configPtr;
     rendererDesc.rendererConfigSize = configSize;
 
-// #if DEBUG
-//     rendererDesc.flags      = LLGL::RenderSystemFlags::DebugDevice;
-//     rendererDesc.debugger   = new LLGL::RenderingDebugger();
-// #endif
+#if DEBUG
+    state.debugger = new LLGL::RenderingDebugger();
+    rendererDesc.flags    = LLGL::RenderSystemFlags::DebugDevice;
+    rendererDesc.debugger = state.debugger;
+#endif
 
     state.context = LLGL::RenderSystem::Load(rendererDesc, &report);
 
@@ -69,11 +74,11 @@ bool Renderer::InitEngine() {
 }
 
 bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution) {
-    LLGL::RenderSystemPtr& context = state.context;
+    const LLGL::RenderSystemPtr& context = state.context;
 
     LLGL::SwapChainDescriptor swapChainDesc;
     swapChainDesc.resolution = resolution;
-    swapChainDesc.fullscreen = FULLSCREEN ? true : false;
+    swapChainDesc.fullscreen = FULLSCREEN;
 
     state.surface = std::make_shared<CustomSurface>(window, resolution);
 
@@ -90,7 +95,7 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution) {
     LOG_INFO("Depth/Stencil Format: %s", LLGL::ToString(state.swap_chain->GetDepthStencilFormat()));
 
     LOG_INFO("Extensions:");
-    for (std::string extension : info.extensionNames) {
+    for (const std::string& extension : info.extensionNames) {
         LOG_INFO("  %s", extension.c_str());
     }
 
@@ -106,10 +111,8 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution) {
 }
 
 void Renderer::Begin(const Camera& camera) {
-    auto sprite_batch = state.sprite_batch;
-    const auto commands = Renderer::CommandBuffer();
-    const auto queue = state.command_queue;
-    const auto swap_chain = Renderer::SwapChain();
+    auto* const commands = Renderer::CommandBuffer();
+    auto* const swap_chain = Renderer::SwapChain();
 
     const glm::vec2 top_left = camera.position() + camera.get_projection_area().min;
     const glm::vec2 bottom_right = camera.position() + camera.get_projection_area().max;
@@ -141,9 +144,9 @@ void Renderer::RenderWorld(const World& world) {
 }
 
 void Renderer::Render() {
-    const auto commands = Renderer::CommandBuffer();
-    const auto queue = state.command_queue;
-    const auto swap_chain = Renderer::SwapChain();
+    auto* const commands = Renderer::CommandBuffer();
+    auto* const queue = state.command_queue;
+    auto* const swap_chain = Renderer::SwapChain();
 
     state.sprite_batch.render();
 
@@ -154,6 +157,15 @@ void Renderer::Render() {
 
     swap_chain->Present();
 }
+
+#if DEBUG
+void Renderer::PrintDebugInfo() {
+    LLGL::FrameProfile profile;
+    state.debugger->FlushProfile(&profile);
+
+    LOG_DEBUG("Draw commands count: %u", profile.commandBufferRecord.drawCommands);
+}
+#endif
 
 void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer) {
     glm::vec4 uv_offset_scale = glm::vec4(0.0, 0.0, 1.0, 1.0);
@@ -171,7 +183,7 @@ void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer) {
     state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.texture(), render_layer == RenderLayer::UI);
 }
 
-void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer) {
+void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer /* render_layer */) {
     const math::Rect& rect = sprite.atlas().rects()[sprite.index()];
 
     glm::vec4 uv_offset_scale = glm::vec4(
@@ -194,7 +206,7 @@ void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer ren
     state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), false);
 }
 
-void Renderer::Terminate(void) {
+void Renderer::Terminate() {
     state.command_queue->WaitIdle();
 
     Assets::DestroyShaders();
@@ -211,7 +223,7 @@ void Renderer::Terminate(void) {
     LLGL::RenderSystem::Unload(std::move(state.context));
 }
 
-void Renderer::FlushSpriteBatch(void) {
+void Renderer::FlushSpriteBatch() {
     state.sprite_batch.render();
     state.sprite_batch.clear_sprites();
 }
@@ -244,9 +256,9 @@ void RenderBatchSprite::init() {
 
 
 #ifdef BACKEND_OPENGL
-    constexpr uint32_t samplerBinding = 1;
-#else
     constexpr uint32_t samplerBinding = 2;
+#else
+    constexpr uint32_t samplerBinding = 3;
 #endif
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
@@ -256,10 +268,10 @@ void RenderBatchSprite::init() {
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::VertexStage,
-            0
+            LLGL::BindingSlot(1)
         ),
-        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 1),
-        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, samplerBinding),
+        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(2)),
+        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(samplerBinding)),
     };
 
     LLGL::PipelineLayout* pipelineLayout = state.context->CreatePipelineLayout(pipelineLayoutDesc);
@@ -267,6 +279,7 @@ void RenderBatchSprite::init() {
     const ShaderPipeline& sprite_shader = Assets::GetShader(ShaderAssetKey::SpriteShader);
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
+    pipelineLayoutDesc.debugName = "SpriteBatch Pipeline";
     pipelineDesc.vertexShader = sprite_shader.vs;
     pipelineDesc.fragmentShader = sprite_shader.ps;
     pipelineDesc.pipelineLayout = pipelineLayout;
@@ -311,20 +324,21 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
         .uv_offset_scale = uv_offset_scale,
         .color = sprite.color(),
         .texture = sprite_texture,
-        .index = m_sprite_index++,
+        .order = sprite.order(),
         .is_ui = is_ui
     });
 }
 
 void RenderBatchSprite::update_buffers() {
-    const auto commands = Renderer::CommandBuffer();
+    auto* const commands = Renderer::CommandBuffer();
 
-    ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
+    const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
     commands->UpdateBuffer(*m_vertex_buffer, 0, m_buffer, size);
 
-    SpriteUniforms uniforms;
-    uniforms.view_projection = m_camera_projection * m_camera_view;
-    uniforms.screen_projection = m_screen_projection;
+    SpriteUniforms uniforms = {
+        .view_projection = m_camera_projection * m_camera_view,
+        .screen_projection = m_screen_projection
+    };
 
     commands->UpdateBuffer(*m_constant_buffer, 0, &uniforms, sizeof(uniforms));
 }
@@ -337,11 +351,14 @@ void RenderBatchSprite::render() {
         sorted_sprites.begin(),
         sorted_sprites.end(),
         [](const SpriteData& a, const SpriteData& b) {
-            int a_id = a.texture.is_some() ? a.texture->id : -1;
-            int b_id = b.texture.is_some() ? b.texture->id : -1;
-
             if (!a.is_ui && b.is_ui) return true;
             if (a.is_ui && !b.is_ui) return false;
+
+            if (a.order < b.order) return true;
+            if (b.order < a.order) return false;
+
+            const int a_id = a.texture.is_some() ? a.texture->id : -1;
+            const int b_id = b.texture.is_some() ? b.texture->id : -1;
 
             if (a_id < b_id) return true;
             if (b_id < a_id) return false;
@@ -351,11 +368,11 @@ void RenderBatchSprite::render() {
     );
     
     tl::optional<Texture> prev_texture = sorted_sprites[0].texture;
-    size_t vertex_offset = m_sprite_count * 4;
+    int vertex_offset = m_sprite_count * 4;
 
     for (const SpriteData& sprite_data : sorted_sprites) {
-        int prev_texture_id = prev_texture.is_some() ? prev_texture->id : -1;
-        int curr_texture_id = sprite_data.texture.is_some() ? sprite_data.texture->id : -1;
+        const int prev_texture_id = prev_texture.is_some() ? prev_texture->id : -1;
+        const int curr_texture_id = sprite_data.texture.is_some() ? sprite_data.texture->id : -1;
 
         if (prev_texture_id >= 0 && prev_texture_id != curr_texture_id) {
             flush(prev_texture, vertex_offset);
@@ -413,8 +430,8 @@ void RenderBatchSprite::render() {
     flush(prev_texture, vertex_offset);
 }
 
-void RenderBatchSprite::flush(const tl::optional<Texture>& texture, size_t vertex_offset) {
-    const auto commands = Renderer::CommandBuffer();
+void RenderBatchSprite::flush(const tl::optional<Texture>& texture, int vertex_offset) {
+    auto* const commands = Renderer::CommandBuffer();
     
     const Texture& t = texture.is_some() ? texture.get() : Assets::GetTexture(AssetKey::TextureStub);
 
@@ -430,9 +447,8 @@ void RenderBatchSprite::flush(const tl::optional<Texture>& texture, size_t verte
     m_index_count = 0;
 }
 
-void RenderBatchSprite::begin(void) {
+void RenderBatchSprite::begin() {
     m_buffer_ptr = m_buffer;
-    m_sprite_index = 0;
     m_sprite_count = 0;
     clear_sprites();
 }

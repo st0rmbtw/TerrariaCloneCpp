@@ -1,7 +1,7 @@
-#pragma once
-
 #ifndef TERRARIA_RENDER_BATCH_HPP
 #define TERRARIA_RENDER_BATCH_HPP
+
+#pragma once
 
 #include <glm/glm.hpp>
 #include <vector>
@@ -31,7 +31,7 @@ struct SpriteData {
     glm::vec4 uv_offset_scale;
     glm::vec4 color;
     tl::optional<Texture> texture;
-    size_t index;
+    int order;
     bool is_ui;
 };
 
@@ -44,10 +44,10 @@ public:
     virtual void begin() = 0;
     virtual void terminate() = 0;
 
-    inline bool is_empty() { return m_sprites.empty(); }
-    inline bool is_full() { return m_index_count >= MAX_INDICES; }
+    [[nodiscard]] inline bool is_empty() const { return m_sprites.empty(); }
+    [[nodiscard]] inline bool is_full() const { return m_index_count >= MAX_INDICES; }
 
-    inline void clear_sprites(void) { m_sprites.clear(); }
+    inline void clear_sprites() { m_sprites.clear(); }
 
     inline void set_projection_matrix(const glm::mat4& projection_matrix) {
         m_camera_projection = projection_matrix;
@@ -77,7 +77,6 @@ protected:
     math::Rect m_camera_frustum;
     math::Rect m_ui_frustum;
     size_t m_index_count = 0;
-    size_t m_sprite_index = 0;
     size_t m_sprite_count = 0;
     LLGL::Buffer* m_vertex_buffer = nullptr;
     LLGL::Buffer* m_index_buffer = nullptr;
@@ -94,7 +93,7 @@ public:
     void begin() override;
     void terminate() override;
 private:
-    void flush(const tl::optional<Texture>& texture, size_t vertex_offset);
+    void flush(const tl::optional<Texture>& texture, int vertex_offset);
 private:
     SpriteVertex* m_buffer = nullptr;
     SpriteVertex* m_buffer_ptr = nullptr;
@@ -105,7 +104,7 @@ public:
     void draw_glyph(const glm::mat4& transform, const glm::vec3& color, /* const Texture& font_texture, */ const glm::vec2& uv, const glm::vec2& size, bool ui);
 
     void init() override;
-    void render();
+    void render() override;
     void begin() override;
     void terminate() override;
 private:

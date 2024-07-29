@@ -29,7 +29,7 @@ void spawn_particles_on_dig(const glm::vec2& position, BlockType type) {
         const glm::vec2 velocity = glm::normalize(glm::diskRand(1.0f)) * 1.25f;
         const float scale = glm::linearRand(0.3f, 1.0f);
 
-        ParticleManager::spawn_particle(
+        ParticleManager::SpawnParticle(
             ParticleBuilder::create(particle, position, velocity, 0.75)
                 .with_gravity(true)
                 .with_rotation_speed(rotation_speed)
@@ -70,17 +70,32 @@ void Player::init() {
     m_left_eye.set_walk_animation({ .offset = 6, .length = 14 });
     m_right_eye.set_walk_animation({ .offset = 6, .length = 14 });
 
-    m_hair.sprite.set_color(glm::vec4(0.55, 0.23, 0.14, 1.0));
-    m_head.sprite.set_color(glm::vec4(0.92, 0.45, 0.32, 1.0));
-    m_body.sprite.set_color(glm::vec4(0.58, 0.55, 0.47, 1.0));
-    m_legs.sprite.set_color(glm::vec4(190.0 / 255.0, 190.0 / 255.0, 156.0 / 255.0, 1.0));
-
-    m_left_hand.sprite.set_color(glm::vec4(0.92, 0.45, 0.32, 1.0));
-    m_left_shoulder.sprite.set_color(glm::vec4(0.58, 0.55, 0.47, 1.0));
-    m_right_arm.sprite.set_color(glm::vec4(0.92, 0.45, 0.32, 1.0));
-    m_right_eye.sprite.set_color(glm::vec4(89.0 / 255.0, 76.0 / 255.0, 64.0 / 255.0, 1.0));
-
-    m_legs.sprite.set_color(glm::vec4(190.0 / 255.0, 190.0 / 255.0, 156.0 / 255.0, 1.0));
+    m_head.sprite
+        .set_color(glm::vec4(0.92, 0.45, 0.32, 1.0))
+        .set_order(0);
+    m_right_arm.sprite
+        .set_color(glm::vec4(0.92, 0.45, 0.32, 1.0))
+        .set_order(1);
+    m_right_eye.sprite
+        .set_color(glm::vec4(89.0 / 255.0, 76.0 / 255.0, 64.0 / 255.0, 1.0))
+        .set_order(1);
+    m_left_eye.sprite
+        .set_order(1);
+    m_hair.sprite
+        .set_color(glm::vec4(0.55, 0.23, 0.14, 1.0))
+        .set_order(2);
+    m_body.sprite
+        .set_color(glm::vec4(0.58, 0.55, 0.47, 1.0))
+        .set_order(2);
+    m_legs.sprite
+        .set_color(glm::vec4(190.0 / 255.0, 190.0 / 255.0, 156.0 / 255.0, 1.0))
+        .set_order(3);
+    m_left_hand.sprite
+        .set_color(glm::vec4(0.92, 0.45, 0.32, 1.0))
+        .set_order(3);
+    m_left_shoulder.sprite
+        .set_color(glm::vec4(0.58, 0.55, 0.47, 1.0))
+        .set_order(3);
 }
 
 void Player::set_position(const World& world, const glm::vec2& position) {
@@ -137,7 +152,7 @@ void Player::vertical_movement(bool handle_input) {
     do_jump = false;
 }
 
-void Player::gravity(void) {
+void Player::gravity() {
     if (!m_collisions.down && m_velocity.y > 0 && m_fall_start < 0) {
         m_fall_start = m_position.y;
     }
@@ -148,8 +163,8 @@ void Player::gravity(void) {
 
 glm::vec2 Player::check_collisions(const World& world) {
     glm::vec2 result = m_velocity;
-    glm::vec2 pos = m_position;
-    glm::vec2 next_pos = m_position + m_velocity;
+    const glm::vec2 pos = m_position;
+    const glm::vec2 next_pos = m_position + m_velocity;
 
     int left = static_cast<int>((m_position.x - PLAYER_WIDTH_HALF) / TILE_SIZE) - 1;
     int right = static_cast<int>((m_position.x + PLAYER_WIDTH_HALF) / TILE_SIZE) + 2;
@@ -216,14 +231,14 @@ glm::vec2 Player::check_collisions(const World& world) {
     return result;
 }
 
-void Player::update_walk_anim_timer(void) {
+void Player::update_walk_anim_timer() {
     if (m_velocity.x != 0.0) {
         const long long time = glm::abs(100.0 / glm::abs(m_velocity.x));
         m_walk_anim_timer.set_duration(Timer::Duration(glm::max(time, 1LL)));
     }
 }
 
-void Player::update_using_item_anim(void) {
+void Player::update_using_item_anim() {
     m_using_item_visible = false;
     
     if (!m_swing_anim) return;
@@ -254,7 +269,7 @@ void Player::update_using_item_anim(void) {
     m_using_item.set_position(item_position);
     m_using_item.set_rotation(Quat::from_rotation_z(rotation * direction * ITEM_ROTATION + direction * 0.5f));
     m_using_item.set_anchor(m_direction == Direction::Left ? Anchor::BottomRight : Anchor::BottomLeft);
-    m_using_item.set_flip_x(m_direction == Direction::Left ? true : false);
+    m_using_item.set_flip_x(m_direction == Direction::Left);
     
     m_using_item_visible = true;
 }
@@ -301,7 +316,7 @@ void Player::update_sprites_index(const delta_time_t& delta_time) {
     }
 }
 
-void Player::update_movement_state(void) {
+void Player::update_movement_state() {
     if (m_velocity.y != 0) {
         m_movement_state = MovementState::Flying;
     } else if (m_velocity.x != 0) {
@@ -317,9 +332,9 @@ void Player::pre_update() {
     }
 }
 
-void Player::spawn_particles_on_walk(void) const {
+void Player::spawn_particles_on_walk() const {
     if (m_stand_on_block.is_none()) return;
-    BlockType block = m_stand_on_block.value();
+    const BlockType block = m_stand_on_block.value();
 
     if (!block_dusty(block)) return;
     if (m_movement_state != MovementState::Walking) return;
@@ -332,16 +347,16 @@ void Player::spawn_particles_on_walk(void) const {
     const float scale = rand_range(0.0f, 1.0f);
     const float rotation_speed = glm::pi<float>() / 12.0f;
 
-    ParticleManager::spawn_particle(
+    ParticleManager::SpawnParticle(
         ParticleBuilder::create(Particle::get_by_block(block), position, velocity, 0.3f)
             .with_scale(scale)
             .with_rotation_speed(rotation_speed)
     );
 }
 
-void Player::spawn_particles_grounded(void) const {
+void Player::spawn_particles_grounded() const {
     if (m_stand_on_block.is_none()) return;
-    BlockType block = m_stand_on_block.value();
+    const BlockType block = m_stand_on_block.value();
 
     if (!block_dusty(block)) return;
 
@@ -357,7 +372,7 @@ void Player::spawn_particles_grounded(void) const {
             const glm::vec2 point = random_point_circle(1.0f, 0.5f) * PLAYER_WIDTH_HALF;
             const glm::vec2 velocity = glm::vec2(glm::normalize(point).x, -0.5f);
 
-            ParticleManager::spawn_particle(
+            ParticleManager::SpawnParticle(
                 ParticleBuilder::create(particle, position, velocity, 0.3f)
                     .with_scale(scale)
                     .with_rotation_speed(rotation_speed)
@@ -418,12 +433,12 @@ void Player::keep_in_world_bounds(const World& world) {
     if (m_position.y + PLAYER_HEIGHT_HALF > world_max_y) m_position.y = world_max_y - PLAYER_HEIGHT_HALF;
 }
 
-float Player::get_fall_distance(void) const {
+float Player::get_fall_distance() const {
     if (m_fall_start < 0) return 0;
     return m_position.y + PLAYER_HEIGHT_HALF - m_fall_start;
 }
 
-void Player::update_sprites(void) {
+void Player::update_sprites() {
     m_hair.sprite
         .set_flip_x(m_direction == Direction::Left)
         .set_position(m_position);
@@ -453,7 +468,7 @@ void Player::update_sprites(void) {
         .set_position(m_position);
 }
 
-void Player::render(void) const {
+void Player::render() const {
     Renderer::DrawAtlasSprite(m_head.sprite, RenderLayer::World);
 
     Renderer::DrawAtlasSprite(m_right_arm.sprite, RenderLayer::World);

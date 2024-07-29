@@ -1,7 +1,7 @@
-#pragma once
+#ifndef WORLD_WORLD_GEN_H
+#define WORLD_WORLD_GEN_H
 
-#ifndef WORLD_GEN_H
-#define WORLD_GEN_H
+#pragma once
 
 #include <stdint.h>
 #include <vector>
@@ -145,7 +145,7 @@ static bool remove_walls_is_valid(WorldData& world, TilePos pos) {
 
 static void remove_walls_flood_fill(WorldData& world, TilePos start) {
     std::vector<std::pair<TilePos, glm::ivec2>> queue;
-    queue.push_back({start, glm::ivec2(0)});
+    queue.emplace_back(start, glm::ivec2(0));
 
     remove_wall(world, start);
 
@@ -163,7 +163,7 @@ static void remove_walls_flood_fill(WorldData& world, TilePos start) {
             const glm::ivec2 new_depth = depth + glm::ivec2(1, 0);
             if (remove_walls_is_valid(world, new_pos)) {
                 remove_wall(world, new_pos);
-                queue.push_back({new_pos, new_depth});
+                queue.emplace_back(new_pos, new_depth);
             }
         }
         {
@@ -171,7 +171,7 @@ static void remove_walls_flood_fill(WorldData& world, TilePos start) {
             const glm::ivec2 new_depth = depth + glm::ivec2(-1, 0);
             if (remove_walls_is_valid(world, new_pos)) {
                 remove_wall(world, new_pos);
-                queue.push_back({new_pos, new_depth});
+                queue.emplace_back(new_pos, new_depth);
             }
         }
         {
@@ -179,7 +179,7 @@ static void remove_walls_flood_fill(WorldData& world, TilePos start) {
             const glm::ivec2 new_depth = depth + glm::ivec2(0, -1);
             if (remove_walls_is_valid(world, new_pos)) {
                 remove_wall(world, new_pos);
-                queue.push_back({new_pos, new_depth});
+                queue.emplace_back(new_pos, new_depth);
             }
         }
         {
@@ -187,7 +187,7 @@ static void remove_walls_flood_fill(WorldData& world, TilePos start) {
             const glm::ivec2 new_depth = depth + glm::ivec2(0, 1);
             if (remove_walls_is_valid(world, new_pos)) {
                 remove_wall(world, new_pos);
-                queue.push_back({new_pos, new_depth});
+                queue.emplace_back(new_pos, new_depth);
             }
         }
         {
@@ -195,7 +195,7 @@ static void remove_walls_flood_fill(WorldData& world, TilePos start) {
             const glm::ivec2 new_depth = depth + glm::ivec2(-1, -1);
             if (remove_walls_is_valid(world, new_pos)) {
                 remove_wall(world, new_pos);
-                queue.push_back({new_pos, new_depth});
+                queue.emplace_back(new_pos, new_depth);
             }
         }
         {
@@ -203,7 +203,7 @@ static void remove_walls_flood_fill(WorldData& world, TilePos start) {
             const glm::ivec2 new_depth = depth + glm::ivec2(1, -1);
             if (remove_walls_is_valid(world, new_pos)) {
                 remove_wall(world, new_pos);
-                queue.push_back({new_pos, new_depth});
+                queue.emplace_back(new_pos, new_depth);
             }
         }
         {
@@ -211,7 +211,7 @@ static void remove_walls_flood_fill(WorldData& world, TilePos start) {
             const glm::ivec2 new_depth = depth + glm::ivec2(-1, 1);
             if (remove_walls_is_valid(world, new_pos)) {
                 remove_wall(world, new_pos);
-                queue.push_back({new_pos, new_depth});
+                queue.emplace_back(new_pos, new_depth);
             }
         }
         {
@@ -219,7 +219,7 @@ static void remove_walls_flood_fill(WorldData& world, TilePos start) {
             const glm::ivec2 new_depth = depth + glm::ivec2(1, 1);
             if (remove_walls_is_valid(world, new_pos)) {
                 remove_wall(world, new_pos);
-                queue.push_back({new_pos, new_depth});
+                queue.emplace_back(new_pos, new_depth);
             }
         }
     }
@@ -288,7 +288,6 @@ static void world_make_hills(WorldData& world) {
 static void world_small_caves(WorldData& world, int seed) {
     const int underground = world.layers.underground;
     const int dirt_level = world.layers.underground - world.layers.dirt_height - DIRT_HILL_HEIGHT;
-    const int height = world.playable_area.height() - dirt_level;
 
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
@@ -303,7 +302,7 @@ static void world_small_caves(WorldData& world, int seed) {
     
     for (int y = dirt_level; y < max_y; ++y) {
         for (int x = min_x; x < max_x; ++x) {
-            float noise_value = noise.GetNoise(static_cast<float>(x), static_cast<float>(y));
+            const float noise_value = noise.GetNoise(static_cast<float>(x), static_cast<float>(y));
 
             if (noise_value < -0.5) {
                 remove_block(world, {x, y});
@@ -321,7 +320,7 @@ static void world_small_caves(WorldData& world, int seed) {
 
     for (int y = underground; y < max_y; ++y) {
         for (int x = min_x; x < max_x; ++x) {
-            float noise_value = noise.GetNoise(static_cast<float>(x), static_cast<float>(y));
+            const float noise_value = noise.GetNoise(static_cast<float>(x), static_cast<float>(y));
 
             if (noise_value < -0.5) {
                 remove_block(world, {x, y});
@@ -332,7 +331,6 @@ static void world_small_caves(WorldData& world, int seed) {
 
 static void world_big_caves(WorldData& world, int seed) {
     const int dirt_level = world.layers.underground - world.layers.dirt_height - DIRT_HILL_HEIGHT;
-    const int height = world.playable_area.height() - dirt_level;
 
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
@@ -349,7 +347,7 @@ static void world_big_caves(WorldData& world, int seed) {
     
     for (int y = dirt_level; y < max_y; ++y) {
         for (int x = min_x; x < max_x; ++x) {
-            float noise_value = noise.GetNoise(static_cast<float>(x), static_cast<float>(y));
+            const float noise_value = noise.GetNoise(static_cast<float>(x), static_cast<float>(y));
 
             if (noise_value < -0.4) {
                 remove_block(world, {x, y});
@@ -401,16 +399,15 @@ static void world_generate_rocks_in_dirt(WorldData& world, int seed) {
     noise.SetFractalGain(0.4);
     noise.SetFractalLacunarity(2.);
 
-    const int world_width = world.playable_area.width();
     const int min_x = world.playable_area.min.x;
     const int max_x = world.playable_area.max.x;
 
     for (int y = dirt_level; y < underground_level; ++y) {
         for (int x = min_x; x < max_x; ++x) {
-            float noise_value = noise.GetNoise(static_cast<float>(x), static_cast<float>(y));
+            const float noise_value = noise.GetNoise(static_cast<float>(x), static_cast<float>(y));
 
             if (noise_value >= 0.4) {
-                TilePos pos = TilePos(x, y);
+                auto pos = TilePos(x, y);
                 const tl::optional<BlockType> block = world.get_block_type(pos);
                 if (block.is_none()) continue;
 
@@ -465,7 +462,7 @@ static glm::ivec2 world_get_spawn_point(const WorldData &world) {
     const int x = world.playable_area.min.x + world.playable_area.width() / 2;
     const int y = get_surface_block(world, x);
 
-    return glm::ivec2(x, y);
+    return {x, y};
 }
 
 static void world_update_tile_sprite_index(WorldData& world) {

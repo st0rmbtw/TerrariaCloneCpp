@@ -5,7 +5,7 @@ CustomSurface::CustomSurface(GLFWwindow * const window, const LLGL::Extent2D& si
     m_size(size),
     m_wnd(window) {}
 
-CustomSurface::CustomSurface(CustomSurface&& other) :
+CustomSurface::CustomSurface(CustomSurface&& other) noexcept :
     m_size(other.m_size),
     m_wnd(other.m_wnd)
 {
@@ -23,7 +23,7 @@ void CustomSurface::ResetPixelFormat() {
 }
 
 bool CustomSurface::GetNativeHandle(void* nativeHandle, std::size_t nativeHandleSize) {
-    auto handle = reinterpret_cast<LLGL::NativeHandle*>(nativeHandle);
+    auto* handle = reinterpret_cast<LLGL::NativeHandle*>(nativeHandle);
 #if defined(_WIN32)
     handle->window = glfwGetWin32Window(m_wnd);
 #elif defined(__MACH__)

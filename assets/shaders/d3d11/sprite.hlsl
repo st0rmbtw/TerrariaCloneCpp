@@ -1,4 +1,4 @@
-cbuffer UniformBuffer : register( b0 )
+cbuffer UniformBuffer : register( b1 )
 {
     float4x4 u_view_projection;
     float4x4 u_screen_projection;
@@ -37,8 +37,8 @@ OutputVS VS(InputVS inp)
 	return outp;
 }
 
-Texture2D Texture : register(t1);
-SamplerState Sampler : register(s2);
+Texture2D Texture : register(t2);
+SamplerState Sampler : register(s3);
 
 float4 PS(OutputVS inp) : SV_Target
 {

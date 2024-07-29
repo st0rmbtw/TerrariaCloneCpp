@@ -1,7 +1,7 @@
-#pragma once
-
 #ifndef TERRARIA_LOG_HPP
 #define TERRARIA_LOG_HPP
+
+#pragma once
 
 #if DEBUG
 #define __LOG(level, text, ...) printf("[" level "]" " " text "\n", __VA_ARGS__)

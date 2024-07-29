@@ -1,7 +1,7 @@
-#pragma once
-
 #ifndef TERRARIA_UTILS_HPP
 #define TERRARIA_UTILS_HPP
+
+#pragma once
 
 #include <stdlib.h>
 #include <GLFW/glfw3.h>
@@ -9,8 +9,8 @@
 #include <glm/glm.hpp>
 #include <list>
 
-inline const char* glfwGetErrorString(void) {
-    const char* description;
+inline const char* glfwGetErrorString() {
+    const char* description = nullptr;
     glfwGetError(&description);
     return description;
 }
@@ -22,13 +22,13 @@ inline int rand_range(int from, int to) {
 }
 
 inline float rand_range(float from, float to) {
-    float scale = rand() / (float) RAND_MAX;
+    const float scale = rand() / (float) RAND_MAX;
     return from + scale * (to - from); 
 }
 
 template <class T>
 static const T& list_at(const std::list<T>& list, int index) {
-    typename std::list<T>::const_iterator it = list.begin();
+    auto it = list.begin();
     for (int i = 0; i < index; i++){
         ++it;
     }

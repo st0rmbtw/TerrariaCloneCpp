@@ -1,7 +1,7 @@
-#pragma once
-
 #ifndef TERRARIA_TYPES_SHADER_PIPELINE
 #define TERRARIA_TYPES_SHADER_PIPELINE
+
+#pragma once
 
 #include <LLGL/LLGL.h>
 
@@ -13,7 +13,7 @@ struct ShaderPipeline {
     LLGL::Shader* ps = nullptr; // Pixel shader (aka. fragment shader)
     LLGL::Shader* cs = nullptr; // Compute shader
     
-    void Unload(const LLGL::RenderSystemPtr& context) {
+    void Unload(const LLGL::RenderSystemPtr& context) const {
         if (vs != nullptr) context->Release(*vs);
         if (hs != nullptr) context->Release(*hs);
         if (ds != nullptr) context->Release(*ds);

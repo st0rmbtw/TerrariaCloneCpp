@@ -1,7 +1,7 @@
-#pragma once
+#ifndef COMMON_H
+#define COMMON_H
 
-#ifndef TERRARIA_COMMON_H
-#define TERRARIA_COMMON_H
+#pragma once
 
 #include <chrono>
 

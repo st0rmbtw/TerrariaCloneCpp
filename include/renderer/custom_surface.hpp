@@ -1,7 +1,7 @@
-#pragma once
-
 #ifndef TERRARIA_CUSTOM_SURFACE_HPP
 #define TERRARIA_CUSTOM_SURFACE_HPP
+
+#pragma once
 
 #if defined(_WIN32)
     #define GLFW_EXPOSE_NATIVE_WIN32
@@ -21,15 +21,16 @@
 
 class CustomSurface : public LLGL::Surface {
 public:
-    CustomSurface(GLFWwindow * const window, const LLGL::Extent2D& size);
-    CustomSurface(CustomSurface&& other);
-    ~CustomSurface();
+    CustomSurface(GLFWwindow* window, const LLGL::Extent2D& size);
+    CustomSurface(CustomSurface&& other) noexcept;
+    ~CustomSurface() override;
 
     bool GetNativeHandle(void* nativeHandle, std::size_t nativeHandleSize) override;
-    LLGL::Extent2D GetContentSize() const override;
     bool AdaptForVideoMode(LLGL::Extent2D* resolution, bool* fullscreen) override;
     void ResetPixelFormat() override;
-    LLGL::Display* FindResidentDisplay() const override;
+
+    [[nodiscard]] LLGL::Extent2D GetContentSize() const override;
+    [[nodiscard]] LLGL::Display* FindResidentDisplay() const override;
 
     bool ProcessEvents();
 private:

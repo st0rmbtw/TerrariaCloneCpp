@@ -1,10 +1,9 @@
+#ifndef WORLD_PARTICLES_HPP
+#define WORLD_PARTICLES_HPP
+
 #pragma once
 
-#ifndef PARTICLES_HPP
-#define PARTICLES_HPP
-
-#include <stdint.h>
-#include <glm/glm.hpp>
+#include <cstdint>
 #include <unordered_map>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -51,17 +50,19 @@ struct ParticleData {
 
 class ParticleBuilder {
 private:
-    ParticleBuilder() {}
+    explicit ParticleBuilder(Particle::Type type) :
+        position{},
+        velocity{},
+        type(type) {}
 public:
     static ParticleBuilder create(Particle::Type type, glm::vec2 position, glm::vec2 velocity, float lifetime) {
-        ParticleBuilder builder;
+        ParticleBuilder builder(type);
         builder.position = position;
         builder.velocity = velocity;
         builder.scale = 1.0f;
         builder.lifetime = lifetime;
         builder.rotation_speed = 0.0f;
         builder.gravity = false;
-        builder.type = type;
         builder.variant = static_cast<uint8_t>(rand() % 3);
 
         return builder;
@@ -71,7 +72,8 @@ public:
     ParticleBuilder& with_rotation_speed(float speed) { this->rotation_speed = speed; return *this; }
     ParticleBuilder& with_scale(float scale) { this->scale = scale; return *this; }
 
-    ParticleData build(void) const {
+    [[nodiscard]] 
+    ParticleData build() const {
         return ParticleData {
             .position       = this->position,
             .velocity       = this->velocity,
@@ -90,37 +92,21 @@ public:
 private:
     glm::vec2 position;
     glm::vec2 velocity;
-    float scale;
-    float lifetime;
-    float rotation_speed;
-    bool gravity;
+    float scale = 1.0f;
+    float lifetime = 0.0f;
+    float rotation_speed = 0.0f;
+    bool gravity = false;
+    uint8_t variant = 0;
     Particle::Type type;
-    uint8_t variant;
 };
 
-class ParticleManager {
-    ParticleManager() = delete;
-    ParticleManager(ParticleManager&) = delete;
-    ParticleManager(ParticleManager&&) = delete;
-    ParticleManager& operator=(ParticleManager &) = delete;
-    ParticleManager& operator=(ParticleManager &&) = delete;
+namespace ParticleManager {
+    void Init();
 
-public:
-    static void init() {
-        particles.reserve(MAX_PARTICLES_COUNT);
-    }
+    void Render();
+    void Update();
 
-    static void render(void);
-    static void fixed_update(void);
-
-    static void spawn_particle(const ParticleBuilder& builder) {
-        particles[particles_index] = builder.build();
-        particles_index = ++particles_index % MAX_PARTICLES_COUNT;
-    }
-
-private:
-    static std::unordered_map<size_t, ParticleData> particles;
-    static size_t particles_index;
+    void SpawnParticle(const ParticleBuilder& builder);
 };
 
 #endif

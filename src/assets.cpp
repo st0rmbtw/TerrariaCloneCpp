@@ -83,10 +83,10 @@ static struct AssetsState {
     std::unordered_map<ShaderAssetKey, ShaderPipeline> shaders;
     std::vector<LLGL::Sampler*> samplers;
     // std::unordered_map<FontKey, Font> fonts;
-    uint32_t texture_index;
+    uint32_t texture_index = 0;
 } state;
 
-Texture create_texture(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler, uint8_t* data);
+Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data);
 Texture create_texture_array_empty(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler);
 inline LLGL::Shader* load_shader(LLGL::ShaderType shader_type, const std::string& name, const LLGL::VertexFormat* vertex_format, const std::vector<ShaderDef>& shader_defs);
 
@@ -96,8 +96,8 @@ bool Assets::Load() {
     using Constants::MAX_WALL_TEXTURE_WIDTH;
     using Constants::MAX_WALL_TEXTURE_HEIGHT;
 
-    uint8_t data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
-    state.textures[AssetKey::TextureStub] = create_texture(1, 1, 1, 4, TextureSampler::Nearest, data);
+    const uint8_t data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
+    state.textures[AssetKey::TextureStub] = create_texture(1, 1, 4, TextureSampler::Nearest, data);
 
     for (auto& asset : TEXTURE_ASSETS) {
         int width, height, components;
@@ -108,7 +108,7 @@ bool Assets::Load() {
             return false;   
         }
 
-        state.textures[asset.first] = create_texture(width, height, 1, components, asset.second.sampler, data);
+        state.textures[asset.first] = create_texture(width, height, components, asset.second.sampler, data);
 
         stbi_image_free(data);
     }
@@ -126,7 +126,7 @@ bool Assets::Load() {
             return false;   
         }
 
-        state.items[asset.first] = create_texture(width, height, 1, components, TextureSampler::Nearest, data);
+        state.items[asset.first] = create_texture(width, height, components, TextureSampler::Nearest, data);
 
         stbi_image_free(data);
     }
@@ -141,8 +141,8 @@ bool Assets::Load() {
         wall_tex_count = glm::max(wall_tex_count, asset.first);
     }
     
-    Texture tiles = create_texture_array_empty(MAX_TILE_TEXTURE_WIDTH, MAX_TILE_TEXTURE_HEIGHT, block_tex_count + 1, 4, TextureSampler::Nearest);
-    Texture walls = create_texture_array_empty(MAX_WALL_TEXTURE_WIDTH, MAX_WALL_TEXTURE_HEIGHT, wall_tex_count + 1, 4, TextureSampler::Nearest);
+    const Texture tiles = create_texture_array_empty(MAX_TILE_TEXTURE_WIDTH, MAX_TILE_TEXTURE_HEIGHT, block_tex_count + 1, 4, TextureSampler::Nearest);
+    const Texture walls = create_texture_array_empty(MAX_WALL_TEXTURE_WIDTH, MAX_WALL_TEXTURE_HEIGHT, wall_tex_count + 1, 4, TextureSampler::Nearest);
 
     for (const auto& asset : BLOCK_ASSETS) {
         int width, height, components;
@@ -152,7 +152,7 @@ bool Assets::Load() {
         image_view.format = (components == 4 ? LLGL::ImageFormat::RGBA : LLGL::ImageFormat::RGB);
         image_view.dataType = LLGL::DataType::UInt8;
         image_view.data = data;
-        image_view.dataSize = static_cast<std::size_t>(width*height*components);
+        image_view.dataSize = width * height * components;
 
         Renderer::Context()->WriteTexture(
             *tiles.texture,
@@ -171,7 +171,7 @@ bool Assets::Load() {
         image_view.format = (components == 4 ? LLGL::ImageFormat::RGBA : LLGL::ImageFormat::RGB);
         image_view.dataType = LLGL::DataType::UInt8;
         image_view.data = data;
-        image_view.dataSize = static_cast<std::size_t>(width*height*components);
+        image_view.dataSize = width * height * components;
 
         Renderer::Context()->WriteTexture(
             *walls.texture,
@@ -190,17 +190,17 @@ bool Assets::Load() {
 
 bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
     ShaderPipeline sprite_shader;
-    if ((sprite_shader.vs = load_shader(LLGL::ShaderType::Vertex, "sprite", &SpriteVertexFormat(), shader_defs)) == nullptr)
+    if (!(sprite_shader.vs = load_shader(LLGL::ShaderType::Vertex, "sprite", &SpriteVertexFormat(), shader_defs)))
         return false;
-    if ((sprite_shader.ps = load_shader(LLGL::ShaderType::Fragment, "sprite", nullptr, shader_defs)) == nullptr)
+    if (!(sprite_shader.ps = load_shader(LLGL::ShaderType::Fragment, "sprite", nullptr, shader_defs)))
         return false;
 
     ShaderPipeline tilemap_shader;
-    if ((tilemap_shader.vs = load_shader(LLGL::ShaderType::Vertex, "tilemap", &TilemapVertexFormat(), shader_defs)) == nullptr)
+    if (!(tilemap_shader.vs = load_shader(LLGL::ShaderType::Vertex, "tilemap", &TilemapVertexFormat(), shader_defs)))
         return false;
-    if ((tilemap_shader.ps = load_shader(LLGL::ShaderType::Fragment, "tilemap", nullptr, shader_defs)) == nullptr)
+    if (!(tilemap_shader.ps = load_shader(LLGL::ShaderType::Fragment, "tilemap", nullptr, shader_defs)))
         return false;
-    if ((tilemap_shader.gs = load_shader(LLGL::ShaderType::Geometry, "tilemap", &TilemapVertexFormat(), shader_defs)) == nullptr)
+    if (!(tilemap_shader.gs = load_shader(LLGL::ShaderType::Geometry, "tilemap", &TilemapVertexFormat(), shader_defs)))
         return false;
 
     state.shaders[ShaderAssetKey::SpriteShader] = sprite_shader;
@@ -287,7 +287,7 @@ LLGL::Sampler& Assets::GetSampler(size_t index) {
     return *state.samplers[index];
 }
 
-Texture create_texture(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler, uint8_t* data) {
+Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data) {
     LLGL::TextureDescriptor texture_desc;
     texture_desc.extent = LLGL::Extent3D(width, height, 1);
     texture_desc.bindFlags = LLGL::BindFlags::Sampled;
@@ -298,7 +298,7 @@ Texture create_texture(uint32_t width, uint32_t height, uint32_t layers, uint32_
     image_view.format = (components == 4 ? LLGL::ImageFormat::RGBA : LLGL::ImageFormat::RGB);
     image_view.dataType = LLGL::DataType::UInt8;
     image_view.data = data;
-    image_view.dataSize = static_cast<std::size_t>(width*height*components);
+    image_view.dataSize = width * height *components;
 
     Texture texture;
     texture.id = state.texture_index++;
@@ -350,13 +350,13 @@ LLGL::Shader* load_shader(
 #endif
 
 #if defined(BACKEND_OPENGL)
-    std::string path = "assets/shaders/opengl/" + name + extension;
+    const std::string path = "assets/shaders/opengl/" + name + extension;
 #elif defined(BACKEND_D3D11)
-    std::string path = "assets/shaders/d3d11/" + name + extension;
+    const std::string path = "assets/shaders/d3d11/" + name + extension;
 #elif defined(BACKEND_METAL)
-    std::string path = "assets/shaders/metal/" + name + extension;
+    const std::string path = "assets/shaders/metal/" + name + extension;
 #elif defined(BACKEND_VULKAN)
-    std::string path = "assets/shaders/vulkan/" + name + extension;
+    const std::string path = "assets/shaders/vulkan/" + name + extension;
 #endif
 
     if (!FileExists(path.c_str())) {
@@ -372,7 +372,7 @@ LLGL::Shader* load_shader(
 
     std::string shader_source = shader_source_str.str();
 
-    for (ShaderDef shader_def : shader_defs) {
+    for (const ShaderDef shader_def : shader_defs) {
         size_t pos;
         while ((pos = shader_source.find(shader_def.name)) != std::string::npos) {
             shader_source.replace(pos, shader_def.name.length(), shader_def.value);
@@ -390,7 +390,7 @@ LLGL::Shader* load_shader(
     }
 
 #if defined(BACKEND_VULKAN)
-    std::string output_path = path + ".spv";
+    const std::string output_path = path + ".spv";
     if (!FileExists(output_path.c_str())) {
         if (!CompileVulkanShader(shader_type, shader_source.c_str(), shader_source.length(), output_path.c_str())) {
             return nullptr;
@@ -459,9 +459,9 @@ LLGL::Shader* load_shader(
             if (report->HasErrors()) {
                 LOG_ERROR("Failed to create a shader. File: %s\nError: %s", path.c_str(), report->GetText());
                 return nullptr;
-            } else {
-                LOG_INFO("%s", report->GetText());
             }
+            
+            LOG_INFO("%s", report->GetText());
         }
     }
 

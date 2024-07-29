@@ -1,7 +1,7 @@
-#pragma once
-
 #ifndef TERRARIA_RENDERER_HPP
 #define TERRARIA_RENDERER_HPP
+
+#pragma once
 
 #include <LLGL/LLGL.h>
 #include "renderer/custom_surface.hpp"
@@ -26,14 +26,19 @@ namespace Renderer {
 
     void DrawSprite(const Sprite& sprite, RenderLayer render_layer = RenderLayer::Main);
     void DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer = RenderLayer::Main);
-    void FlushSpriteBatch(void);
+    void FlushSpriteBatch();
 
-    void Terminate(void);
+#if DEBUG
+    void PrintDebugInfo();
+#endif
 
-    const LLGL::RenderSystemPtr& Context(void);
-    LLGL::SwapChain* SwapChain(void);
-    LLGL::CommandBuffer* CommandBuffer(void);
-    const std::shared_ptr<CustomSurface>& Surface(void);
+    void Terminate();
+
+    const LLGL::RenderSystemPtr& Context();
+    LLGL::SwapChain* SwapChain();
+    LLGL::CommandBuffer* CommandBuffer();
+    LLGL::CommandQueue* CommandQueue();
+    const std::shared_ptr<CustomSurface>& Surface();
 };
 
 #endif

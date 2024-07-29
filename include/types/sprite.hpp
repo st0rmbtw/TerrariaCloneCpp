@@ -1,7 +1,7 @@
-#pragma once
-
 #ifndef TERRARIA_SPRITE_HPP
 #define TERRARIA_SPRITE_HPP
+
+#pragma once
 
 #include <LLGL/LLGL.h>
 #include <glm/glm.hpp>
@@ -10,15 +10,15 @@
 #include "types/anchor.hpp"
 #include "types/texture.hpp"
 #include "types/texture_atlas.hpp"
-#include "optional.hpp"
 #include "math/rect.hpp"
 #include "optional.hpp"
 
 class BaseSprite {
 public:
-    BaseSprite() {}
+    BaseSprite() = default;
+    ~BaseSprite() = default;
 
-    BaseSprite(glm::vec2 position) : m_position(position) {}
+    explicit BaseSprite(glm::vec2 position) : m_position(position) {}
 
     BaseSprite(glm::vec2 position, glm::vec2 scale, glm::vec4 color, Anchor anchor) : 
         m_position(position),
@@ -41,35 +41,38 @@ public:
     BaseSprite& set_anchor(Anchor anchor) { m_anchor = anchor; return *this; }
     BaseSprite& set_flip_x(bool flip_x) { m_flip_x = flip_x; return *this; }
     BaseSprite& set_flip_y(bool flip_y) { m_flip_y = flip_y; return *this; }
+    BaseSprite& set_order(int order) { m_order = order; return *this; }
 
-    const glm::vec2& position(void) const { return m_position; }
-    const glm::quat& rotation(void) const { return m_rotation; }
-    const glm::vec2& scale(void) const { return m_scale; }
-    const glm::vec4& color(void) const { return m_color; }
-    const glm::vec4& outline_color(void) const { return m_outline_color; }
-    const float outline_thickness(void) const { return m_outline_thickness; }
+    [[nodiscard]] const glm::vec2& position() const { return m_position; }
+    [[nodiscard]] const glm::quat& rotation() const { return m_rotation; }
+    [[nodiscard]] const glm::vec2& scale() const { return m_scale; }
+    [[nodiscard]] const glm::vec4& color() const { return m_color; }
+    [[nodiscard]] const glm::vec4& outline_color() const { return m_outline_color; }
+    [[nodiscard]] float outline_thickness() const { return m_outline_thickness; }
 
-    Anchor anchor(void) const { return m_anchor; }
-    bool flip_x(void) const { return m_flip_x; }
-    bool flip_y(void) const { return m_flip_y; }
+    [[nodiscard]] Anchor anchor() const { return m_anchor; }
+    [[nodiscard]] bool flip_x() const { return m_flip_x; }
+    [[nodiscard]] bool flip_y() const { return m_flip_y; }
 
-    const math::Rect& aabb(void) const { return m_aabb; }
+    [[nodiscard]] const math::Rect& aabb() const { return m_aabb; }
+    [[nodiscard]] int order() const { return m_order; }
 
-    virtual glm::vec2 size(void) const = 0;
+    [[nodiscard]] virtual glm::vec2 size() const = 0;
 
 protected:
-    void calculate_aabb(void) {
+    void calculate_aabb() {
         m_aabb = math::Rect::from_top_left(m_position - anchor_to_vec2(m_anchor) * size(), size());
     }
 
-protected:
+private:
+    math::Rect m_aabb;
+    glm::quat m_rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
     glm::vec2 m_position = glm::vec2(0.0f);
     glm::vec2 m_scale = glm::vec2(1.0f);
-    glm::quat m_rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
     glm::vec4 m_color = glm::vec4(1.0f);
     glm::vec4 m_outline_color = glm::vec4(0.0f);
     float m_outline_thickness = 0.0f;
-    math::Rect m_aabb = math::Rect();
+    int m_order = 0;
     Anchor m_anchor = Anchor::Center;
     bool m_flip_x = false;
     bool m_flip_y = false;
@@ -77,7 +80,7 @@ protected:
 
 class Sprite : public BaseSprite {
 public:
-    Sprite() {}
+    Sprite() = default;
 
     Sprite& set_texture(Texture texture) { m_texture = texture; return *this; }
     BaseSprite& set_custom_size(tl::optional<glm::vec2> custom_size) {
@@ -86,16 +89,16 @@ public:
         return *this;
     }
 
-    const tl::optional<Texture>& texture(void) const { return m_texture; }
-    const tl::optional<glm::vec2>& custom_size(void) const { return m_custom_size; }
+    [[nodiscard]] const tl::optional<Texture>& texture() const { return m_texture; }
+    [[nodiscard]] const tl::optional<glm::vec2>& custom_size() const { return m_custom_size; }
 
-    virtual glm::vec2 size(void) const override {
-        glm::vec2 size = glm::vec2(1.0f);
+    [[nodiscard]] glm::vec2 size() const override {
+        auto size = glm::vec2(1.0f);
 
         if (m_texture.is_some()) size = m_texture->size();
         if (m_custom_size.is_some()) size = m_custom_size.value();
 
-        return size * m_scale;
+        return size * scale();
     }
 
 private:
@@ -106,20 +109,19 @@ private:
 class TextureAtlasSprite : public BaseSprite {
 public:
     TextureAtlasSprite() :
-        m_texture_atlas(),
         m_index(0) {}
 
-    TextureAtlasSprite(const TextureAtlas& texture_atlas) :
-        m_texture_atlas(texture_atlas),
+    explicit TextureAtlasSprite(TextureAtlas texture_atlas) :
+        m_texture_atlas(std::move(texture_atlas)),
         m_index(0) {}
 
     void set_index(size_t index) { m_index = index; }
 
-    size_t index(void) const { return m_index; }
-    const TextureAtlas& atlas(void) const { return m_texture_atlas; }
+    [[nodiscard]] size_t index() const { return m_index; }
+    [[nodiscard]] const TextureAtlas& atlas() const { return m_texture_atlas; }
 
-    virtual glm::vec2 size(void) const override {
-        return m_texture_atlas.rects()[m_index].size() * m_scale;
+    [[nodiscard]] glm::vec2 size() const override {
+        return m_texture_atlas.rects()[m_index].size() * scale();
     }
 private:
     TextureAtlas m_texture_atlas;

@@ -1,7 +1,7 @@
-#include <stdint.h>
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <utility>
-#include <time.h>
+#include <ctime>
 
 #include "world/world.hpp"
 #include "types/block.hpp"
@@ -13,6 +13,107 @@
 
 inline glm::uvec2 get_chunk_pos(TilePos tile_pos) {
     return glm::uvec2(tile_pos.x, tile_pos.y) / RENDER_CHUNK_SIZE_U;
+}
+
+tl::optional<const Block&> WorldData::get_block(TilePos pos) const {
+    if (!is_tilepos_valid(pos)) return tl::nullopt;
+
+    const size_t index = this->get_tile_index(pos);
+
+    if (this->blocks[index].is_none()) return tl::nullopt;
+
+    return this->blocks[index].value();
+}
+
+tl::optional<const Wall&> WorldData::get_wall(TilePos pos) const {
+    if (!is_tilepos_valid(pos)) return tl::nullopt;
+
+    const size_t index = this->get_tile_index(pos);
+
+    if (this->walls[index].is_none()) return tl::nullopt;
+    
+    return this->walls[index].value();
+}
+
+tl::optional<Block&> WorldData::get_block_mut(TilePos pos) {
+    if (!is_tilepos_valid(pos)) return tl::nullopt;
+
+    const size_t index = this->get_tile_index(pos);
+
+    if (this->blocks[index].is_none()) return tl::nullopt;
+
+    return this->blocks[index].value();
+}
+
+tl::optional<Wall&> WorldData::get_wall_mut(TilePos pos) {
+    if (!is_tilepos_valid(pos)) return tl::nullopt;
+
+    const size_t index = this->get_tile_index(pos);
+
+    if (this->walls[index].is_none()) return tl::nullopt;
+    
+    return this->walls[index].value();
+}
+
+tl::optional<BlockType> WorldData::get_block_type(TilePos pos) const {
+    if (!is_tilepos_valid(pos)) return tl::nullopt;
+
+    tl::optional<const Block&> block = get_block(pos);
+    if (block.is_none()) return tl::nullopt;
+
+    return block->type;
+}
+
+Neighbors<const Block&> WorldData::get_block_neighbors(TilePos pos) const {
+    return Neighbors<const Block&> {
+        .top = this->get_block(pos.offset(TileOffset::Top)),
+        .bottom = this->get_block(pos.offset(TileOffset::Bottom)),
+        .left = this->get_block(pos.offset(TileOffset::Left)),
+        .right = this->get_block(pos.offset(TileOffset::Right)),
+        .top_left = this->get_block(pos.offset(TileOffset::TopLeft)),
+        .top_right = this->get_block(pos.offset(TileOffset::TopRight)),
+        .bottom_left = this->get_block(pos.offset(TileOffset::BottomLeft)),
+        .bottom_right = this->get_block(pos.offset(TileOffset::BottomRight)),
+    };
+}
+
+Neighbors<Block&> WorldData::get_block_neighbors_mut(TilePos pos) {
+    return Neighbors<Block&> {
+        .top = this->get_block_mut(pos.offset(TileOffset::Top)),
+        .bottom = this->get_block_mut(pos.offset(TileOffset::Bottom)),
+        .left = this->get_block_mut(pos.offset(TileOffset::Left)),
+        .right = this->get_block_mut(pos.offset(TileOffset::Right)),
+        .top_left = this->get_block_mut(pos.offset(TileOffset::TopLeft)),
+        .top_right = this->get_block_mut(pos.offset(TileOffset::TopRight)),
+        .bottom_left = this->get_block_mut(pos.offset(TileOffset::BottomLeft)),
+        .bottom_right = this->get_block_mut(pos.offset(TileOffset::BottomRight)),
+    };
+}
+
+Neighbors<const Wall&> WorldData::get_wall_neighbors(TilePos pos) const {
+    return Neighbors<const Wall&> {
+        .top = this->get_wall(pos.offset(TileOffset::Top)),
+        .bottom = this->get_wall(pos.offset(TileOffset::Bottom)),
+        .left = this->get_wall(pos.offset(TileOffset::Left)),
+        .right = this->get_wall(pos.offset(TileOffset::Right)),
+        .top_left = this->get_wall(pos.offset(TileOffset::TopLeft)),
+        .top_right = this->get_wall(pos.offset(TileOffset::TopRight)),
+        .bottom_left = this->get_wall(pos.offset(TileOffset::BottomLeft)),
+        .bottom_right = this->get_wall(pos.offset(TileOffset::BottomRight)),
+    };
+}
+
+Neighbors<Wall&> WorldData::get_wall_neighbors_mut(TilePos pos) {
+    return Neighbors<Wall&> {
+        .top = this->get_wall_mut(pos.offset(TileOffset::Top)),
+        .bottom = this->get_wall_mut(pos.offset(TileOffset::Bottom)),
+        .left = this->get_wall_mut(pos.offset(TileOffset::Left)),
+        .right = this->get_wall_mut(pos.offset(TileOffset::Right)),
+        .top_left = this->get_wall_mut(pos.offset(TileOffset::TopLeft)),
+        .top_right = this->get_wall_mut(pos.offset(TileOffset::TopRight)),
+        .bottom_left = this->get_wall_mut(pos.offset(TileOffset::BottomLeft)),
+        .bottom_right = this->get_wall_mut(pos.offset(TileOffset::BottomRight)),
+    };
 }
 
 void World::set_block(TilePos pos, const Block& block) {
@@ -29,7 +130,7 @@ void World::set_block(TilePos pos, const Block& block) {
     // }
 
     const glm::uvec2 chunk_pos = get_chunk_pos(pos);
-    if (m_render_chunks.count(chunk_pos) > 0) {
+    if (m_render_chunks.contains(chunk_pos)) {
         m_render_chunks.at(chunk_pos).blocks_dirty = true;
     }
 
@@ -42,7 +143,6 @@ void World::set_block(TilePos pos, BlockType block_type) {
     const size_t index = m_data.get_tile_index(pos);
 
     m_data.blocks[index] = Block(block_type);
-    Block& block = m_data.blocks[index].value();
 
     reset_tiles(pos, *this);
 
@@ -54,7 +154,7 @@ void World::set_block(TilePos pos, BlockType block_type) {
     // Renderer::state.tiles_texture->set_pixel(index, &pixel);
 
     const glm::uvec2 chunk_pos = get_chunk_pos(pos);
-    if (m_render_chunks.count(chunk_pos) > 0) {
+    if (m_render_chunks.contains(chunk_pos)) {
         m_render_chunks.at(chunk_pos).blocks_dirty = true;
     }
 }
@@ -66,7 +166,7 @@ void World::remove_block(TilePos pos) {
     
     if (m_data.blocks[index].is_some()) {
         const glm::uvec2 chunk_pos = get_chunk_pos(pos);
-        if (m_render_chunks.count(chunk_pos) > 0) {
+        if (m_render_chunks.contains(chunk_pos)) {
             m_render_chunks.at(chunk_pos).blocks_dirty = true;
         }
     }
@@ -112,18 +212,17 @@ void World::set_wall(TilePos pos, WallType wall_type) {
     // Renderer::state.tiles_texture->set_pixel(index, &pixel);
 
     const glm::uvec2 chunk_pos = get_chunk_pos(pos);
-    if (m_render_chunks.count(chunk_pos) > 0) {
+    if (m_render_chunks.contains(chunk_pos)) {
         m_render_chunks.at(chunk_pos).walls_dirty = true;
     }
 }
 
 void World::generate(uint32_t width, uint32_t height, size_t seed) {
-    WorldData world_data = world_generate(width, height, seed);
-    m_data = world_data;
+    m_data = world_generate(width, height, seed);
 }
 
 inline math::Rect get_camera_fov(const glm::vec2& camera_pos, const math::Rect& projection_area) {
-    return math::Rect(camera_pos + projection_area.min, camera_pos + projection_area.max);
+    return {camera_pos + projection_area.min, camera_pos + projection_area.max};
 }
 
 math::URect get_chunk_range(const math::Rect& camera_fov, const glm::uvec2& world_size) {
@@ -150,12 +249,11 @@ math::URect get_chunk_range(const math::Rect& camera_fov, const glm::uvec2& worl
     if (right >= chunk_max_pos.x) right = chunk_max_pos.x;
     if (bottom >= chunk_max_pos.y) bottom = chunk_max_pos.y;
 
-    return math::URect(glm::uvec2(left, top), glm::uvec2(right, bottom));
+    return {glm::uvec2(left, top), glm::uvec2(right, bottom)};
 }
 
-void World::update(const Camera& camera) {
+void World::update(const Camera& /* camera */) {
     m_changed = false;
-    manage_chunks(camera);
 }
 
 void World::manage_chunks(const Camera& camera) {
@@ -179,7 +277,7 @@ void World::manage_chunks(const Camera& camera) {
         for (uint32_t x = chunk_range.min.x; x < chunk_range.max.x; ++x) {
             const glm::uvec2 chunk_pos = glm::uvec2(x, y);
 
-            if (m_render_chunks.count(chunk_pos) == 0) {
+            if (m_render_chunks.find(chunk_pos) == m_render_chunks.end()) {
                 const glm::vec2 world_pos = glm::vec2(x * Constants::TILE_SIZE, y * Constants::TILE_SIZE);
                 m_render_chunks.insert(std::make_pair(chunk_pos, RenderChunk(chunk_pos, world_pos, *this)));
             }
@@ -190,7 +288,7 @@ void World::manage_chunks(const Camera& camera) {
 void World::update_neighbors(TilePos initial_pos) {
     for (int y = initial_pos.y - 3; y < initial_pos.y + 3; ++y) {
         for (int x = initial_pos.x - 3; x < initial_pos.x + 3; ++x) {
-            TilePos pos = TilePos(x, y);
+            auto pos = TilePos(x, y);
             update_tile_sprite_index(pos.offset(TileOffset::Left));
             update_tile_sprite_index(pos.offset(TileOffset::Right));
             update_tile_sprite_index(pos.offset(TileOffset::Top));
@@ -227,7 +325,7 @@ void World::update_tile_sprite_index(TilePos pos) {
     // Don't rebuild chunk vao if nothing changed
     if (wall_updated || block_updated) {
         const glm::uvec2 chunk_pos = get_chunk_pos(pos);
-        if (m_render_chunks.count(chunk_pos) > 0) {
+        if (m_render_chunks.contains(chunk_pos)) {
             m_render_chunks.at(chunk_pos).blocks_dirty |= block_updated;
             m_render_chunks.at(chunk_pos).walls_dirty |= wall_updated;
         }

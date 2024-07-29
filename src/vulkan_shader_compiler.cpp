@@ -95,7 +95,7 @@ bool CompileVulkanShader(LLGL::ShaderType shaderType, const char* shaderSource, 
     // start the program up
     success = CreateProcessA(
         "./assets/bin/glslangValidator.exe", // the path
-        (char*) args.c_str(),                // Command line
+        const_cast<char*>(args.c_str()),     // Command line
         NULL,                   // Process handle not inheritable
         NULL,                   // Thread handle not inheritable
         TRUE,                  // Set handle inheritance to FALSE

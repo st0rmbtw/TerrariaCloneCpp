@@ -1,25 +1,25 @@
-#pragma once
-
 #ifndef TERRARIA_TEXTURE_HPP
 #define TERRARIA_TEXTURE_HPP
+
+#pragma once
 
 #include <LLGL/LLGL.h>
 
 namespace TextureSampler {
-    enum {
+    enum : uint8_t {
         Linear = 0,
         Nearest = 1
     };
 };
 
 struct Texture {
-    uint32_t id;
-    int sampler;
-    LLGL::Texture* texture;
+    uint32_t id = -1;
+    int sampler = 0;
+    LLGL::Texture* texture = nullptr;
 
-    inline glm::uvec2 size() const {
-        LLGL::Extent3D extent = texture->GetDesc().extent;
-        return glm::uvec2(extent.width, extent.height);
+    [[nodiscard]] inline glm::uvec2 size() const {
+        const LLGL::Extent3D extent = texture->GetDesc().extent;
+        return {extent.width, extent.height};
     }
 };
 

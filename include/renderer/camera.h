@@ -1,3 +1,6 @@
+#ifndef TERRARIA_RENDERER_CAMERA_H
+#define TERRARIA_RENDERER_CAMERA_H
+
 #pragma once
 
 #include <glm/glm.hpp>
@@ -10,23 +13,43 @@ public:
     Camera() :
         m_position(0.0f),
         m_viewport(0),
-        m_area() {}
+        m_projection_matrix{},
+        m_view_matrix{},
+        m_transform_matrix{} {}
 
-    Camera(const glm::uvec2& viewport) {
-        m_viewport = viewport;
+    explicit Camera(glm::uvec2 viewport) :
+        m_position(0.0f),
+        m_viewport(viewport),
+        m_projection_matrix{},
+        m_view_matrix{},
+        m_transform_matrix{}
+    {
         update_projection_area();
         compute_projection_and_view_matrix();
     }
 
     void update();
 
-    inline const glm::vec2& position() const { return m_position; }
-    inline const glm::uvec2& viewport() const { return m_viewport; }
-    inline const glm::mat4x4& get_projection_matrix() const { return m_projection_matrix; }
-    inline const glm::mat4x4& get_view_matrix() const { return m_view_matrix; }
-    inline const glm::mat4x4& get_transform_matrix() const { return m_transform_matrix; }
-    inline const math::Rect& get_projection_area() const { return m_area; }
-    inline const float zoom() const { return m_zoom; }
+    [[nodiscard]]
+    inline auto position() const -> const glm::vec2& { return m_position; }
+
+    [[nodiscard]]
+    inline auto viewport() const -> const glm::uvec2& { return m_viewport; }
+
+    [[nodiscard]]
+    inline auto get_projection_matrix() const -> const glm::mat4x4& { return m_projection_matrix; }
+
+    [[nodiscard]]
+    inline auto get_view_matrix() const -> const glm::mat4x4& { return m_view_matrix; }
+    
+    [[nodiscard]]
+    inline auto get_transform_matrix() const -> const glm::mat4x4& { return m_transform_matrix; }
+
+    [[nodiscard]]
+    inline auto get_projection_area() const -> const math::Rect& { return m_area; }
+
+    [[nodiscard]]
+    inline float zoom() const { return m_zoom; }
 
     void set_zoom(float zoom) {
         m_zoom = glm::clamp(zoom, Constants::CAMERA_MAX_ZOOM, Constants::CAMERA_MIN_ZOOM);
@@ -42,7 +65,9 @@ public:
         m_position = position;
     }
 
-    glm::vec2 screen_to_world(const glm::vec2& screen_pos) const;
+    [[nodiscard]]
+    auto screen_to_world(const glm::vec2 &screen_pos) const -> glm::vec2;
+
 private:
     void compute_projection_and_view_matrix();
     void compute_transform_matrix();
@@ -60,3 +85,5 @@ private:
     
     float m_zoom = 1.0f;
 };
+
+#endif

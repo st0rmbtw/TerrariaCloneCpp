@@ -1,7 +1,7 @@
-#pragma once
-
 #ifndef TERRARIA_RENDERER_ASSETS
 #define TERRARIA_RENDERER_ASSETS
+
+#pragma once
 
 #include <LLGL/LLGL.h>
 #include <LLGL/Utils/VertexFormat.h>
@@ -29,7 +29,7 @@ struct TilemapUniforms {
     glm::mat4 view;
 };
 
-const LLGL::VertexFormat& SpriteVertexFormat(void);
-const LLGL::VertexFormat& TilemapVertexFormat(void);
+const LLGL::VertexFormat& SpriteVertexFormat();
+const LLGL::VertexFormat& TilemapVertexFormat();
 
 #endif

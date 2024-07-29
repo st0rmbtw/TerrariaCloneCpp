@@ -1,7 +1,7 @@
-#pragma once
-
 #ifndef TERRARIA_RENDERER_UTILS_HPP
 #define TERRARIA_RENDERER_UTILS_HPP
+
+#pragma once
 
 #include <LLGL/LLGL.h>
 #include <LLGL/Utils/Utility.h>

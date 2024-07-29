@@ -1,10 +1,10 @@
-cbuffer UniformBuffer : register( b0 )
+cbuffer UniformBuffer : register( b1 )
 {
     float4x4 u_projection;
     float4x4 u_view;
 };
 
-cbuffer TransformBuffer : register( b1 )
+cbuffer TransformBuffer : register( b2 )
 {
     float4x4 u_transform;
 };
@@ -92,8 +92,8 @@ void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
     OutputStream.Append(output);
 }
 
-Texture2DArray TextureArray : register(t2);
-SamplerState Sampler : register(s3);
+Texture2DArray TextureArray : register(t3);
+SamplerState Sampler : register(s4);
 
 float4 PS(GSOutput inp) : SV_Target
 {

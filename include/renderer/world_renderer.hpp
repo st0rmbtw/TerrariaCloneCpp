@@ -8,6 +8,10 @@
 
 class WorldRenderer {
 public:
+    WorldRenderer() :
+        m_projection_matrix{},
+        m_view_matrix{} {}
+
     void init();
     void render(const World& world);
     void terminate();

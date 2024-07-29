@@ -30,13 +30,13 @@ constexpr float JUMP_SPEED = 5.01;
 constexpr float MAX_WALK_SPEED = 3.0;
 constexpr float MAX_FALL_SPEED = 10.0;
 
-const size_t WALK_ANIMATION_LENGTH = 13;
+constexpr size_t WALK_ANIMATION_LENGTH = 13;
 
-static const glm::vec2 ITEM_ANIMATION_POINTS[] = {
+const glm::vec2 ITEM_ANIMATION_POINTS[] = {
     glm::vec2(-7.5, -11.0), glm::vec2(6.0, -7.5), glm::vec2(7.0, 4.0)
 };
 
-const float ITEM_ROTATION = 1.7;
+constexpr float ITEM_ROTATION = 1.7;
 
 enum class Direction : uint8_t {
     Left = 0,
@@ -74,14 +74,13 @@ struct PlayerSprite {
     UseItemAnimation use_item_animation;
 
     PlayerSprite() :
-        sprite(),
         walk_animation(),
         fly_animation(),
         idle_animation(),
         use_item_animation() {}
 
-    PlayerSprite(const TextureAtlasSprite& sprite, WalkAnimation walk_anim = {}, FlyAnimation fly_anim = {}, IdleAnimation idle_anim = {}, UseItemAnimation use_item_anim = {}) :
-        sprite(sprite),
+    PlayerSprite(TextureAtlasSprite sprite, WalkAnimation walk_anim = {}, FlyAnimation fly_anim = {}, IdleAnimation idle_anim = {}, UseItemAnimation use_item_anim = {}) :
+        sprite(std::move(sprite)),
         walk_animation(walk_anim),
         fly_animation(fly_anim),
         idle_animation(idle_anim),
@@ -118,31 +117,31 @@ public:
     void pre_update();
     void fixed_update(const delta_time_t& delta_time, const World& world, bool handle_input);
     void update(const Camera& camera, World& world);
-    void render(void) const;
+    void render() const;
 
     void set_position(const World& world, const glm::vec2& position);
 
-    const glm::vec2& position(void) const { return m_position; }
-    Direction direction(void) const { return m_direction; }
+    [[nodiscard]] const glm::vec2& position() const { return m_position; }
+    [[nodiscard]] Direction direction() const { return m_direction; }
 
-    const Inventory& inventory(void) const { return m_inventory; }
-    Inventory& inventory(void) { return m_inventory; }
+    [[nodiscard]] const Inventory& inventory() const { return m_inventory; }
+    [[nodiscard]] Inventory& inventory() { return m_inventory; }
     
 private:
     void horizontal_movement(bool handle_input);
     void vertical_movement(bool handle_input);
-    void gravity(void);
+    void gravity();
     glm::vec2 check_collisions(const World& world);
     void keep_in_world_bounds(const World& world);
-    void update_sprites(void);
-    void update_walk_anim_timer(void);
+    void update_sprites();
+    void update_walk_anim_timer();
     void update_sprites_index(const delta_time_t& delta_time);
-    void update_movement_state(void);
-    void update_using_item_anim(void);
-    void spawn_particles_on_walk(void) const;
-    void spawn_particles_grounded(void) const;
+    void update_movement_state();
+    void update_using_item_anim();
+    void spawn_particles_on_walk() const;
+    void spawn_particles_grounded() const;
 
-    inline float get_fall_distance(void) const;
+    inline float get_fall_distance() const;
 
     void use_item(const Camera& camera, World& world);
 

@@ -1,7 +1,7 @@
-#pragma once
-
 #ifndef TERRARIA_UI_HPP
 #define TERRARIA_UI_HPP
+
+#pragma once
 
 #include "renderer/camera.h"
 #include "player/inventory.hpp"

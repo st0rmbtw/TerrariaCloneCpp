@@ -13,10 +13,10 @@
 #include "player/player.hpp"
 
 static struct GameState {
-    GLFWwindow *window;
     Camera camera;
     World world;
     Player player;
+    GLFWwindow *window = nullptr;
     bool free_camera = false;
 } g;
 
@@ -24,6 +24,7 @@ void pre_update();
 void fixed_update(delta_time_t delta_time);
 void update();
 void render();
+void post_render();
 
 glm::vec2 camera_follow_player();
 #if DEBUG
@@ -96,7 +97,7 @@ bool Game::Init() {
 
     g.world.generate(200, 500, 0);
 
-    std::vector<ShaderDef> shader_defs = {
+    const std::vector<ShaderDef> shader_defs = {
         // ShaderDef("DEF_SUBDIVISION", std::to_string(config::SUBDIVISION)),
         ShaderDef("WORLD_WIDTH", std::to_string(g.world.area().width())),
         ShaderDef("WORLD_HEIGHT", std::to_string(g.world.area().height())),
@@ -141,7 +142,7 @@ void Game::Run() {
     float fixed_timer = 0;
     
     while (Renderer::Surface()->ProcessEvents()) {
-        double current_tick = glfwGetTime();
+        const double current_tick = glfwGetTime();
         const double delta_time = (current_tick - prev_tick);
         prev_tick = current_tick;
 
@@ -158,6 +159,7 @@ void Game::Run() {
 
         update();
         render();
+        post_render();
 
         KeyboardInput::Clear();
         MouseInput::Clear();
@@ -221,6 +223,16 @@ void render() {
     Renderer::Render();
 }
 
+void post_render() {
+    g.world.manage_chunks(g.camera);
+
+#if DEBUG
+    if (KeyboardInput::Pressed(Key::C)) {
+        Renderer::PrintDebugInfo();
+    }
+#endif
+}
+
 glm::vec2 camera_follow_player() {
     glm::vec2 position = g.player.position();
 
@@ -248,7 +260,7 @@ glm::vec2 camera_follow_player() {
 
 #if DEBUG
 glm::vec2 camera_free() {
-    float dt = Time::delta_seconds();
+    const float dt = Time::delta_seconds();
     glm::vec2 position = g.camera.position();
 
     float speed = 2000.0f;

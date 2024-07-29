@@ -9,7 +9,7 @@ layout(location = 5) in vec4 a_color;
 layout(location = 6) in int a_has_texture;
 layout(location = 7) in int a_is_ui;
 
-layout(binding = 0) uniform UniformBuffer {
+layout(binding = 1) uniform UniformBuffer {
     mat4 view_projection;
     mat4 screen_projection;
 } ubo;

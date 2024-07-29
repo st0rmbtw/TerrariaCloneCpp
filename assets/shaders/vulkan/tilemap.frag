@@ -2,8 +2,8 @@
 
 #extension GL_ARB_separate_shader_objects : enable
 
-layout(set = 0, binding = 2) uniform texture2DArray u_texture_array;
-layout(set = 0, binding = 3) uniform sampler u_sampler;
+layout(set = 0, binding = 3) uniform texture2DArray u_texture_array;
+layout(set = 0, binding = 4) uniform sampler u_sampler;
 
 layout(location = 0) in vec2 g_uv;
 layout(location = 1) flat in uint g_tile_id;

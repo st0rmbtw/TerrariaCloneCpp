@@ -1,7 +1,7 @@
-#pragma once
+#ifndef WORLD_AUTOTILE_HPP
+#define WORLD_AUTOTILE_HPP
 
-#ifndef TERRARIA_WORLD_AUTOTILE_HPP
-#define TERRARIA_WORLD_AUTOTILE_HPP
+#pragma once
 
 #include <string>
 #include <vector>
@@ -10,7 +10,7 @@
 #include "types/block.hpp"
 #include "world/world.hpp"
 
-static uint8_t MERGE_VALIDATION[22][16] = {
+const uint8_t MERGE_VALIDATION[22][16] = {
     {11, 13, 13, 13, 14, 10, 8, 8, 8, 1, 15, 15, 4, 13, 13, 13},
     {11, 15, 15, 15, 14, 10, 15, 15, 15, 1, 15, 15, 4, 7, 7, 7},
     {11, 7, 7, 7, 14, 10, 15, 15, 15, 1, 15, 15, 4, 11, 11, 11},
@@ -41,8 +41,8 @@ struct TileRule {
 
     TileRule(const std::string& start, const std::string& end, uint32_t corner_exclusion_mask = 0, uint32_t blend_exclusion_mask = 0, uint32_t blend_inclusion_mask = 0, uint32_t corner_inclusion_mask = 0);
 
-    bool matches(uint32_t neighbors_mask, uint32_t blend_mask) const;
-    bool matches_relaxed(uint32_t neighbors_mask, uint32_t blend_mask) const;
+    [[nodiscard]] bool matches(uint32_t neighbors_mask, uint32_t blend_mask) const;
+    [[nodiscard]] bool matches_relaxed(uint32_t neighbors_mask, uint32_t blend_mask) const;
 
 public:
     TextureAtlasPos indexes[3];

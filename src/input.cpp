@@ -26,11 +26,11 @@ void KeyboardInput::release(Key key) {
 }
 
 bool KeyboardInput::Pressed(Key key) {
-    return input_state.keyboard_pressed.count(key) > 0;
+    return input_state.keyboard_pressed.find(key) != input_state.keyboard_pressed.end();
 }
 
 bool KeyboardInput::JustPressed(Key key) {
-    return input_state.keyboard_just_pressed.count(key) > 0;
+    return input_state.keyboard_just_pressed.find(key) != input_state.keyboard_just_pressed.end();
 }
 
 void KeyboardInput::Clear() {
@@ -52,11 +52,11 @@ void MouseInput::release(MouseButton button) {
 }
 
 bool MouseInput::Pressed(MouseButton button) {
-    return input_state.mouse_pressed.count(static_cast<uint8_t>(button)) > 0;
+    return input_state.mouse_pressed.find(static_cast<uint8_t>(button)) != input_state.mouse_pressed.end();
 }
 
 bool MouseInput::JustPressed(MouseButton button) {
-    return input_state.mouse_just_pressed.count(static_cast<uint8_t>(button)) > 0;
+    return input_state.mouse_just_pressed.find(static_cast<uint8_t>(button)) != input_state.mouse_just_pressed.end();
 }
 
 void MouseInput::Clear() {

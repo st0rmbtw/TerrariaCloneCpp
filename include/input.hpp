@@ -1,3 +1,6 @@
+#ifndef TERRARIA_INPUT_HPP
+#define TERRARIA_INPUT_HPP
+
 #pragma once
 
 #include <GLFW/glfw3.h>
@@ -82,7 +85,7 @@ namespace MouseInput {
     bool Pressed(MouseButton button);
     bool JustPressed(MouseButton button);
 
-    const std::vector<float>& scroll_events(void);
+    const std::vector<float>& scroll_events();
 
     void push_scroll_event(float y);
     void set_screen_position(const glm::vec2& position);
@@ -90,6 +93,8 @@ namespace MouseInput {
 
     void Clear();
 
-    const glm::vec2& ScreenPosition(void);
-    bool IsMouseOverUi(void);
+    const glm::vec2& ScreenPosition();
+    bool IsMouseOverUi();
 };
+
+#endif

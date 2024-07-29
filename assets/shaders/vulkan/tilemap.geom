@@ -1,12 +1,12 @@
 #version 450 core
 #extension GL_ARB_separate_shader_objects : enable
 
-layout(binding = 0) uniform UniformBuffer {
+layout(binding = 1) uniform UniformBuffer {
     mat4 projection;
     mat4 view;
 } ubo;
 
-layout(binding = 1) uniform TransformBuffer {
+layout(binding = 2) uniform TransformBuffer {
     mat4 transform;
 } ubo2;
 

@@ -1,7 +1,7 @@
-#pragma once
-
 #ifndef TERRARIA_ITEM_HPP
 #define TERRARIA_ITEM_HPP
+
+#pragma once
 
 #include <stdint.h>
 #include <string>
@@ -30,14 +30,12 @@ struct Item {
         return new_item;
     }
 
-    inline Item with_max_stack(void) {
+    inline Item with_max_stack() {
         Item new_item = *this;
         new_item.stack = max_stack;
         return new_item;
     }
 };
-
-void init_items(void);
 
 extern Item ITEM_COPPER_PICKAXE;
 extern Item ITEM_COPPER_AXE;

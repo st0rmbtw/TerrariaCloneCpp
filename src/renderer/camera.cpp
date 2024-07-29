@@ -41,7 +41,7 @@ glm::vec2 project_point2(const glm::mat4& mat, const glm::vec2& point) {
     glm::vec4 res = mat[0] * point.x;
     res = mat[1] * point.y + res;
     res = mat[3] + res;
-    return glm::vec2(res);
+    return res;
 }
 
 glm::vec2 Camera::screen_to_world(const glm::vec2& screen_pos) const {

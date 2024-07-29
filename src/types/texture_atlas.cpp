@@ -15,11 +15,11 @@ TextureAtlas TextureAtlas::from_grid(const Texture& texture, const glm::uvec2 &t
                 current_padding.x = padding.x;
             }
 
-            glm::uvec2 cell = glm::uvec2(x, y);
+            const glm::uvec2 cell = glm::uvec2(x, y);
 
-            glm::uvec2 rect_min = (tile_size + current_padding) * cell + offset;
+            const glm::uvec2 rect_min = (tile_size + current_padding) * cell + offset;
 
-            sprites.push_back(math::Rect(rect_min, rect_min + tile_size));
+            sprites.emplace_back(rect_min, rect_min + tile_size);
         }
     }
 

@@ -1,7 +1,7 @@
-#pragma once
-
 #ifndef TERRARIA_CONSTANTS_HPP
 #define TERRARIA_CONSTANTS_HPP
+
+#pragma once
 
 #include <stdint.h>
 

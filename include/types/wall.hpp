@@ -1,7 +1,7 @@
-#pragma once
-
 #ifndef TERRARIA_WALL_HPP
 #define TERRARIA_WALL_HPP
+
+#pragma once
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -13,7 +13,7 @@ enum class WallType : uint8_t {
     Count
 };
 
-inline constexpr static int16_t wall_hp(WallType wall_type) {
+inline constexpr static int16_t wall_hp(WallType /* wall_type */) {
     return 70;
 }
 

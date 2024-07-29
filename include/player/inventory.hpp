@@ -12,18 +12,18 @@ constexpr uint8_t INVENTORY_ROWS = 5;
 
 class Inventory {
 public:
-    Inventory() :
-        m_selected_slot(0),
-        m_items() {}
+    Inventory() = default;
 
-    tl::optional<const Item&> get_item(uint8_t index) const;
-    tl::optional<Item&> get_item(uint8_t index);
+    [[nodiscard]] tl::optional<const Item&> get_item(uint8_t index) const;
+    [[nodiscard]] tl::optional<Item&> get_item(uint8_t index);
 
     void set_item(uint8_t index, const Item& item);
 
-    inline uint8_t selected_slot(void) const { return m_selected_slot; }
+    [[nodiscard]]
+    inline uint8_t selected_slot() const { return m_selected_slot; }
 
-    inline tl::optional<const Item&> get_selected_item(void) const {
+    [[nodiscard]]
+    inline tl::optional<const Item&> get_selected_item() const {
         return get_item(selected_slot());
     }
 
@@ -33,7 +33,7 @@ public:
     }
 
 private:
-    uint8_t m_selected_slot;
+    uint8_t m_selected_slot = 0;
     tl::optional<Item> m_items[50];
 };
 

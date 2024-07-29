@@ -11,9 +11,9 @@ void WorldRenderer::init() {
     m_transform_buffer = Renderer::Context()->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(glm::mat4)));
 
 #if defined(BACKEND_OPENGL)
-    constexpr uint32_t samplerBinding = 2;
-#else
     constexpr uint32_t samplerBinding = 3;
+#else
+    constexpr uint32_t samplerBinding = 4;
 #endif
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
@@ -23,16 +23,16 @@ void WorldRenderer::init() {
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::GeometryStage,
-            0
+            LLGL::BindingSlot(1)
         ),
         LLGL::BindingDescriptor(
             "TransformBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::GeometryStage,
-            1
+            LLGL::BindingSlot(2)
         ),
-        LLGL::BindingDescriptor("u_texture_array", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 2),
+        LLGL::BindingDescriptor("u_texture_array", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
         LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, samplerBinding),
     };
 
@@ -41,6 +41,7 @@ void WorldRenderer::init() {
     const ShaderPipeline& tilemap_shader = Assets::GetShader(ShaderAssetKey::TilemapShader);
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
+    pipelineDesc.debugName = "World Pipeline";
     pipelineDesc.vertexShader = tilemap_shader.vs;
     pipelineDesc.fragmentShader = tilemap_shader.ps;
     pipelineDesc.geometryShader = tilemap_shader.gs;

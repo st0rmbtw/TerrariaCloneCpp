@@ -31,18 +31,18 @@ inline void render_cell_item(const glm::vec2& item_size, const glm::vec2& cell_s
 }
 
 void render_inventory(const Inventory& inventory) {
-    glm::vec2 offset = glm::vec2(0.0f, 18.0f);
-    glm::vec2 item_offset = glm::vec2(0);
+    auto offset = glm::vec2(0.0f, 18.0f);
+    auto item_offset = glm::vec2(0);
 
     for (size_t x = 0; x < CELLS_IN_ROW; ++x) {
         Texture texture;
-        glm::vec2 item_size;
-        glm::vec2 cell_size;
-        glm::vec2 padding = glm::vec2(0.0f);
+        auto item_size = glm::vec2(0.0f);
+        auto cell_size = glm::vec2(0.0f);
+        auto padding = glm::vec2(0.0f);
         float text_size = 14.0f;
 
         auto item = inventory.get_item(x);
-        bool item_selected = inventory.selected_slot() == x;
+        const bool item_selected = inventory.selected_slot() == x;
 
         if (item.is_some()) {
             item_size = Assets::GetItemTexture(item->id).size();
@@ -105,7 +105,7 @@ void render_inventory(const Inventory& inventory) {
         offset.x = 0;
         offset.y += INVENTORY_SLOT_SIZE + INVENTORY_CELL_MARGIN;
 
-        glm::vec2 cell_size = glm::vec2(state.show_extra_ui ? INVENTORY_SLOT_SIZE : HOTBAR_SLOT_SIZE);
+        const glm::vec2 cell_size = glm::vec2(state.show_extra_ui ? INVENTORY_SLOT_SIZE : HOTBAR_SLOT_SIZE);
 
         for (size_t y = 1; y < INVENTORY_ROWS; ++y) {
             for (size_t x = 0; x < CELLS_IN_ROW; ++x) {
@@ -137,14 +137,13 @@ void UI::Update(Inventory& inventory) {
 void UI::Render(const Camera& camera, const Inventory& inventory) {
     render_inventory(inventory);
 
-    Renderer::FlushSpriteBatch();
-
     Sprite sprite;
     sprite.set_custom_size(glm::vec2(25.0f));
     sprite.set_color(glm::vec3(1.0f, 0.0f, 0.0f));
     sprite.set_position(MouseInput::ScreenPosition());
     sprite.set_anchor(Anchor::TopLeft);
     sprite.set_texture(Assets::GetTexture(AssetKey::TextureUiCursorForeground));
+    sprite.set_order(100);
 
     Renderer::DrawSprite(sprite, RenderLayer::UI);
 }
