@@ -22,16 +22,8 @@ layout(location = 1) flat out uint g_tile_id;
 layout (points) in;
 layout (triangle_strip, max_vertices = 4) out;
 
-const float TILE_SIZE = DEF_TILE_SIZE;
-const float WALL_SIZE = DEF_WALL_SIZE;
-
-const float TILE_TEXTURE_WIDTH   = DEF_TILE_TEXTURE_WIDTH;
-const float TILE_TEXTURE_HEIGHT  = DEF_TILE_TEXTURE_HEIGHT;
-const vec2  TILE_TEXTURE_PADDING = vec2(DEF_TILE_TEXTURE_PADDING) / vec2(TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT);
-
-const float WALL_TEXTURE_WIDTH   = DEF_WALL_TEXTURE_WIDTH;
-const float WALL_TEXTURE_HEIGHT  = DEF_WALL_TEXTURE_HEIGHT;
-const vec2  WALL_TEXTURE_PADDING = vec2(DEF_WALL_TEXTURE_PADDING) / vec2(WALL_TEXTURE_WIDTH, WALL_TEXTURE_HEIGHT);
+const vec2 TILE_TEX_PADDING = vec2(TILE_TEXTURE_PADDING) / vec2(TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT);
+const vec2 WALL_TEX_PADDING = vec2(WALL_TEXTURE_PADDING) / vec2(WALL_TEXTURE_WIDTH, WALL_TEXTURE_HEIGHT);
 
 const vec2 TILE_TEX_SIZE = vec2(TILE_SIZE) / vec2(TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT);
 const vec2 WALL_TEX_SIZE = vec2(WALL_SIZE) / vec2(WALL_TEXTURE_WIDTH, WALL_TEXTURE_HEIGHT);
@@ -45,12 +37,12 @@ void main() {
 
     vec2 size = vec2(TILE_SIZE);
     vec2 tex_size = vec2(TILE_TEX_SIZE);
-    vec2 padding = TILE_TEXTURE_PADDING;
+    vec2 padding = TILE_TEX_PADDING;
 
     if (tile_type == TILE_TYPE_WALL) {
         size = vec2(WALL_SIZE);
         tex_size = vec2(WALL_TEX_SIZE);
-        padding = WALL_TEXTURE_PADDING;
+        padding = WALL_TEX_PADDING;
     }
 
     vec2 start_uv = atlas_pos * (tex_size + padding);

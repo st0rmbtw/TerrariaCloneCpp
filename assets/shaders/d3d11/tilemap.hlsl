@@ -42,16 +42,8 @@ VSOutput VS(VSInput inp)
 	return output;
 }
 
-static const float TILE_SIZE = DEF_TILE_SIZE;
-static const float WALL_SIZE = DEF_WALL_SIZE;
-
-static const float  TILE_TEXTURE_WIDTH   = DEF_TILE_TEXTURE_WIDTH;
-static const float  TILE_TEXTURE_HEIGHT  = DEF_TILE_TEXTURE_HEIGHT;
-static const float2 TILE_TEXTURE_PADDING = float2(DEF_TILE_TEXTURE_PADDING, DEF_TILE_TEXTURE_PADDING) / float2(TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT);
-
-static const float  WALL_TEXTURE_WIDTH   = DEF_WALL_TEXTURE_WIDTH;
-static const float  WALL_TEXTURE_HEIGHT  = DEF_WALL_TEXTURE_HEIGHT;
-static const float2 WALL_TEXTURE_PADDING = float2(DEF_WALL_TEXTURE_PADDING, DEF_WALL_TEXTURE_PADDING) / float2(WALL_TEXTURE_WIDTH, WALL_TEXTURE_HEIGHT);
+static const float2 TILE_TEX_PADDING = float2(TILE_TEXTURE_PADDING, TILE_TEXTURE_PADDING) / float2(TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT);
+static const float2 WALL_TEX_PADDING = float2(WALL_TEXTURE_PADDING, WALL_TEXTURE_PADDING) / float2(WALL_TEXTURE_WIDTH, WALL_TEXTURE_HEIGHT);
 
 static const float2 TILE_TEX_SIZE = float2(TILE_SIZE, TILE_SIZE) / float2(TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT);
 static const float2 WALL_TEX_SIZE = float2(WALL_SIZE, WALL_SIZE) / float2(WALL_TEXTURE_WIDTH, WALL_TEXTURE_HEIGHT);
@@ -68,12 +60,12 @@ void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
 
     float2 size = float2(TILE_SIZE, TILE_SIZE);
     float2 tex_size = TILE_TEX_SIZE;
-    float2 padding = TILE_TEXTURE_PADDING;
+    float2 padding = TILE_TEX_PADDING;
 
     if (tile_type == TILE_TYPE_WALL) {
         size = float2(WALL_SIZE, WALL_SIZE);
         tex_size = WALL_TEX_SIZE;
-        padding = WALL_TEXTURE_PADDING;
+        padding = WALL_TEX_PADDING;
     }
 
     float2 start_uv = atlas_pos * (tex_size + padding);

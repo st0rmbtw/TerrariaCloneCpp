@@ -98,21 +98,21 @@ bool Game::Init() {
 
     std::vector<ShaderDef> shader_defs = {
         // ShaderDef("DEF_SUBDIVISION", std::to_string(config::SUBDIVISION)),
-        ShaderDef("DEF_WORLD_WIDTH", std::to_string(g.world.area().width())),
-        ShaderDef("DEF_WORLD_HEIGHT", std::to_string(g.world.area().height())),
-        ShaderDef("DEF_CHUNK_WIDTH", std::to_string(RENDER_CHUNK_SIZE_U)),
-        ShaderDef("DEF_CHUNK_HEIGHT", std::to_string(RENDER_CHUNK_SIZE_U)),
+        ShaderDef("WORLD_WIDTH", std::to_string(g.world.area().width())),
+        ShaderDef("WORLD_HEIGHT", std::to_string(g.world.area().height())),
+        ShaderDef("CHUNK_WIDTH", std::to_string(RENDER_CHUNK_SIZE_U)),
+        ShaderDef("CHUNK_HEIGHT", std::to_string(RENDER_CHUNK_SIZE_U)),
 
-        ShaderDef("DEF_TILE_SIZE", std::to_string(Constants::TILE_SIZE)),
-        ShaderDef("DEF_WALL_SIZE", std::to_string(Constants::WALL_SIZE)),
+        ShaderDef("TILE_SIZE", std::to_string(Constants::TILE_SIZE)),
+        ShaderDef("WALL_SIZE", std::to_string(Constants::WALL_SIZE)),
 
-        ShaderDef("DEF_TILE_TEXTURE_WIDTH", std::to_string(Constants::MAX_TILE_TEXTURE_WIDTH)),
-        ShaderDef("DEF_TILE_TEXTURE_HEIGHT", std::to_string(Constants::MAX_TILE_TEXTURE_HEIGHT)),
-        ShaderDef("DEF_TILE_TEXTURE_PADDING", std::to_string(Constants::TILE_TEXTURE_PADDING)),
+        ShaderDef("TILE_TEXTURE_WIDTH", std::to_string(Constants::MAX_TILE_TEXTURE_WIDTH)),
+        ShaderDef("TILE_TEXTURE_HEIGHT", std::to_string(Constants::MAX_TILE_TEXTURE_HEIGHT)),
+        ShaderDef("TILE_TEXTURE_PADDING", std::to_string(Constants::TILE_TEXTURE_PADDING)),
 
-        ShaderDef("DEF_WALL_TEXTURE_WIDTH", std::to_string(Constants::MAX_WALL_TEXTURE_WIDTH)),
-        ShaderDef("DEF_WALL_TEXTURE_HEIGHT", std::to_string(Constants::MAX_WALL_TEXTURE_HEIGHT)),
-        ShaderDef("DEF_WALL_TEXTURE_PADDING", std::to_string(Constants::WALL_TEXTURE_PADDING)),
+        ShaderDef("WALL_TEXTURE_WIDTH", std::to_string(Constants::MAX_WALL_TEXTURE_WIDTH)),
+        ShaderDef("WALL_TEXTURE_HEIGHT", std::to_string(Constants::MAX_WALL_TEXTURE_HEIGHT)),
+        ShaderDef("WALL_TEXTURE_PADDING", std::to_string(Constants::WALL_TEXTURE_PADDING)),
     };
 
     if (!Assets::LoadShaders(shader_defs)) return false;
