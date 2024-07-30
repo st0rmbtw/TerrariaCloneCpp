@@ -17,8 +17,20 @@ public:
     vec max;
 
     rect() :
-        min(0.0f),
-        max(0.0f) {}
+        min(static_cast<T>(0)),
+        max(static_cast<T>(0)) {}
+        
+    rect(const rect<glm::float32>& r) :
+        min(r.min),
+        max(r.max) {}
+
+    rect(const rect<glm::int32>& r) :
+        min(r.min),
+        max(r.max) {}
+
+    rect(const rect<glm::uint32>& r) :
+        min(r.min),
+        max(r.max) {}
 
     rect(vec min, vec max) :
         min(min),

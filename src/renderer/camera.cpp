@@ -37,7 +37,7 @@ void Camera::compute_transform_matrix() {
     m_transform_matrix = glm::translate(glm::mat4(1.0), glm::vec3(m_position, 0.));
 }
 
-glm::vec2 project_point2(const glm::mat4& mat, const glm::vec2& point) {
+inline glm::vec2 project_point(const glm::mat4& mat, const glm::vec2& point) {
     glm::vec4 res = mat[0] * point.x;
     res = mat[1] * point.y + res;
     res = mat[3] + res;
@@ -47,6 +47,6 @@ glm::vec2 project_point2(const glm::mat4& mat, const glm::vec2& point) {
 glm::vec2 Camera::screen_to_world(const glm::vec2& screen_pos) const {
     const glm::vec2 ndc = screen_pos * 2.0f / glm::vec2(m_viewport) - glm::vec2(1.0);
     const glm::mat4 ndc_to_world = m_transform_matrix * glm::inverse(m_projection_matrix);
-    const glm::vec2 world_pos = project_point2(ndc_to_world, ndc);
+    const glm::vec2 world_pos = project_point(ndc_to_world, ndc);
     return world_pos;
 }

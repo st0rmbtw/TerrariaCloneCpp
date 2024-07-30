@@ -68,18 +68,17 @@ GLFWwindow* create_window(LLGL::Extent2D size) {
     return window;
 }
 
-bool Game::Init() {
+bool Game::Init(RenderBackend backend, GameConfig config) {
     if (!glfwInit()) {
         LOG_ERROR("Couldn't initialize GLFW: %s", glfwGetErrorString());
         return false;
     }
 
-#if FULLSCREEN
-    const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    const auto window_size = LLGL::Extent2D(mode->width, mode->height);
-#else
-    const auto window_size = LLGL::Extent2D(1280, 720);
-#endif
+    auto window_size = LLGL::Extent2D(1280, 720);
+    if (config.fullscreen) {
+        const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+        window_size = LLGL::Extent2D(mode->width, mode->height);
+    }
 
     const LLGL::Display* display = LLGL::Display::GetPrimary();
     const std::uint32_t resScale = (display != nullptr ? static_cast<std::uint32_t>(display->GetScale()) : 1u);
@@ -87,7 +86,7 @@ bool Game::Init() {
 
     LLGL::Log::RegisterCallbackStd();
 
-    if (!Renderer::InitEngine()) return false;
+    if (!Renderer::InitEngine(backend)) return false;
     if (!Assets::Load()) return false;
     if (!Assets::InitSamplers()) return false;
 
@@ -123,7 +122,7 @@ bool Game::Init() {
 
     g.window = window;
     
-    if (!Renderer::Init(window, resolution)) return false;
+    if (!Renderer::Init(window, resolution, config.vsync, config.fullscreen)) return false;
 
     g.player.init();
     g.player.inventory().set_item(0, ITEM_COPPER_AXE);
@@ -146,7 +145,7 @@ void Game::Run() {
         const double delta_time = (current_tick - prev_tick);
         prev_tick = current_tick;
 
-        delta_time_t dt(delta_time);
+        const delta_time_t dt(delta_time);
         Time::advance_by(dt);
 
         pre_update();
@@ -182,19 +181,21 @@ void update() {
 #if DEBUG
     if (g.free_camera) {
         g.camera.set_position(camera_free());
+    } else {
+        g.camera.set_position(camera_follow_player());
     }
+#else
+    g.camera.set_position(camera_follow_player());
 #endif
 
     g.camera.update();
     g.world.update(g.camera);
     g.player.update(g.camera, g.world);
 
-    UI::Update(g.player.inventory());
+    UI::Update(g.player.inventory());   
 }
 
 void fixed_update(delta_time_t delta_time) {
-    const float dt = Time::delta_seconds();
-
     // if (m_game_state == GameState::InGame) {
         // ParticleManager::fixed_update();
 
@@ -202,11 +203,10 @@ void fixed_update(delta_time_t delta_time) {
         if (g.free_camera) {
             g.player.fixed_update(delta_time, g.world, false);
         } else {
-#endif
             g.player.fixed_update(delta_time, g.world, true);
-            g.camera.set_position(camera_follow_player());
-#if DEBUG
         }
+#else
+        g.player.fixed_update(delta_time, g.world, true);
 #endif
     // }
 }
@@ -236,11 +236,7 @@ void post_render() {
 glm::vec2 camera_follow_player() {
     glm::vec2 position = g.player.position();
 
-    const float world_min_x = g.world.playable_area().min.x * Constants::TILE_SIZE;
-    const float world_max_x = g.world.playable_area().max.x * Constants::TILE_SIZE;
-    const float world_min_y = g.world.playable_area().min.y * Constants::TILE_SIZE;
-    const float world_max_y = g.world.playable_area().max.y * Constants::TILE_SIZE;
-
+    const math::Rect area = g.world.playable_area() * Constants::TILE_SIZE;
     const math::Rect& camera_area = g.camera.get_projection_area();
     
     const float left = camera_area.min.x;
@@ -249,11 +245,11 @@ glm::vec2 camera_follow_player() {
     const float top = camera_area.min.y;
     const float bottom = camera_area.max.y;
 
-    if (position.x + left < world_min_x) position.x = world_min_x - left;
-    if (position.x + right > world_max_x) position.x = world_max_x - right;
+    if (position.x + left < area.min.x) position.x = area.min.x - left;
+    if (position.x + right > area.max.x) position.x = area.max.x - right;
 
-    if (position.y + top < world_min_y) position.y = world_min_y - top;
-    if (position.y + bottom > world_max_y) position.y = world_max_y - bottom;
+    if (position.y + top < area.min.y) position.y = area.min.y - top;
+    if (position.y + bottom > area.max.y) position.y = area.max.y - bottom;
 
     return position;
 }
@@ -265,29 +261,13 @@ glm::vec2 camera_free() {
 
     float speed = 2000.0f;
 
-    if (KeyboardInput::Pressed(Key::LeftShift)) {
-        speed *= 2.0f;
-    }
+    if (KeyboardInput::Pressed(Key::LeftShift)) speed *= 2.0f;
+    if (KeyboardInput::Pressed(Key::LeftAlt)) speed /= 5.0f;
 
-    if (KeyboardInput::Pressed(Key::LeftAlt)) {
-        speed /= 5.0f;
-    }
-
-    if (KeyboardInput::Pressed(Key::A)) {
-        position.x -= speed * dt;
-    }
-
-    if (KeyboardInput::Pressed(Key::D)) {
-        position.x += speed * dt;
-    }
-
-    if (KeyboardInput::Pressed(Key::W)) {
-        position.y -= speed * dt;
-    }
-
-    if (KeyboardInput::Pressed(Key::S)) {
-        position.y += speed * dt;
-    }
+    if (KeyboardInput::Pressed(Key::A)) position.x -= speed * dt;
+    if (KeyboardInput::Pressed(Key::D)) position.x += speed * dt;
+    if (KeyboardInput::Pressed(Key::W)) position.y -= speed * dt;
+    if (KeyboardInput::Pressed(Key::S)) position.y += speed * dt;
 
     return position;
 }

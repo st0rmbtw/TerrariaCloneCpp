@@ -28,6 +28,7 @@ static struct RendererState {
     
     RenderBatchSprite sprite_batch;
     WorldRenderer world_renderer;
+    RenderBackend backend;
 } state;
 
 static constexpr uint32_t MAX_TEXTURES_COUNT = 32;
@@ -37,8 +38,9 @@ LLGL::SwapChain* Renderer::SwapChain() { return state.swap_chain; }
 LLGL::CommandBuffer* Renderer::CommandBuffer() { return state.command_buffer; }
 LLGL::CommandQueue* Renderer::CommandQueue() { return state.command_queue; }
 const std::shared_ptr<CustomSurface>& Renderer::Surface() { return state.surface; }
+RenderBackend Renderer::Backend() { return state.backend; }
 
-bool Renderer::InitEngine() {
+bool Renderer::InitEngine(RenderBackend backend) {
     LLGL::Report report;
 
     void* configPtr = nullptr;
@@ -53,7 +55,7 @@ bool Renderer::InitEngine() {
 #endif
 
     LLGL::RenderSystemDescriptor rendererDesc;
-    rendererDesc.moduleName = BACKEND;
+    rendererDesc.moduleName = backend.ToString();
     rendererDesc.rendererConfig = configPtr;
     rendererDesc.rendererConfigSize = configSize;
 
@@ -64,6 +66,7 @@ bool Renderer::InitEngine() {
 #endif
 
     state.context = LLGL::RenderSystem::Load(rendererDesc, &report);
+    state.backend = backend;
 
     if (report.HasErrors()) {
         LOG_ERROR("%s", report.GetText());
@@ -73,17 +76,17 @@ bool Renderer::InitEngine() {
     return true;
 }
 
-bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution) {
+bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool vsync, bool fullscreen) {
     const LLGL::RenderSystemPtr& context = state.context;
 
     LLGL::SwapChainDescriptor swapChainDesc;
     swapChainDesc.resolution = resolution;
-    swapChainDesc.fullscreen = FULLSCREEN;
+    swapChainDesc.fullscreen = fullscreen;
 
     state.surface = std::make_shared<CustomSurface>(window, resolution);
 
     state.swap_chain = context->CreateSwapChain(swapChainDesc, state.surface);
-    state.swap_chain->SetVsyncInterval(VSYNC);
+    state.swap_chain->SetVsyncInterval(vsync);
 
     const auto& info = context->GetRendererInfo();
 
@@ -254,12 +257,7 @@ void RenderBatchSprite::init() {
 
     m_constant_buffer = state.context->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(SpriteUniforms)));
 
-
-#ifdef BACKEND_OPENGL
-    constexpr uint32_t samplerBinding = 2;
-#else
-    constexpr uint32_t samplerBinding = 3;
-#endif
+    const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.bindings = {

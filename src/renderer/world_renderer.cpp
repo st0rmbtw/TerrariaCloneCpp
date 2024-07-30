@@ -10,11 +10,7 @@ void WorldRenderer::init() {
     m_constant_buffer = Renderer::Context()->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(TilemapUniforms)));
     m_transform_buffer = Renderer::Context()->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(glm::mat4)));
 
-#if defined(BACKEND_OPENGL)
-    constexpr uint32_t samplerBinding = 3;
-#else
-    constexpr uint32_t samplerBinding = 4;
-#endif
+    const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 3 : 4;
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.bindings = {
@@ -65,9 +61,9 @@ void WorldRenderer::init() {
 }
 
 void WorldRenderer::render(const World& world) {
-    const auto commands = Renderer::CommandBuffer();
+    auto* const commands = Renderer::CommandBuffer();
 
-    TilemapUniforms uniforms = TilemapUniforms {
+    auto uniforms = TilemapUniforms {
         .projection = m_projection_matrix,
         .view = m_view_matrix,
     };

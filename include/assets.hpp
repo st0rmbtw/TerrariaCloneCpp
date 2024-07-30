@@ -8,7 +8,6 @@
 #include <glm/glm.hpp>
 #include <unordered_map>
 
-#include "renderer/defines.h"
 #include "types/block.hpp"
 #include "types/wall.hpp"
 #include "types/texture_atlas.hpp"

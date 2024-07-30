@@ -5,9 +5,9 @@
 
 #include <LLGL/LLGL.h>
 #include "renderer/custom_surface.hpp"
-#include "renderer/defines.h"
 #include "renderer/camera.h"
 #include "types/sprite.hpp"
+#include "types/backend.hpp"
 #include "world/world.hpp"
 
 enum class RenderLayer : uint8_t {
@@ -17,8 +17,8 @@ enum class RenderLayer : uint8_t {
 };
 
 namespace Renderer {
-    bool InitEngine();
-    bool Init(GLFWwindow* window, const LLGL::Extent2D& resolution);
+    bool InitEngine(RenderBackend backend);
+    bool Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool vsync, bool fullscreen);
     void RenderWorld(const World& world);
 
     void Begin(const Camera& camera);
@@ -39,6 +39,7 @@ namespace Renderer {
     LLGL::CommandBuffer* CommandBuffer();
     LLGL::CommandQueue* CommandQueue();
     const std::shared_ptr<CustomSurface>& Surface();
+    RenderBackend Backend();
 };
 
 #endif

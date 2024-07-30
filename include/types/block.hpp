@@ -16,10 +16,8 @@ enum class BlockType : uint8_t {
 
 inline constexpr static bool block_is_stone(BlockType block_type) {
     switch (block_type) {
-    case BlockType::Dirt:  return false;
-    case BlockType::Grass: return false;
     case BlockType::Stone: return true;
-    case BlockType::Wood:  return false;
+    default: return false;
     }
 }
 
