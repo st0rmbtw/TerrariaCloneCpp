@@ -3,8 +3,6 @@
 
 #pragma once
 
-#include <chrono>
-
 #if DEBUG
     #include <stdio.h>
     #define ASSERT(expression, message) \

@@ -1,6 +1,7 @@
 #include <GLFW/glfw3.h>
 
 #include "game.hpp"
+#include "constants.hpp"
 #include "renderer/camera.h"
 #include "renderer/renderer.hpp"
 #include "time/time.hpp"
@@ -18,6 +19,7 @@ static struct GameState {
     Player player;
     GLFWwindow *window = nullptr;
     bool free_camera = false;
+    bool minimized = false;
 } g;
 
 void pre_update();
@@ -36,15 +38,13 @@ static void handle_mouse_button_events(GLFWwindow* window, int button, int actio
 static void handle_mouse_scroll_events(GLFWwindow* window, double xoffset, double yoffset);
 static void handle_cursor_pos_events(GLFWwindow* window, double xpos, double ypos);
 static void handle_window_resize_events(GLFWwindow* window, int width, int height);
+static void handle_window_iconify_callback(GLFWwindow* window, int iconified);
 
-GLFWwindow* create_window(LLGL::Extent2D size) {
+GLFWwindow* create_window(LLGL::Extent2D size, bool fullscreen) {
     glfwWindowHint(GLFW_FOCUSED, 1);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-    GLFWmonitor* primary_monitor = nullptr;
-#if FULLSCREEN
-    primary_monitor = glfwGetPrimaryMonitor();
-#endif
+    GLFWmonitor* primary_monitor = fullscreen ? glfwGetPrimaryMonitor() : nullptr;
 
     GLFWwindow *window = glfwCreateWindow(size.width, size.height, "AAA", primary_monitor, nullptr);
     if (window == nullptr) {
@@ -60,10 +60,7 @@ GLFWwindow* create_window(LLGL::Extent2D size) {
     glfwSetScrollCallback(window, handle_mouse_scroll_events);
     glfwSetCursorPosCallback(window, handle_cursor_pos_events);
     glfwSetWindowSizeCallback(window, handle_window_resize_events);
-
-#ifdef BACKEND_OPENGL
-    glfwSwapInterval(VSYNC);
-#endif
+    glfwSetWindowIconifyCallback(window, handle_window_iconify_callback);
 
     return window;
 }
@@ -117,7 +114,7 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
 
     if (!Assets::LoadShaders(shader_defs)) return false;
 
-    GLFWwindow *window = create_window(window_size);
+    GLFWwindow *window = create_window(window_size, config.fullscreen);
     if (window == nullptr) return false;
 
     g.window = window;
@@ -131,6 +128,7 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     g.player.inventory().set_item(3, ITEM_DIRT_BLOCK.with_max_stack());
     g.player.inventory().set_item(4, ITEM_STONE_BLOCK.with_max_stack());
     g.player.inventory().set_item(5, ITEM_WOOD_BLOCK.with_max_stack());
+    g.player.set_position(g.world, glm::vec2(g.world.spawn_point()) * Constants::TILE_SIZE);
 
     return true;
 }
@@ -157,11 +155,13 @@ void Game::Run() {
         }
 
         update();
-        render();
-        post_render();
+        
+        if (!g.minimized) {
+            render();
+            post_render();
+        }
 
-        KeyboardInput::Clear();
-        MouseInput::Clear();
+        Input::Clear();
     }
 }
 
@@ -174,20 +174,17 @@ void Game::Destroy() {
 void pre_update() {
     g.player.pre_update();
 
-    if (KeyboardInput::JustPressed(Key::F)) g.free_camera = !g.free_camera;
+    if (Input::JustPressed(Key::F)) g.free_camera = !g.free_camera;
 }
 
 void update() {
 #if DEBUG
-    if (g.free_camera) {
-        g.camera.set_position(camera_free());
-    } else {
-        g.camera.set_position(camera_follow_player());
-    }
+    const glm::vec2 position = g.free_camera ? camera_free() : camera_follow_player();
 #else
-    g.camera.set_position(camera_follow_player());
+    const glm::vec2 position = camera_follow_player();
 #endif
 
+    g.camera.set_position(position);
     g.camera.update();
     g.world.update(g.camera);
     g.player.update(g.camera, g.world);
@@ -196,19 +193,15 @@ void update() {
 }
 
 void fixed_update(delta_time_t delta_time) {
-    // if (m_game_state == GameState::InGame) {
-        // ParticleManager::fixed_update();
+    // ParticleManager::fixed_update();
 
 #if DEBUG
-        if (g.free_camera) {
-            g.player.fixed_update(delta_time, g.world, false);
-        } else {
-            g.player.fixed_update(delta_time, g.world, true);
-        }
+    bool handle_input = !g.free_camera;
 #else
-        g.player.fixed_update(delta_time, g.world, true);
+    bool handle_input = true;
 #endif
-    // }
+
+    g.player.fixed_update(delta_time, g.world, handle_input);
 }
 
 void render() {
@@ -227,7 +220,7 @@ void post_render() {
     g.world.manage_chunks(g.camera);
 
 #if DEBUG
-    if (KeyboardInput::Pressed(Key::C)) {
+    if (Input::Pressed(Key::C)) {
         Renderer::PrintDebugInfo();
     }
 #endif
@@ -261,13 +254,13 @@ glm::vec2 camera_free() {
 
     float speed = 2000.0f;
 
-    if (KeyboardInput::Pressed(Key::LeftShift)) speed *= 2.0f;
-    if (KeyboardInput::Pressed(Key::LeftAlt)) speed /= 5.0f;
+    if (Input::Pressed(Key::LeftShift)) speed *= 2.0f;
+    if (Input::Pressed(Key::LeftAlt)) speed /= 5.0f;
 
-    if (KeyboardInput::Pressed(Key::A)) position.x -= speed * dt;
-    if (KeyboardInput::Pressed(Key::D)) position.x += speed * dt;
-    if (KeyboardInput::Pressed(Key::W)) position.y -= speed * dt;
-    if (KeyboardInput::Pressed(Key::S)) position.y += speed * dt;
+    if (Input::Pressed(Key::A)) position.x -= speed * dt;
+    if (Input::Pressed(Key::D)) position.x += speed * dt;
+    if (Input::Pressed(Key::W)) position.y -= speed * dt;
+    if (Input::Pressed(Key::S)) position.y += speed * dt;
 
     return position;
 }
@@ -275,36 +268,48 @@ glm::vec2 camera_free() {
 
 static void handle_keyboard_events(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
-        KeyboardInput::press(static_cast<Key>(key));
+        Input::Press(static_cast<Key>(key));
     } else if (action == GLFW_RELEASE) {
-        KeyboardInput::release(static_cast<Key>(key));
+        Input::Release(static_cast<Key>(key));
     }
 }
 
 static void handle_mouse_button_events(GLFWwindow* window, int button, int action, int mods) {
     if (action == GLFW_PRESS) {
-        MouseInput::press(static_cast<MouseButton>(button));
+        Input::press(static_cast<MouseButton>(button));
     } else if (action == GLFW_RELEASE) {
-        MouseInput::release(static_cast<MouseButton>(button));
+        Input::release(static_cast<MouseButton>(button));
     }
 }
 
 static void handle_mouse_scroll_events(GLFWwindow* window, double xoffset, double yoffset) {
-    MouseInput::push_scroll_event(yoffset);
+    Input::PushMouseScrollEvent(yoffset);
 }
 
 static void handle_cursor_pos_events(GLFWwindow* window, double xpos, double ypos) {
-    MouseInput::set_screen_position(glm::vec2(xpos, ypos));
+    Input::SetMouseScreenPosition(glm::vec2(xpos, ypos));
 }
 
 static void handle_window_resize_events(GLFWwindow* window, int width, int height) {
+    if (width <= 0 || height <= 0) {
+        g.minimized = true;
+        return;
+    } else {
+        g.minimized = false;
+    }
+
     const LLGL::Display* display = LLGL::Display::GetPrimary();
     const std::uint32_t resScale = (display != nullptr ? static_cast<std::uint32_t>(display->GetScale()) : 1u);
 
     const auto new_size = LLGL::Extent2D(width * resScale, height * resScale);
+
     Renderer::SwapChain()->ResizeBuffers(new_size);
 
     g.camera.set_viewport({new_size.width, new_size.height});
 
     render();
+}
+
+static void handle_window_iconify_callback(GLFWwindow* window, int iconified) {
+    g.minimized = iconified;
 }

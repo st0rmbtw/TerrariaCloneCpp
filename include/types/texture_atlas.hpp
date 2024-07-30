@@ -5,9 +5,9 @@
 
 #include <utility>
 #include <vector>
-#include <LLGL/LLGL.h>
 #include "math/rect.hpp"
 #include "types/texture.hpp"
+#include "common.h"
 
 struct TextureAtlas {
     TextureAtlas() = default;
@@ -18,8 +18,12 @@ struct TextureAtlas {
 
     static TextureAtlas from_grid(const Texture& texture, const glm::uvec2& tile_size, uint32_t columns, uint32_t rows, const glm::uvec2& padding = glm::uvec2(0), const glm::uvec2& offset = glm::uvec2(0));
 
-    [[nodiscard]] const std::vector<math::Rect>& rects() const { return m_rects; }
-    [[nodiscard]] const Texture& texture() const { return m_texture; }
+    [[nodiscard]] inline const std::vector<math::Rect>& rects() const { return m_rects; }
+    [[nodiscard]] inline const Texture& texture() const { return m_texture; }
+    [[nodiscard]] const math::Rect& get_rect(size_t index) const {
+        ASSERT(index < m_rects.size(), "Index is out of bounds.");
+        return m_rects[index];
+    }
 
 private:
     Texture m_texture;

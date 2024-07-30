@@ -16,8 +16,7 @@
 #endif
 
 #include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
-#include <LLGL/LLGL.h>
+#include <LLGL/Surface.h>
 
 class CustomSurface : public LLGL::Surface {
 public:
@@ -27,7 +26,6 @@ public:
 
     bool GetNativeHandle(void* nativeHandle, std::size_t nativeHandleSize) override;
     bool AdaptForVideoMode(LLGL::Extent2D* resolution, bool* fullscreen) override;
-    void ResetPixelFormat() override;
 
     [[nodiscard]] LLGL::Extent2D GetContentSize() const override;
     [[nodiscard]] LLGL::Display* FindResidentDisplay() const override;

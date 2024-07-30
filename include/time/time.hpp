@@ -3,8 +3,7 @@
 
 #pragma once
 
-#include "common.h"
-#include "constants.hpp"
+#include <chrono>
 
 using delta_time_t = std::chrono::duration<double>;
 

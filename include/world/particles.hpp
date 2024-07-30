@@ -4,7 +4,6 @@
 #pragma once
 
 #include <cstdint>
-#include <unordered_map>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 

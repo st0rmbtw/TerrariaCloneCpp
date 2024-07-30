@@ -6,7 +6,6 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <stdint.h>
-#include <unordered_set>
 #include <vector>
 
 enum class MouseButton : uint8_t {
@@ -68,33 +67,29 @@ enum class Key : uint16_t {
     F10 = GLFW_KEY_F10
 };
 
-namespace KeyboardInput {
-    void press(Key key);
-    void release(Key key);
+namespace Input {
+    void Press(Key key);
+    void Release(Key key);
 
     bool Pressed(Key key);
     bool JustPressed(Key key);
 
-    void Clear();
-};
 
-namespace MouseInput {
     void press(MouseButton button);
     void release(MouseButton button);
 
     bool Pressed(MouseButton button);
     bool JustPressed(MouseButton button);
 
-    const std::vector<float>& scroll_events();
+    void PushMouseScrollEvent(float y);
+    void SetMouseScreenPosition(const glm::vec2& position);
+    void SetMouseOverUi(bool mouse_over_ui);
 
-    void push_scroll_event(float y);
-    void set_screen_position(const glm::vec2& position);
-    void set_mouse_over_ui(bool mouse_over_ui);
+    const std::vector<float>& ScrollEvents();
+    const glm::vec2& MouseScreenPosition();
+    bool IsMouseOverUi();
 
     void Clear();
-
-    const glm::vec2& ScreenPosition();
-    bool IsMouseOverUi();
 };
 
 #endif

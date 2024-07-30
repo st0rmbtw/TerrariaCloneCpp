@@ -122,16 +122,16 @@ void render_inventory(const Inventory& inventory) {
 }
 
 void UI::Update(Inventory& inventory) {
-    if (KeyboardInput::JustPressed(Key::Digit1)) inventory.set_selected_slot(0);
-    if (KeyboardInput::JustPressed(Key::Digit2)) inventory.set_selected_slot(1);
-    if (KeyboardInput::JustPressed(Key::Digit3)) inventory.set_selected_slot(2);
-    if (KeyboardInput::JustPressed(Key::Digit4)) inventory.set_selected_slot(3);
-    if (KeyboardInput::JustPressed(Key::Digit5)) inventory.set_selected_slot(4);
-    if (KeyboardInput::JustPressed(Key::Digit6)) inventory.set_selected_slot(5);
-    if (KeyboardInput::JustPressed(Key::Digit7)) inventory.set_selected_slot(6);
-    if (KeyboardInput::JustPressed(Key::Digit8)) inventory.set_selected_slot(7);
-    if (KeyboardInput::JustPressed(Key::Digit9)) inventory.set_selected_slot(8);
-    if (KeyboardInput::JustPressed(Key::Digit0)) inventory.set_selected_slot(9);
+    if (Input::JustPressed(Key::Digit1)) inventory.set_selected_slot(0);
+    if (Input::JustPressed(Key::Digit2)) inventory.set_selected_slot(1);
+    if (Input::JustPressed(Key::Digit3)) inventory.set_selected_slot(2);
+    if (Input::JustPressed(Key::Digit4)) inventory.set_selected_slot(3);
+    if (Input::JustPressed(Key::Digit5)) inventory.set_selected_slot(4);
+    if (Input::JustPressed(Key::Digit6)) inventory.set_selected_slot(5);
+    if (Input::JustPressed(Key::Digit7)) inventory.set_selected_slot(6);
+    if (Input::JustPressed(Key::Digit8)) inventory.set_selected_slot(7);
+    if (Input::JustPressed(Key::Digit9)) inventory.set_selected_slot(8);
+    if (Input::JustPressed(Key::Digit0)) inventory.set_selected_slot(9);
 }
 
 void UI::Render(const Camera& camera, const Inventory& inventory) {
@@ -140,7 +140,7 @@ void UI::Render(const Camera& camera, const Inventory& inventory) {
     Sprite sprite;
     sprite.set_custom_size(glm::vec2(25.0f));
     sprite.set_color(glm::vec3(1.0f, 0.0f, 0.0f));
-    sprite.set_position(MouseInput::ScreenPosition());
+    sprite.set_position(Input::MouseScreenPosition());
     sprite.set_anchor(Anchor::TopLeft);
     sprite.set_texture(Assets::GetTexture(AssetKey::TextureUiCursorForeground));
     sprite.set_order(100);

@@ -30,6 +30,22 @@ public:
 
     void update();
 
+    void set_position(const glm::vec2& position) { m_position = position; }
+
+    void set_zoom(float zoom) {
+        m_zoom = glm::clamp(zoom, Constants::CAMERA_MAX_ZOOM, Constants::CAMERA_MIN_ZOOM);
+        update_projection_area();
+    }
+
+    void set_viewport(const glm::uvec2& viewport) {
+        m_viewport = viewport;
+        update_projection_area();
+    }
+
+
+    [[nodiscard]]
+    auto screen_to_world(const glm::vec2 &screen_pos) const -> glm::vec2;
+
     [[nodiscard]]
     inline auto position() const -> const glm::vec2& { return m_position; }
 
@@ -50,23 +66,6 @@ public:
 
     [[nodiscard]]
     inline float zoom() const { return m_zoom; }
-
-    void set_zoom(float zoom) {
-        m_zoom = glm::clamp(zoom, Constants::CAMERA_MAX_ZOOM, Constants::CAMERA_MIN_ZOOM);
-        update_projection_area();
-    }
-
-    void set_viewport(const glm::uvec2& viewport) {
-        m_viewport = viewport;
-        update_projection_area();
-    }
-
-    void set_position(const glm::vec2& position) {
-        m_position = position;
-    }
-
-    [[nodiscard]]
-    auto screen_to_world(const glm::vec2 &screen_pos) const -> glm::vec2;
 
 private:
     void compute_projection_and_view_matrix();

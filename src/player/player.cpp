@@ -2,7 +2,6 @@
 
 #include "assets.hpp"
 #include "player/player.hpp"
-#include "common.h"
 #include "constants.hpp"
 #include "input.hpp"
 #include "types/item.hpp"
@@ -107,8 +106,8 @@ void Player::set_position(const World& world, const glm::vec2& position) {
 void Player::horizontal_movement(bool handle_input) {
     int8_t dir = 0;
 
-    if (handle_input && KeyboardInput::Pressed(Key::A)) { dir -= 1; }
-    if (handle_input && KeyboardInput::Pressed(Key::D)) { dir += 1; }
+    if (handle_input && Input::Pressed(Key::A)) { dir -= 1; }
+    if (handle_input && Input::Pressed(Key::D)) { dir += 1; }
 
     if (dir > 0) {
         m_direction = Direction::Right;
@@ -136,7 +135,7 @@ void Player::vertical_movement(bool handle_input) {
         m_jumping = true;
     }
 
-    if (handle_input && KeyboardInput::Pressed(Key::Space)) {
+    if (handle_input && Input::Pressed(Key::Space)) {
         if (m_jump > 0) {
             if (m_velocity.y == 0) {
                 m_jump = 0;
@@ -327,7 +326,7 @@ void Player::update_movement_state() {
 }
 
 void Player::pre_update() {
-    if (KeyboardInput::JustPressed(Key::Space)) {
+    if (Input::JustPressed(Key::Space)) {
         do_jump = true;
     }
 }
@@ -414,7 +413,7 @@ void Player::fixed_update(const delta_time_t& delta_time, const World& world, bo
 }
 
 void Player::update(const Camera& camera, World& world) {
-    if (MouseInput::Pressed(MouseButton::Left) && !MouseInput::IsMouseOverUi()) {
+    if (Input::Pressed(MouseButton::Left) && !Input::IsMouseOverUi()) {
         use_item(camera, world);
     }
 
@@ -422,15 +421,12 @@ void Player::update(const Camera& camera, World& world) {
 }
 
 void Player::keep_in_world_bounds(const World& world) {
-    const float world_min_x = world.playable_area().min.x * TILE_SIZE;
-    const float world_max_x = world.playable_area().max.x * TILE_SIZE;
-    const float world_min_y = world.playable_area().min.y * TILE_SIZE;
-    const float world_max_y = world.playable_area().max.y * TILE_SIZE;
+    const math::Rect area = world.playable_area() * TILE_SIZE;
 
-    if (m_position.x - PLAYER_WIDTH_HALF < world_min_x) m_position.x = world_min_x + PLAYER_WIDTH_HALF;
-    if (m_position.x + PLAYER_WIDTH_HALF > world_max_x) m_position.x = world_max_x - PLAYER_WIDTH_HALF;
-    if (m_position.y - PLAYER_HEIGHT_HALF < world_min_y) m_position.y = world_min_y + PLAYER_HEIGHT_HALF;
-    if (m_position.y + PLAYER_HEIGHT_HALF > world_max_y) m_position.y = world_max_y - PLAYER_HEIGHT_HALF;
+    if (m_position.x - PLAYER_WIDTH_HALF < area.min.x) m_position.x = area.min.x + PLAYER_WIDTH_HALF;
+    if (m_position.x + PLAYER_WIDTH_HALF > area.max.x) m_position.x = area.max.x - PLAYER_WIDTH_HALF;
+    if (m_position.y - PLAYER_HEIGHT_HALF < area.min.y) m_position.y = area.min.y + PLAYER_HEIGHT_HALF;
+    if (m_position.y + PLAYER_HEIGHT_HALF > area.max.y) m_position.y = area.max.y - PLAYER_HEIGHT_HALF;
 }
 
 float Player::get_fall_distance() const {
@@ -502,7 +498,7 @@ void Player::use_item(const Camera& camera, World& world) {
 
     if (m_use_cooldown > 0) return;
 
-    const glm::vec2& screen_pos = MouseInput::ScreenPosition();
+    const glm::vec2& screen_pos = Input::MouseScreenPosition();
     const glm::vec2 world_pos = camera.screen_to_world(screen_pos);
 
     const TilePos tile_pos = TilePos::from_world_pos(world_pos);

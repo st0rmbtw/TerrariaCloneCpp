@@ -9,7 +9,7 @@
 
 #include "renderer/assets.hpp"
 #include "math/rect.hpp"
-#include "types/texture.hpp"
+#include "types/sprite.hpp"
 
 constexpr size_t MAX_QUADS = 5000;
 constexpr size_t MAX_VERTICES = MAX_QUADS * 4;
@@ -44,9 +44,6 @@ public:
     virtual void begin() = 0;
     virtual void terminate() = 0;
 
-    [[nodiscard]] inline bool is_empty() const { return m_sprites.empty(); }
-    [[nodiscard]] inline bool is_full() const { return m_index_count >= MAX_INDICES; }
-
     inline void clear_sprites() { m_sprites.clear(); }
 
     inline void set_projection_matrix(const glm::mat4& projection_matrix) {
@@ -68,6 +65,9 @@ public:
     inline void set_ui_frustum(const math::Rect& ui_frustum) {
         m_ui_frustum = ui_frustum;
     }
+
+    [[nodiscard]] inline bool is_empty() const { return m_sprites.empty(); }
+    [[nodiscard]] inline bool is_full() const { return m_index_count >= MAX_INDICES; }
 
 protected:
     std::vector<SpriteData> m_sprites;

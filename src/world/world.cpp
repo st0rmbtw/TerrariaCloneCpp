@@ -8,7 +8,6 @@
 #include "world/world_gen.h"
 #include "world/autotile.hpp"
 #include "math/rect.hpp"
-#include "assets.hpp"
 #include "optional.hpp"
 
 inline glm::uvec2 get_chunk_pos(TilePos tile_pos) {

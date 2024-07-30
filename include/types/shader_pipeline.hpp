@@ -3,7 +3,8 @@
 
 #pragma once
 
-#include <LLGL/LLGL.h>
+#include <LLGL/Shader.h>
+#include <LLGL/RenderSystem.h>
 
 struct ShaderPipeline {
     LLGL::Shader* vs = nullptr; // Vertex shader

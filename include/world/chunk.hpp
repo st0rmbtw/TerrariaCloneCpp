@@ -4,7 +4,6 @@
 #pragma once
 
 #include <stdint.h>
-#include <memory>
 #include <glm/glm.hpp>
 #include <glm/gtx/hash.hpp>
 #include <LLGL/LLGL.h>

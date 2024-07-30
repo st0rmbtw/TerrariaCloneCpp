@@ -6,7 +6,6 @@
 #include <LLGL/LLGL.h>
 #include <LLGL/Utils/VertexFormat.h>
 #include <glm/glm.hpp>
-#include "types/texture.hpp"
 
 struct SpriteVertex {
     glm::vec4 transform_col_0;

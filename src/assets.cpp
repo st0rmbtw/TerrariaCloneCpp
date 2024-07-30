@@ -1,8 +1,13 @@
 #include <sstream>
 #include <fstream>
+#include <array>
 
 #include <LLGL/Utils/VertexFormat.h>
+#include <LLGL/Shader.h>
+#include <LLGL/ShaderFlags.h>
+#include <LLGL/VertexAttribute.h>
 #include <STB/stb_image.h>
+
 #include "assets.hpp"
 #include "renderer/assets.hpp"
 #include "renderer/renderer.hpp"
@@ -10,6 +15,54 @@
 #include "utils.hpp"
 #include "types/shader_pipeline.hpp"
 #include "vulkan_shader_compiler.hpp"
+
+struct AssetTextureAtlas {
+    uint32_t rows;
+    uint32_t columns;
+    glm::uvec2 tile_size;
+    glm::uvec2 padding = glm::uvec2(0);
+    glm::uvec2 offset = glm::uvec2(0);
+
+    AssetTextureAtlas(uint32_t columns, uint32_t rows, glm::uvec2 tile_size, glm::uvec2 padding = glm::uvec2(0), glm::uvec2 offset = glm::uvec2(0)) :
+        columns(columns),
+        rows(rows),
+        tile_size(tile_size),
+        padding(padding),
+        offset(offset) {}
+};
+
+struct AssetTexture {
+    std::string path;
+    int sampler;
+
+    explicit AssetTexture(std::string path, int sampler = TextureSampler::Nearest) :
+        path(std::move(path)),
+        sampler(sampler) {}
+};
+
+namespace ShaderStages {
+    enum : uint8_t {
+        Vertex = 1 << 0,
+        Fragment = 1 << 1,
+        Geometry = 1 << 2
+    };
+}
+
+struct AssetShader {
+    std::string name;
+    uint8_t stages;
+    std::vector<LLGL::VertexAttribute> vertex_attributes;
+
+    explicit AssetShader(std::string name, uint8_t stages) :
+        name(std::move(name)),
+        stages(stages),
+        vertex_attributes() {}
+
+    explicit AssetShader(std::string name, uint8_t stages, const LLGL::VertexFormat& vertex_format) :
+        name(std::move(name)),
+        stages(stages),
+        vertex_attributes(vertex_format.attributes) {}
+};
 
 static const std::pair<AssetKey, AssetTexture> TEXTURE_ASSETS[] = {
     { AssetKey::TexturePlayerHair,         AssetTexture("assets/sprites/player/Player_Hair_1.png") },
@@ -85,7 +138,7 @@ static struct AssetsState {
 
 Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data);
 Texture create_texture_array_empty(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler);
-inline LLGL::Shader* load_shader(LLGL::ShaderType shader_type, const std::string& name, const LLGL::VertexFormat* vertex_format, const std::vector<ShaderDef>& shader_defs);
+inline LLGL::Shader* load_shader(LLGL::ShaderType shader_type, const std::string& name, const std::vector<ShaderDef>& shader_defs, const std::vector<LLGL::VertexAttribute>& vertex_attributes = {});
 
 bool Assets::Load() {
     using Constants::MAX_TILE_TEXTURE_WIDTH;
@@ -186,22 +239,31 @@ bool Assets::Load() {
 }
 
 bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
-    ShaderPipeline sprite_shader;
-    if (!(sprite_shader.vs = load_shader(LLGL::ShaderType::Vertex, "sprite", &SpriteVertexFormat(), shader_defs)))
-        return false;
-    if (!(sprite_shader.ps = load_shader(LLGL::ShaderType::Fragment, "sprite", nullptr, shader_defs)))
-        return false;
+    const std::pair<ShaderAssetKey, AssetShader> SHADER_ASSETS[] = {
+        { ShaderAssetKey::SpriteShader, AssetShader("sprite", ShaderStages::Vertex | ShaderStages::Fragment, SpriteVertexFormat()) },
+        { ShaderAssetKey::TilemapShader, AssetShader("tilemap", ShaderStages::Vertex | ShaderStages::Fragment | ShaderStages::Geometry, TilemapVertexFormat()) },
+    };
 
-    ShaderPipeline tilemap_shader;
-    if (!(tilemap_shader.vs = load_shader(LLGL::ShaderType::Vertex, "tilemap", &TilemapVertexFormat(), shader_defs)))
-        return false;
-    if (!(tilemap_shader.ps = load_shader(LLGL::ShaderType::Fragment, "tilemap", nullptr, shader_defs)))
-        return false;
-    if (!(tilemap_shader.gs = load_shader(LLGL::ShaderType::Geometry, "tilemap", &TilemapVertexFormat(), shader_defs)))
-        return false;
+    for (const auto& [key, asset] : SHADER_ASSETS) {
+        ShaderPipeline shader_pipeline;
 
-    state.shaders[ShaderAssetKey::SpriteShader] = sprite_shader;
-    state.shaders[ShaderAssetKey::TilemapShader] = tilemap_shader;
+        if ((asset.stages & ShaderStages::Vertex) == ShaderStages::Vertex) {
+            if (!(shader_pipeline.vs = load_shader(LLGL::ShaderType::Vertex, asset.name, shader_defs, asset.vertex_attributes)))
+                return false;
+        }
+        
+        if ((asset.stages & ShaderStages::Fragment) == ShaderStages::Fragment) {
+            if (!(shader_pipeline.ps = load_shader(LLGL::ShaderType::Fragment, asset.name, shader_defs)))
+                return false;
+        }
+
+        if ((asset.stages & ShaderStages::Geometry) == ShaderStages::Geometry) {
+            if (!(shader_pipeline.gs = load_shader(LLGL::ShaderType::Geometry, asset.name, shader_defs)))
+                return false;
+        }
+
+        state.shaders[key] = shader_pipeline;
+    }
 
     return true;
 };
@@ -325,8 +387,8 @@ Texture create_texture_array_empty(uint32_t width, uint32_t height, uint32_t lay
 LLGL::Shader* load_shader(
     LLGL::ShaderType shader_type,
     const std::string& name,
-    const LLGL::VertexFormat* vertex_format = nullptr,
-    const std::vector<ShaderDef>& shader_defs = {}
+    const std::vector<ShaderDef>& shader_defs,
+    const std::vector<LLGL::VertexAttribute>& vertex_attributes
 ) {
     const RenderBackend backend = Renderer::Backend();
 
@@ -391,7 +453,7 @@ LLGL::Shader* load_shader(
     shader_desc.sourceType = LLGL::ShaderSourceType::CodeString;
 
     if (shader_type == LLGL::ShaderType::Vertex) {
-        shader_desc.vertex.inputAttribs = vertex_format->attributes;
+        shader_desc.vertex.inputAttribs = vertex_attributes;
     }
 
     const std::string output_path = path + ".spv";

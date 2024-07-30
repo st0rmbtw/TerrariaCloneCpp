@@ -1,5 +1,4 @@
 #include <memory>
-#include <array>
 #include <LLGL/Utils/TypeNames.h>
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -12,7 +11,6 @@
 #include "renderer/batch.hpp"
 #include "renderer/world_renderer.hpp"
 #include "assets.hpp"
-#include "utils.hpp"
 #include "log.hpp"
 
 static struct RendererState {
@@ -187,7 +185,7 @@ void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer) {
 }
 
 void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer /* render_layer */) {
-    const math::Rect& rect = sprite.atlas().rects()[sprite.index()];
+    const math::Rect& rect = sprite.atlas().get_rect(sprite.index());
 
     glm::vec4 uv_offset_scale = glm::vec4(
         rect.min.x / sprite.atlas().texture().size().x,

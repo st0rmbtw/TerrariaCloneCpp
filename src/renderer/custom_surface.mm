@@ -1,5 +1,6 @@
 #include "renderer/custom_surface.hpp"
 #include <LLGL/Platform/NativeHandle.h>
+#include <GLFW/glfw3native.h>
 
 CustomSurface::CustomSurface(GLFWwindow * const window, const LLGL::Extent2D& size) :
     m_size(size),
@@ -16,23 +17,16 @@ CustomSurface::~CustomSurface() {
     if (m_wnd) glfwDestroyWindow(m_wnd);
 }
 
-void CustomSurface::ResetPixelFormat() {
-    // glfwDestroyWindow(m_wnd);
-    // m_wnd = CreateGLFWWindow();
-    printf("RESET PIXEL FORMAT CALLED\n");
-}
-
 bool CustomSurface::GetNativeHandle(void* nativeHandle, std::size_t nativeHandleSize) {
     auto* handle = reinterpret_cast<LLGL::NativeHandle*>(nativeHandle);
 #if defined(_WIN32)
     handle->window = glfwGetWin32Window(m_wnd);
 #elif defined(__MACH__)
     handle->responder = glfwGetCocoaWindow(m_wnd);
-#else
+#elif defined(WAYLAND)
     // TODO
-    #if defined(WAYLAND)
-    #elif defined(X11)
-  #endif
+#elif defined(X11)
+    // TODO
 #endif
     return true;
 }

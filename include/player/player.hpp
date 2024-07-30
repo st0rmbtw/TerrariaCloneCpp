@@ -4,10 +4,8 @@
 #define PLAYER_HPP
 
 #include <glm/glm.hpp>
-#include "common.h"
 #include "optional.hpp"
 
-#include "input.hpp"
 #include "renderer/camera.h"
 #include "types/sprite.hpp"
 #include "world/world.hpp"

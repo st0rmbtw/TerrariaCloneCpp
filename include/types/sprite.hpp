@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include <LLGL/LLGL.h>
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 
@@ -31,31 +30,31 @@ public:
         calculate_aabb();
         return *this;
     }
-    BaseSprite& set_rotation(const glm::quat& rotation) { m_rotation = rotation; return *this; }
-    BaseSprite& set_scale(const glm::vec2& scale) { m_scale = scale; return *this; }
-    BaseSprite& set_color(const glm::vec4& color) { m_color = color; return *this; }
-    BaseSprite& set_color(const glm::vec3& color) { m_color = glm::vec4(color, 1.0); return *this; }
-    BaseSprite& set_outline_color(const glm::vec4& color) { m_outline_color = color; return *this; }
-    BaseSprite& set_outline_color(const glm::vec3& color) { m_outline_color = glm::vec4(color, 1.0); return *this; }
-    BaseSprite& set_outline_thickness(const float thickness) { m_outline_thickness = thickness; return *this; }
-    BaseSprite& set_anchor(Anchor anchor) { m_anchor = anchor; return *this; }
-    BaseSprite& set_flip_x(bool flip_x) { m_flip_x = flip_x; return *this; }
-    BaseSprite& set_flip_y(bool flip_y) { m_flip_y = flip_y; return *this; }
-    BaseSprite& set_order(int order) { m_order = order; return *this; }
+    inline BaseSprite& set_rotation(const glm::quat& rotation) { m_rotation = rotation; return *this; }
+    inline BaseSprite& set_scale(const glm::vec2& scale) { m_scale = scale; return *this; }
+    inline BaseSprite& set_color(const glm::vec4& color) { m_color = color; return *this; }
+    inline BaseSprite& set_color(const glm::vec3& color) { m_color = glm::vec4(color, 1.0); return *this; }
+    inline BaseSprite& set_outline_color(const glm::vec4& color) { m_outline_color = color; return *this; }
+    inline BaseSprite& set_outline_color(const glm::vec3& color) { m_outline_color = glm::vec4(color, 1.0); return *this; }
+    inline BaseSprite& set_outline_thickness(const float thickness) { m_outline_thickness = thickness; return *this; }
+    inline BaseSprite& set_anchor(Anchor anchor) { m_anchor = anchor; return *this; }
+    inline BaseSprite& set_flip_x(bool flip_x) { m_flip_x = flip_x; return *this; }
+    inline BaseSprite& set_flip_y(bool flip_y) { m_flip_y = flip_y; return *this; }
+    inline BaseSprite& set_order(int order) { m_order = order; return *this; }
 
-    [[nodiscard]] const glm::vec2& position() const { return m_position; }
-    [[nodiscard]] const glm::quat& rotation() const { return m_rotation; }
-    [[nodiscard]] const glm::vec2& scale() const { return m_scale; }
-    [[nodiscard]] const glm::vec4& color() const { return m_color; }
-    [[nodiscard]] const glm::vec4& outline_color() const { return m_outline_color; }
-    [[nodiscard]] float outline_thickness() const { return m_outline_thickness; }
+    [[nodiscard]] inline const glm::vec2& position() const { return m_position; }
+    [[nodiscard]] inline const glm::quat& rotation() const { return m_rotation; }
+    [[nodiscard]] inline const glm::vec2& scale() const { return m_scale; }
+    [[nodiscard]] inline const glm::vec4& color() const { return m_color; }
+    [[nodiscard]] inline const glm::vec4& outline_color() const { return m_outline_color; }
+    [[nodiscard]] inline float outline_thickness() const { return m_outline_thickness; }
 
-    [[nodiscard]] Anchor anchor() const { return m_anchor; }
-    [[nodiscard]] bool flip_x() const { return m_flip_x; }
-    [[nodiscard]] bool flip_y() const { return m_flip_y; }
+    [[nodiscard]] inline Anchor anchor() const { return m_anchor; }
+    [[nodiscard]] inline bool flip_x() const { return m_flip_x; }
+    [[nodiscard]] inline bool flip_y() const { return m_flip_y; }
 
-    [[nodiscard]] const math::Rect& aabb() const { return m_aabb; }
-    [[nodiscard]] int order() const { return m_order; }
+    [[nodiscard]] inline const math::Rect& aabb() const { return m_aabb; }
+    [[nodiscard]] inline int order() const { return m_order; }
 
     [[nodiscard]] virtual glm::vec2 size() const = 0;
 
@@ -89,8 +88,8 @@ public:
         return *this;
     }
 
-    [[nodiscard]] const tl::optional<Texture>& texture() const { return m_texture; }
-    [[nodiscard]] const tl::optional<glm::vec2>& custom_size() const { return m_custom_size; }
+    [[nodiscard]] inline const tl::optional<Texture>& texture() const { return m_texture; }
+    [[nodiscard]] inline const tl::optional<glm::vec2>& custom_size() const { return m_custom_size; }
 
     [[nodiscard]] glm::vec2 size() const override {
         auto size = glm::vec2(1.0f);
@@ -115,13 +114,13 @@ public:
         m_texture_atlas(std::move(texture_atlas)),
         m_index(0) {}
 
-    void set_index(size_t index) { m_index = index; }
+    inline void set_index(size_t index) { m_index = index; }
 
-    [[nodiscard]] size_t index() const { return m_index; }
-    [[nodiscard]] const TextureAtlas& atlas() const { return m_texture_atlas; }
+    [[nodiscard]] inline size_t index() const { return m_index; }
+    [[nodiscard]] inline const TextureAtlas& atlas() const { return m_texture_atlas; }
 
     [[nodiscard]] glm::vec2 size() const override {
-        return m_texture_atlas.rects()[m_index].size() * scale();
+        return m_texture_atlas.get_rect(m_index).size() * scale();
     }
 private:
     TextureAtlas m_texture_atlas;

@@ -4,8 +4,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <glm/glm.hpp>
-#include "common.h"
+#include <glm/vec2.hpp>
 
 enum class Anchor : uint8_t {
     Center = 0,
