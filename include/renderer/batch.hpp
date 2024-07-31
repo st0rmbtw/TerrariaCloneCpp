@@ -1,7 +1,6 @@
 #ifndef TERRARIA_RENDER_BATCH_HPP
 #define TERRARIA_RENDER_BATCH_HPP
 
-#include "optional.hpp"
 #pragma once
 
 #include <glm/glm.hpp>
@@ -11,6 +10,7 @@
 #include "renderer/assets.hpp"
 #include "math/rect.hpp"
 #include "types/sprite.hpp"
+#include "optional.hpp"
 
 constexpr size_t MAX_QUADS = 5000;
 constexpr size_t MAX_VERTICES = MAX_QUADS * 4;

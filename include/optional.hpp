@@ -2003,22 +2003,29 @@ public:
   void swap(optional &rhs) noexcept { std::swap(m_value, rhs.m_value); }
 
   /// Returns a pointer to the stored value
-  constexpr const T *operator->() const noexcept { return m_value; }
+  TL_OPTIONAL_11_CONSTEXPR const T *operator->() const noexcept { return m_value; }
 
   TL_OPTIONAL_11_CONSTEXPR T *operator->() noexcept { return m_value; }
 
   /// Returns the stored value
   TL_OPTIONAL_11_CONSTEXPR T &operator*() noexcept { return *m_value; }
 
-  constexpr const T &operator*() const noexcept { return *m_value; }
+  TL_OPTIONAL_11_CONSTEXPR const T &operator*() const noexcept { return *m_value; }
 
-  constexpr bool has_value() const noexcept { return m_value != nullptr; }
+  TL_OPTIONAL_11_CONSTEXPR bool has_value() const noexcept { return m_value != nullptr; }
 
   /// Returns whether or not the optional has a value
-  constexpr bool is_some() const noexcept { return has_value(); }
-  constexpr bool is_none() const noexcept { return !is_some(); }
+  TL_OPTIONAL_11_CONSTEXPR bool is_some() const noexcept { return has_value(); }
+  TL_OPTIONAL_11_CONSTEXPR bool is_none() const noexcept { return !is_some(); }
 
-  constexpr explicit operator bool() const noexcept {
+  TL_OPTIONAL_11_CONSTEXPR T &get() & { return *this->m_value; }
+  TL_OPTIONAL_11_CONSTEXPR const T &get() const & { return *this->m_value; }
+  TL_OPTIONAL_11_CONSTEXPR T &&get() && { return std::move(*this->m_value); }
+#ifndef TL_OPTIONAL_NO_CONSTRR
+  constexpr const T &&get() const && { return std::move(*this->m_value); }
+#endif
+
+  TL_OPTIONAL_11_CONSTEXPR explicit operator bool() const noexcept {
     return m_value != nullptr;
   }
 

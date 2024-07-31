@@ -6,7 +6,7 @@ tl::optional<const Item&> Inventory::get_item(uint8_t index) const {
 
     if (m_items[index].is_none()) return tl::nullopt;
 
-    return m_items[index].value();
+    return m_items[index].get();
 }
 
 tl::optional<Item&> Inventory::get_item(uint8_t index) {
@@ -14,7 +14,7 @@ tl::optional<Item&> Inventory::get_item(uint8_t index) {
 
     if (m_items[index].is_none()) return tl::nullopt;
 
-    return m_items[index].value();
+    return m_items[index].get();
 }
 
 void Inventory::set_item(uint8_t index, const Item& item) {

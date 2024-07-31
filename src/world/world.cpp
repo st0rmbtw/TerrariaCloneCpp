@@ -21,7 +21,7 @@ tl::optional<const Block&> WorldData::get_block(TilePos pos) const {
 
     if (this->blocks[index].is_none()) return tl::nullopt;
 
-    return this->blocks[index].value();
+    return this->blocks[index].get();
 }
 
 tl::optional<const Wall&> WorldData::get_wall(TilePos pos) const {
@@ -31,7 +31,7 @@ tl::optional<const Wall&> WorldData::get_wall(TilePos pos) const {
 
     if (this->walls[index].is_none()) return tl::nullopt;
     
-    return this->walls[index].value();
+    return this->walls[index].get();
 }
 
 tl::optional<Block&> WorldData::get_block_mut(TilePos pos) {
@@ -41,7 +41,7 @@ tl::optional<Block&> WorldData::get_block_mut(TilePos pos) {
 
     if (this->blocks[index].is_none()) return tl::nullopt;
 
-    return this->blocks[index].value();
+    return this->blocks[index].get();
 }
 
 tl::optional<Wall&> WorldData::get_wall_mut(TilePos pos) {
@@ -51,7 +51,7 @@ tl::optional<Wall&> WorldData::get_wall_mut(TilePos pos) {
 
     if (this->walls[index].is_none()) return tl::nullopt;
     
-    return this->walls[index].value();
+    return this->walls[index].get();
 }
 
 tl::optional<BlockType> WorldData::get_block_type(TilePos pos) const {
@@ -175,10 +175,7 @@ void World::remove_block(TilePos pos) {
 
     reset_tiles(pos, *this);
 
-    uint8_t pixel = 0;
-    if (m_data.wall_exists(pos)) {
-        pixel = 2;
-    }
+    uint8_t pixel = m_data.wall_exists(pos) ? 2 : 0;
 
     // Renderer::state.tiles_texture->set_pixel(index, &pixel);
 
@@ -203,10 +200,7 @@ void World::set_wall(TilePos pos, WallType wall_type) {
 
     update_neighbors(pos);
 
-    uint8_t pixel = 2;
-    if (m_data.block_exists(pos)) {
-        pixel = 1;
-    }
+    const uint8_t pixel = m_data.block_exists(pos) ? 1 : 2;
 
     // Renderer::state.tiles_texture->set_pixel(index, &pixel);
 
@@ -316,7 +310,7 @@ void World::update_tile_sprite_index(TilePos pos) {
         const Neighbors<const Block&> neighbors = this->get_block_neighbors(pos);
         const TextureAtlasPos prev_atlas_pos = block->atlas_pos;
 
-        update_block_sprite_index(block.value(), neighbors);
+        update_block_sprite_index(block.get(), neighbors);
         
         block_updated = true;
     }
@@ -325,7 +319,7 @@ void World::update_tile_sprite_index(TilePos pos) {
         const Neighbors<const Wall&> neighbors = this->get_wall_neighbors(pos);
         const TextureAtlasPos prev_atlas_pos = wall->atlas_pos;
 
-        update_wall_sprite_index(wall.value(), neighbors);
+        update_wall_sprite_index(wall.get(), neighbors);
         
         wall_updated = true;
     }
