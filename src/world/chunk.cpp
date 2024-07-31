@@ -1,4 +1,5 @@
 #include "world/chunk.hpp"
+#include "LLGL/ResourceFlags.h"
 #include "optional.hpp"
 #include "world/world.hpp"
 #include "types/block.hpp"
@@ -26,25 +27,12 @@ RenderChunk::RenderChunk(const glm::uvec2& index, const glm::vec2& world_pos, co
     build_mesh(world);
 }
 
-RenderChunk::RenderChunk(RenderChunk&& other) noexcept :
-    transform_matrix(other.transform_matrix),
-    index(other.index),
-    block_vertex_buffer(other.block_vertex_buffer),
-    wall_vertex_buffer(other.wall_vertex_buffer),
-    blocks_count(other.blocks_count),
-    walls_count(other.walls_count),
-    blocks_dirty(other.blocks_dirty),
-    walls_dirty(other.walls_dirty)
-{
-    other.block_vertex_buffer = nullptr;    
-    other.wall_vertex_buffer = nullptr;
-}
-
-RenderChunk::~RenderChunk() {
-    if (block_vertex_buffer || wall_vertex_buffer) Renderer::CommandQueue()->WaitIdle();
-
+void RenderChunk::destroy() {
     if (block_vertex_buffer) Renderer::Context()->Release(*block_vertex_buffer);
     if (wall_vertex_buffer) Renderer::Context()->Release(*wall_vertex_buffer);
+
+    block_vertex_buffer = nullptr;
+    wall_vertex_buffer = nullptr;
 }
 
 void RenderChunk::build_mesh(const World& world) {

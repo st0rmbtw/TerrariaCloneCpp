@@ -124,10 +124,10 @@ void Renderer::Begin(const Camera& camera) {
     const glm::mat4 screen_projection = glm::ortho(0.0f, static_cast<float>(camera.viewport().x), static_cast<float>(camera.viewport().y), 0.0f, -1.0f, 1.0f);
 
     commands->Begin();
+    commands->SetViewport(swap_chain->GetResolution());
 
     commands->BeginRenderPass(*swap_chain);
     commands->Clear(LLGL::ClearFlags::Color, LLGL::ClearValue(0.854f, 0.584f, 0.584f, 1.0f));
-    commands->SetViewport(swap_chain->GetResolution());
 
     state.sprite_batch.begin();
     state.sprite_batch.set_projection_matrix(camera.get_projection_matrix());
@@ -208,8 +208,6 @@ void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer /* 
 }
 
 void Renderer::Terminate() {
-    state.command_queue->WaitIdle();
-
     Assets::DestroyShaders();
 
     state.sprite_batch.terminate();
@@ -247,13 +245,9 @@ void RenderBatchSprite::init() {
         offset += 4;
     }
 
-    LLGL::BufferDescriptor bufferDesc = LLGL::VertexBufferDesc(MAX_VERTICES * sizeof(SpriteVertex), SpriteVertexFormat());
-    bufferDesc.debugName = "SpriteBatch VertexBuffer";
-    m_vertex_buffer = state.context->CreateBuffer(bufferDesc);
-
-    m_index_buffer = CreateIndexBuffer(indices, LLGL::Format::R32UInt);
-
-    m_constant_buffer = state.context->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(SpriteUniforms)));
+    m_vertex_buffer = CreateVertexBuffer(MAX_VERTICES * sizeof(SpriteVertex), SpriteVertexFormat(), "SpriteBatch VertexBuffer");
+    m_index_buffer = CreateIndexBuffer(indices, LLGL::Format::R32UInt, "SpriteBatch IndexBuffer");
+    m_constant_buffer = CreateConstantBuffer(sizeof(SpriteUniforms));
 
     const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
 
@@ -310,7 +304,7 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
     transform = glm::translate(transform, glm::vec3(-sprite.size() * sprite.anchor(), 0.));
     transform = glm::scale(transform, glm::vec3(sprite.size(), 1.0f));
 
-    if (m_index_count >= MAX_INDICES) {
+    if (m_sprites.size() >= MAX_QUADS) {
         render();
         begin();
     }
@@ -364,15 +358,22 @@ void RenderBatchSprite::render() {
     );
     
     tl::optional<Texture> prev_texture = sorted_sprites[0].texture;
-    int vertex_offset = m_sprite_count * 4;
+    uint32_t index_count = 0;
+    uint32_t sprite_count = 0;
+    int vertex_offset = 0;
 
     for (const SpriteData& sprite_data : sorted_sprites) {
         const int prev_texture_id = prev_texture.is_some() ? prev_texture->id : -1;
         const int curr_texture_id = sprite_data.texture.is_some() ? sprite_data.texture->id : -1;
 
         if (prev_texture_id >= 0 && prev_texture_id != curr_texture_id) {
-            flush(prev_texture, vertex_offset);
-            vertex_offset = m_sprite_count * 4;
+            m_sprite_flush_queue.push_back(SpriteFlush {
+                .texture = prev_texture,
+                .vertex_offset = vertex_offset,
+                .index_count = index_count
+            });
+            index_count = 0;
+            vertex_offset = sprite_count * 4;
         }
 
         m_buffer_ptr->transform_col_0 = sprite_data.transform[0];
@@ -415,37 +416,44 @@ void RenderBatchSprite::render() {
         m_buffer_ptr->is_ui = sprite_data.is_ui;
         m_buffer_ptr++;
 
-        m_index_count += 6;
-        m_sprite_count += 1;
+        index_count += 6;
+        sprite_count += 1;
 
         prev_texture = sprite_data.texture;
     }
 
-    update_buffers();
+    m_sprite_flush_queue.push_back(SpriteFlush {
+        .texture = prev_texture,
+        .vertex_offset = vertex_offset,
+        .index_count = index_count
+    });
 
-    flush(prev_texture, vertex_offset);
+    flush();
 }
 
-void RenderBatchSprite::flush(const tl::optional<Texture>& texture, int vertex_offset) {
+void RenderBatchSprite::flush() {
     auto* const commands = Renderer::CommandBuffer();
-    
-    const Texture& t = texture.is_some() ? texture.get() : Assets::GetTexture(AssetKey::TextureStub);
 
+    update_buffers();
+    
     commands->SetVertexBuffer(*m_vertex_buffer);
     commands->SetIndexBuffer(*m_index_buffer);
 
     commands->SetPipelineState(*m_pipeline);
     commands->SetResource(0, *m_constant_buffer);
-    commands->SetResource(1, *t.texture);
-    commands->SetResource(2, Assets::GetSampler(t.sampler));
-    commands->DrawIndexed(m_index_count, 0, vertex_offset);
 
-    m_index_count = 0;
+    for (const SpriteFlush& sprite_flush : m_sprite_flush_queue) {
+        const Texture& t = sprite_flush.texture.is_some() ? sprite_flush.texture.get() : Assets::GetTexture(AssetKey::TextureStub);
+
+        commands->SetResource(1, *t.texture);
+        commands->SetResource(2, Assets::GetSampler(t.sampler));
+        commands->DrawIndexed(sprite_flush.index_count, 0, sprite_flush.vertex_offset);
+    }
 }
 
 void RenderBatchSprite::begin() {
     m_buffer_ptr = m_buffer;
-    m_sprite_count = 0;
+    m_sprite_flush_queue.clear();
     clear_sprites();
 }
 

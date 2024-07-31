@@ -69,42 +69,38 @@ void WorldRenderer::render(const World& world) {
     };
     commands->UpdateBuffer(*m_constant_buffer, 0, &uniforms, sizeof(uniforms));
 
-    for (const auto& entry : world.render_chunks()) {
-        const RenderChunk& chunk = entry.second;
+    for (const glm::uvec2& pos : world.visible_chunks()) {
+        const RenderChunk& chunk = world.render_chunks().at(pos);
 
-        if (chunk.walls_empty()) continue;
+        if (chunk.walls_empty() && chunk.blocks_empty()) continue;
 
         commands->UpdateBuffer(*m_transform_buffer, 0, glm::value_ptr(chunk.transform_matrix), sizeof(glm::mat4));
 
-        const Texture& t = Assets::GetTexture(AssetKey::TextureWalls);
+        if (!chunk.walls_empty()) {
+            const Texture& t = Assets::GetTexture(AssetKey::TextureWalls);
 
-        commands->SetPipelineState(*m_pipeline);
-        commands->SetVertexBuffer(*chunk.wall_vertex_buffer);
-        commands->SetResource(0, *m_constant_buffer);
-        commands->SetResource(1, *m_transform_buffer);
-        commands->SetResource(2, *t.texture);
-        commands->SetResource(3, Assets::GetSampler(t.sampler));
+            commands->SetPipelineState(*m_pipeline);
+            commands->SetVertexBuffer(*chunk.wall_vertex_buffer);
+            commands->SetResource(0, *m_constant_buffer);
+            commands->SetResource(1, *m_transform_buffer);
+            commands->SetResource(2, *t.texture);
+            commands->SetResource(3, Assets::GetSampler(t.sampler));
 
-        commands->Draw(chunk.walls_count, 0);
-    }
+            commands->Draw(chunk.walls_count, 0);
+        }
 
-    for (const auto& entry : world.render_chunks()) {
-        const RenderChunk& chunk = entry.second;
+        if (!chunk.blocks_empty()) {
+            const Texture& t = Assets::GetTexture(AssetKey::TextureTiles);
 
-        if (chunk.blocks_empty()) continue;
-        
-        commands->UpdateBuffer(*m_transform_buffer, 0, glm::value_ptr(chunk.transform_matrix), sizeof(glm::mat4));
+            commands->SetPipelineState(*m_pipeline);
+            commands->SetVertexBuffer(*chunk.block_vertex_buffer);
+            commands->SetResource(0, *m_constant_buffer);
+            commands->SetResource(1, *m_transform_buffer);
+            commands->SetResource(2, *t.texture);
+            commands->SetResource(3, Assets::GetSampler(t.sampler));
 
-        const Texture& t = Assets::GetTexture(AssetKey::TextureTiles);
-
-        commands->SetPipelineState(*m_pipeline);
-        commands->SetVertexBuffer(*chunk.block_vertex_buffer);
-        commands->SetResource(0, *m_constant_buffer);
-        commands->SetResource(1, *m_transform_buffer);
-        commands->SetResource(2, *t.texture);
-        commands->SetResource(3, Assets::GetSampler(t.sampler));
-
-        commands->Draw(chunk.blocks_count, 0);
+            commands->Draw(chunk.blocks_count, 0);
+        }
     }
 }
 

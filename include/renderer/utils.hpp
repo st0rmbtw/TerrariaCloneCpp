@@ -3,36 +3,49 @@
 
 #pragma once
 
-#include <LLGL/LLGL.h>
 #include <LLGL/Utils/Utility.h>
 #include "renderer/renderer.hpp"
 
 template <typename Container>
-std::size_t GetArraySize(const Container& container)
+inline std::size_t GetArraySize(const Container& container)
 {
     return (container.size() * sizeof(typename Container::value_type));
 }
 
 template <typename T, std::size_t N>
-std::size_t GetArraySize(const T (&container)[N])
+inline std::size_t GetArraySize(const T (&container)[N])
 {
     return (N * sizeof(T));
 }
 
 template <typename Container>
-LLGL::Buffer* CreateVertexBuffer(const Container& vertices, const LLGL::VertexFormat& vertexFormat)
+inline LLGL::Buffer* CreateVertexBuffer(const Container& vertices, const LLGL::VertexFormat& vertexFormat, const char* debug_name = nullptr)
 {
     LLGL::BufferDescriptor bufferDesc = LLGL::VertexBufferDesc(GetArraySize(vertices), vertexFormat);
-    bufferDesc.debugName = "VertexBuffer";
+    bufferDesc.debugName = debug_name;
     return Renderer::Context()->CreateBuffer(bufferDesc, &vertices[0]);
 }
 
+inline LLGL::Buffer* CreateVertexBuffer(size_t size, const LLGL::VertexFormat& vertexFormat, const char* debug_name = nullptr)
+{
+    LLGL::BufferDescriptor bufferDesc = LLGL::VertexBufferDesc(size, vertexFormat);
+    bufferDesc.debugName = debug_name;
+    return Renderer::Context()->CreateBuffer(bufferDesc, nullptr);
+}
+
 template <typename Container>
-LLGL::Buffer* CreateIndexBuffer(const Container& indices, const LLGL::Format format)
+inline LLGL::Buffer* CreateIndexBuffer(const Container& indices, const LLGL::Format format, const char* debug_name = nullptr)
 {
     LLGL::BufferDescriptor bufferDesc = LLGL::IndexBufferDesc(GetArraySize(indices), format);
-    bufferDesc.debugName = "IndexBuffer";
+    bufferDesc.debugName = debug_name;
     return Renderer::Context()->CreateBuffer(bufferDesc, &indices[0]);
+}
+
+inline LLGL::Buffer* CreateConstantBuffer(const size_t size, const char* debug_name = nullptr)
+{
+    LLGL::BufferDescriptor bufferDesc = LLGL::ConstantBufferDesc(size);
+    bufferDesc.debugName = debug_name;
+    return Renderer::Context()->CreateBuffer(bufferDesc);
 }
 
 #endif

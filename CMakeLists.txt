@@ -50,6 +50,8 @@ if (WIN32)
     add_compile_definitions(NOMINMAX)
 endif()
 
+add_compile_options("-Wno-ignored-attributes")
+
 set(LLGL_BUILD_RENDERER_METAL OFF CACHE BOOL "" FORCE)
 set(LLGL_BUILD_RENDERER_NULL OFF CACHE BOOL "" FORCE)
 set(LLGL_BUILD_RENDERER_VULKAN ON CACHE BOOL "" FORCE)

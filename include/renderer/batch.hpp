@@ -1,6 +1,7 @@
 #ifndef TERRARIA_RENDER_BATCH_HPP
 #define TERRARIA_RENDER_BATCH_HPP
 
+#include "optional.hpp"
 #pragma once
 
 #include <glm/glm.hpp>
@@ -35,6 +36,12 @@ struct SpriteData {
     bool is_ui;
 };
 
+struct SpriteFlush {
+    tl::optional<Texture> texture;
+    int vertex_offset;
+    uint32_t index_count;
+};
+
 class RenderBatch {
 public:
     virtual void init() = 0;
@@ -43,8 +50,6 @@ public:
 
     virtual void begin() = 0;
     virtual void terminate() = 0;
-
-    inline void clear_sprites() { m_sprites.clear(); }
 
     inline void set_projection_matrix(const glm::mat4& projection_matrix) {
         m_camera_projection = projection_matrix;
@@ -66,18 +71,12 @@ public:
         m_ui_frustum = ui_frustum;
     }
 
-    [[nodiscard]] inline bool is_empty() const { return m_sprites.empty(); }
-    [[nodiscard]] inline bool is_full() const { return m_index_count >= MAX_INDICES; }
-
 protected:
-    std::vector<SpriteData> m_sprites;
     glm::mat4 m_camera_projection = glm::mat4(1.0);
     glm::mat4 m_screen_projection = glm::mat4(1.0);
     glm::mat4 m_camera_view = glm::mat4(1.0);
     math::Rect m_camera_frustum;
     math::Rect m_ui_frustum;
-    size_t m_index_count = 0;
-    size_t m_sprite_count = 0;
     LLGL::Buffer* m_vertex_buffer = nullptr;
     LLGL::Buffer* m_index_buffer = nullptr;
     LLGL::Buffer* m_constant_buffer = nullptr;
@@ -92,9 +91,16 @@ public:
     void render() override;
     void begin() override;
     void terminate() override;
+
+    inline void clear_sprites() { m_sprites.clear(); }
+
+    [[nodiscard]] inline bool is_empty() const { return m_sprites.empty(); }
 private:
-    void flush(const tl::optional<Texture>& texture, int vertex_offset);
+    void flush();
 private:
+    std::vector<SpriteData> m_sprites;
+    std::vector<SpriteFlush> m_sprite_flush_queue;
+
     SpriteVertex* m_buffer = nullptr;
     SpriteVertex* m_buffer_ptr = nullptr;
 };

@@ -3,8 +3,10 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 #include <unordered_map>
+#include <unordered_set>
+#include <deque>
 
 #include "math/rect.hpp"
 #include "renderer/camera.h"
@@ -136,14 +138,22 @@ public:
     [[nodiscard]] inline bool is_changed() const { return m_changed; }
 
     [[nodiscard]] inline const std::unordered_map<glm::uvec2, RenderChunk>& render_chunks() const { return m_render_chunks; }
+    [[nodiscard]] inline const std::unordered_set<glm::uvec2>& visible_chunks() const { return m_visible_chunks; }
+    [[nodiscard]] inline std::deque<RenderChunk>& chunks_to_destroy() { return m_chunks_to_destroy; }
 
-    inline void clear_chunks() { m_render_chunks.clear(); }
+    inline void destroy_chunks() {
+        for (auto& entry : m_render_chunks) {
+            entry.second.destroy();
+        }
+    }
 private:
     void update_neighbors(TilePos pos);
 
 private:
     WorldData m_data;
     std::unordered_map<glm::uvec2, RenderChunk> m_render_chunks;
+    std::unordered_set<glm::uvec2> m_visible_chunks;
+    std::deque<RenderChunk> m_chunks_to_destroy;
     bool m_changed = false;
 };
 

@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <glm/gtx/hash.hpp>
 #include <LLGL/LLGL.h>
@@ -22,10 +22,9 @@ struct RenderChunk {
     bool walls_dirty = true;
 
     RenderChunk(const glm::uvec2& index, const glm::vec2& world_pos, const class World& world);
-    RenderChunk(RenderChunk&& other) noexcept;
-    ~RenderChunk();
 
     void build_mesh(const class World& world);
+    void destroy();
 
     [[nodiscard]] inline bool dirty() const { return blocks_dirty || walls_dirty; }
 

@@ -4,7 +4,7 @@
 #pragma once
 
 #if DEBUG
-    #include <stdio.h>
+    #include <cstdio>
     #define ASSERT(expression, message) \
         if (!(expression)) { \
             fprintf(stderr, "[%s:%d] %s\n", __FILE__, __LINE__, message); \

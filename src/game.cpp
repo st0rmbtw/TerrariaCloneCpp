@@ -91,7 +91,7 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
 
     g.camera.set_viewport({resolution.width, resolution.height});
 
-    g.world.generate(200, 500, 0);
+    g.world.generate(1000, 500, 0);
 
     const std::vector<ShaderDef> shader_defs = {
         // ShaderDef("DEF_SUBDIVISION", std::to_string(config::SUBDIVISION)),
@@ -166,7 +166,10 @@ void Game::Run() {
 }
 
 void Game::Destroy() {
-    g.world.clear_chunks();
+    Renderer::CommandQueue()->WaitIdle();
+
+    g.world.destroy_chunks();
+    
     Renderer::Terminate();
     glfwTerminate();
 }
@@ -217,7 +220,14 @@ void render() {
 }
 
 void post_render() {
-    g.world.manage_chunks(g.camera);
+    std::deque<RenderChunk>& chunks = g.world.chunks_to_destroy();
+    if (!chunks.empty()) {
+        Renderer::CommandQueue()->WaitIdle();
+        while (!chunks.empty()) {
+            chunks.back().destroy();
+            chunks.pop_back();
+        }
+    }
 
 #if DEBUG
     if (Input::Pressed(Key::C)) {
