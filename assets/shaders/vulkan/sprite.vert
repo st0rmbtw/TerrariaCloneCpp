@@ -10,8 +10,9 @@ layout(location = 6) in int a_has_texture;
 layout(location = 7) in int a_is_ui;
 
 layout(binding = 1) uniform UniformBuffer {
-    mat4 view_projection;
     mat4 screen_projection;
+    mat4 projection;
+    mat4 view;
 } ubo;
 
 layout(location = 0) out vec2 v_uv;
@@ -26,7 +27,7 @@ void main() {
         (gl_VertexIndex & 0x2) >> 1
     );
 
-    mat4 projection = a_is_ui > 0 ? ubo.screen_projection : ubo.view_projection;
+    mat4 projection = a_is_ui > 0 ? ubo.screen_projection : ubo.projection * ubo.view;
 
     gl_Position = projection * transform * vec4(position, 0.0, 1.0);
 

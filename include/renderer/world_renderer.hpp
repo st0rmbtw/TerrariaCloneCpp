@@ -8,22 +8,13 @@
 
 class WorldRenderer {
 public:
-    WorldRenderer() :
-        m_projection_matrix{},
-        m_view_matrix{} {}
+    WorldRenderer() = default;
 
     void init();
     void render(const World& world);
     void terminate();
 
-    inline void set_projection_matrix(const glm::mat4& projection) { m_projection_matrix = projection; }
-    inline void set_view_matrix(const glm::mat4& view) { m_view_matrix = view; }
-
 private:
-    glm::mat4 m_projection_matrix;
-    glm::mat4 m_view_matrix;
-
-    LLGL::Buffer* m_constant_buffer = nullptr;
     LLGL::Buffer* m_transform_buffer = nullptr;
     LLGL::PipelineState* m_pipeline = nullptr;
 };

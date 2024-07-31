@@ -8,8 +8,8 @@
 #include <glm/gtx/hash.hpp>
 #include <LLGL/LLGL.h>
 
-constexpr float RENDER_CHUNK_SIZE = 75;
-constexpr uint32_t RENDER_CHUNK_SIZE_U = 75u;
+constexpr float RENDER_CHUNK_SIZE = 50.0f;
+constexpr uint32_t RENDER_CHUNK_SIZE_U = 50u;
 
 struct RenderChunk {
     glm::mat4 transform_matrix;

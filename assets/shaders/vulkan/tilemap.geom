@@ -2,6 +2,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 layout(binding = 1) uniform UniformBuffer {
+    mat4 screen_projection;
     mat4 projection;
     mat4 view;
 } ubo;

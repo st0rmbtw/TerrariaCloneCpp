@@ -46,40 +46,18 @@ class RenderBatch {
 public:
     virtual void init() = 0;
     virtual void render() = 0;
-    virtual void update_buffers() = 0;
 
     virtual void begin() = 0;
     virtual void terminate() = 0;
 
-    inline void set_projection_matrix(const glm::mat4& projection_matrix) {
-        m_camera_projection = projection_matrix;
-    }
-
-    inline void set_screen_projection_matrix(const glm::mat4& projection_matrix) {
-        m_screen_projection = projection_matrix;
-    }
-
-    inline void set_view_matrix(const glm::mat4& view_matrix) {
-        m_camera_view = view_matrix;
-    }
-
-    inline void set_camera_frustum(const math::Rect& camera_frustum) {
-        m_camera_frustum = camera_frustum;
-    }
-
-    inline void set_ui_frustum(const math::Rect& ui_frustum) {
-        m_ui_frustum = ui_frustum;
-    }
+    inline void set_camera_frustum(const math::Rect& camera_frustum) { m_camera_frustum = camera_frustum; }
+    inline void set_ui_frustum(const math::Rect& ui_frustum) { m_ui_frustum = ui_frustum; }
 
 protected:
-    glm::mat4 m_camera_projection = glm::mat4(1.0);
-    glm::mat4 m_screen_projection = glm::mat4(1.0);
-    glm::mat4 m_camera_view = glm::mat4(1.0);
     math::Rect m_camera_frustum;
     math::Rect m_ui_frustum;
     LLGL::Buffer* m_vertex_buffer = nullptr;
     LLGL::Buffer* m_index_buffer = nullptr;
-    LLGL::Buffer* m_constant_buffer = nullptr;
     LLGL::PipelineState* m_pipeline = nullptr;
 };
 
@@ -87,7 +65,6 @@ class RenderBatchSprite : public RenderBatch {
 public:
     void draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, bool ui);
     void init() override;
-    void update_buffers() override;
     void render() override;
     void begin() override;
     void terminate() override;

@@ -3,11 +3,10 @@
 
 #include "renderer/renderer.hpp"
 #include "renderer/world_renderer.hpp"
-#include "renderer/assets.hpp"
 #include "assets.hpp"
+#include "world/chunk.hpp"
 
 void WorldRenderer::init() {
-    m_constant_buffer = Renderer::Context()->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(TilemapUniforms)));
     m_transform_buffer = Renderer::Context()->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(glm::mat4)));
 
     const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 3 : 4;
@@ -63,49 +62,51 @@ void WorldRenderer::init() {
 void WorldRenderer::render(const World& world) {
     auto* const commands = Renderer::CommandBuffer();
 
-    auto uniforms = TilemapUniforms {
-        .projection = m_projection_matrix,
-        .view = m_view_matrix,
-    };
-    commands->UpdateBuffer(*m_constant_buffer, 0, &uniforms, sizeof(uniforms));
+    std::vector<const RenderChunk*> blocks;
+    blocks.reserve(world.visible_chunks().size());
+
+    std::vector<const RenderChunk*> walls;
+    walls.reserve(world.visible_chunks().size());
 
     for (const glm::uvec2& pos : world.visible_chunks()) {
         const RenderChunk& chunk = world.render_chunks().at(pos);
 
-        if (chunk.walls_empty() && chunk.blocks_empty()) continue;
+        if (!chunk.blocks_empty()) blocks.push_back(&chunk);
+        if (!chunk.walls_empty()) walls.push_back(&chunk);
+    }
 
-        commands->UpdateBuffer(*m_transform_buffer, 0, glm::value_ptr(chunk.transform_matrix), sizeof(glm::mat4));
+    for (const RenderChunk* chunk : walls) {
+        commands->UpdateBuffer(*m_transform_buffer, 0, glm::value_ptr(chunk->transform_matrix), sizeof(glm::mat4));
 
-        if (!chunk.walls_empty()) {
-            const Texture& t = Assets::GetTexture(AssetKey::TextureWalls);
+        const Texture& t = Assets::GetTexture(AssetKey::TextureWalls);
 
-            commands->SetPipelineState(*m_pipeline);
-            commands->SetVertexBuffer(*chunk.wall_vertex_buffer);
-            commands->SetResource(0, *m_constant_buffer);
-            commands->SetResource(1, *m_transform_buffer);
-            commands->SetResource(2, *t.texture);
-            commands->SetResource(3, Assets::GetSampler(t.sampler));
+        commands->SetPipelineState(*m_pipeline);
+        commands->SetVertexBuffer(*chunk->wall_vertex_buffer);
+        commands->SetResource(0, *Renderer::ProjectionsUniformBuffer());
+        commands->SetResource(1, *m_transform_buffer);
+        commands->SetResource(2, *t.texture);
+        commands->SetResource(3, Assets::GetSampler(t.sampler));
 
-            commands->Draw(chunk.walls_count, 0);
-        }
+        commands->Draw(chunk->walls_count, 0);
+    }
 
-        if (!chunk.blocks_empty()) {
-            const Texture& t = Assets::GetTexture(AssetKey::TextureTiles);
+    for (const RenderChunk* chunk : blocks) {
+        commands->UpdateBuffer(*m_transform_buffer, 0, glm::value_ptr(chunk->transform_matrix), sizeof(glm::mat4));
 
-            commands->SetPipelineState(*m_pipeline);
-            commands->SetVertexBuffer(*chunk.block_vertex_buffer);
-            commands->SetResource(0, *m_constant_buffer);
-            commands->SetResource(1, *m_transform_buffer);
-            commands->SetResource(2, *t.texture);
-            commands->SetResource(3, Assets::GetSampler(t.sampler));
+        const Texture& t = Assets::GetTexture(AssetKey::TextureTiles);
 
-            commands->Draw(chunk.blocks_count, 0);
-        }
+        commands->SetPipelineState(*m_pipeline);
+        commands->SetVertexBuffer(*chunk->block_vertex_buffer);
+        commands->SetResource(0, *Renderer::ProjectionsUniformBuffer());
+        commands->SetResource(1, *m_transform_buffer);
+        commands->SetResource(2, *t.texture);
+        commands->SetResource(3, Assets::GetSampler(t.sampler));
+
+        commands->Draw(chunk->blocks_count, 0);
     }
 }
 
 void WorldRenderer::terminate() {
-    Renderer::Context()->Release(*m_constant_buffer);
     Renderer::Context()->Release(*m_transform_buffer);
     Renderer::Context()->Release(*m_pipeline);
 }

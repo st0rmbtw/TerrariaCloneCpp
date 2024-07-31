@@ -16,6 +16,12 @@ enum class RenderLayer : uint8_t {
     UI = 2
 };
 
+struct ProjectionsUniform {
+    glm::mat4 screen_projection_matrix;
+    glm::mat4 projection_matrix;
+    glm::mat4 view_matrix;
+};
+
 namespace Renderer {
     bool InitEngine(RenderBackend backend);
     bool Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool vsync, bool fullscreen);
@@ -39,6 +45,7 @@ namespace Renderer {
     LLGL::CommandBuffer* CommandBuffer();
     LLGL::CommandQueue* CommandQueue();
     const std::shared_ptr<CustomSurface>& Surface();
+    LLGL::Buffer* ProjectionsUniformBuffer();
     RenderBackend Backend();
 };
 

@@ -5,8 +5,9 @@ using namespace metal;
 
 struct Constants
 {
-    float4x4 u_view_projection;
-    float4x4 u_screen_projection;
+    float4x4 screen_projection;
+    float4x4 projection;
+    float4x4 view;
 };
 
 struct VertexIn
@@ -32,11 +33,11 @@ struct VertexOut
 
 vertex VertexOut VS(
     VertexIn inp [[stage_in]],
-    constant Constants& constants [[buffer(0)]]
+    constant Constants& constants [[buffer(1)]]
 ) {
     VertexOut outp;
 
-    float4x4 projection = inp.is_ui > 0 ? constants.u_screen_projection : constants.u_view_projection;
+    float4x4 projection = inp.is_ui > 0 ? constants.screen_projection : constants.projection * constants.view;
 
     outp.position = projection * inp.transform * float4(inp.position, 0.0, 1.0);
     outp.uv_offset_scale = inp.uv_offset_scale;
@@ -48,8 +49,8 @@ vertex VertexOut VS(
 
 fragment float4 PS(
     VertexOut inp [[stage_in]],
-    texture2d<float> texture [[texture(0)]],
-    sampler texture_sampler [[sampler(0)]]
+    texture2d<float> texture [[texture(2)]],
+    sampler texture_sampler [[sampler(3)]]
 ) {
     if (inp.has_texture > 0) {
         return texture.sample(texture_sampler, inp.uv) * inp.color;

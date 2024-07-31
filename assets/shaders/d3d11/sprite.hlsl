@@ -1,7 +1,8 @@
 cbuffer UniformBuffer : register( b1 )
 {
-    float4x4 u_view_projection;
     float4x4 u_screen_projection;
+    float4x4 u_projection;
+    float4x4 u_view;
 };
 
 struct InputVS
@@ -28,7 +29,7 @@ OutputVS VS(InputVS inp)
 
     float2 position = float2(inp.id & 0x1, (inp.id & 0x2) >> 1);
 
-    float4x4 MVP = inp.is_ui > 0 ? mul(u_screen_projection, inp.transform) : mul(u_view_projection, inp.transform);
+    float4x4 MVP = inp.is_ui > 0 ? mul(u_screen_projection, inp.transform) : mul(mul(u_projection, u_view), inp.transform);
     outp.position = mul(MVP, float4(position, 0.0, 1.0));
     outp.uv = position * inp.uv_offset_scale.zw + inp.uv_offset_scale.xy;
     outp.color = inp.color;

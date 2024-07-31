@@ -18,16 +18,6 @@ struct SpriteVertex {
     int is_ui;
 };
 
-struct SpriteUniforms {
-    glm::mat4 view_projection;
-    glm::mat4 screen_projection;
-};
-
-struct TilemapUniforms {
-    glm::mat4 projection;
-    glm::mat4 view;
-};
-
 const LLGL::VertexFormat& SpriteVertexFormat();
 const LLGL::VertexFormat& TilemapVertexFormat();
 

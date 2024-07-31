@@ -23,6 +23,8 @@ static struct RendererState {
 #if DEBUG
     LLGL::RenderingDebugger* debugger = nullptr;
 #endif
+
+    LLGL::Buffer* constant_buffer = nullptr;
     
     RenderBatchSprite sprite_batch;
     WorldRenderer world_renderer;
@@ -36,6 +38,7 @@ LLGL::SwapChain* Renderer::SwapChain() { return state.swap_chain; }
 LLGL::CommandBuffer* Renderer::CommandBuffer() { return state.command_buffer; }
 LLGL::CommandQueue* Renderer::CommandQueue() { return state.command_queue; }
 const std::shared_ptr<CustomSurface>& Renderer::Surface() { return state.surface; }
+LLGL::Buffer* Renderer::ProjectionsUniformBuffer() { return state.constant_buffer; }
 RenderBackend Renderer::Backend() { return state.backend; }
 
 bool Renderer::InitEngine(RenderBackend backend) {
@@ -105,6 +108,8 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     state.command_buffer = context->CreateCommandBuffer();
     state.command_queue = context->GetCommandQueue();
 
+    state.constant_buffer = CreateConstantBuffer(sizeof(ProjectionsUniform));
+
     state.sprite_batch.init();
     state.world_renderer.init();
 
@@ -123,21 +128,23 @@ void Renderer::Begin(const Camera& camera) {
 
     const glm::mat4 screen_projection = glm::ortho(0.0f, static_cast<float>(camera.viewport().x), static_cast<float>(camera.viewport().y), 0.0f, -1.0f, 1.0f);
 
+    auto projections_uniform = ProjectionsUniform {
+        .screen_projection_matrix = screen_projection,
+        .projection_matrix = camera.get_projection_matrix(),
+        .view_matrix = camera.get_view_matrix(),
+    };
+
     commands->Begin();
     commands->SetViewport(swap_chain->GetResolution());
+
+    commands->UpdateBuffer(*state.constant_buffer, 0, &projections_uniform, sizeof(projections_uniform));
 
     commands->BeginRenderPass(*swap_chain);
     commands->Clear(LLGL::ClearFlags::Color, LLGL::ClearValue(0.854f, 0.584f, 0.584f, 1.0f));
 
     state.sprite_batch.begin();
-    state.sprite_batch.set_projection_matrix(camera.get_projection_matrix());
-    state.sprite_batch.set_view_matrix(camera.get_view_matrix());
-    state.sprite_batch.set_screen_projection_matrix(screen_projection);
     state.sprite_batch.set_camera_frustum(camera_frustum);
     state.sprite_batch.set_ui_frustum(ui_frustum);
-
-    state.world_renderer.set_projection_matrix(camera.get_projection_matrix());
-    state.world_renderer.set_view_matrix(camera.get_view_matrix());
 }
 
 void Renderer::RenderWorld(const World& world) {
@@ -213,6 +220,8 @@ void Renderer::Terminate() {
     state.sprite_batch.terminate();
     state.world_renderer.terminate();
 
+    state.context->Release(*state.constant_buffer);
+
     state.context->Release(*state.command_buffer);
     state.context->Release(*state.swap_chain);
 
@@ -247,7 +256,6 @@ void RenderBatchSprite::init() {
 
     m_vertex_buffer = CreateVertexBuffer(MAX_VERTICES * sizeof(SpriteVertex), SpriteVertexFormat(), "SpriteBatch VertexBuffer");
     m_index_buffer = CreateIndexBuffer(indices, LLGL::Format::R32UInt, "SpriteBatch IndexBuffer");
-    m_constant_buffer = CreateConstantBuffer(sizeof(SpriteUniforms));
 
     const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
 
@@ -317,20 +325,6 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
         .order = sprite.order(),
         .is_ui = is_ui
     });
-}
-
-void RenderBatchSprite::update_buffers() {
-    auto* const commands = Renderer::CommandBuffer();
-
-    const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    commands->UpdateBuffer(*m_vertex_buffer, 0, m_buffer, size);
-
-    SpriteUniforms uniforms = {
-        .view_projection = m_camera_projection * m_camera_view,
-        .screen_projection = m_screen_projection
-    };
-
-    commands->UpdateBuffer(*m_constant_buffer, 0, &uniforms, sizeof(uniforms));
 }
 
 void RenderBatchSprite::render() {
@@ -434,13 +428,14 @@ void RenderBatchSprite::render() {
 void RenderBatchSprite::flush() {
     auto* const commands = Renderer::CommandBuffer();
 
-    update_buffers();
+    const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
+    commands->UpdateBuffer(*m_vertex_buffer, 0, m_buffer, size);
     
     commands->SetVertexBuffer(*m_vertex_buffer);
     commands->SetIndexBuffer(*m_index_buffer);
 
     commands->SetPipelineState(*m_pipeline);
-    commands->SetResource(0, *m_constant_buffer);
+    commands->SetResource(0, *state.constant_buffer);
 
     for (const SpriteFlush& sprite_flush : m_sprite_flush_queue) {
         const Texture& t = sprite_flush.texture.is_some() ? sprite_flush.texture.get() : Assets::GetTexture(AssetKey::TextureStub);
@@ -460,7 +455,6 @@ void RenderBatchSprite::begin() {
 void RenderBatchSprite::terminate() {
     state.context->Release(*m_vertex_buffer);
     state.context->Release(*m_index_buffer);
-    state.context->Release(*m_constant_buffer);
     state.context->Release(*m_pipeline);
 
     delete[] m_buffer;

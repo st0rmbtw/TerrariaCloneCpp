@@ -1,6 +1,7 @@
 #version 330 core
 
 layout(std140) uniform UniformBuffer {
+    mat4 screen_projection;
     mat4 projection;
     mat4 view;
 } ubo;
