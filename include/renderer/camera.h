@@ -13,16 +13,16 @@ public:
     Camera() :
         m_position(0.0f),
         m_viewport(0),
-        m_projection_matrix{},
-        m_view_matrix{},
-        m_transform_matrix{} {}
+        m_projection_matrix(),
+        m_view_matrix(),
+        m_transform_matrix() {}
 
     explicit Camera(glm::uvec2 viewport) :
         m_position(0.0f),
         m_viewport(viewport),
-        m_projection_matrix{},
-        m_view_matrix{},
-        m_transform_matrix{}
+        m_projection_matrix(),
+        m_view_matrix(),
+        m_transform_matrix()
     {
         update_projection_area();
         compute_projection_and_view_matrix();

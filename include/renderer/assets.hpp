@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include <LLGL/LLGL.h>
 #include <LLGL/Utils/VertexFormat.h>
 #include <glm/glm.hpp>
 

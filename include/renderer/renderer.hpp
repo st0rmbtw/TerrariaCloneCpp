@@ -3,7 +3,8 @@
 
 #pragma once
 
-#include <LLGL/LLGL.h>
+#include <LLGL/SwapChain.h>
+#include <LLGL/RenderSystem.h>
 #include "renderer/custom_surface.hpp"
 #include "renderer/camera.h"
 #include "types/sprite.hpp"

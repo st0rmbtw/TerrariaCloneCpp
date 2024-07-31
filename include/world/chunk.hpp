@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <glm/gtx/hash.hpp>
-#include <LLGL/LLGL.h>
+#include <LLGL/Buffer.h>
 
 constexpr float RENDER_CHUNK_SIZE = 50.0f;
 constexpr uint32_t RENDER_CHUNK_SIZE_U = 50u;

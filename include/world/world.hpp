@@ -94,7 +94,7 @@ class World {
 public:
     World() = default;
 
-    void generate(uint32_t width, uint32_t height, size_t seed);
+    void generate(uint32_t width, uint32_t height, uint32_t seed);
 
 
     void set_block(TilePos pos, const Block& block);

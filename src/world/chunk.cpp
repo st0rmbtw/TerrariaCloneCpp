@@ -18,12 +18,9 @@ struct ChunkVertex {
 };
 
 RenderChunk::RenderChunk(const glm::uvec2& index, const glm::vec2& world_pos, const World& world) :
-    transform_matrix(),
+    transform_matrix(glm::translate(glm::mat4(1.), glm::vec3(world_pos.x * RENDER_CHUNK_SIZE, world_pos.y * RENDER_CHUNK_SIZE, 0.0))),
     index(index)
 {
-    const glm::mat4 translation = glm::translate(glm::mat4(1.), glm::vec3(world_pos.x * RENDER_CHUNK_SIZE, world_pos.y * RENDER_CHUNK_SIZE, 0.0));
-    const glm::mat4 scale = glm::scale(glm::mat4(1.), glm::vec3(1.));
-    this->transform_matrix = translation * scale;
     build_mesh(world);
 }
 
@@ -33,6 +30,15 @@ void RenderChunk::destroy() {
 
     block_vertex_buffer = nullptr;
     wall_vertex_buffer = nullptr;
+}
+
+inline LLGL::BufferDescriptor GetBufferDescriptor() {
+    LLGL::BufferDescriptor buffer_desc;
+    buffer_desc.bindFlags = LLGL::BindFlags::VertexBuffer;
+    buffer_desc.size = sizeof(ChunkVertex) * RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U;
+    buffer_desc.stride = sizeof(ChunkVertex);
+    buffer_desc.vertexAttribs = TilemapVertexFormat().attributes;
+    return buffer_desc;
 }
 
 void RenderChunk::build_mesh(const World& world) {
@@ -100,29 +106,17 @@ void RenderChunk::build_mesh(const World& world) {
     }
 
     if (!block_vertex_buffer) {
-        LLGL::BufferDescriptor buffer_desc;
-        buffer_desc.bindFlags = LLGL::BindFlags::VertexBuffer;
-        buffer_desc.size = sizeof(ChunkVertex) * RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U;
-        buffer_desc.stride = sizeof(ChunkVertex);
-        buffer_desc.vertexAttribs = TilemapVertexFormat().attributes;
-
         const void* data = blocks_dirty && !blocks_empty() ? block_vertices.data() : nullptr;
 
-        this->block_vertex_buffer = Renderer::Context()->CreateBuffer(buffer_desc, data);
+        this->block_vertex_buffer = Renderer::Context()->CreateBuffer(GetBufferDescriptor(), data);
     } else if (blocks_dirty && !blocks_empty()) {
         Renderer::Context()->WriteBuffer(*block_vertex_buffer, 0, block_vertices.data(), block_vertices.size() * sizeof(ChunkVertex));
     }
 
     if (!wall_vertex_buffer) {
-        LLGL::BufferDescriptor buffer_desc;
-        buffer_desc.bindFlags = LLGL::BindFlags::VertexBuffer;
-        buffer_desc.size = sizeof(ChunkVertex) * RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U;
-        buffer_desc.stride = sizeof(ChunkVertex);
-        buffer_desc.vertexAttribs = TilemapVertexFormat().attributes;
-
         const void* data = walls_dirty && !walls_empty() ? wall_vertices.data() : nullptr;
 
-        this->wall_vertex_buffer = Renderer::Context()->CreateBuffer(buffer_desc, data);
+        this->wall_vertex_buffer = Renderer::Context()->CreateBuffer(GetBufferDescriptor(), data);
     } else if (walls_dirty && !walls_empty()) {
         Renderer::Context()->WriteBuffer(*wall_vertex_buffer, 0, wall_vertices.data(), wall_vertices.size() * sizeof(ChunkVertex));
     }

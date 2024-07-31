@@ -210,7 +210,7 @@ void World::set_wall(TilePos pos, WallType wall_type) {
     }
 }
 
-void World::generate(uint32_t width, uint32_t height, size_t seed) {
+void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
     m_data = world_generate(width, height, seed);
 }
 
