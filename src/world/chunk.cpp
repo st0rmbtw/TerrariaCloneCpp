@@ -1,11 +1,11 @@
-#include "world/chunk.hpp"
 #include "LLGL/ResourceFlags.h"
-#include "optional.hpp"
-#include "world/world.hpp"
-#include "types/block.hpp"
-#include "types/texture_atlas_pos.hpp"
-#include "renderer/renderer.hpp"
-#include "renderer/assets.hpp"
+#include "chunk.hpp"
+#include "world.hpp"
+#include "../optional.hpp"
+#include "../types/block.hpp"
+#include "../types/texture_atlas_pos.hpp"
+#include "../renderer/renderer.hpp"
+#include "../renderer/assets.hpp"
 
 #define TILE_TYPE_BLOCK 0
 #define TILE_TYPE_WALL 1

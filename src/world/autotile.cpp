@@ -1,9 +1,9 @@
 // Based on the implementation from https://github.com/TEdit/Terraria-Map-Editor/blob/main/src/TEdit/View/WorldRenderXna.xaml.cs
 
-#include "world/autotile.hpp"
-#include "types/block.hpp"
-#include "optional.hpp"
-#include "utils.hpp"
+#include "autotile.hpp"
+#include "../types/block.hpp"
+#include "../optional.hpp"
+#include "../utils.hpp"
 
 static std::vector<std::list<TileRule>> base_rules = {};
 static std::vector<std::list<TileRule>> blend_rules = {};

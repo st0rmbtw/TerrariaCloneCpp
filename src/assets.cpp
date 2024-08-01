@@ -1,3 +1,5 @@
+#include "assets.hpp"
+
 #include <sstream>
 #include <fstream>
 #include <array>
@@ -8,7 +10,6 @@
 #include <LLGL/VertexAttribute.h>
 #include <STB/stb_image.h>
 
-#include "assets.hpp"
 #include "renderer/assets.hpp"
 #include "renderer/renderer.hpp"
 #include "log.hpp"

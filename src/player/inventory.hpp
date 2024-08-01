@@ -3,9 +3,9 @@
 #ifndef INVENTORY_HPP
 #define INVENTORY_HPP
 
-#include "types/item.hpp"
-#include "optional.hpp"
-#include "common.h"
+#include "../types/item.hpp"
+#include "../optional.hpp"
+#include "../common.h"
 
 constexpr uint8_t CELLS_IN_ROW = 10;
 constexpr uint8_t INVENTORY_ROWS = 5;

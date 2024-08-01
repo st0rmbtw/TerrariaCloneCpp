@@ -1,5 +1,6 @@
-#include "time/time.hpp"
-#include "constants.hpp"
+#include "time.hpp"
+
+#include "../constants.hpp"
 
 static struct TimeState {
     delta_time_t delta;

@@ -1,5 +1,5 @@
-#include "player/inventory.hpp"
-#include "common.h"
+#include "inventory.hpp"
+#include "../common.h"
 
 tl::optional<const Item&> Inventory::get_item(uint8_t index) const {
     ASSERT(index < 50, "Index must be less than 50.")

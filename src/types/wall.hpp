@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include "types/texture_atlas_pos.hpp"
+#include "texture_atlas_pos.hpp"
 
 enum class WallType : uint8_t {
     StoneWall = 0,

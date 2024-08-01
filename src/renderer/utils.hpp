@@ -4,7 +4,7 @@
 #pragma once
 
 #include <LLGL/Utils/Utility.h>
-#include "renderer/renderer.hpp"
+#include "renderer.hpp"
 
 template <typename Container>
 inline std::size_t GetArraySize(const Container& container)

@@ -1,5 +1,6 @@
+#include "timer.hpp"
+
 #include <chrono>
-#include "time/timer.hpp"
 
 void Timer::tick_impl(const Duration& delta) {
     if (paused()) {

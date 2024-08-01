@@ -6,11 +6,11 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-#include "types/anchor.hpp"
-#include "types/texture.hpp"
-#include "types/texture_atlas.hpp"
-#include "math/rect.hpp"
-#include "optional.hpp"
+#include "../math/rect.hpp"
+#include "../optional.hpp"
+#include "anchor.hpp"
+#include "texture.hpp"
+#include "texture_atlas.hpp"
 
 class BaseSprite {
 public:

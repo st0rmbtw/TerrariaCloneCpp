@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 #include <glm/glm.hpp>
-#include "constants.hpp"
+#include "../constants.hpp"
 
 enum class TileOffset: uint8_t {
     Top,

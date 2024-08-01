@@ -3,15 +3,16 @@
 #ifndef PLAYER_HPP
 #define PLAYER_HPP
 
-#include <glm/glm.hpp>
-#include "optional.hpp"
+#include "inventory.hpp"
 
-#include "renderer/camera.h"
-#include "types/sprite.hpp"
-#include "world/world.hpp"
-#include "time/timer.hpp"
-#include "time/time.hpp"
-#include "player/inventory.hpp"
+#include <glm/glm.hpp>
+#include "../optional.hpp"
+
+#include "../renderer/camera.h"
+#include "../types/sprite.hpp"
+#include "../world/world.hpp"
+#include "../time/timer.hpp"
+#include "../time/time.hpp"
 
 constexpr float PLAYER_WIDTH = 22.0f;
 constexpr float PLAYER_WIDTH_HALF = PLAYER_WIDTH / 2.0f;

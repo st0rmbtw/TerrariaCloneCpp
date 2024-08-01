@@ -1,8 +1,10 @@
+#include "math.hpp"
+
 #include <glm/glm.hpp>
 #include <glm/ext/scalar_constants.hpp>
-#include "math/math.hpp"
-#include "common.h"
-#include "utils.hpp"
+
+#include "../common.h"
+#include "../utils.hpp"
 
 float move_towards(float current, float target, float max_delta) noexcept {
     if (glm::abs(target - current) <= max_delta) {

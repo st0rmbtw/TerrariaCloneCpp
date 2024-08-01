@@ -1,5 +1,5 @@
-#include "renderer/assets.hpp"
-#include "renderer/renderer.hpp"
+#include "assets.hpp"
+#include "renderer.hpp"
 
 const LLGL::VertexFormat& SpriteVertexFormat() {
     static LLGL::VertexFormat vertexFormat;

@@ -1,10 +1,11 @@
-#include "world/particles.hpp"
-#include "math/math.hpp"
-#include "math/quat.hpp"
-#include "renderer/renderer.hpp"
-#include "types/sprite.hpp"
-#include "common.h"
-#include "assets.hpp"
+#include "particles.hpp"
+
+#include "../math/math.hpp"
+#include "../math/quat.hpp"
+#include "../renderer/renderer.hpp"
+#include "../types/sprite.hpp"
+#include "../common.h"
+#include "../assets.hpp"
 
 inline size_t get_particle_index(Particle::Type type, uint8_t variant) {
     ASSERT(variant <= 2, "Variant must be in range of 0 to 3");

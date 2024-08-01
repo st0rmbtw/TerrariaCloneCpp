@@ -1,15 +1,16 @@
-#include "world/world_gen.h"
+#include "world_gen.h"
 
 #include <stdint.h>
 #include <vector>
 #include <FastNoiseLite.hpp>
 #include <time.h>
 
-#include "types/wall.hpp"
-#include "world/autotile.hpp"
-#include "log.hpp"
-#include "optional.hpp"
-#include "math/math.hpp"
+#include "../types/wall.hpp"
+#include "../log.hpp"
+#include "../optional.hpp"
+#include "../math/math.hpp"
+
+#include "autotile.hpp"
 
 static inline void set_block(WorldData& world, TilePos pos, BlockType block) {
     const size_t index = world.get_tile_index(pos);

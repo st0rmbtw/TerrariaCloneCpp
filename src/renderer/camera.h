@@ -5,8 +5,8 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include "math/rect.hpp"
-#include "constants.hpp"
+#include "../math/rect.hpp"
+#include "../constants.hpp"
 
 class Camera {
 public:

@@ -1,20 +1,21 @@
+#include "player.hpp"
+
 #include <glm/gtc/random.hpp>
 
-#include "assets.hpp"
-#include "player/player.hpp"
-#include "constants.hpp"
-#include "input.hpp"
-#include "types/item.hpp"
-#include "types/anchor.hpp"
-#include "types/block.hpp"
-#include "math/quat.hpp"
-#include "renderer/renderer.hpp"
-#include "math/math.hpp"
-#include "math/rect.hpp"
-#include "time/timer.hpp"
-#include "utils.hpp"
-#include "world/chunk.hpp"
-#include "world/particles.hpp"
+#include "../assets.hpp"
+#include "../constants.hpp"
+#include "../input.hpp"
+#include "../types/item.hpp"
+#include "../types/anchor.hpp"
+#include "../types/block.hpp"
+#include "../math/quat.hpp"
+#include "../renderer/renderer.hpp"
+#include "../math/math.hpp"
+#include "../math/rect.hpp"
+#include "../time/timer.hpp"
+#include "../utils.hpp"
+#include "../world/chunk.hpp"
+#include "../world/particles.hpp"
 
 using Constants::TILE_SIZE;
 

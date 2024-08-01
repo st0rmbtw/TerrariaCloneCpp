@@ -1,14 +1,15 @@
+#include "world.hpp"
+
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <utility>
 #include <ctime>
 
-#include "world/world.hpp"
-#include "types/block.hpp"
-#include "world/world_gen.h"
-#include "world/autotile.hpp"
-#include "math/rect.hpp"
-#include "optional.hpp"
+#include "../types/block.hpp"
+#include "../world/world_gen.h"
+#include "../world/autotile.hpp"
+#include "../math/rect.hpp"
+#include "../optional.hpp"
 
 inline glm::uvec2 get_chunk_pos(TilePos tile_pos) {
     return glm::uvec2(tile_pos.x, tile_pos.y) / RENDER_CHUNK_SIZE_U;

@@ -1,5 +1,5 @@
-#include "types/item.hpp"
-#include "optional.hpp"
+#include "item.hpp"
+#include "../optional.hpp"
 
 Item ITEM_COPPER_AXE = {
     .id = 3506,

@@ -1,3 +1,5 @@
+#include "renderer.hpp"
+
 #include <memory>
 #include <LLGL/Utils/TypeNames.h>
 #include <glm/glm.hpp>
@@ -5,13 +7,13 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-#include "renderer/renderer.hpp"
-#include "renderer/utils.hpp"
-#include "renderer/assets.hpp"
-#include "renderer/batch.hpp"
-#include "renderer/world_renderer.hpp"
+#include "../assets.hpp"
+#include "../log.hpp"
+
+#include "utils.hpp"
 #include "assets.hpp"
-#include "log.hpp"
+#include "batch.hpp"
+#include "world_renderer.hpp"
 
 static struct RendererState {
     LLGL::RenderSystemPtr context = nullptr;

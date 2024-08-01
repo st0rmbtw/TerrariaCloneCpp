@@ -1,4 +1,4 @@
-#include "renderer/camera.h"
+#include "camera.h"
 
 void Camera::update() {
     compute_projection_and_view_matrix();

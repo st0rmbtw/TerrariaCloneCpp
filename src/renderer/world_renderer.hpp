@@ -4,7 +4,7 @@
 #define TERRARIA_RENDERER_WORLD_RENDERER
 
 #include <LLGL/LLGL.h>
-#include "world/world.hpp"
+#include "../world/world.hpp"
 
 class WorldRenderer {
 public:

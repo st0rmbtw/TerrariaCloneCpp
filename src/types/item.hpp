@@ -5,8 +5,8 @@
 
 #include <stdint.h>
 #include <string>
-#include "optional.hpp"
-#include "types/block.hpp"
+#include "../optional.hpp"
+#include "block.hpp"
 
 using ItemStack = uint16_t;
 

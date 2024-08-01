@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 #include <list>
-#include "types/texture_atlas_pos.hpp"
-#include "types/block.hpp"
-#include "world/world.hpp"
+#include "../types/texture_atlas_pos.hpp"
+#include "../types/block.hpp"
+#include "world.hpp"
 
 const uint8_t MERGE_VALIDATION[22][16] = {
     {11, 13, 13, 13, 14, 10, 8, 8, 8, 1, 15, 15, 4, 13, 13, 13},

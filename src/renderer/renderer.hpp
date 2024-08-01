@@ -5,11 +5,13 @@
 
 #include <LLGL/SwapChain.h>
 #include <LLGL/RenderSystem.h>
-#include "renderer/custom_surface.hpp"
-#include "renderer/camera.h"
-#include "types/sprite.hpp"
-#include "types/backend.hpp"
-#include "world/world.hpp"
+
+#include "../types/sprite.hpp"
+#include "../types/backend.hpp"
+#include "../world/world.hpp"
+
+#include "custom_surface.hpp"
+#include "camera.h"
 
 enum class RenderLayer : uint8_t {
     Main = 0,

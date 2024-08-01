@@ -5,8 +5,8 @@
 
 #include <cstdint>
 #include <LLGL/ShaderFlags.h>
-#include "common.h"
-#include "types/backend.hpp"
+#include "../common.h"
+#include "backend.hpp"
 
 class ShaderType {
 public:

@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "world/world.hpp"
+#include "world.hpp"
 
 constexpr int DIRT_HILL_HEIGHT = 75;
 

@@ -1,10 +1,12 @@
+#include "world_renderer.hpp"
+
 #include <LLGL/Utils/Utility.h>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "renderer/renderer.hpp"
-#include "renderer/world_renderer.hpp"
-#include "assets.hpp"
-#include "world/chunk.hpp"
+#include "../assets.hpp"
+#include "../world/chunk.hpp"
+
+#include "renderer.hpp"
 
 void WorldRenderer::init() {
     m_transform_buffer = Renderer::Context()->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(glm::mat4)));

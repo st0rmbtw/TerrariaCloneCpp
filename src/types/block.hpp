@@ -4,8 +4,8 @@
 #pragma once
 
 #include <stdint.h>
-#include "optional.hpp"
-#include "types/texture_atlas_pos.hpp"
+#include "../optional.hpp"
+#include "texture_atlas_pos.hpp"
 
 enum class BlockType : uint8_t {
     Dirt = 0,

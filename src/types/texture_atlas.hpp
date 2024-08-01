@@ -5,9 +5,9 @@
 
 #include <utility>
 #include <vector>
-#include "math/rect.hpp"
-#include "types/texture.hpp"
-#include "common.h"
+#include "../math/rect.hpp"
+#include "../common.h"
+#include "texture.hpp"
 
 struct TextureAtlas {
     TextureAtlas() = default;

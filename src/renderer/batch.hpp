@@ -7,10 +7,11 @@
 #include <vector>
 #include <LLGL/LLGL.h>
 
-#include "renderer/assets.hpp"
-#include "math/rect.hpp"
-#include "types/sprite.hpp"
-#include "optional.hpp"
+#include "../math/rect.hpp"
+#include "../types/sprite.hpp"
+#include "../optional.hpp"
+
+#include "assets.hpp"
 
 constexpr size_t MAX_QUADS = 5000;
 constexpr size_t MAX_VERTICES = MAX_QUADS * 4;

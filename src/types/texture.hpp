@@ -5,7 +5,7 @@
 
 #include <LLGL/Texture.h>
 #include <glm/glm.hpp>
-#include "common.h"
+#include "../common.h"
 
 namespace TextureSampler {
     enum : uint8_t {

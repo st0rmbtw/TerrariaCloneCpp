@@ -8,15 +8,15 @@
 #include <unordered_set>
 #include <deque>
 
-#include "math/rect.hpp"
-#include "renderer/camera.h"
+#include "../math/rect.hpp"
+#include "../renderer/camera.h"
 
-#include "types/block.hpp"
-#include "types/wall.hpp"
-#include "types/tile_pos.hpp"
-#include "world/chunk.hpp"
+#include "../types/block.hpp"
+#include "../types/wall.hpp"
+#include "../types/tile_pos.hpp"
+#include "../optional.hpp"
 
-#include "optional.hpp"
+#include "chunk.hpp"
 
 struct Layers {
     int surface;
