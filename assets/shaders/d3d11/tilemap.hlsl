@@ -1,13 +1,12 @@
 cbuffer UniformBuffer : register( b1 )
 {
-    float4x4 u_screen_projection;
-    float4x4 u_projection;
-    float4x4 u_view;
+    column_major float4x4 u_screen_projection;
+    column_major float4x4 u_view_projection;
 };
 
 cbuffer TransformBuffer : register( b2 )
 {
-    float4x4 u_transform;
+    column_major float4x4 u_transform;
 };
 
 struct VSInput
@@ -71,7 +70,7 @@ void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
 
     float2 start_uv = atlas_pos * (tex_size + padding);
 
-    float4x4 mvp = mul(mul(u_projection, u_view), u_transform);
+    float4x4 mvp = mul(u_view_projection, u_transform);
 
     GSOutput output;
     output.tile_id = tile_id;

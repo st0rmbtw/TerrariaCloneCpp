@@ -5,8 +5,10 @@
 
 #include <utility>
 #include <vector>
+
 #include "../math/rect.hpp"
 #include "../common.h"
+
 #include "texture.hpp"
 
 struct TextureAtlas {

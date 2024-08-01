@@ -242,7 +242,7 @@ bool Assets::Load() {
 
 bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
     const std::pair<ShaderAssetKey, AssetShader> SHADER_ASSETS[] = {
-        { ShaderAssetKey::SpriteShader, AssetShader("sprite", ShaderStages::Vertex | ShaderStages::Fragment, SpriteVertexFormat()) },
+        { ShaderAssetKey::SpriteShader, AssetShader("sprite", ShaderStages::Vertex | ShaderStages::Fragment | ShaderStages::Geometry, SpriteVertexFormat()) },
         { ShaderAssetKey::TilemapShader, AssetShader("tilemap", ShaderStages::Vertex | ShaderStages::Fragment | ShaderStages::Geometry, TilemapVertexFormat()) },
     };
 

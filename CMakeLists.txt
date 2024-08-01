@@ -74,8 +74,6 @@ add_executable(${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME} PRIVATE ${SRC})
 
-target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/")
-
 if(RELEASE_BUILD)
     target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG=0)
     target_compile_options(${PROJECT_NAME} PUBLIC "-O3" "-g0")

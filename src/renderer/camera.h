@@ -19,7 +19,7 @@ public:
 
     explicit Camera(glm::uvec2 viewport) :
         m_position(0.0f),
-        m_viewport(viewport),
+        m_viewport(std::move(viewport)),
         m_projection_matrix(),
         m_view_matrix(),
         m_transform_matrix()
@@ -28,16 +28,19 @@ public:
         compute_projection_and_view_matrix();
     }
 
-    void update();
+    inline void update() {
+        compute_projection_and_view_matrix();
+        compute_transform_matrix();
+    }
 
-    void set_position(const glm::vec2& position) { m_position = position; }
+    inline void set_position(const glm::vec2& position) { m_position = position; }
 
-    void set_zoom(float zoom) {
+    inline void set_zoom(float zoom) {
         m_zoom = glm::clamp(zoom, Constants::CAMERA_MAX_ZOOM, Constants::CAMERA_MIN_ZOOM);
         update_projection_area();
     }
 
-    void set_viewport(const glm::uvec2& viewport) {
+    inline void set_viewport(const glm::uvec2& viewport) {
         m_viewport = viewport;
         update_projection_area();
     }

@@ -12,7 +12,6 @@
 #include "../types/sprite.hpp"
 #include "../world/world.hpp"
 #include "../time/timer.hpp"
-#include "../time/time.hpp"
 
 constexpr float PLAYER_WIDTH = 22.0f;
 constexpr float PLAYER_WIDTH_HALF = PLAYER_WIDTH / 2.0f;
@@ -114,7 +113,7 @@ public:
     void init();
 
     void pre_update();
-    void fixed_update(const delta_time_t& delta_time, const World& world, bool handle_input);
+    void fixed_update(const World& world, bool handle_input);
     void update(const Camera& camera, World& world);
     void render() const;
 
@@ -134,7 +133,7 @@ private:
     void keep_in_world_bounds(const World& world);
     void update_sprites();
     void update_walk_anim_timer();
-    void update_sprites_index(const delta_time_t& delta_time);
+    void update_sprites_index();
     void update_movement_state();
     void update_using_item_anim();
     void spawn_particles_on_walk() const;

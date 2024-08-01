@@ -14,8 +14,7 @@
 #include "assets.hpp"
 
 constexpr size_t MAX_QUADS = 5000;
-constexpr size_t MAX_VERTICES = MAX_QUADS * 4;
-constexpr size_t MAX_INDICES = MAX_QUADS * 6;
+constexpr size_t MAX_VERTICES = MAX_QUADS;
 
 struct GlyphVertex {
     glm::vec4 transform_col_0;
@@ -40,7 +39,7 @@ struct SpriteData {
 struct SpriteFlush {
     tl::optional<Texture> texture;
     int vertex_offset;
-    uint32_t index_count;
+    uint32_t sprite_count;
 };
 
 class RenderBatch {
@@ -58,7 +57,6 @@ protected:
     math::Rect m_camera_frustum;
     math::Rect m_ui_frustum;
     LLGL::Buffer* m_vertex_buffer = nullptr;
-    LLGL::Buffer* m_index_buffer = nullptr;
     LLGL::PipelineState* m_pipeline = nullptr;
 };
 

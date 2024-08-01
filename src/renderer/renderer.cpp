@@ -82,11 +82,11 @@ bool Renderer::InitEngine(RenderBackend backend) {
 bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool vsync, bool fullscreen) {
     const LLGL::RenderSystemPtr& context = state.context;
 
+    state.surface = std::make_shared<CustomSurface>(window, resolution);
+
     LLGL::SwapChainDescriptor swapChainDesc;
     swapChainDesc.resolution = resolution;
     swapChainDesc.fullscreen = fullscreen;
-
-    state.surface = std::make_shared<CustomSurface>(window, resolution);
 
     state.swap_chain = context->CreateSwapChain(swapChainDesc, state.surface);
     state.swap_chain->SetVsyncInterval(vsync);
@@ -132,8 +132,7 @@ void Renderer::Begin(const Camera& camera) {
 
     auto projections_uniform = ProjectionsUniform {
         .screen_projection_matrix = screen_projection,
-        .projection_matrix = camera.get_projection_matrix(),
-        .view_matrix = camera.get_view_matrix(),
+        .view_projection_matrix = camera.get_projection_matrix() * camera.get_view_matrix(),
     };
 
     commands->Begin();
@@ -193,7 +192,7 @@ void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer) {
     state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.texture(), render_layer == RenderLayer::UI);
 }
 
-void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer /* render_layer */) {
+void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer) {
     const math::Rect& rect = sprite.atlas().get_rect(sprite.index());
 
     glm::vec4 uv_offset_scale = glm::vec4(
@@ -213,7 +212,7 @@ void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer /* 
         uv_offset_scale.w *= -1.0;
     }
 
-    state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), false);
+    state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), render_layer == RenderLayer::UI);
 }
 
 void Renderer::Terminate() {
@@ -241,23 +240,7 @@ void Renderer::FlushSpriteBatch() {
 void RenderBatchSprite::init() {
     m_buffer = new SpriteVertex[MAX_VERTICES];
 
-    uint32_t indices[MAX_INDICES];
-    uint32_t offset = 0;
-
-    for (size_t i = 0; i < MAX_INDICES; i += 6) {
-        indices[i + 0] = 0 + offset;
-        indices[i + 1] = 1 + offset;
-        indices[i + 2] = 2 + offset;
-
-        indices[i + 3] = 2 + offset;
-        indices[i + 4] = 3 + offset;
-        indices[i + 5] = 1 + offset;
-
-        offset += 4;
-    }
-
     m_vertex_buffer = CreateVertexBuffer(MAX_VERTICES * sizeof(SpriteVertex), SpriteVertexFormat(), "SpriteBatch VertexBuffer");
-    m_index_buffer = CreateIndexBuffer(indices, LLGL::Format::R32UInt, "SpriteBatch IndexBuffer");
 
     const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
 
@@ -267,7 +250,7 @@ void RenderBatchSprite::init() {
             "UniformBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
-            LLGL::StageFlags::VertexStage,
+            LLGL::StageFlags::GeometryStage,
             LLGL::BindingSlot(1)
         ),
         LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(2)),
@@ -282,10 +265,12 @@ void RenderBatchSprite::init() {
     pipelineLayoutDesc.debugName = "SpriteBatch Pipeline";
     pipelineDesc.vertexShader = sprite_shader.vs;
     pipelineDesc.fragmentShader = sprite_shader.ps;
+    pipelineDesc.geometryShader = sprite_shader.gs;
     pipelineDesc.pipelineLayout = pipelineLayout;
-    pipelineDesc.indexFormat = LLGL::Format::R32UInt;
-    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleList;
+    pipelineDesc.indexFormat = LLGL::Format::Undefined;
+    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::PointList;
     pipelineDesc.renderPass = state.swap_chain->GetRenderPass();
+    pipelineDesc.rasterizer.frontCCW = true;
     pipelineDesc.blend = LLGL::BlendDescriptor {
         .targets = {
             LLGL::BlendTargetDescriptor {
@@ -354,8 +339,8 @@ void RenderBatchSprite::render() {
     );
     
     tl::optional<Texture> prev_texture = sorted_sprites[0].texture;
-    uint32_t index_count = 0;
     uint32_t sprite_count = 0;
+    uint32_t total_sprite_count = 0;
     int vertex_offset = 0;
 
     for (const SpriteData& sprite_data : sorted_sprites) {
@@ -366,10 +351,10 @@ void RenderBatchSprite::render() {
             m_sprite_flush_queue.push_back(SpriteFlush {
                 .texture = prev_texture,
                 .vertex_offset = vertex_offset,
-                .index_count = index_count
+                .sprite_count = sprite_count
             });
-            index_count = 0;
-            vertex_offset = sprite_count * 4;
+            sprite_count = 0;
+            vertex_offset = total_sprite_count;
         }
 
         m_buffer_ptr->transform_col_0 = sprite_data.transform[0];
@@ -382,38 +367,8 @@ void RenderBatchSprite::render() {
         m_buffer_ptr->is_ui = sprite_data.is_ui;
         m_buffer_ptr++;
 
-        m_buffer_ptr->transform_col_0 = sprite_data.transform[0];
-        m_buffer_ptr->transform_col_1 = sprite_data.transform[1];
-        m_buffer_ptr->transform_col_2 = sprite_data.transform[2];
-        m_buffer_ptr->transform_col_3 = sprite_data.transform[3];
-        m_buffer_ptr->uv_offset_scale = sprite_data.uv_offset_scale;
-        m_buffer_ptr->color = sprite_data.color;
-        m_buffer_ptr->has_texture = curr_texture_id >= 0;
-        m_buffer_ptr->is_ui = sprite_data.is_ui;
-        m_buffer_ptr++;
-
-        m_buffer_ptr->transform_col_0 = sprite_data.transform[0];
-        m_buffer_ptr->transform_col_1 = sprite_data.transform[1];
-        m_buffer_ptr->transform_col_2 = sprite_data.transform[2];
-        m_buffer_ptr->transform_col_3 = sprite_data.transform[3];
-        m_buffer_ptr->uv_offset_scale = sprite_data.uv_offset_scale;
-        m_buffer_ptr->color = sprite_data.color;
-        m_buffer_ptr->has_texture = curr_texture_id >= 0;
-        m_buffer_ptr->is_ui = sprite_data.is_ui;
-        m_buffer_ptr++;
-
-        m_buffer_ptr->transform_col_0 = sprite_data.transform[0];
-        m_buffer_ptr->transform_col_1 = sprite_data.transform[1];
-        m_buffer_ptr->transform_col_2 = sprite_data.transform[2];
-        m_buffer_ptr->transform_col_3 = sprite_data.transform[3];
-        m_buffer_ptr->uv_offset_scale = sprite_data.uv_offset_scale;
-        m_buffer_ptr->color = sprite_data.color;
-        m_buffer_ptr->has_texture = curr_texture_id >= 0;
-        m_buffer_ptr->is_ui = sprite_data.is_ui;
-        m_buffer_ptr++;
-
-        index_count += 6;
         sprite_count += 1;
+        total_sprite_count += 1;
 
         prev_texture = sprite_data.texture;
     }
@@ -421,7 +376,7 @@ void RenderBatchSprite::render() {
     m_sprite_flush_queue.push_back(SpriteFlush {
         .texture = prev_texture,
         .vertex_offset = vertex_offset,
-        .index_count = index_count
+        .sprite_count = sprite_count
     });
 
     flush();
@@ -431,10 +386,13 @@ void RenderBatchSprite::flush() {
     auto* const commands = Renderer::CommandBuffer();
 
     const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    commands->UpdateBuffer(*m_vertex_buffer, 0, m_buffer, size);
+    if (size <= (1 << 16)) {
+        commands->UpdateBuffer(*m_vertex_buffer, 0, m_buffer, size);
+    } else {
+        Renderer::Context()->WriteBuffer(*m_vertex_buffer, 0, m_buffer, size);
+    }
     
     commands->SetVertexBuffer(*m_vertex_buffer);
-    commands->SetIndexBuffer(*m_index_buffer);
 
     commands->SetPipelineState(*m_pipeline);
     commands->SetResource(0, *state.constant_buffer);
@@ -444,7 +402,7 @@ void RenderBatchSprite::flush() {
 
         commands->SetResource(1, *t.texture);
         commands->SetResource(2, Assets::GetSampler(t.sampler));
-        commands->DrawIndexed(sprite_flush.index_count, 0, sprite_flush.vertex_offset);
+        commands->Draw(sprite_flush.sprite_count, sprite_flush.vertex_offset);
     }
 }
 
@@ -456,7 +414,6 @@ void RenderBatchSprite::begin() {
 
 void RenderBatchSprite::terminate() {
     state.context->Release(*m_vertex_buffer);
-    state.context->Release(*m_index_buffer);
     state.context->Release(*m_pipeline);
 
     delete[] m_buffer;

@@ -80,7 +80,7 @@ public:
             .lifetime       = this->lifetime,
             .rotation_speed = this->rotation_speed,
             .custom_scale   = this->scale,
-            .scale          = 1.0f,
+            .scale          = this->scale,
             .rotation       = glm::mat4(1.0f),
             .gravity        = this->gravity,
             .type           = this->type,
@@ -104,6 +104,7 @@ namespace ParticleManager {
 
     void Render();
     void Update();
+    void DeleteExpired();
 
     void SpawnParticle(const ParticleBuilder& builder);
 };

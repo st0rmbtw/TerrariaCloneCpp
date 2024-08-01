@@ -1,10 +1,5 @@
 #include "camera.h"
 
-void Camera::update() {
-    compute_projection_and_view_matrix();
-    compute_transform_matrix();
-}
-
 void Camera::update_projection_area() {
     m_area = math::Rect::from_corners(
         -glm::vec2(m_viewport) / 2.0f * m_zoom,

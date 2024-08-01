@@ -31,7 +31,11 @@ public:
         return *this;
     }
     inline BaseSprite& set_rotation(const glm::quat& rotation) { m_rotation = rotation; return *this; }
-    inline BaseSprite& set_scale(const glm::vec2& scale) { m_scale = scale; return *this; }
+    inline BaseSprite& set_scale(const glm::vec2& scale) {
+        m_scale = scale;
+        calculate_aabb();
+        return *this;
+    }
     inline BaseSprite& set_color(const glm::vec4& color) { m_color = color; return *this; }
     inline BaseSprite& set_color(const glm::vec3& color) { m_color = glm::vec4(color, 1.0); return *this; }
     inline BaseSprite& set_outline_color(const glm::vec4& color) { m_outline_color = color; return *this; }

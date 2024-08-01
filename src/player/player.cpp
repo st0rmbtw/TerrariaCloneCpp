@@ -274,12 +274,12 @@ void Player::update_using_item_anim() {
     m_using_item_visible = true;
 }
 
-void Player::update_sprites_index(const delta_time_t& delta_time) {
+void Player::update_sprites_index() {
     PlayerSprite* sprites[] = { &m_hair, &m_head, &m_body, &m_legs, &m_left_hand, &m_left_shoulder, &m_right_arm, &m_left_eye, &m_right_eye };
 
     switch (m_movement_state) {
     case MovementState::Walking: {
-        if (m_walk_anim_timer.tick(delta_time).just_finished()) {
+        if (m_walk_anim_timer.tick(Time::fixed_delta()).just_finished()) {
             m_walk_animation_index = (m_walk_animation_index + 1) % WALK_ANIMATION_LENGTH;
 
             for (PlayerSprite* sprite : sprites) {
@@ -381,7 +381,7 @@ void Player::spawn_particles_grounded() const {
     }
 }
 
-void Player::fixed_update(const delta_time_t& delta_time, const World& world, bool handle_input) {
+void Player::fixed_update(const World& world, bool handle_input) {
     horizontal_movement(handle_input);
     vertical_movement(handle_input);
     gravity();
@@ -396,7 +396,7 @@ void Player::fixed_update(const delta_time_t& delta_time, const World& world, bo
 
     update_using_item_anim();
 
-    update_sprites_index(delta_time);
+    update_sprites_index();
 
     m_swing_anim_index = 2;
     if (m_swing_counter <= 0) {

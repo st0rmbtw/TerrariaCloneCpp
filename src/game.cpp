@@ -12,6 +12,7 @@
 #include "ui.hpp"
 #include "world/autotile.hpp"
 #include "player/player.hpp"
+#include "world/particles.hpp"
 
 static struct GameState {
     Camera camera;
@@ -23,7 +24,7 @@ static struct GameState {
 } g;
 
 void pre_update();
-void fixed_update(delta_time_t delta_time);
+void fixed_update();
 void update();
 void render();
 void post_render();
@@ -90,8 +91,9 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     init_tile_rules();
 
     g.camera.set_viewport({resolution.width, resolution.height});
+    g.camera.set_zoom(1.0f);
 
-    g.world.generate(1000, 500, 0);
+    g.world.generate(200, 500, 0);
 
     const std::vector<ShaderDef> shader_defs = {
         // ShaderDef("DEF_SUBDIVISION", std::to_string(config::SUBDIVISION)),
@@ -120,6 +122,8 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     g.window = window;
     
     if (!Renderer::Init(window, resolution, config.vsync, config.fullscreen)) return false;
+
+    ParticleManager::Init();
 
     g.player.init();
     g.player.inventory().set_item(0, ITEM_COPPER_AXE);
@@ -150,7 +154,8 @@ void Game::Run() {
 
         fixed_timer += delta_time;
         while (fixed_timer > Constants::FIXED_UPDATE_INTERVAL) {
-            fixed_update(delta_time_t(Constants::FIXED_UPDATE_INTERVAL));
+            Time::fixed_advance_by(delta_time_t(Constants::FIXED_UPDATE_INTERVAL));
+            fixed_update();
             fixed_timer -= Constants::FIXED_UPDATE_INTERVAL;
         }
 
@@ -175,6 +180,8 @@ void Game::Destroy() {
 }
 
 void pre_update() {
+    ParticleManager::DeleteExpired();
+
     g.player.pre_update();
 
     if (Input::JustPressed(Key::F)) g.free_camera = !g.free_camera;
@@ -188,15 +195,49 @@ void update() {
 #endif
 
     g.camera.set_position(position);
+
+    float scale_speed = 2.f;
+
+    if (Input::Pressed(Key::LeftShift)) {
+        scale_speed *= 4.f;
+    }
+
+    if (Input::Pressed(Key::LeftAlt)) {
+        scale_speed /= 4.f;
+    }
+
+    if (Input::Pressed(Key::Minus)) {
+        g.camera.set_zoom(g.camera.zoom() + scale_speed * Time::delta_seconds());
+    }
+
+    if (Input::Pressed(Key::Equals)) {
+        g.camera.set_zoom(g.camera.zoom() - scale_speed * Time::delta_seconds());
+    }
+
     g.camera.update();
     g.world.update(g.camera);
     g.player.update(g.camera, g.world);
 
-    UI::Update(g.player.inventory());   
+    UI::Update(g.player.inventory());
+
+    if (Input::JustPressed(Key::K)) {
+        // for (int i = 0; i < 1; i++) {
+        // const glm::vec2 position = g.camera.screen_to_world(Input::MouseScreenPosition());
+        // const glm::vec2 velocity = glm::diskRand(1.0f) * 1.5f;
+        const glm::vec2 velocity = glm::vec2(0.0f);
+        const glm::vec2 position = glm::vec2(g.player.position()) - glm::vec2(0.0f, 100.0f);
+
+        ParticleManager::SpawnParticle(
+            ParticleBuilder::create(Particle::Type::Grass, position, velocity, 1.5f)
+                .with_rotation_speed(glm::pi<float>() / 12.0f)
+                .with_scale(0.5f)
+        );
+        // }
+    }
 }
 
-void fixed_update(delta_time_t delta_time) {
-    // ParticleManager::fixed_update();
+void fixed_update() {
+    ParticleManager::Update();
 
 #if DEBUG
     bool handle_input = !g.free_camera;
@@ -204,7 +245,7 @@ void fixed_update(delta_time_t delta_time) {
     bool handle_input = true;
 #endif
 
-    g.player.fixed_update(delta_time, g.world, handle_input);
+    g.player.fixed_update(g.world, handle_input);
 }
 
 void render() {
@@ -213,6 +254,8 @@ void render() {
     Renderer::RenderWorld(g.world);
 
     g.player.render();
+
+    ParticleManager::Render();
 
     UI::Render(g.camera, g.player.inventory());
 

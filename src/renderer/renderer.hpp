@@ -21,8 +21,7 @@ enum class RenderLayer : uint8_t {
 
 struct ProjectionsUniform {
     glm::mat4 screen_projection_matrix;
-    glm::mat4 projection_matrix;
-    glm::mat4 view_matrix;
+    glm::mat4 view_projection_matrix;
 };
 
 namespace Renderer {
