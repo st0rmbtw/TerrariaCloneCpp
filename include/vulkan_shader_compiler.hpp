@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include <LLGL/ShaderFlags.h>
+#include "types/shader_type.hpp"
 
-bool CompileVulkanShader(LLGL::ShaderType shaderType, const char* shaderSource, size_t shaderSourceSize, const char* outputPath);
+bool CompileVulkanShader(ShaderType shaderType, const char* shaderSource, size_t shaderSourceSize, const char* outputPath);
 
 #endif

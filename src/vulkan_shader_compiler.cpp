@@ -25,7 +25,7 @@ void ReadFromPipe(HANDLE pipe) {
 }
 #endif
 
-bool CompileVulkanShader(LLGL::ShaderType shaderType, const char* shaderSource, size_t shaderSourceSize, const char* outputPath)
+bool CompileVulkanShader(ShaderType shaderType, const char* shaderSource, size_t shaderSourceSize, const char* outputPath)
 {
     SECURITY_ATTRIBUTES saAttr; 
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES); 
@@ -81,11 +81,11 @@ bool CompileVulkanShader(LLGL::ShaderType shaderType, const char* shaderSource, 
 
     std::string stage;
     switch (shaderType) {
-        case LLGL::ShaderType::Vertex: stage = "vert";
+        case ShaderType::Vertex: stage = "vert";
         break;
-        case LLGL::ShaderType::Fragment: stage = "frag";
+        case ShaderType::Fragment: stage = "frag";
         break;
-        case LLGL::ShaderType::Geometry: stage = "geom";
+        case ShaderType::Geometry: stage = "geom";
         break;
         default: UNREACHABLE()
     }

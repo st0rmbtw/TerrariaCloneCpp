@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstdint>
+#include "common.h"
 
 class RenderBackend {
 public:
@@ -34,6 +35,24 @@ public:
             break;
             case Value::OpenGL: return "OpenGL";
             break;
+            default: UNREACHABLE()
+        };
+    }
+
+    [[nodiscard]]
+    inline constexpr const char* AssetFolder() const {
+        switch (m_value) {
+            case Value::Vulkan: return "assets/shaders/vulkan/";
+            break;
+            case Value::D3D11: return "assets/shaders/d3d11/";
+            break;
+            case Value::D3D12: return "assets/shaders/d3d12/";
+            break;
+            case Value::Metal: return "assets/shaders/metal/";
+            break;
+            case Value::OpenGL: return "assets/shaders/opengl/";
+            break;
+            default: UNREACHABLE()
         };
     }
 

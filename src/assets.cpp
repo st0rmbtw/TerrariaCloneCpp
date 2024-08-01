@@ -14,6 +14,7 @@
 #include "log.hpp"
 #include "utils.hpp"
 #include "types/shader_pipeline.hpp"
+#include "types/shader_type.hpp"
 #include "vulkan_shader_compiler.hpp"
 
 struct AssetTextureAtlas {
@@ -138,7 +139,7 @@ static struct AssetsState {
 
 Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data);
 Texture create_texture_array_empty(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler);
-inline LLGL::Shader* load_shader(LLGL::ShaderType shader_type, const std::string& name, const std::vector<ShaderDef>& shader_defs, const std::vector<LLGL::VertexAttribute>& vertex_attributes = {});
+inline LLGL::Shader* load_shader(ShaderType shader_type, const std::string& name, const std::vector<ShaderDef>& shader_defs, const std::vector<LLGL::VertexAttribute>& vertex_attributes = {});
 
 bool Assets::Load() {
     using Constants::MAX_TILE_TEXTURE_WIDTH;
@@ -248,17 +249,17 @@ bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
         ShaderPipeline shader_pipeline;
 
         if ((asset.stages & ShaderStages::Vertex) == ShaderStages::Vertex) {
-            if (!(shader_pipeline.vs = load_shader(LLGL::ShaderType::Vertex, asset.name, shader_defs, asset.vertex_attributes)))
+            if (!(shader_pipeline.vs = load_shader(ShaderType::Vertex, asset.name, shader_defs, asset.vertex_attributes)))
                 return false;
         }
         
         if ((asset.stages & ShaderStages::Fragment) == ShaderStages::Fragment) {
-            if (!(shader_pipeline.ps = load_shader(LLGL::ShaderType::Fragment, asset.name, shader_defs)))
+            if (!(shader_pipeline.ps = load_shader(ShaderType::Fragment, asset.name, shader_defs)))
                 return false;
         }
 
         if ((asset.stages & ShaderStages::Geometry) == ShaderStages::Geometry) {
-            if (!(shader_pipeline.gs = load_shader(LLGL::ShaderType::Geometry, asset.name, shader_defs)))
+            if (!(shader_pipeline.gs = load_shader(ShaderType::Geometry, asset.name, shader_defs)))
                 return false;
         }
 
@@ -322,22 +323,22 @@ void Assets::DestroyShaders() {
 }
 
 const Texture& Assets::GetTexture(AssetKey key) {
-    ASSERT(state.textures.find(key) != state.textures.end(), "Key not found");
+    ASSERT(state.textures.contains(key), "Key not found");
     return state.textures[key];
 }
 
 const TextureAtlas& Assets::GetTextureAtlas(AssetKey key) {
-    ASSERT(state.textures_atlases.find(key) != state.textures_atlases.end(), "Key not found");
+    ASSERT(state.textures_atlases.contains(key), "Key not found");
     return state.textures_atlases[key];
 }
 
 const Texture& Assets::GetItemTexture(size_t index) {
-    ASSERT(state.items.find(index) != state.items.end(), "Key not found");
+    ASSERT(state.items.contains(index), "Key not found");
     return state.items[index];
 }
 
 const ShaderPipeline& Assets::GetShader(ShaderAssetKey key) {
-    ASSERT(state.shaders.find(key) != state.shaders.end(), "Key not found");
+    ASSERT(state.shaders.contains(key), "Key not found");
     return state.shaders[key];
 }
 
@@ -385,46 +386,14 @@ Texture create_texture_array_empty(uint32_t width, uint32_t height, uint32_t lay
 }
 
 LLGL::Shader* load_shader(
-    LLGL::ShaderType shader_type,
+    ShaderType shader_type,
     const std::string& name,
     const std::vector<ShaderDef>& shader_defs,
     const std::vector<LLGL::VertexAttribute>& vertex_attributes
 ) {
     const RenderBackend backend = Renderer::Backend();
 
-    std::string extension;
-    std::string path;
-
-    switch (backend) {
-        case RenderBackend::D3D11:
-        case RenderBackend::D3D12: extension = ".hlsl";
-        break;
-        case RenderBackend::Metal: extension = ".metal";
-        break;
-        default: switch (shader_type) {
-            case LLGL::ShaderType::Vertex: extension = ".vert";
-            break;
-            case LLGL::ShaderType::Fragment: extension = ".frag";
-            break;
-            case LLGL::ShaderType::Geometry: extension = ".geom";
-            break;
-            default: break;
-        };
-    }
-
-    switch (backend) {
-        case RenderBackend::D3D11: path = "assets/shaders/d3d11/" + name + extension;
-        break;
-        case RenderBackend::D3D12: path = "assets/shaders/d3d12/" + name + extension;
-        break;
-        case RenderBackend::Metal: path = "assets/shaders/metal/" + name + extension;
-        break;
-        case RenderBackend::Vulkan: path = "assets/shaders/vulkan/" + name + extension;
-        break;
-        case RenderBackend::OpenGL: path = "assets/shaders/opengl/" + name + extension;
-        break;
-        default: UNREACHABLE()
-    }
+    const std::string path = backend.AssetFolder() + name + shader_type.FileExtension(backend);
 
     if (!FileExists(path.c_str())) {
         LOG_ERROR("Failed to find shader '%s'", path.c_str());
@@ -449,69 +418,30 @@ LLGL::Shader* load_shader(
     shader_file.close();
 
     LLGL::ShaderDescriptor shader_desc;
-    shader_desc.type = shader_type;
+    shader_desc.type = shader_type.ToLLGLType();
     shader_desc.sourceType = LLGL::ShaderSourceType::CodeString;
 
-    if (shader_type == LLGL::ShaderType::Vertex) {
+    if (shader_type.IsVertex()) {
         shader_desc.vertex.inputAttribs = vertex_attributes;
     }
 
-    const std::string output_path = path + ".spv";
+    const std::string spirv_path = path + ".spv";
     if (backend.IsVulkan()) {
-        if (!FileExists(output_path.c_str())) {
-            if (!CompileVulkanShader(shader_type, shader_source.c_str(), shader_source.length(), output_path.c_str())) {
+        if (!FileExists(spirv_path.c_str())) {
+            if (!CompileVulkanShader(shader_type, shader_source.c_str(), shader_source.length(), spirv_path.c_str())) {
                 return nullptr;
             }
         }
 
-        shader_desc.source = output_path.c_str();
+        shader_desc.source = spirv_path.c_str();
         shader_desc.sourceType = LLGL::ShaderSourceType::BinaryFile;
     } else {
-        shader_desc.type = shader_type;
         shader_desc.source = shader_source.c_str();
         shader_desc.sourceSize = shader_source.length();
-    }
-
-    if (backend.IsD3D11()) {
-        switch (shader_type) {
-            case LLGL::ShaderType::Vertex: {
-                shader_desc.entryPoint = "VS";
-                shader_desc.profile = "vs_4_0";
-            }
-            break;
-            case LLGL::ShaderType::Fragment: {
-                shader_desc.entryPoint = "PS";
-                shader_desc.profile = "ps_4_0";
-            }
-            break;
-            case LLGL::ShaderType::Geometry: {
-                shader_desc.entryPoint = "GS";
-                shader_desc.profile = "gs_4_0";
-            }
-            break;
-            default: UNREACHABLE()
-        }
-    }
-
-    if (backend.IsMetal()) {
-        shader_desc.flags |= LLGL::ShaderCompileFlags::DefaultLibrary;
-        switch (shader_type) {
-            case LLGL::ShaderType::Vertex: {
-                shader_desc.entryPoint = "VS";
-                shader_desc.profile = "1.1";
-            }
-            break;
-            case LLGL::ShaderType::Fragment: {
-                shader_desc.entryPoint = "PS";
-                shader_desc.profile = "1.1";
-            }
-            break;
-            case LLGL::ShaderType::Geometry: {
-                shader_desc.entryPoint = "GS";
-                shader_desc.profile = "1.1";
-            }
-            break;
-            default: UNREACHABLE()
+        shader_desc.entryPoint = shader_type.EntryPoint(backend);
+        shader_desc.profile = shader_type.Profile(backend);
+        if (backend.IsMetal()) {
+            shader_desc.flags |= LLGL::ShaderCompileFlags::DefaultLibrary;
         }
     }
 
