@@ -282,6 +282,7 @@ bool Assets::InitSamplers() {
         sampler_desc.mipMapFilter = LLGL::SamplerFilter::Linear;
         sampler_desc.minLOD = 0.0f;
         sampler_desc.maxLOD = 1.0f;
+        sampler_desc.mipMapEnabled = false;
         sampler_desc.maxAnisotropy = 1;
 
         state.samplers[TextureSampler::Linear] = Renderer::Context()->CreateSampler(sampler_desc);
@@ -297,6 +298,7 @@ bool Assets::InitSamplers() {
         sampler_desc.mipMapFilter = LLGL::SamplerFilter::Nearest;
         sampler_desc.minLOD = 0.0f;
         sampler_desc.maxLOD = 1.0f;
+        sampler_desc.mipMapEnabled = false;
         sampler_desc.maxAnisotropy = 1;
 
         state.samplers[TextureSampler::Nearest] = Renderer::Context()->CreateSampler(sampler_desc);
@@ -359,7 +361,7 @@ Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int
     image_view.format = (components == 4 ? LLGL::ImageFormat::RGBA : LLGL::ImageFormat::RGB);
     image_view.dataType = LLGL::DataType::UInt8;
     image_view.data = data;
-    image_view.dataSize = width * height *components;
+    image_view.dataSize = width * height * components;
 
     Texture texture;
     texture.id = state.texture_index++;

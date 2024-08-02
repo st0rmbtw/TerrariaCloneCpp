@@ -36,11 +36,9 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
 
 void ParticleManager::Render() {
     for (const ParticleData& particle : state.particles) {
-        TextureAtlasSprite sprite(Assets::GetTextureAtlas(AssetKey::TextureParticles));
-        sprite.set_position(particle.position);
+        TextureAtlasSprite sprite(Assets::GetTextureAtlas(AssetKey::TextureParticles), particle.position, glm::vec2(particle.scale));
         sprite.set_index(get_particle_index(particle.type, particle.variant));
         sprite.set_rotation(particle.rotation);
-        sprite.set_scale(glm::vec2(particle.scale));
 
         Renderer::DrawAtlasSprite(sprite, RenderLayer::World);
     }
@@ -75,8 +73,7 @@ void ParticleManager::DeleteExpired() {
             )
         );
 
-        // particle.scale = 0.5f;
-        particle.scale = particle.custom_scale;
+        particle.scale = particle.custom_scale * scale;
 
         it++;
     }

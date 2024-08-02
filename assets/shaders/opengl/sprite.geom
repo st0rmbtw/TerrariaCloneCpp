@@ -27,7 +27,7 @@ void main() {
     int is_ui = gs_in[0].is_ui;
     int has_texture = gs_in[0].has_texture;
     
-    mat4 mvp = is_ui > 0.5 ? ubo.screen_projection * transform : ubo.view_projection * transform;
+    mat4 mvp = is_ui > 0 ? ubo.screen_projection * transform : ubo.view_projection * transform;
 
     vec2 position = vec2(0.0, 0.0);
     gl_Position = mvp * vec4(position, 0.0, 1.0);

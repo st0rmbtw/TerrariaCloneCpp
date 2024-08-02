@@ -19,11 +19,15 @@ public:
 
     explicit BaseSprite(glm::vec2 position) : m_position(position) {}
 
+    BaseSprite(glm::vec2 position, glm::vec2 scale) : 
+        m_position(std::move(position)),
+        m_scale(std::move(scale)) {}
+
     BaseSprite(glm::vec2 position, glm::vec2 scale, glm::vec4 color, Anchor anchor) : 
-        m_position(position),
-        m_scale(scale),
-        m_color(color),
-        m_anchor(anchor) {}
+        m_position(std::move(position)),
+        m_scale(std::move(scale)),
+        m_color(std::move(color)),
+        m_anchor(std::move(anchor)) {}
 
     BaseSprite& set_position(const glm::vec2& position) {
         m_position = position;
@@ -85,6 +89,13 @@ class Sprite : public BaseSprite {
 public:
     Sprite() = default;
 
+    Sprite(glm::vec2 position) : BaseSprite(position) {
+        calculate_aabb();
+    }
+    Sprite(glm::vec2 position, glm::vec2 scale) : BaseSprite(position, scale) {
+        calculate_aabb();
+    }
+
     Sprite& set_texture(Texture texture) { m_texture = texture; return *this; }
     BaseSprite& set_custom_size(tl::optional<glm::vec2> custom_size) {
         m_custom_size = custom_size;
@@ -118,13 +129,20 @@ public:
         m_texture_atlas(std::move(texture_atlas)),
         m_index(0) {}
 
+    TextureAtlasSprite(const TextureAtlas& texture_atlas, glm::vec2 position, glm::vec2 scale) : BaseSprite(position, scale)
+    {
+        m_texture_atlas = texture_atlas;
+        m_index = 0;
+        calculate_aabb();
+    }
+
     inline void set_index(size_t index) { m_index = index; }
 
     [[nodiscard]] inline size_t index() const { return m_index; }
     [[nodiscard]] inline const TextureAtlas& atlas() const { return m_texture_atlas; }
 
     [[nodiscard]] glm::vec2 size() const override {
-        return m_texture_atlas.get_rect(m_index).size() * scale();
+        return glm::vec2(m_texture_atlas.size()) * scale();
     }
 private:
     TextureAtlas m_texture_atlas;

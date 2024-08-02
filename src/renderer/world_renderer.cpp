@@ -46,6 +46,7 @@ void WorldRenderer::init() {
     pipelineDesc.indexFormat = LLGL::Format::Undefined;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::PointList;
     pipelineDesc.renderPass = Renderer::SwapChain()->GetRenderPass();
+    pipelineDesc.rasterizer.frontCCW = true;
     pipelineDesc.blend = LLGL::BlendDescriptor {
         .targets = {
             LLGL::BlendTargetDescriptor {

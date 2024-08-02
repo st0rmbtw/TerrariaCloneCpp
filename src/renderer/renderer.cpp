@@ -128,7 +128,12 @@ void Renderer::Begin(const Camera& camera) {
     const math::Rect camera_frustum = math::Rect::from_corners(top_left, bottom_right);
     const math::Rect ui_frustum = math::Rect::from_corners(glm::vec2(0.0), camera.viewport());
 
-    const glm::mat4 screen_projection = glm::ortho(0.0f, static_cast<float>(camera.viewport().x), static_cast<float>(camera.viewport().y), 0.0f, -1.0f, 1.0f);
+    glm::mat4 screen_projection;
+    if (state.backend.IsOpenGL()) {
+        screen_projection = glm::orthoRH_NO(0.0f, static_cast<float>(camera.viewport().x), static_cast<float>(camera.viewport().y), 0.0f, -1.0f, 1.0f);
+    } else {
+        screen_projection = glm::orthoLH_ZO(0.0f, static_cast<float>(camera.viewport().x), static_cast<float>(camera.viewport().y), 0.0f, 0.0f, 1.0f);
+    }
 
     auto projections_uniform = ProjectionsUniform {
         .screen_projection_matrix = screen_projection,
@@ -136,7 +141,7 @@ void Renderer::Begin(const Camera& camera) {
     };
 
     commands->Begin();
-    commands->SetViewport(swap_chain->GetResolution());
+    commands->SetViewport(LLGL::Extent2D(camera.viewport().x, camera.viewport().y));
 
     commands->UpdateBuffer(*state.constant_buffer, 0, &projections_uniform, sizeof(projections_uniform));
 

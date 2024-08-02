@@ -2,6 +2,7 @@
 
 #include "game.hpp"
 #include "constants.hpp"
+#include "glm/gtc/random.hpp"
 #include "renderer/camera.h"
 #include "renderer/renderer.hpp"
 #include "time/time.hpp"
@@ -220,19 +221,16 @@ void update() {
 
     UI::Update(g.player.inventory());
 
-    if (Input::JustPressed(Key::K)) {
-        // for (int i = 0; i < 1; i++) {
-        // const glm::vec2 position = g.camera.screen_to_world(Input::MouseScreenPosition());
-        // const glm::vec2 velocity = glm::diskRand(1.0f) * 1.5f;
-        const glm::vec2 velocity = glm::vec2(0.0f);
-        const glm::vec2 position = glm::vec2(g.player.position()) - glm::vec2(0.0f, 100.0f);
+    if (Input::Pressed(Key::K)) {
+        for (int i = 0; i < 5; i++) {
+            const glm::vec2 position = g.camera.screen_to_world(Input::MouseScreenPosition());
+            const glm::vec2 velocity = glm::diskRand(1.0f) * 1.5f;
 
-        ParticleManager::SpawnParticle(
-            ParticleBuilder::create(Particle::Type::Grass, position, velocity, 1.5f)
-                .with_rotation_speed(glm::pi<float>() / 12.0f)
-                .with_scale(0.5f)
-        );
-        // }
+            ParticleManager::SpawnParticle(
+                ParticleBuilder::create(Particle::Type::Grass, position, velocity, 1.5f)
+                    .with_rotation_speed(glm::pi<float>() / 12.0f)
+            );
+        }
     }
 }
 
@@ -359,6 +357,7 @@ static void handle_window_resize_events(GLFWwindow* window, int width, int heigh
     Renderer::SwapChain()->ResizeBuffers(new_size);
 
     g.camera.set_viewport({new_size.width, new_size.height});
+    g.camera.update();
 
     render();
 }

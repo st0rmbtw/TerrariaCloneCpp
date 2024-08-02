@@ -7,25 +7,51 @@ static struct UiState {
     bool show_extra_ui = false;
 } state;
 
+void render_inventory(const Inventory& inventory);
+
+void UI::Update(Inventory& inventory) {
+    if (Input::JustPressed(Key::Digit1)) inventory.set_selected_slot(0);
+    if (Input::JustPressed(Key::Digit2)) inventory.set_selected_slot(1);
+    if (Input::JustPressed(Key::Digit3)) inventory.set_selected_slot(2);
+    if (Input::JustPressed(Key::Digit4)) inventory.set_selected_slot(3);
+    if (Input::JustPressed(Key::Digit5)) inventory.set_selected_slot(4);
+    if (Input::JustPressed(Key::Digit6)) inventory.set_selected_slot(5);
+    if (Input::JustPressed(Key::Digit7)) inventory.set_selected_slot(6);
+    if (Input::JustPressed(Key::Digit8)) inventory.set_selected_slot(7);
+    if (Input::JustPressed(Key::Digit9)) inventory.set_selected_slot(8);
+    if (Input::JustPressed(Key::Digit0)) inventory.set_selected_slot(9);
+}
+
+void UI::Render(const Camera& camera, const Inventory& inventory) {
+    render_inventory(inventory);
+
+    Sprite sprite(Input::MouseScreenPosition());
+    sprite.set_custom_size(glm::vec2(25.0f));
+    sprite.set_color(glm::vec3(1.0f, 0.0f, 0.0f));
+    sprite.set_anchor(Anchor::TopLeft);
+    sprite.set_texture(Assets::GetTexture(AssetKey::TextureUiCursorForeground));
+    sprite.set_order(100);
+
+    Renderer::DrawSprite(sprite, RenderLayer::UI);
+}
+
 inline void render_inventory_cell(UiElement element_type, uint8_t index, const glm::vec2& size, const glm::vec2& position, const Texture& texture) {
     const glm::vec2 pos = INVENTORY_PADDING + position;
     
     // m_elements.push_back(Element(element_type, index, Rect::from_top_left(pos, size)));
     
-    Sprite cell_sprite;
+    Sprite cell_sprite(pos);
     cell_sprite.set_anchor(Anchor::TopLeft);
     cell_sprite.set_custom_size(tl::optional<glm::vec2>(size));
-    cell_sprite.set_position(pos);
     cell_sprite.set_color(glm::vec4(1.0f, 1.0f, 1.0f, 0.8f));
     cell_sprite.set_texture(texture);
     Renderer::DrawSprite(cell_sprite, RenderLayer::UI);
 }
 
 inline void render_cell_item(const glm::vec2& item_size, const glm::vec2& cell_size, const glm::vec2& position, const Texture& texture) {
-    Sprite cell_sprite;
+    Sprite cell_sprite(INVENTORY_PADDING + position + (cell_size - item_size) / 2.0f);
     cell_sprite.set_anchor(Anchor::TopLeft);
     cell_sprite.set_custom_size(tl::optional<glm::vec2>(item_size));
-    cell_sprite.set_position(INVENTORY_PADDING + position + (cell_size - item_size) / 2.0f);
     cell_sprite.set_texture(texture);
     Renderer::DrawSprite(cell_sprite, RenderLayer::UI);
 }
@@ -119,31 +145,4 @@ void render_inventory(const Inventory& inventory) {
             offset.x = 0;
         }
     }
-}
-
-void UI::Update(Inventory& inventory) {
-    if (Input::JustPressed(Key::Digit1)) inventory.set_selected_slot(0);
-    if (Input::JustPressed(Key::Digit2)) inventory.set_selected_slot(1);
-    if (Input::JustPressed(Key::Digit3)) inventory.set_selected_slot(2);
-    if (Input::JustPressed(Key::Digit4)) inventory.set_selected_slot(3);
-    if (Input::JustPressed(Key::Digit5)) inventory.set_selected_slot(4);
-    if (Input::JustPressed(Key::Digit6)) inventory.set_selected_slot(5);
-    if (Input::JustPressed(Key::Digit7)) inventory.set_selected_slot(6);
-    if (Input::JustPressed(Key::Digit8)) inventory.set_selected_slot(7);
-    if (Input::JustPressed(Key::Digit9)) inventory.set_selected_slot(8);
-    if (Input::JustPressed(Key::Digit0)) inventory.set_selected_slot(9);
-}
-
-void UI::Render(const Camera& camera, const Inventory& inventory) {
-    render_inventory(inventory);
-
-    Sprite sprite;
-    sprite.set_custom_size(glm::vec2(25.0f));
-    sprite.set_color(glm::vec3(1.0f, 0.0f, 0.0f));
-    sprite.set_position(Input::MouseScreenPosition());
-    sprite.set_anchor(Anchor::TopLeft);
-    sprite.set_texture(Assets::GetTexture(AssetKey::TextureUiCursorForeground));
-    sprite.set_order(100);
-
-    Renderer::DrawSprite(sprite, RenderLayer::UI);
 }
