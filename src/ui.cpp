@@ -5,9 +5,32 @@
 
 static struct UiState {
     bool show_extra_ui = false;
+    std::vector<Element> elements;
 } state;
 
 void render_inventory(const Inventory& inventory);
+
+void UI::Init() {
+    state.elements.reserve(100);
+}
+
+void UI::PreUpdate(Inventory& inventory) {
+    for (const Element& element : state.elements) {
+        if (element.rect().contains(Input::MouseScreenPosition())) {
+            Input::SetMouseOverUi(true);
+            
+            if (Input::JustPressed(MouseButton::Left)) {
+                switch (element.type()) {
+                case UiElement::HotbarCell:
+                    inventory.set_selected_slot(element.data());
+                    break;
+                case UiElement::InventoryCell:
+                    break;
+                }
+            }
+        }
+    }
+}
 
 void UI::Update(Inventory& inventory) {
     if (Input::JustPressed(Key::Escape)) {
@@ -32,6 +55,10 @@ void UI::Update(Inventory& inventory) {
     }
 }
 
+void UI::PostUpdate() {
+    state.elements.clear();
+}
+
 void UI::Render(const Camera& camera, const Inventory& inventory) {
     render_inventory(inventory);
 
@@ -48,7 +75,7 @@ void UI::Render(const Camera& camera, const Inventory& inventory) {
 inline void render_inventory_cell(UiElement element_type, uint8_t index, const glm::vec2& size, const glm::vec2& position, const Texture& texture) {
     const glm::vec2 pos = INVENTORY_PADDING + position;
     
-    // m_elements.push_back(Element(element_type, index, Rect::from_top_left(pos, size)));
+    state.elements.emplace_back(element_type, index, math::Rect::from_top_left(pos, size));
     
     Sprite cell_sprite(pos);
     cell_sprite.set_anchor(Anchor::TopLeft);
@@ -107,16 +134,16 @@ void render_inventory(const Inventory& inventory) {
         }
 
         // Draw cell index
-        if (item.is_some() || state.show_extra_ui) {
-            float index_size = text_size;
-            float index_color = 0.8f;
-            if (state.show_extra_ui && item_selected) {
-                index_size = 16.0f;
-                index_color = 1.0f;
-            }
+        // if (item.is_some() || state.show_extra_ui) {
+        //     float index_size = text_size;
+        //     float index_color = 0.8f;
+        //     if (state.show_extra_ui && item_selected) {
+        //         index_size = 16.0f;
+        //         index_color = 1.0f;
+        //     }
 
-            // Renderer::draw_text_ui(FontKey::AndyBold, std::to_string((x + 1) % 10), offset + padding + glm::vec2(16.0f, text_size * 1.7f), index_size, glm::vec3(index_color));
-        }
+        //     Renderer::draw_text_ui(FontKey::AndyBold, std::to_string((x + 1) % 10), offset + padding + glm::vec2(16.0f, text_size * 1.7f), index_size, glm::vec3(index_color));
+        // }
 
         // Draw item stack
         if (item.is_some() && item->stack > 1) {

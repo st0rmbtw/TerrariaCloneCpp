@@ -27,6 +27,7 @@ static struct GameState {
 void pre_update();
 void fixed_update();
 void update();
+void post_update();
 void render();
 void post_render();
 
@@ -125,6 +126,7 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     if (!Renderer::Init(window, resolution, config.vsync, config.fullscreen)) return false;
 
     ParticleManager::Init();
+    UI::Init();
 
     g.player.init();
     g.player.inventory().set_item(0, ITEM_COPPER_AXE);
@@ -161,6 +163,7 @@ void Game::Run() {
         }
 
         update();
+        post_update();
         
         if (!g.minimized) {
             render();
@@ -183,9 +186,23 @@ void Game::Destroy() {
 void pre_update() {
     ParticleManager::DeleteExpired();
 
+    UI::PreUpdate(g.player.inventory());
+
     g.player.pre_update();
 
     if (Input::JustPressed(Key::F)) g.free_camera = !g.free_camera;
+}
+
+void fixed_update() {
+    ParticleManager::Update();
+
+#if DEBUG
+    const bool handle_input = !g.free_camera;
+#else
+    const bool handle_input = true;
+#endif
+
+    g.player.fixed_update(g.world, handle_input);
 }
 
 void update() {
@@ -217,9 +234,10 @@ void update() {
 
     g.camera.update();
     g.world.update(g.camera);
-    g.player.update(g.camera, g.world);
-
+    
     UI::Update(g.player.inventory());
+    
+    g.player.update(g.camera, g.world);
 
     if (Input::Pressed(Key::K)) {
         for (int i = 0; i < 5; i++) {
@@ -234,16 +252,8 @@ void update() {
     }
 }
 
-void fixed_update() {
-    ParticleManager::Update();
-
-#if DEBUG
-    bool handle_input = !g.free_camera;
-#else
-    bool handle_input = true;
-#endif
-
-    g.player.fixed_update(g.world, handle_input);
+void post_update() {
+    UI::PostUpdate();
 }
 
 void render() {
