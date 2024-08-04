@@ -17,7 +17,6 @@
 #include "types/shader_pipeline.hpp"
 #include "types/shader_type.hpp"
 #include "types/texture.hpp"
-#include "vulkan_shader_compiler.hpp"
 
 struct AssetTextureAtlas {
     uint32_t rows;
@@ -457,15 +456,8 @@ LLGL::Shader* load_shader(
         shader_desc.vertex.inputAttribs = vertex_attributes;
     }
 
-    const std::string spirv_path = path + ".spv";
     if (backend.IsVulkan()) {
-        if (!FileExists(spirv_path.c_str())) {
-            if (!CompileVulkanShader(shader_type, shader_source.c_str(), shader_source.length(), spirv_path.c_str())) {
-                return nullptr;
-            }
-        }
-
-        shader_desc.source = spirv_path.c_str();
+        shader_desc.source = path.c_str();
         shader_desc.sourceType = LLGL::ShaderSourceType::BinaryFile;
     } else {
         shader_desc.source = shader_source.c_str();

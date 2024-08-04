@@ -52,10 +52,23 @@ endif()
 
 add_compile_options("-Wno-ignored-attributes")
 
-set(LLGL_BUILD_RENDERER_METAL OFF CACHE BOOL "" FORCE)
 set(LLGL_BUILD_RENDERER_NULL OFF CACHE BOOL "" FORCE)
+
+if (APPLE)
+    set(LLGL_BUILD_RENDERER_METAL ON CACHE BOOL "" FORCE)
+else()
+    set(LLGL_BUILD_RENDERER_METAL OFF CACHE BOOL "" FORCE)
+endif()
+
+if (WIN32)
+    set(LLGL_BUILD_RENDERER_DIRECT3D12 OFF CACHE BOOL "" FORCE)
+    set(LLGL_BUILD_RENDERER_DIRECT3D11 ON CACHE BOOL "" FORCE)
+else()
+    set(LLGL_BUILD_RENDERER_DIRECT3D12 OFF CACHE BOOL "" FORCE)
+    set(LLGL_BUILD_RENDERER_DIRECT3D11 OFF CACHE BOOL "" FORCE)
+endif()
+
 set(LLGL_BUILD_RENDERER_VULKAN ON CACHE BOOL "" FORCE)
-set(LLGL_BUILD_RENDERER_DIRECT3D12 OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(thirdparty/LLGL)
@@ -63,6 +76,7 @@ add_subdirectory(thirdparty/glm)
 add_subdirectory(thirdparty/glfw)
 add_subdirectory(thirdparty/STB)
 add_subdirectory(thirdparty/FastNoiseLite)
+add_subdirectory(shader_compiler)
 # add_subdirectory(thirdparty/freetype-2.13.2)
 
 unset(EXECUTABLE_OUTPUT_PATH CACHE)
@@ -83,3 +97,23 @@ else()
 endif()
 
 target_link_libraries(${PROJECT_NAME} glm STB glfw LLGL LLGL_Direct3D11 LLGL_OpenGL FastNoiseLite)
+
+add_custom_target(COPY_ASSETS ALL COMMAND ${CMAKE_COMMAND} -D BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR} -P ${CMAKE_SOURCE_DIR}/CopyAssets.cmake WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+file(GLOB_RECURSE VULKAN_SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/vulkan/*.*)
+
+set(VULKAN_SHADERS_OUTPUT)
+
+foreach(shader ${VULKAN_SHADERS})
+    get_filename_component(shader_name ${shader} NAME)
+    add_custom_command(
+        OUTPUT assets/shaders/vulkan/${shader_name}.spv
+        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/shader_compiler/ShaderCompiler.exe ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${shader}
+        DEPENDS ${shader}
+    )
+    list(APPEND VULKAN_SHADERS_OUTPUT assets/shaders/vulkan/${shader_name}.spv)
+endforeach()
+
+add_custom_target(COMPILE_VULKAN_SHADERS DEPENDS ${VULKAN_SHADERS_OUTPUT})
+
+add_dependencies(${PROJECT_NAME} COMPILE_VULKAN_SHADERS)
