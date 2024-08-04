@@ -110,6 +110,6 @@ void WorldRenderer::render(const World& world) {
 }
 
 void WorldRenderer::terminate() {
-    Renderer::Context()->Release(*m_transform_buffer);
-    Renderer::Context()->Release(*m_pipeline);
+    if (m_transform_buffer) Renderer::Context()->Release(*m_transform_buffer);
+    if (m_pipeline) Renderer::Context()->Release(*m_pipeline);
 }

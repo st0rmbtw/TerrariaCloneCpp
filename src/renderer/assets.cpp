@@ -17,6 +17,8 @@ const LLGL::VertexFormat& SpriteVertexFormat() {
             vertexFormat.AppendAttribute({"a_transform_col_3", LLGL::Format::RGBA32Float});
             vertexFormat.AppendAttribute({"a_uv_offset_scale", LLGL::Format::RGBA32Float});
             vertexFormat.AppendAttribute({"a_color", LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"a_outline_color", LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"a_outline_thickness", LLGL::Format::R32Float});
             vertexFormat.AppendAttribute({"a_has_texture", LLGL::Format::R32SInt});
             vertexFormat.AppendAttribute({"a_is_ui", LLGL::Format::R32SInt});
         }
@@ -29,6 +31,8 @@ const LLGL::VertexFormat& SpriteVertexFormat() {
             vertexFormat.AppendAttribute({"Transform", 3, LLGL::Format::RGBA32Float});
             vertexFormat.AppendAttribute({"UvOffsetScale", LLGL::Format::RGBA32Float});
             vertexFormat.AppendAttribute({"Color", LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"OutlineColor", LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"OutlineThickness", LLGL::Format::R32Float});
             vertexFormat.AppendAttribute({"HasTexture", LLGL::Format::R32SInt});
             vertexFormat.AppendAttribute({"IsUI", LLGL::Format::R32SInt});        
         }
@@ -40,6 +44,8 @@ const LLGL::VertexFormat& SpriteVertexFormat() {
             vertexFormat.AppendAttribute({"transform3", LLGL::Format::RGBA32Float});
             vertexFormat.AppendAttribute({"uv_offset_scale", LLGL::Format::RGBA32Float});
             vertexFormat.AppendAttribute({"color", LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"outline_color", LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"outline_thickness", LLGL::Format::R32Float});
             vertexFormat.AppendAttribute({"has_texture", LLGL::Format::R32SInt});
             vertexFormat.AppendAttribute({"is_ui", LLGL::Format::R32SInt});
         }

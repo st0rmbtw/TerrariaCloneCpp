@@ -226,10 +226,10 @@ void Renderer::Terminate() {
     state.sprite_batch.terminate();
     state.world_renderer.terminate();
 
-    state.context->Release(*state.constant_buffer);
+    if (state.constant_buffer) state.context->Release(*state.constant_buffer);
 
-    state.context->Release(*state.command_buffer);
-    state.context->Release(*state.swap_chain);
+    if (state.command_buffer) state.context->Release(*state.command_buffer);
+    if (state.swap_chain) state.context->Release(*state.swap_chain);
 
     Assets::DestroyTextures();
     Assets::DestroySamplers();
@@ -315,6 +315,8 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
         .transform = transform,
         .uv_offset_scale = uv_offset_scale,
         .color = sprite.color(),
+        .outline_color = sprite.outline_color(),
+        .outline_thickness = sprite.outline_thickness(),
         .texture = sprite_texture,
         .order = sprite.order(),
         .is_ui = is_ui
@@ -370,6 +372,8 @@ void RenderBatchSprite::render() {
         m_buffer_ptr->transform_col_3 = sprite_data.transform[3];
         m_buffer_ptr->uv_offset_scale = sprite_data.uv_offset_scale;
         m_buffer_ptr->color = sprite_data.color;
+        m_buffer_ptr->outline_color = sprite_data.outline_color;
+        m_buffer_ptr->outline_thickness = sprite_data.outline_thickness;
         m_buffer_ptr->has_texture = curr_texture_id >= 0;
         m_buffer_ptr->is_ui = sprite_data.is_ui;
         m_buffer_ptr++;
@@ -420,8 +424,8 @@ void RenderBatchSprite::begin() {
 }
 
 void RenderBatchSprite::terminate() {
-    state.context->Release(*m_vertex_buffer);
-    state.context->Release(*m_pipeline);
+    if (m_vertex_buffer) state.context->Release(*m_vertex_buffer);
+    if (m_pipeline) state.context->Release(*m_pipeline);
 
     delete[] m_buffer;
 }

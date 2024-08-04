@@ -31,6 +31,8 @@ struct SpriteData {
     glm::mat4 transform;
     glm::vec4 uv_offset_scale;
     glm::vec4 color;
+    glm::vec4 outline_color;
+    float outline_thickness;
     tl::optional<Texture> texture;
     int order;
     bool is_ui;

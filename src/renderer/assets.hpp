@@ -13,6 +13,8 @@ struct SpriteVertex {
     glm::vec4 transform_col_3;
     glm::vec4 uv_offset_scale;
     glm::vec4 color;
+    glm::vec4 outline_color;
+    float outline_thickness;
     int has_texture;
     int is_ui;
 };
