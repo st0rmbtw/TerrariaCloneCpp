@@ -98,9 +98,33 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} glm STB glfw LLGL LLGL_Direct3D11 LLGL_OpenGL FastNoiseLite)
 
-add_custom_target(COPY_ASSETS ALL COMMAND ${CMAKE_COMMAND} -D BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR} -P ${CMAKE_SOURCE_DIR}/CopyAssets.cmake WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+file(GLOB_RECURSE ASSETS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/**/*.*)
 
-file(GLOB_RECURSE VULKAN_SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/vulkan/*.*)
+set(ASSETS_OUTPUT)
+foreach(asset ${ASSETS})
+    file(RELATIVE_PATH out_file ${CMAKE_CURRENT_SOURCE_DIR}/assets/ ${asset})
+    get_filename_component(out_dir ${out_file} DIRECTORY)
+    get_filename_component(out_name ${out_file} NAME)
+
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/assets/${out_dir})
+
+    if (NOT ${out_dir} STREQUAL "shaders/vulkan")
+        add_custom_command(
+            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/assets/${out_dir}/${out_name}
+            COMMAND ${CMAKE_COMMAND} -E copy ${asset} ${CMAKE_CURRENT_BINARY_DIR}/assets/${out_dir}
+            DEPENDS ${asset}
+        )
+
+        list(APPEND ASSETS_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/assets/${out_dir}/${out_name})
+    endif()
+endforeach()
+
+add_custom_target(COPY_ASSETS DEPENDS ${ASSETS_OUTPUT})
+add_dependencies(${PROJECT_NAME} COPY_ASSETS)
+
+# -----------------------------------------------------------------------
+
+file(GLOB_RECURSE VULKAN_SHADERS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/vulkan/*.*)
 
 set(VULKAN_SHADERS_OUTPUT)
 
