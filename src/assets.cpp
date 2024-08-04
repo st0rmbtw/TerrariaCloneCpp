@@ -16,6 +16,7 @@
 #include "utils.hpp"
 #include "types/shader_pipeline.hpp"
 #include "types/shader_type.hpp"
+#include "types/texture.hpp"
 #include "vulkan_shader_compiler.hpp"
 
 struct AssetTextureAtlas {
@@ -79,9 +80,9 @@ static const std::pair<AssetKey, AssetTexture> TEXTURE_ASSETS[] = {
 
     { AssetKey::TextureUiCursorForeground,    AssetTexture("assets/sprites/ui/Cursor_0.png", TextureSampler::Linear) },
     { AssetKey::TextureUiCursorBackground,    AssetTexture("assets/sprites/ui/Cursor_11.png", TextureSampler::Linear) },
-    { AssetKey::TextureUiInventoryBackground, AssetTexture("assets/sprites/ui/Inventory_Back.png", TextureSampler::Nearest) },
-    { AssetKey::TextureUiInventorySelected,   AssetTexture("assets/sprites/ui/Inventory_Back14.png", TextureSampler::Nearest) },
-    { AssetKey::TextureUiInventoryHotbar,     AssetTexture("assets/sprites/ui/Inventory_Back9.png", TextureSampler::Nearest) },
+    { AssetKey::TextureUiInventoryBackground, AssetTexture("assets/sprites/ui/Inventory_Back.png", TextureSampler::Linear) },
+    { AssetKey::TextureUiInventorySelected,   AssetTexture("assets/sprites/ui/Inventory_Back14.png", TextureSampler::Linear) },
+    { AssetKey::TextureUiInventoryHotbar,     AssetTexture("assets/sprites/ui/Inventory_Back9.png", TextureSampler::Linear) },
 
     { AssetKey::TextureParticles, AssetTexture("assets/sprites/Particles.png") }
 };

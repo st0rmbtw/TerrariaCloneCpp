@@ -182,16 +182,16 @@ void Renderer::PrintDebugInfo() {
 #endif
 
 void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer) {
-    glm::vec4 uv_offset_scale = glm::vec4(0.0, 0.0, 1.0, 1.0);
+    glm::vec4 uv_offset_scale = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
 
     if (sprite.flip_x()) {
         uv_offset_scale.x += uv_offset_scale.z;
-        uv_offset_scale.z *= -1.0;
+        uv_offset_scale.z *= -1.0f;
     }
 
     if (sprite.flip_y()) {
         uv_offset_scale.y += uv_offset_scale.w;
-        uv_offset_scale.w *= -1.0;
+        uv_offset_scale.w *= -1.0f;
     }
 
     state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.texture(), render_layer == RenderLayer::UI);
@@ -209,12 +209,12 @@ void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer ren
 
     if (sprite.flip_x()) {
         uv_offset_scale.x += uv_offset_scale.z;
-        uv_offset_scale.z *= -1.0;
+        uv_offset_scale.z *= -1.0f;
     }
 
     if (sprite.flip_y()) {
         uv_offset_scale.y += uv_offset_scale.w;
-        uv_offset_scale.w *= -1.0;
+        uv_offset_scale.w *= -1.0f;
     }
 
     state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), render_layer == RenderLayer::UI);
@@ -296,8 +296,10 @@ void RenderBatchSprite::init() {
 }
 
 void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, bool is_ui) {
-    if (!is_ui && !this->m_camera_frustum.intersects(sprite.aabb())) return;
-    if (is_ui && !this->m_ui_frustum.intersects(sprite.aabb())) return;
+    const math::Rect aabb = sprite.calculate_aabb();
+    
+    if (!is_ui && !this->m_camera_frustum.intersects(aabb)) return;
+    if (is_ui && !this->m_ui_frustum.intersects(aabb)) return;
 
     glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(sprite.position(), 0.0f));
     transform *= glm::toMat4(sprite.rotation());

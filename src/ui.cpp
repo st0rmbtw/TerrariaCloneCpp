@@ -10,6 +10,10 @@ static struct UiState {
 void render_inventory(const Inventory& inventory);
 
 void UI::Update(Inventory& inventory) {
+    if (Input::JustPressed(Key::Escape)) {
+        state.show_extra_ui = !state.show_extra_ui;
+    }
+
     if (Input::JustPressed(Key::Digit1)) inventory.set_selected_slot(0);
     if (Input::JustPressed(Key::Digit2)) inventory.set_selected_slot(1);
     if (Input::JustPressed(Key::Digit3)) inventory.set_selected_slot(2);
@@ -20,6 +24,12 @@ void UI::Update(Inventory& inventory) {
     if (Input::JustPressed(Key::Digit8)) inventory.set_selected_slot(7);
     if (Input::JustPressed(Key::Digit9)) inventory.set_selected_slot(8);
     if (Input::JustPressed(Key::Digit0)) inventory.set_selected_slot(9);
+
+    for (float scroll : Input::ScrollEvents()) {
+        int next_index = static_cast<int>(inventory.selected_slot()) - static_cast<int>(glm::sign(scroll));
+        int new_index = (next_index % CELLS_IN_ROW + CELLS_IN_ROW) % CELLS_IN_ROW;
+        inventory.set_selected_slot(static_cast<uint8_t>(new_index));
+    }
 }
 
 void UI::Render(const Camera& camera, const Inventory& inventory) {

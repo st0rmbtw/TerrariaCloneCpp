@@ -33,8 +33,8 @@ public:
         max(r.max) {}
 
     rect(vec min, vec max) :
-        min(min),
-        max(max) {}
+        min(std::move(min)),
+        max(std::move(max)) {}
     
     [[nodiscard]]
     inline constexpr static rect from_corners(vec p1, vec p2) noexcept {

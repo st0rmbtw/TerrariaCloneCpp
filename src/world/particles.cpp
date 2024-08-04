@@ -7,8 +7,8 @@
 #include "../common.h"
 #include "../assets.hpp"
 
-inline size_t get_particle_index(Particle::Type type, uint8_t variant) {
-    ASSERT(variant <= 2, "Variant must be in range of 0 to 3");
+inline constexpr size_t get_particle_index(Particle::Type type, uint8_t variant) {
+    ASSERT(variant <= 2, "Variant must be in range from 0 to 3");
 
     const size_t index = static_cast<uint8_t>(type);
     const size_t y = index / PARTICLES_ATLAS_COLUMNS;
@@ -35,8 +35,13 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
 }
 
 void ParticleManager::Render() {
+    if (state.particles.empty()) return;
+
+    TextureAtlasSprite sprite(Assets::GetTextureAtlas(AssetKey::TextureParticles));
+
     for (const ParticleData& particle : state.particles) {
-        TextureAtlasSprite sprite(Assets::GetTextureAtlas(AssetKey::TextureParticles), particle.position, glm::vec2(particle.scale));
+        sprite.set_position(particle.position);
+        sprite.set_scale(glm::vec2(particle.scale));
         sprite.set_index(get_particle_index(particle.type, particle.variant));
         sprite.set_rotation(particle.rotation);
 

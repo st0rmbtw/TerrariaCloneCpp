@@ -15,17 +15,17 @@ enum class Anchor : uint8_t {
 };
 
 [[nodiscard]]
-constexpr static inline glm::vec2 anchor_to_vec2(Anchor anchor) {
+constexpr inline glm::vec2 anchor_to_vec2(Anchor anchor) noexcept {
     switch (anchor) {
-    case Anchor::Center: return {0.5f, 0.5f};
-    case Anchor::TopLeft: return {0.0f, 0.0f};
-    case Anchor::TopRight: return {1.0f, 0.0f};
-    case Anchor::BottomLeft: return {0.0f, 1.0f};
+    case Anchor::Center:      return {0.5f, 0.5f};
+    case Anchor::TopLeft:     return {0.0f, 0.0f};
+    case Anchor::TopRight:    return {1.0f, 0.0f};
+    case Anchor::BottomLeft:  return {0.0f, 1.0f};
     case Anchor::BottomRight: return {1.0f, 1.0f};
     }
 }
 
-inline glm::vec2 operator*(const glm::vec2& vec, const Anchor& anchor) {
+inline glm::vec2 operator*(const glm::vec2& vec, Anchor anchor) noexcept {
     return anchor_to_vec2(anchor) * vec;
 }
 
