@@ -64,8 +64,9 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (!Game::Init(backend, config)) return -1;
-    Game::Run();
+    if (Game::Init(backend, config)) {
+        Game::Run();
+    }
     Game::Destroy();
 
     return 0;

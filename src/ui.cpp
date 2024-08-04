@@ -1,16 +1,46 @@
 #include "ui.hpp"
+
 #include "renderer/renderer.hpp"
 #include "input.hpp"
 #include "assets.hpp"
+#include "time/time.hpp"
 
 static struct UiState {
     bool show_extra_ui = false;
+
+    float cursor_anim_progress;
+    AnimationDirection cursor_anim_dir;
+
+    glm::vec4 cursor_foreground_color;
+    glm::vec4 cursor_background_color;
+
+    Sprite cursor_foreground;
+    Sprite cursor_background;
+    
     std::vector<Element> elements;
 } state;
 
 void render_inventory(const Inventory& inventory);
+void update_cursor();
 
 void UI::Init() {
+    state.cursor_foreground_color = glm::vec4(1.0, 0.08, 0.58, 1.0);
+    state.cursor_background_color = glm::vec4(0.9, 0.9, 0.9, 1.0);
+
+    state.cursor_background
+        .set_texture(Assets::GetTexture(AssetKey::TextureUiCursorBackground))
+        .set_color(state.cursor_background_color)
+        .set_anchor(Anchor::TopLeft)
+        .set_outline_color(state.cursor_background_color)
+        .set_outline_thickness(0.03)
+        .set_order(INT_MAX - 1);
+
+    state.cursor_foreground
+        .set_texture(Assets::GetTexture(AssetKey::TextureUiCursorForeground))
+        .set_color(state.cursor_foreground_color)
+        .set_anchor(Anchor::TopLeft)
+        .set_order(INT_MAX);
+
     state.elements.reserve(100);
 }
 
@@ -33,6 +63,8 @@ void UI::PreUpdate(Inventory& inventory) {
 }
 
 void UI::Update(Inventory& inventory) {
+    update_cursor();
+
     if (Input::JustPressed(Key::Escape)) {
         state.show_extra_ui = !state.show_extra_ui;
     }
@@ -62,14 +94,42 @@ void UI::PostUpdate() {
 void UI::Render(const Camera& camera, const Inventory& inventory) {
     render_inventory(inventory);
 
-    Sprite sprite(Input::MouseScreenPosition());
-    sprite.set_custom_size(glm::vec2(25.0f));
-    sprite.set_color(glm::vec3(1.0f, 0.0f, 0.0f));
-    sprite.set_anchor(Anchor::TopLeft);
-    sprite.set_texture(Assets::GetTexture(AssetKey::TextureUiCursorForeground));
-    sprite.set_order(100);
+    Renderer::DrawSprite(state.cursor_background, RenderLayer::UI);
 
-    Renderer::DrawSprite(sprite, RenderLayer::UI);
+    // Sprite shadow = state.cursor_foreground;
+    // shadow.set_color(glm::vec4(0.5, 0.5, 0.5, 0.8));
+    // shadow.set_position(shadow.position() + glm::vec2(2.0f));
+    // shadow.set_scale(shadow.scale());
+    // Renderer::DrawSprite(shadow, RenderLayer::UI);
+
+    Renderer::DrawSprite(state.cursor_foreground, RenderLayer::UI);
+}
+
+void update_cursor() {
+    if (state.cursor_anim_progress >= 1.0f) {
+        state.cursor_anim_dir = AnimationDirection::Backward;
+    } else if (state.cursor_anim_progress <= 0.0f) {
+        state.cursor_anim_dir = AnimationDirection::Forward;
+    }
+
+    switch (state.cursor_anim_dir) {
+    case AnimationDirection::Backward:
+        state.cursor_anim_progress -= 1.5f * Time::delta_seconds();
+        break;
+    case AnimationDirection::Forward:
+        state.cursor_anim_progress += 1.5f * Time::delta_seconds();
+        break;
+    }
+
+    const float scale = MIN_CURSOR_SCALE + state.cursor_anim_progress * (MAX_CURSOR_SCALE - MIN_CURSOR_SCALE);
+
+    state.cursor_background.set_position(Input::MouseScreenPosition());
+    state.cursor_foreground.set_position(Input::MouseScreenPosition() + glm::vec2(2.0f));
+
+    state.cursor_background.set_scale(glm::vec2(scale));
+    state.cursor_foreground.set_scale(glm::vec2(scale));
+
+    state.cursor_foreground.set_color(state.cursor_foreground_color * (0.7f + 0.3f * state.cursor_anim_progress));
 }
 
 inline void render_inventory_cell(UiElement element_type, uint8_t index, const glm::vec2& size, const glm::vec2& position, const Texture& texture) {

@@ -7,7 +7,7 @@
 #include "types/config.hpp"
 
 namespace Game {
-    bool Init(RenderBackend backend, GameConfig config = {});
+    bool Init(RenderBackend backend, GameConfig config);
     void Run();
     void Destroy();
 };

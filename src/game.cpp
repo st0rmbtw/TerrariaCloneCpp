@@ -56,7 +56,7 @@ GLFWwindow* create_window(LLGL::Extent2D size, bool fullscreen) {
         return nullptr;
     }
 
-    glfwMakeContextCurrent(window);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 
     glfwSetKeyCallback(window, handle_keyboard_events);
     glfwSetMouseButtonCallback(window, handle_mouse_button_events);
@@ -101,8 +101,8 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
         // ShaderDef("DEF_SUBDIVISION", std::to_string(config::SUBDIVISION)),
         ShaderDef("WORLD_WIDTH", std::to_string(g.world.area().width())),
         ShaderDef("WORLD_HEIGHT", std::to_string(g.world.area().height())),
-        ShaderDef("CHUNK_WIDTH", std::to_string(RENDER_CHUNK_SIZE_U)),
-        ShaderDef("CHUNK_HEIGHT", std::to_string(RENDER_CHUNK_SIZE_U)),
+        ShaderDef("CHUNK_WIDTH", std::to_string(Constants::RENDER_CHUNK_SIZE_U)),
+        ShaderDef("CHUNK_HEIGHT", std::to_string(Constants::RENDER_CHUNK_SIZE_U)),
 
         ShaderDef("TILE_SIZE", std::to_string(Constants::TILE_SIZE)),
         ShaderDef("WALL_SIZE", std::to_string(Constants::WALL_SIZE)),
@@ -175,11 +175,14 @@ void Game::Run() {
 }
 
 void Game::Destroy() {
-    Renderer::CommandQueue()->WaitIdle();
-
-    g.world.destroy_chunks();
-    
-    Renderer::Terminate();
+    if (Renderer::CommandQueue()) {
+        Renderer::CommandQueue()->WaitIdle();
+    }
+    if (Renderer::Context()) {
+        g.world.destroy_chunks();
+   
+        Renderer::Terminate();
+    }
     glfwTerminate();
 }
 

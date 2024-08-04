@@ -44,6 +44,7 @@ void ParticleManager::Render() {
         sprite.set_scale(glm::vec2(particle.scale));
         sprite.set_index(get_particle_index(particle.type, particle.variant));
         sprite.set_rotation(particle.rotation);
+        sprite.set_order(10);
 
         Renderer::DrawAtlasSprite(sprite, RenderLayer::World);
     }
