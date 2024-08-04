@@ -10,6 +10,9 @@
 #define TILE_TYPE_BLOCK 0
 #define TILE_TYPE_WALL 1
 
+using Constants::RENDER_CHUNK_SIZE;
+using Constants::RENDER_CHUNK_SIZE_U;
+
 struct ChunkVertex {
     glm::vec2 position;
     glm::vec2 atlas_pos;

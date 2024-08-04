@@ -24,6 +24,9 @@ namespace Constants {
     constexpr uint32_t MAX_WALL_TEXTURE_WIDTH = 468;
     constexpr uint32_t MAX_WALL_TEXTURE_HEIGHT = 180;
     constexpr float WALL_TEXTURE_PADDING = 4.0f;
+
+    constexpr float RENDER_CHUNK_SIZE = 50.0f;
+    constexpr uint32_t RENDER_CHUNK_SIZE_U = 50u;
 };
 
 #endif
