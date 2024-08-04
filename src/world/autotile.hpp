@@ -4,8 +4,6 @@
 #pragma once
 
 #include <string>
-#include <vector>
-#include <list>
 #include "../types/texture_atlas_pos.hpp"
 #include "../types/block.hpp"
 #include "world.hpp"
@@ -36,8 +34,7 @@ const uint8_t MERGE_VALIDATION[22][16] = {
 };
 
 struct TileRule {
-
-    TileRule() {}
+    TileRule() = default;
 
     TileRule(const std::string& start, const std::string& end, uint32_t corner_exclusion_mask = 0, uint32_t blend_exclusion_mask = 0, uint32_t blend_inclusion_mask = 0, uint32_t corner_inclusion_mask = 0);
 
@@ -52,10 +49,6 @@ private:
     uint32_t blend_inclusion_mask;
     uint32_t corner_inclusion_mask;
 };
-
-extern std::vector<std::list<TileRule>> base_rules;
-extern std::vector<std::list<TileRule>> blend_rules;
-extern std::vector<std::list<TileRule>> grass_rules;
 
 void init_tile_rules();
 void update_block_sprite_index(Block& block, const Neighbors<const Block&>& neighbors);

@@ -10,7 +10,9 @@
 namespace TextureSampler {
     enum : uint8_t {
         Linear = 0,
-        Nearest = 1
+        LinearMips,
+        Nearest,
+        NearestMips
     };
 };
 

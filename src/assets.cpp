@@ -99,17 +99,17 @@ static const std::pair<AssetKey, AssetTextureAtlas> TEXTURE_ATLAS_ASSETS[] = {
     { AssetKey::TextureParticles,          AssetTextureAtlas(PARTICLES_ATLAS_COLUMNS, 12, glm::uvec2(8), glm::uvec2(2)) }
 };
 
-static const std::pair<uint16_t, std::string> BLOCK_ASSETS[] = {
+static const std::array BLOCK_ASSETS = std::to_array<std::pair<uint16_t, std::string>>({
     { static_cast<uint16_t>(BlockType::Dirt), "assets/sprites/tiles/Tiles_0.png" },
     { static_cast<uint16_t>(BlockType::Stone), "assets/sprites/tiles/Tiles_1.png" },
     { static_cast<uint16_t>(BlockType::Grass), "assets/sprites/tiles/Tiles_2.png" },
     { static_cast<uint16_t>(BlockType::Wood), "assets/sprites/tiles/Tiles_30.png" },
-};
+});
 
-static const std::pair<uint16_t, std::string> WALL_ASSETS[] = {
+static const std::array WALL_ASSETS = std::to_array<std::pair<uint16_t, std::string>>({
     { static_cast<uint16_t>(WallType::DirtWall), "assets/sprites/walls/Wall_2.png" },
     { static_cast<uint16_t>(WallType::StoneWall), "assets/sprites/walls/Wall_1.png" },
-};
+});
 
 static const std::pair<uint16_t, std::string> ITEM_ASSETS[] = {
     { 2, "assets/sprites/items/Item_2.png" },
@@ -123,10 +123,10 @@ static const std::pair<uint16_t, std::string> ITEM_ASSETS[] = {
     { 3509, "assets/sprites/items/Item_3509.png" },
 };
 
-static const std::pair<FontKey, std::string> FONT_ASSETS[] = {
+static const std::array FONT_ASSETS = std::to_array<std::pair<FontKey, std::string>>({
     { FontKey::AndyBold, "assets/fonts/andy_bold.ttf" },
     { FontKey::AndyRegular, "assets/fonts/andy_regular.otf" },
-};
+});
 
 static struct AssetsState {
     std::unordered_map<uint16_t, Texture> items;
@@ -138,9 +138,12 @@ static struct AssetsState {
     uint32_t texture_index = 0;
 } state;
 
-Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data);
-Texture create_texture_array_empty(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler);
-inline LLGL::Shader* load_shader(ShaderType shader_type, const std::string& name, const std::vector<ShaderDef>& shader_defs, const std::vector<LLGL::VertexAttribute>& vertex_attributes = {});
+Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data, bool generate_mip_maps = false);
+Texture create_texture_array(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler, const uint8_t* data, size_t data_size, bool generate_mip_maps = false);
+LLGL::Shader* load_shader(ShaderType shader_type, const std::string& name, const std::vector<ShaderDef>& shader_defs, const std::vector<LLGL::VertexAttribute>& vertex_attributes = {});
+
+template <size_t T>
+Texture load_texture_array(const std::array<std::pair<uint16_t, std::string>, T>& assets, int sampler, bool generate_mip_maps = false);
 
 bool Assets::Load() {
     using Constants::MAX_TILE_TEXTURE_WIDTH;
@@ -154,7 +157,7 @@ bool Assets::Load() {
     for (const auto& asset : TEXTURE_ASSETS) {
         int width, height, components;
 
-        uint8_t* data = stbi_load(asset.second.path.c_str(), &width, &height, &components, 0);
+        uint8_t* data = stbi_load(asset.second.path.c_str(), &width, &height, &components, 4);
         if (data == nullptr) {
             LOG_ERROR("Couldn't load asset: %s", asset.second.path.c_str());
             return false;   
@@ -172,7 +175,7 @@ bool Assets::Load() {
     for (const auto& asset : ITEM_ASSETS) {
         int width, height, components;
 
-        uint8_t* data = stbi_load(asset.second.c_str(), &width, &height, &components, 0);
+        uint8_t* data = stbi_load(asset.second.c_str(), &width, &height, &components, 4);
         if (data == nullptr) {
             LOG_ERROR("Couldn't load asset: %s", asset.second.c_str());
             return false;   
@@ -183,59 +186,8 @@ bool Assets::Load() {
         stbi_image_free(data);
     }
 
-    uint16_t block_tex_count = 0;
-    for (const auto& asset : BLOCK_ASSETS) {
-        block_tex_count = glm::max(block_tex_count, asset.first);
-    }
-
-    uint16_t wall_tex_count = 0;
-    for (const auto& asset : WALL_ASSETS) {
-        wall_tex_count = glm::max(wall_tex_count, asset.first);
-    }
-    
-    const Texture tiles = create_texture_array_empty(MAX_TILE_TEXTURE_WIDTH, MAX_TILE_TEXTURE_HEIGHT, block_tex_count + 1, 4, TextureSampler::Nearest);
-    const Texture walls = create_texture_array_empty(MAX_WALL_TEXTURE_WIDTH, MAX_WALL_TEXTURE_HEIGHT, wall_tex_count + 1, 4, TextureSampler::Nearest);
-
-    for (const auto& asset : BLOCK_ASSETS) {
-        int width, height, components;
-        uint8_t* data = stbi_load(asset.second.c_str(), &width, &height, &components, 0);
-
-        LLGL::ImageView image_view;
-        image_view.format = (components == 4 ? LLGL::ImageFormat::RGBA : LLGL::ImageFormat::RGB);
-        image_view.dataType = LLGL::DataType::UInt8;
-        image_view.data = data;
-        image_view.dataSize = width * height * components;
-
-        Renderer::Context()->WriteTexture(
-            *tiles.texture,
-            LLGL::TextureRegion(LLGL::TextureSubresource(asset.first, 0), LLGL::Offset3D(), LLGL::Extent3D(width, height, 1)),
-            image_view
-        );
-
-        stbi_image_free(data);
-    }
-
-    for (const auto& asset : WALL_ASSETS) {
-        int width, height, components;
-        uint8_t* data = stbi_load(asset.second.c_str(), &width, &height, &components, 0);
-
-        LLGL::ImageView image_view;
-        image_view.format = (components == 4 ? LLGL::ImageFormat::RGBA : LLGL::ImageFormat::RGB);
-        image_view.dataType = LLGL::DataType::UInt8;
-        image_view.data = data;
-        image_view.dataSize = width * height * components;
-
-        Renderer::Context()->WriteTexture(
-            *walls.texture,
-            LLGL::TextureRegion(LLGL::TextureSubresource(asset.first, 0), LLGL::Offset3D(), LLGL::Extent3D(width, height, 1)),
-            image_view
-        );
-
-        stbi_image_free(data);
-    }
-
-    state.textures[AssetKey::TextureTiles] = tiles;
-    state.textures[AssetKey::TextureWalls] = walls;
+    state.textures[AssetKey::TextureTiles] = load_texture_array(BLOCK_ASSETS, TextureSampler::NearestMips, true);
+    state.textures[AssetKey::TextureWalls] = load_texture_array(WALL_ASSETS, TextureSampler::Nearest);
 
     return true;
 }
@@ -271,7 +223,7 @@ bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
 };
 
 bool Assets::InitSamplers() {
-    state.samplers.resize(2);
+    state.samplers.resize(4);
     {
         LLGL::SamplerDescriptor sampler_desc;
         sampler_desc.addressModeU = LLGL::SamplerAddressMode::Clamp;
@@ -287,7 +239,21 @@ bool Assets::InitSamplers() {
 
         state.samplers[TextureSampler::Linear] = Renderer::Context()->CreateSampler(sampler_desc);
     }
+    {
+        LLGL::SamplerDescriptor sampler_desc;
+        sampler_desc.addressModeU = LLGL::SamplerAddressMode::Clamp;
+        sampler_desc.addressModeV = LLGL::SamplerAddressMode::Clamp;
+        sampler_desc.addressModeW = LLGL::SamplerAddressMode::Clamp;
+        sampler_desc.magFilter = LLGL::SamplerFilter::Linear;
+        sampler_desc.minFilter = LLGL::SamplerFilter::Linear;
+        sampler_desc.mipMapFilter = LLGL::SamplerFilter::Linear;
+        sampler_desc.minLOD = 0.0f;
+        sampler_desc.maxLOD = 100.0f;
+        sampler_desc.mipMapEnabled = true;
+        sampler_desc.maxAnisotropy = 1;
 
+        state.samplers[TextureSampler::LinearMips] = Renderer::Context()->CreateSampler(sampler_desc);
+    }
     {
         LLGL::SamplerDescriptor sampler_desc;
         sampler_desc.addressModeU = LLGL::SamplerAddressMode::Clamp;
@@ -295,13 +261,28 @@ bool Assets::InitSamplers() {
         sampler_desc.addressModeW = LLGL::SamplerAddressMode::Clamp;
         sampler_desc.magFilter = LLGL::SamplerFilter::Nearest;
         sampler_desc.minFilter = LLGL::SamplerFilter::Nearest;
-        sampler_desc.mipMapFilter = LLGL::SamplerFilter::Nearest;
+        sampler_desc.mipMapFilter = LLGL::SamplerFilter::Linear;
         sampler_desc.minLOD = 0.0f;
         sampler_desc.maxLOD = 1.0f;
         sampler_desc.mipMapEnabled = false;
         sampler_desc.maxAnisotropy = 1;
 
         state.samplers[TextureSampler::Nearest] = Renderer::Context()->CreateSampler(sampler_desc);
+    }
+    {
+        LLGL::SamplerDescriptor sampler_desc;
+        sampler_desc.addressModeU = LLGL::SamplerAddressMode::Clamp;
+        sampler_desc.addressModeV = LLGL::SamplerAddressMode::Clamp;
+        sampler_desc.addressModeW = LLGL::SamplerAddressMode::Clamp;
+        sampler_desc.magFilter = LLGL::SamplerFilter::Nearest;
+        sampler_desc.minFilter = LLGL::SamplerFilter::Nearest;
+        sampler_desc.mipMapFilter = LLGL::SamplerFilter::Linear;
+        sampler_desc.minLOD = 0.0f;
+        sampler_desc.maxLOD = 100.0f;
+        sampler_desc.mipMapEnabled = true;
+        sampler_desc.maxAnisotropy = 1;
+
+        state.samplers[TextureSampler::NearestMips] = Renderer::Context()->CreateSampler(sampler_desc);
     }
 
     return true;
@@ -350,12 +331,12 @@ LLGL::Sampler& Assets::GetSampler(size_t index) {
     return *state.samplers[index];
 }
 
-Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data) {
+Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data, bool generate_mip_maps) {
     LLGL::TextureDescriptor texture_desc;
     texture_desc.extent = LLGL::Extent3D(width, height, 1);
-    texture_desc.bindFlags = LLGL::BindFlags::Sampled;
+    texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
     texture_desc.cpuAccessFlags = 0;
-    texture_desc.miscFlags = 0;
+    texture_desc.miscFlags = LLGL::MiscFlags::GenerateMips * generate_mip_maps;
 
     LLGL::ImageView image_view;
     image_view.format = (components == 4 ? LLGL::ImageFormat::RGBA : LLGL::ImageFormat::RGB);
@@ -371,21 +352,68 @@ Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int
     return texture;
 }
 
-Texture create_texture_array_empty(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler) {
+Texture create_texture_array(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler, const uint8_t* data, size_t data_size, bool generate_mip_maps) {
     LLGL::TextureDescriptor texture_desc;
     texture_desc.type = LLGL::TextureType::Texture2DArray;
     texture_desc.extent = LLGL::Extent3D(width, height, 1);
     texture_desc.arrayLayers = layers;
-    texture_desc.bindFlags = LLGL::BindFlags::Sampled;
+    texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
     texture_desc.cpuAccessFlags = 0;
-    texture_desc.miscFlags = 0;
+    texture_desc.miscFlags = LLGL::MiscFlags::GenerateMips * generate_mip_maps;
+
+    LLGL::ImageView image_view;
+    image_view.format = (components == 4 ? LLGL::ImageFormat::RGBA : LLGL::ImageFormat::RGB);
+    image_view.dataType = LLGL::DataType::UInt8;
+    image_view.data = data;
+    image_view.dataSize = data_size;
 
     Texture texture;
     texture.id = state.texture_index++;
-    texture.texture = Renderer::Context()->CreateTexture(texture_desc);
+    texture.texture = Renderer::Context()->CreateTexture(texture_desc, &image_view);
     texture.sampler = sampler;
 
     return texture;
+}
+
+template <size_t T>
+Texture load_texture_array(const std::array<std::pair<uint16_t, std::string>, T>& assets, int sampler, bool generate_mip_maps) {
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint32_t layers_count = 0;
+
+    struct Layer {
+        uint8_t* data;
+        size_t size;
+    };
+
+    std::unordered_map<uint32_t, Layer> layer_to_data_map;
+    layer_to_data_map.reserve(assets.size());
+
+    for (const std::pair<uint16_t, std::string>& asset : assets) {
+        layers_count = glm::max(layers_count, static_cast<uint32_t>(asset.first));
+
+        int w, h;
+        uint8_t* layer_data = stbi_load(asset.second.c_str(), &w, &h, nullptr, 4);
+
+        layer_to_data_map[asset.first] = Layer {
+            .data = layer_data,
+            .size = static_cast<size_t>(w * h * 4)
+        };
+
+        width = glm::max(width, static_cast<uint32_t>(w));
+        height = glm::max(height, static_cast<uint32_t>(h));
+    }
+    layers_count += 1;
+
+    const size_t data_size = width * height * layers_count * 4;
+    uint8_t* image_data = new uint8_t[data_size];
+
+    for (const auto& [layer, layer_data] : layer_to_data_map) {
+        memcpy(&image_data[width * height * 4 * layer], layer_data.data, layer_data.size);
+        stbi_image_free(layer_data.data);
+    }
+    
+    return create_texture_array(width, height, layers_count, 4, sampler, image_data, data_size, generate_mip_maps);
 }
 
 LLGL::Shader* load_shader(
