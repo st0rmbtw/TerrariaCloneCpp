@@ -336,18 +336,16 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
     if (!is_ui && !this->m_camera_frustum.intersects(aabb)) return;
     if (is_ui && !this->m_ui_frustum.intersects(aabb)) return;
 
-    glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(sprite.position(), 0.0f));
-    transform *= glm::toMat4(sprite.rotation());
-    transform = glm::translate(transform, glm::vec3(-sprite.size() * sprite.anchor(), 0.));
-    transform = glm::scale(transform, glm::vec3(sprite.size(), 1.0f));
-
     if (m_sprites.size() >= MAX_QUADS) {
         render();
         begin();
     }
 
     m_sprites.push_back(SpriteData {
-        .transform = transform,
+        .position = sprite.position(),
+        .rotation = sprite.rotation(),
+        .size = sprite.size(),
+        .offset = sprite.anchor().to_vec2(),
         .uv_offset_scale = uv_offset_scale,
         .color = sprite.color(),
         .outline_color = sprite.outline_color(),
@@ -401,10 +399,10 @@ void RenderBatchSprite::render() {
             vertex_offset = total_sprite_count;
         }
 
-        m_buffer_ptr->transform_col_0 = sprite_data.transform[0];
-        m_buffer_ptr->transform_col_1 = sprite_data.transform[1];
-        m_buffer_ptr->transform_col_2 = sprite_data.transform[2];
-        m_buffer_ptr->transform_col_3 = sprite_data.transform[3];
+        m_buffer_ptr->position = sprite_data.position;
+        m_buffer_ptr->rotation = sprite_data.rotation;
+        m_buffer_ptr->size = sprite_data.size;
+        m_buffer_ptr->offset = sprite_data.offset;
         m_buffer_ptr->uv_offset_scale = sprite_data.uv_offset_scale;
         m_buffer_ptr->color = sprite_data.color;
         m_buffer_ptr->outline_color = sprite_data.outline_color;

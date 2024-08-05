@@ -25,7 +25,10 @@ struct GlyphVertex {
 };
 
 struct SpriteData {
-    glm::mat4 transform;
+    glm::vec2 position;
+    glm::quat rotation;
+    glm::vec2 size;
+    glm::vec2 offset;
     glm::vec4 uv_offset_scale;
     glm::vec4 color;
     glm::vec4 outline_color;

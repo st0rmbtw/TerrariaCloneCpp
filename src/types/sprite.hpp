@@ -59,7 +59,7 @@ public:
     [[nodiscard]] virtual glm::vec2 size() const = 0;
 
     [[nodiscard]] inline math::Rect calculate_aabb() const {
-        return math::Rect::from_top_left(m_position - anchor_to_vec2(m_anchor) * size(), size());
+        return math::Rect::from_top_left(m_position - m_anchor.to_vec2() * size(), size());
     }
 
 private:

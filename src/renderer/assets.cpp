@@ -11,10 +11,10 @@ const LLGL::VertexFormat& SpriteVertexFormat() {
     switch (Renderer::Backend()) {
         case RenderBackend::Vulkan:
         case RenderBackend::OpenGL: {
-            vertexFormat.AppendAttribute({"a_transform_col_0", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"a_transform_col_1", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"a_transform_col_2", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"a_transform_col_3", LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"a_position", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"a_rotation", LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"a_size", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"a_offset", LLGL::Format::RG32Float});
             vertexFormat.AppendAttribute({"a_uv_offset_scale", LLGL::Format::RGBA32Float});
             vertexFormat.AppendAttribute({"a_color", LLGL::Format::RGBA32Float});
             vertexFormat.AppendAttribute({"a_outline_color", LLGL::Format::RGBA32Float});
@@ -25,10 +25,10 @@ const LLGL::VertexFormat& SpriteVertexFormat() {
         break;
         case RenderBackend::D3D11:
         case RenderBackend::D3D12: {
-            vertexFormat.AppendAttribute({"Transform", 0, LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"Transform", 1, LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"Transform", 2, LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"Transform", 3, LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"Position", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"Rotation", LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"Size", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"Offset", LLGL::Format::RG32Float});
             vertexFormat.AppendAttribute({"UvOffsetScale", LLGL::Format::RGBA32Float});
             vertexFormat.AppendAttribute({"Color", LLGL::Format::RGBA32Float});
             vertexFormat.AppendAttribute({"OutlineColor", LLGL::Format::RGBA32Float});

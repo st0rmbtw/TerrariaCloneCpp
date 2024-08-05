@@ -5,12 +5,13 @@
 
 #include <LLGL/Utils/VertexFormat.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 struct SpriteVertex {
-    glm::vec4 transform_col_0;
-    glm::vec4 transform_col_1;
-    glm::vec4 transform_col_2;
-    glm::vec4 transform_col_3;
+    glm::vec2 position;
+    glm::quat rotation;
+    glm::vec2 size;
+    glm::vec2 offset;
     glm::vec4 uv_offset_scale;
     glm::vec4 color;
     glm::vec4 outline_color;

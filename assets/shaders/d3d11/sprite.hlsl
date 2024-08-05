@@ -6,7 +6,10 @@ cbuffer UniformBuffer : register( b1 )
 
 struct VSInput
 {
-    float4x4 transform : Transform;
+    float2 position : Position;
+    float4 rotation : Rotation;
+    float2 size : Size;
+    float2 offset : Offset;
     float4 uv_offset_scale : UvOffsetScale;
     float4 color : Color;
     float4 outline_color : OutlineColor;
@@ -37,8 +40,53 @@ struct GSOutput {
 
 VSOutput VS(VSInput inp)
 {
+    float qxx = inp.rotation.x * inp.rotation.x;
+    float qyy = inp.rotation.y * inp.rotation.y;
+    float qzz = inp.rotation.z * inp.rotation.z;
+    float qxz = inp.rotation.x * inp.rotation.z;
+    float qxy = inp.rotation.x * inp.rotation.y;
+    float qyz = inp.rotation.y * inp.rotation.z;
+    float qwx = inp.rotation.w * inp.rotation.x;
+    float qwy = inp.rotation.w * inp.rotation.y;
+    float qwz = inp.rotation.w * inp.rotation.z;
+
+    float4x4 rotation_matrix = float4x4(
+        float4(1.0 - 2.0 * (qyy + qzz), 2.0 * (qxy - qwz)      , 2.0 * (qxz + qwy)      , 0.0),
+        float4(2.0 * (qxy + qwz)      , 1.0 - 2.0 * (qxx + qzz), 2.0 * (qyz - qwx)      , 0.0),
+        float4(2.0 * (qxz - qwy)      , 2.0 * (qyz + qwx)      , 1.0 - 2.0 * (qxx + qyy), 0.0),
+        float4(0.0                    , 0.0                    , 0.0                    , 1.0)
+    );
+
+    float4x4 transform = float4x4(
+        float4(1.0, 0.0, 0.0, inp.position.x),
+        float4(0.0, 1.0, 0.0, inp.position.y),
+        float4(0.0, 0.0, 1.0, 0.0),
+        float4(0.0, 0.0, 0.0, 1.0)
+    );
+
+    transform = mul(transform, rotation_matrix);
+
+    float2 offset = -inp.offset * inp.size;
+
+    // translate
+    transform[0][3] = transform[0][0] * offset[0] + transform[0][1] * offset[1] + transform[0][2] * 0.0 + transform[0][3];
+    transform[1][3] = transform[1][0] * offset[0] + transform[1][1] * offset[1] + transform[1][2] * 0.0 + transform[1][3];
+    transform[2][3] = transform[2][0] * offset[0] + transform[2][1] * offset[1] + transform[2][2] * 0.0 + transform[2][3];
+    transform[3][3] = transform[3][0] * offset[0] + transform[3][1] * offset[1] + transform[3][2] * 0.0 + transform[3][3];
+
+    //scale
+    transform[0][0] = transform[0][0] * inp.size[0];
+    transform[1][0] = transform[1][0] * inp.size[0];
+    transform[2][0] = transform[2][0] * inp.size[0];
+    transform[3][0] = transform[3][0] * inp.size[0];
+
+    transform[0][1] = transform[0][1] * inp.size[1];
+    transform[1][1] = transform[1][1] * inp.size[1];
+    transform[2][1] = transform[2][1] * inp.size[1];
+    transform[3][1] = transform[3][1] * inp.size[1];
+
 	VSOutput outp;
-    outp.transform = inp.transform;
+    outp.transform = transform;
     outp.uv_offset_scale = inp.uv_offset_scale;
     outp.color = inp.color;
     outp.outline_color = inp.outline_color;
