@@ -9,6 +9,7 @@
 #include "types/texture_atlas.hpp"
 #include "types/texture.hpp"
 #include "types/shader_pipeline.hpp"
+#include "types/font.hpp"
 
 enum class AssetKey : uint8_t {
     TextureStub = 0,
@@ -37,7 +38,7 @@ enum class ShaderAssetKey : uint8_t {
     TilemapShader = 0,
     SpriteShader,
     NinepatchShader,
-    PostprocessShader,
+    PostProcessShader,
     FontShader,
 };
 
@@ -60,14 +61,17 @@ constexpr uint32_t PARTICLES_ATLAS_COLUMNS = 100;
 namespace Assets {
     bool Load();
     bool LoadShaders(const std::vector<ShaderDef>& shader_defs);
+    bool LoadFonts();
     bool InitSamplers();
 
     void DestroyTextures();
     void DestroyShaders();
     void DestroySamplers();
+    void DestroyFonts();
 
     const Texture& GetTexture(AssetKey key);
     const TextureAtlas& GetTextureAtlas(AssetKey key);
+    const Font& GetFont(FontKey key);
     const Texture& GetItemTexture(size_t index);
     const ShaderPipeline& GetShader(ShaderAssetKey key);
     LLGL::Sampler& GetSampler(size_t index);

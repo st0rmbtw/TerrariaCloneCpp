@@ -56,6 +56,47 @@ const LLGL::VertexFormat& SpriteVertexFormat() {
     return vertexFormat;
 }
 
+const LLGL::VertexFormat& GlyphVertexFormat() {
+    static LLGL::VertexFormat vertexFormat;
+
+    if (!vertexFormat.attributes.empty()) return vertexFormat;
+
+    vertexFormat.SetStride(sizeof(SpriteVertex));
+
+    switch (Renderer::Backend()) {
+        case RenderBackend::Vulkan:
+        case RenderBackend::OpenGL: {
+            vertexFormat.AppendAttribute({"a_color", LLGL::Format::RGB32Float});
+            vertexFormat.AppendAttribute({"a_position", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"a_uv", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"a_is_ui", LLGL::Format::R32SInt});
+        }
+        break;
+        case RenderBackend::D3D11:
+        case RenderBackend::D3D12: {
+            vertexFormat.AppendAttribute({"Color", LLGL::Format::RGB32Float});
+            vertexFormat.AppendAttribute({"Position", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"UV", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"IsUI", LLGL::Format::R32SInt});
+        }
+        break;
+        case RenderBackend::Metal: {
+            vertexFormat.AppendAttribute({"transform_col_0", LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"transform_col_1", LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"transform_col_2", LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"transform_col_3", LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"color", LLGL::Format::RGB32Float});
+            vertexFormat.AppendAttribute({"size", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"uv", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"is_ui", LLGL::Format::R32SInt});
+        }
+        break;
+        default: UNREACHABLE();
+    }
+
+    return vertexFormat;
+}
+
 const LLGL::VertexFormat& TilemapVertexFormat() {
     static LLGL::VertexFormat vertexFormat;
 

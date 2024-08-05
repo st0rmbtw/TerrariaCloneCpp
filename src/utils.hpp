@@ -9,6 +9,8 @@
 #include <glm/glm.hpp>
 #include <list>
 
+#include "assets.hpp"
+
 inline const char* glfwGetErrorString() {
     const char* description = nullptr;
     glfwGetError(&description);
@@ -34,5 +36,7 @@ static const T& list_at(const std::list<T>& list, int index) {
     }
     return *it;
 }
+
+glm::vec2 calculate_text_bounds(FontKey key, const std::string &text, float size);
 
 #endif

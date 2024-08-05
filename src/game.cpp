@@ -88,6 +88,7 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
 
     if (!Renderer::InitEngine(backend)) return false;
     if (!Assets::Load()) return false;
+    if (!Assets::LoadFonts()) return false;
     if (!Assets::InitSamplers()) return false;
 
     init_tile_rules();

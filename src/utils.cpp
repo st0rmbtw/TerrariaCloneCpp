@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "utils.hpp"
+#include "assets.hpp"
 
 bool FileExists(const char *path) {
 #ifdef _WIN32
@@ -16,4 +17,28 @@ bool FileExists(const char *path) {
     }
 
     return exists;
+}
+
+glm::vec2 calculate_text_bounds(FontKey key, const std::string &text, float size) {
+    const Font& font = Assets::GetFont(key);
+
+    auto bounds = glm::vec2(0.0f);
+    float prev_x = 0.0f;
+
+    float scale = size / font.font_size;
+
+    std::string::const_iterator c;
+    for (c = text.begin(); c != text.end(); ++c) {
+        if (*c == '\n') {
+            bounds.y += size;
+            prev_x = 0.0f;
+            continue;
+        }
+
+        const Glyph& glyph = font.glyphs.at(*c);
+        prev_x += glyph.size.x * scale;
+        bounds.x = std::max(prev_x, bounds.x);
+    }
+
+    return bounds;
 }

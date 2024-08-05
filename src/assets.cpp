@@ -9,6 +9,8 @@
 #include <LLGL/ShaderFlags.h>
 #include <LLGL/VertexAttribute.h>
 #include <STB/stb_image.h>
+#include <ft2build.h>
+#include <freetype/freetype.h>
 
 #include "renderer/assets.hpp"
 #include "renderer/renderer.hpp"
@@ -133,14 +135,15 @@ static struct AssetsState {
     std::unordered_map<AssetKey, Texture> textures;
     std::unordered_map<AssetKey, TextureAtlas> textures_atlases;
     std::unordered_map<ShaderAssetKey, ShaderPipeline> shaders;
+    std::unordered_map<FontKey, Font> fonts;
     std::vector<LLGL::Sampler*> samplers;
-    // std::unordered_map<FontKey, Font> fonts;
     uint32_t texture_index = 0;
 } state;
 
 Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data, bool generate_mip_maps = false);
 Texture create_texture_array(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler, const uint8_t* data, size_t data_size, bool generate_mip_maps = false);
 LLGL::Shader* load_shader(ShaderType shader_type, const std::string& name, const std::vector<ShaderDef>& shader_defs, const std::vector<LLGL::VertexAttribute>& vertex_attributes = {});
+bool load_font(FT_Library ft, const std::string& path, Font& font);
 
 template <size_t T>
 Texture load_texture_array(const std::array<std::pair<uint16_t, std::string>, T>& assets, int sampler, bool generate_mip_maps = false);
@@ -196,6 +199,7 @@ bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
     const std::pair<ShaderAssetKey, AssetShader> SHADER_ASSETS[] = {
         { ShaderAssetKey::SpriteShader, AssetShader("sprite", ShaderStages::Vertex | ShaderStages::Fragment | ShaderStages::Geometry, SpriteVertexFormat()) },
         { ShaderAssetKey::TilemapShader, AssetShader("tilemap", ShaderStages::Vertex | ShaderStages::Fragment | ShaderStages::Geometry, TilemapVertexFormat()) },
+        { ShaderAssetKey::FontShader, AssetShader("font", ShaderStages::Vertex | ShaderStages::Fragment, GlyphVertexFormat()) },
     };
 
     for (const auto& [key, asset] : SHADER_ASSETS) {
@@ -221,6 +225,30 @@ bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
 
     return true;
 };
+
+bool Assets::LoadFonts() {
+    FT_Library ft;
+    if (FT_Init_FreeType(&ft)) {
+        LOG_ERROR("Couldn't init FreeType library.");
+        return false;
+    }
+
+    for (const auto& [key, path] : FONT_ASSETS) {
+        if (!FileExists(path.c_str())) {
+            LOG_ERROR("Failed to find font '%s'",  path.c_str());
+            return false;
+        }
+
+        Font font;
+        if (!load_font(ft, path, font)) return false;
+
+        state.fonts[key] = font;
+    }
+
+    FT_Done_FreeType(ft);
+
+    return true;
+}
 
 bool Assets::InitSamplers() {
     state.samplers.resize(4);
@@ -316,6 +344,11 @@ const TextureAtlas& Assets::GetTextureAtlas(AssetKey key) {
     return state.textures_atlases[key];
 }
 
+const Font& Assets::GetFont(FontKey key) {
+    ASSERT(state.fonts.contains(key), "Key not found");
+    return state.fonts[key];
+}
+
 const Texture& Assets::GetItemTexture(size_t index) {
     ASSERT(state.items.contains(index), "Key not found");
     return state.items[index];
@@ -339,7 +372,15 @@ Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int
     texture_desc.miscFlags = LLGL::MiscFlags::GenerateMips * generate_mip_maps;
 
     LLGL::ImageView image_view;
-    image_view.format = (components == 4 ? LLGL::ImageFormat::RGBA : LLGL::ImageFormat::RGB);
+    if (components == 4) {
+        image_view.format = LLGL::ImageFormat::RGBA;
+    } else if (components == 3) {
+        image_view.format = LLGL::ImageFormat::RGB;
+    } else if (components == 2) {
+        image_view.format = LLGL::ImageFormat::RG;
+    } else if (components == 1) {
+        image_view.format = LLGL::ImageFormat::R;
+    }
     image_view.dataType = LLGL::DataType::UInt8;
     image_view.data = data;
     image_view.dataSize = width * height * components;
@@ -488,4 +529,67 @@ LLGL::Shader* load_shader(
     }
 
     return shader;
+}
+
+bool load_font(FT_Library ft, const std::string& path, Font& font) {
+    FT_Face face;
+    if (FT_New_Face(ft, path.c_str(), 0, &face)) {
+        LOG_ERROR("Failed to load font: %s", path.c_str());
+        return false;
+    }
+
+    constexpr uint32_t FONT_SIZE = 22;
+    constexpr uint32_t PADDING = 2;
+
+    FT_Set_Pixel_Sizes(face, 0, FONT_SIZE);
+
+    constexpr uint32_t texture_width = 512;
+    constexpr uint32_t texture_height = 512;
+
+    constexpr glm::vec2 texture_size = glm::vec2(texture_width, texture_height);
+
+    uint32_t row = 0;
+    uint32_t col = PADDING;
+
+    uint8_t* texture_data = new uint8_t[texture_width * texture_height];
+    memset(texture_data, 0, texture_width * texture_height * sizeof(uint8_t));
+
+    for (unsigned char c = 32; c < 127; ++c) {
+        if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
+            LOG_ERROR("Failed to load glyph '%c'", c);
+            continue;
+        }
+
+        if (col + face->glyph->bitmap.width + PADDING >= texture_width) {
+            col = PADDING;
+            row += FONT_SIZE;
+        }
+
+        for (uint32_t y = 0; y < face->glyph->bitmap.rows; ++y) {
+            for (uint32_t x = 0; x < face->glyph->bitmap.width; ++x) {
+                texture_data[(row + y) * texture_width + col + x] = face->glyph->bitmap.buffer[y * face->glyph->bitmap.width + x];
+            }
+        }
+
+        const glm::ivec2 size = glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows);
+        
+        Glyph glyph = {
+            .size = size,
+            .tex_size = glm::vec2(size) / texture_size,
+            .bearing = glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
+            .advance = face->glyph->advance.x,
+            .texture_coords = glm::vec2(col, row) / texture_size
+        };
+
+        font.glyphs[c] = glyph;
+
+        col += face->glyph->bitmap.width + PADDING;
+    }
+
+    font.texture = create_texture(texture_width, texture_height, 1, TextureSampler::Linear, texture_data);
+    font.font_size = FONT_SIZE;
+
+    FT_Done_Face(face);
+
+    return true;
 }

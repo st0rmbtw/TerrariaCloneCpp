@@ -4,6 +4,7 @@
 #include "input.hpp"
 #include "assets.hpp"
 #include "time/time.hpp"
+#include "utils.hpp"
 
 static struct UiState {
     bool show_extra_ui = false;
@@ -194,35 +195,35 @@ void render_inventory(const Inventory& inventory) {
         }
 
         // Draw cell index
-        // if (item.is_some() || state.show_extra_ui) {
-        //     float index_size = text_size;
-        //     float index_color = 0.8f;
-        //     if (state.show_extra_ui && item_selected) {
-        //         index_size = 16.0f;
-        //         index_color = 1.0f;
-        //     }
+        if (item.is_some() || state.show_extra_ui) {
+            float index_size = text_size;
+            float index_color = 0.8f;
+            if (state.show_extra_ui && item_selected) {
+                index_size = 16.0f;
+                index_color = 1.0f;
+            }
 
-        //     Renderer::draw_text_ui(FontKey::AndyBold, std::to_string((x + 1) % 10), offset + padding + glm::vec2(16.0f, text_size * 1.7f), index_size, glm::vec3(index_color));
-        // }
+            Renderer::DrawTextUi(std::to_string((x + 1) % 10), index_size, offset + padding + glm::vec2(16.0f, text_size * 1.7f), glm::vec3(index_color), FontKey::AndyBold);
+        }
 
         // Draw item stack
         if (item.is_some() && item->stack > 1) {
-            // Renderer::draw_text_ui(FontKey::AndyBold, std::to_string(item->stack), offset + padding + glm::vec2(16.0f, cell_size.y / 2.0f + text_size * 1.6f), text_size, glm::vec3(0.8f));
+            Renderer::DrawTextUi(std::to_string(item->stack), text_size, offset + padding + glm::vec2(16.0f, cell_size.y / 2.0f + text_size * 1.6f), glm::vec3(0.8f), FontKey::AndyBold);
         }
 
         offset.x += cell_size.x + INVENTORY_CELL_MARGIN;
         item_offset.x += item_size.x + INVENTORY_CELL_MARGIN;
     }
 
-    // if (state.show_extra_ui) {
-    //     Renderer::draw_text_ui(FontKey::AndyBold, "Inventory", glm::vec2(INVENTORY_PADDING + INVENTORY_SLOT_SIZE / 2.0f, 22.0f), 22.0f, glm::vec3(0.8f));
-    // } else {
-    //     auto item = inventory.get_item(inventory.selected_slot());
-    //     const std::string title = item.is_some() ? item->name : "Items";
+    if (state.show_extra_ui) {
+        Renderer::DrawTextUi("Inventory", 22.0f, glm::vec2(INVENTORY_PADDING + INVENTORY_SLOT_SIZE / 2.0f, 22.0f), glm::vec3(0.8f), FontKey::AndyBold);
+    } else {
+        auto item = inventory.get_item(inventory.selected_slot());
+        const std::string& title = item.is_some() ? item->name : "Items";
 
-    //     glm::vec2 bounds = calculate_text_bounds(FontKey::AndyBold, title, 22.0f);
-    //     Renderer::draw_text_ui(FontKey::AndyBold, title, glm::vec2(offset.x / 2.0f - bounds.x / 2.0f, 22.0f), 22.0f, glm::vec3(0.8f));
-    // }
+        glm::vec2 bounds = calculate_text_bounds(FontKey::AndyBold, title, 22.0f);
+        Renderer::DrawTextUi(title, 22.0f, glm::vec2(offset.x / 2.0f - bounds.x / 2.0f, 22.0f), glm::vec3(0.8f), FontKey::AndyBold);
+    }
 
     if (state.show_extra_ui) {
         offset.x = 0;

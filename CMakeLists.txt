@@ -77,7 +77,7 @@ add_subdirectory(thirdparty/glfw)
 add_subdirectory(thirdparty/STB)
 add_subdirectory(thirdparty/FastNoiseLite)
 add_subdirectory(shader_compiler)
-# add_subdirectory(thirdparty/freetype-2.13.2)
+add_subdirectory(thirdparty/freetype-2.13.2)
 
 unset(EXECUTABLE_OUTPUT_PATH CACHE)
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR} CACHE STRING "" FORCE)
@@ -96,7 +96,7 @@ else()
     target_compile_options(${PROJECT_NAME} PUBLIC "-O0" "-ggdb")
 endif()
 
-target_link_libraries(${PROJECT_NAME} glm STB glfw LLGL LLGL_Direct3D11 LLGL_OpenGL FastNoiseLite)
+target_link_libraries(${PROJECT_NAME} glm STB glfw LLGL LLGL_Direct3D11 LLGL_OpenGL FastNoiseLite freetype)
 
 file(GLOB_RECURSE ASSETS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/**/*.*)
 

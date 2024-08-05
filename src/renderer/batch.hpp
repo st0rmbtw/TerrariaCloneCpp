@@ -14,17 +14,14 @@
 #include "assets.hpp"
 
 constexpr size_t MAX_QUADS = 5000;
-constexpr size_t MAX_VERTICES = MAX_QUADS;
+constexpr size_t MAX_VERTICES = MAX_QUADS * 4;
+constexpr size_t MAX_INDICES = MAX_QUADS * 6;
 
 struct GlyphVertex {
-    glm::vec4 transform_col_0;
-    glm::vec4 transform_col_1;
-    glm::vec4 transform_col_2;
-    glm::vec4 transform_col_3;
     glm::vec3 color;
-    glm::vec2 size;
+    glm::vec2 pos;
     glm::vec2 uv;
-    float is_ui;
+    int is_ui;
 };
 
 struct SpriteData {
@@ -38,10 +35,21 @@ struct SpriteData {
     bool is_ui;
 };
 
-struct SpriteFlush {
+struct FlushData {
     tl::optional<Texture> texture;
-    int vertex_offset;
-    uint32_t sprite_count;
+    int offset;
+    uint32_t count;
+};
+
+struct GlyphData {
+    Texture texture;
+    glm::vec3 color;
+    glm::vec2 pos;
+    glm::vec2 size;
+    glm::vec2 tex_size;
+    glm::vec2 tex_uv;
+    int order;
+    bool is_ui;
 };
 
 class RenderBatch {
@@ -70,14 +78,12 @@ public:
     void begin() override;
     void terminate() override;
 
-    inline void clear_sprites() { m_sprites.clear(); }
-
     [[nodiscard]] inline bool is_empty() const { return m_sprites.empty(); }
 private:
     void flush();
 private:
     std::vector<SpriteData> m_sprites;
-    std::vector<SpriteFlush> m_sprite_flush_queue;
+    std::vector<FlushData> m_sprite_flush_queue;
 
     SpriteVertex* m_buffer = nullptr;
     SpriteVertex* m_buffer_ptr = nullptr;
@@ -85,15 +91,23 @@ private:
 
 class RenderBatchGlyph : public RenderBatch {
 public:
-    void draw_glyph(const glm::mat4& transform, const glm::vec3& color, /* const Texture& font_texture, */ const glm::vec2& uv, const glm::vec2& size, bool ui);
+    void draw_glyph(const glm::vec2& pos, const glm::vec2& size, const glm::vec3& color, const Texture& font_texture, const glm::vec2& tex_uv, const glm::vec2& tex_size, bool ui);
 
     void init() override;
     void render() override;
     void begin() override;
     void terminate() override;
+
+    [[nodiscard]] inline bool is_empty() const { return m_glyphs.empty(); }
 private:
+    void flush();
+private:
+    std::vector<GlyphData> m_glyphs;
+    std::vector<FlushData> m_glyphs_flush_queue;
+
     GlyphVertex* m_buffer = nullptr;
     GlyphVertex* m_buffer_ptr = nullptr;
+    LLGL::Buffer* m_index_buffer = nullptr;
 };
 
 #endif

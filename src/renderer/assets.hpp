@@ -21,5 +21,6 @@ struct SpriteVertex {
 
 const LLGL::VertexFormat& SpriteVertexFormat();
 const LLGL::VertexFormat& TilemapVertexFormat();
+const LLGL::VertexFormat& GlyphVertexFormat();
 
 #endif

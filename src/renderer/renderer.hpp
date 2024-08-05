@@ -9,6 +9,7 @@
 #include "../types/sprite.hpp"
 #include "../types/backend.hpp"
 #include "../world/world.hpp"
+#include "../assets.hpp"
 
 #include "custom_surface.hpp"
 #include "camera.h"
@@ -34,7 +35,10 @@ namespace Renderer {
 
     void DrawSprite(const Sprite& sprite, RenderLayer render_layer = RenderLayer::Main);
     void DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer = RenderLayer::Main);
-    void FlushSpriteBatch();
+    void DrawText(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, RenderLayer render_layer = RenderLayer::Main);
+    inline void DrawTextUi(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontKey font) {
+        DrawText(text, size, position, color, font, RenderLayer::UI);
+    }
 
 #if DEBUG
     void PrintDebugInfo();
