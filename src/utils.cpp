@@ -27,15 +27,15 @@ glm::vec2 calculate_text_bounds(FontKey key, const std::string &text, float size
 
     float scale = size / font.font_size;
 
-    std::string::const_iterator c;
-    for (c = text.begin(); c != text.end(); ++c) {
+    const char* c = text.c_str();
+    for (; *c != '\0'; c++) {
         if (*c == '\n') {
             bounds.y += size;
             prev_x = 0.0f;
             continue;
         }
 
-        const Glyph& glyph = font.glyphs.at(*c);
+        const Glyph& glyph = font.glyphs.find(*c)->second;
         prev_x += glyph.size.x * scale;
         bounds.x = std::max(prev_x, bounds.x);
     }

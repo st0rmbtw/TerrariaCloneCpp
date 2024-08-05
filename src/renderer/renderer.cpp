@@ -234,15 +234,16 @@ void Renderer::DrawText(const std::string& text, float size, const glm::vec2& po
     glm::vec2 tex_size = font.texture.size();
     float scale = size / font.font_size;
 
-    std::string::const_iterator c;
-    for (c = text.begin(); c != text.end(); c++) {
+    const char* c = text.c_str();
+
+    for (; *c != '\0'; c++) {
         if (*c == '\n') {
             y += size;
             x = position.x;
             continue;
         }
 
-        const Glyph& ch = font.glyphs.at(*c);
+        const Glyph& ch = font.glyphs.find(*c)->second;
 
         if (*c == ' ') {
             x += (ch.advance >> 6) * scale;
