@@ -1,4 +1,3 @@
-#include <Windows.h>
 #include <sstream>
 #include <stdio.h>
 #include <string>
@@ -6,6 +5,12 @@
 #include <fstream>
 
 #include "../src/constants.hpp"
+
+#if defined(WIN32) || defined(_WIN32)
+#include <Windows.h>
+#else
+// TODO
+#endif
 
 namespace fs = std::filesystem;
 
@@ -23,12 +28,12 @@ struct ShaderDef {
 int main(int argc, const char** argv) {
     if (argc == 0) {
         printf("No input arguments given.\n");
-        return 1;
+        return -1;
     }
 
     if (argc < 4) {
         printf("Usage: %s <SOURCE_DIRECTORY> <BUILD_DIRECTORY> <file>\n", argv[0]);
-        return 1;
+        return -1;
     }
 
     const fs::path source_dir = argv[1];
@@ -88,12 +93,12 @@ int main(int argc, const char** argv) {
     const std::string stage = file.extension().string().substr(1);
     
     printf("Compiling %s\n", file.string().c_str());
-    if (!CompileVulkanShader(executable.string(), stage, shader_source.c_str(), shader_source.length(), output_path.string().c_str())) return 1;
+    if (!CompileVulkanShader(executable.string(), stage, shader_source.c_str(), shader_source.length(), output_path.string().c_str())) return -1;
 
     return 0;
 }
 
-#ifdef WIN32
+#if defined(WIN32) || defined(_WIN32)
 
 void ReadFromPipe(HANDLE pipe) { 
    DWORD dwRead, dwWritten; 
@@ -195,4 +200,6 @@ bool CompileVulkanShader(const std::string& executable, const std::string& stage
     return true;
 }
 
+#else
+// TODO
 #endif
