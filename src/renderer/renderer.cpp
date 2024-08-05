@@ -225,7 +225,7 @@ void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer ren
     state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), render_layer == RenderLayer::UI);
 }
 
-void Renderer::DrawText(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontKey key, RenderLayer render_layer) {
+void Renderer::DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontKey key, RenderLayer render_layer) {
     const Font& font = Assets::GetFont(key);
     
     float x = position.x;
@@ -234,18 +234,17 @@ void Renderer::DrawText(const std::string& text, float size, const glm::vec2& po
     glm::vec2 tex_size = font.texture.size();
     float scale = size / font.font_size;
 
-    const char* c = text.c_str();
-
-    for (; *c != '\0'; c++) {
-        if (*c == '\n') {
+    for (uint32_t i = 0; i < length; ++i) {
+        const char c = text[i];
+        if (c == '\n') {
             y += size;
             x = position.x;
             continue;
         }
 
-        const Glyph& ch = font.glyphs.find(*c)->second;
+        const Glyph& ch = font.glyphs.find(c)->second;
 
-        if (*c == ' ') {
+        if (c == ' ') {
             x += (ch.advance >> 6) * scale;
             continue;
         }
@@ -443,7 +442,7 @@ void RenderBatchSprite::flush() {
     commands->SetResource(0, *state.constant_buffer);
 
     for (const FlushData& flush_data : m_sprite_flush_queue) {
-        const Texture& t = flush_data.texture.is_some() ? flush_data.texture.get() : Assets::GetTexture(AssetKey::TextureStub);
+        const Texture& t = flush_data.texture.is_some() ? flush_data.texture.get() : Assets::GetTexture(TextureKey::Stub);
 
         commands->SetResource(1, *t.texture);
         commands->SetResource(2, Assets::GetSampler(t.sampler));

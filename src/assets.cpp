@@ -68,37 +68,37 @@ struct AssetShader {
         vertex_attributes(vertex_format.attributes) {}
 };
 
-static const std::pair<AssetKey, AssetTexture> TEXTURE_ASSETS[] = {
-    { AssetKey::TexturePlayerHair,         AssetTexture("assets/sprites/player/Player_Hair_1.png") },
-    { AssetKey::TexturePlayerHead,         AssetTexture("assets/sprites/player/Player_0_0.png") },
-    { AssetKey::TexturePlayerChest,        AssetTexture("assets/sprites/player/Player_Body.png") },
-    { AssetKey::TexturePlayerLegs,         AssetTexture("assets/sprites/player/Player_0_11.png") },
-    { AssetKey::TexturePlayerLeftHand,     AssetTexture("assets/sprites/player/Player_Left_Hand.png") },
-    { AssetKey::TexturePlayerLeftShoulder, AssetTexture("assets/sprites/player/Player_Left_Shoulder.png") },
-    { AssetKey::TexturePlayerRightArm,     AssetTexture("assets/sprites/player/Player_Right_Arm.png") },
-    { AssetKey::TexturePlayerLeftEye,      AssetTexture("assets/sprites/player/Player_0_1.png") },
-    { AssetKey::TexturePlayerRightEye,     AssetTexture("assets/sprites/player/Player_0_2.png") },
+static const std::pair<TextureKey, AssetTexture> TEXTURE_ASSETS[] = {
+    { TextureKey::PlayerHair,         AssetTexture("assets/sprites/player/Player_Hair_1.png") },
+    { TextureKey::PlayerHead,         AssetTexture("assets/sprites/player/Player_0_0.png") },
+    { TextureKey::PlayerChest,        AssetTexture("assets/sprites/player/Player_Body.png") },
+    { TextureKey::PlayerLegs,         AssetTexture("assets/sprites/player/Player_0_11.png") },
+    { TextureKey::PlayerLeftHand,     AssetTexture("assets/sprites/player/Player_Left_Hand.png") },
+    { TextureKey::PlayerLeftShoulder, AssetTexture("assets/sprites/player/Player_Left_Shoulder.png") },
+    { TextureKey::PlayerRightArm,     AssetTexture("assets/sprites/player/Player_Right_Arm.png") },
+    { TextureKey::PlayerLeftEye,      AssetTexture("assets/sprites/player/Player_0_1.png") },
+    { TextureKey::PlayerRightEye,     AssetTexture("assets/sprites/player/Player_0_2.png") },
 
-    { AssetKey::TextureUiCursorForeground,    AssetTexture("assets/sprites/ui/Cursor_0.png", TextureSampler::Linear) },
-    { AssetKey::TextureUiCursorBackground,    AssetTexture("assets/sprites/ui/Cursor_11.png", TextureSampler::Linear) },
-    { AssetKey::TextureUiInventoryBackground, AssetTexture("assets/sprites/ui/Inventory_Back.png", TextureSampler::Linear) },
-    { AssetKey::TextureUiInventorySelected,   AssetTexture("assets/sprites/ui/Inventory_Back14.png", TextureSampler::Linear) },
-    { AssetKey::TextureUiInventoryHotbar,     AssetTexture("assets/sprites/ui/Inventory_Back9.png", TextureSampler::Linear) },
+    { TextureKey::UiCursorForeground,    AssetTexture("assets/sprites/ui/Cursor_0.png", TextureSampler::Linear) },
+    { TextureKey::UiCursorBackground,    AssetTexture("assets/sprites/ui/Cursor_11.png", TextureSampler::Linear) },
+    { TextureKey::UiInventoryBackground, AssetTexture("assets/sprites/ui/Inventory_Back.png", TextureSampler::Linear) },
+    { TextureKey::UiInventorySelected,   AssetTexture("assets/sprites/ui/Inventory_Back14.png", TextureSampler::Linear) },
+    { TextureKey::UiInventoryHotbar,     AssetTexture("assets/sprites/ui/Inventory_Back9.png", TextureSampler::Linear) },
 
-    { AssetKey::TextureParticles, AssetTexture("assets/sprites/Particles.png") }
+    { TextureKey::Particles, AssetTexture("assets/sprites/Particles.png") }
 };
 
-static const std::pair<AssetKey, AssetTextureAtlas> TEXTURE_ATLAS_ASSETS[] = {
-    { AssetKey::TexturePlayerHair,         AssetTextureAtlas(1, 14, glm::uvec2(40, 64)) },
-    { AssetKey::TexturePlayerHead,         AssetTextureAtlas(1, 14, glm::uvec2(40, 48)) },
-    { AssetKey::TexturePlayerChest,        AssetTextureAtlas(1, 14, glm::uvec2(32, 64), glm::uvec2(8, 0)) },
-    { AssetKey::TexturePlayerLegs,         AssetTextureAtlas(1, 19, glm::uvec2(40, 64)) },
-    { AssetKey::TexturePlayerLeftHand,     AssetTextureAtlas(27, 1, glm::uvec2(32, 64)) },
-    { AssetKey::TexturePlayerLeftShoulder, AssetTextureAtlas(27, 1, glm::uvec2(32, 64)) },
-    { AssetKey::TexturePlayerRightArm,     AssetTextureAtlas(18, 1, glm::uvec2(32, 80)) },
-    { AssetKey::TexturePlayerLeftEye,      AssetTextureAtlas(1, 20, glm::uvec2(40, 64)) },
-    { AssetKey::TexturePlayerRightEye,     AssetTextureAtlas(1, 20, glm::uvec2(40, 64)) },
-    { AssetKey::TextureParticles,          AssetTextureAtlas(PARTICLES_ATLAS_COLUMNS, 12, glm::uvec2(8), glm::uvec2(2)) }
+static const std::pair<TextureKey, AssetTextureAtlas> TEXTURE_ATLAS_ASSETS[] = {
+    { TextureKey::PlayerHair,         AssetTextureAtlas(1, 14, glm::uvec2(40, 64)) },
+    { TextureKey::PlayerHead,         AssetTextureAtlas(1, 14, glm::uvec2(40, 48)) },
+    { TextureKey::PlayerChest,        AssetTextureAtlas(1, 14, glm::uvec2(32, 64), glm::uvec2(8, 0)) },
+    { TextureKey::PlayerLegs,         AssetTextureAtlas(1, 19, glm::uvec2(40, 64)) },
+    { TextureKey::PlayerLeftHand,     AssetTextureAtlas(27, 1, glm::uvec2(32, 64)) },
+    { TextureKey::PlayerLeftShoulder, AssetTextureAtlas(27, 1, glm::uvec2(32, 64)) },
+    { TextureKey::PlayerRightArm,     AssetTextureAtlas(18, 1, glm::uvec2(32, 80)) },
+    { TextureKey::PlayerLeftEye,      AssetTextureAtlas(1, 20, glm::uvec2(40, 64)) },
+    { TextureKey::PlayerRightEye,     AssetTextureAtlas(1, 20, glm::uvec2(40, 64)) },
+    { TextureKey::Particles,          AssetTextureAtlas(PARTICLES_ATLAS_COLUMNS, 12, glm::uvec2(8), glm::uvec2(2)) }
 };
 
 static const std::array BLOCK_ASSETS = std::to_array<std::pair<uint16_t, std::string>>({
@@ -132,8 +132,8 @@ static const std::array FONT_ASSETS = std::to_array<std::pair<FontKey, std::stri
 
 static struct AssetsState {
     std::unordered_map<uint16_t, Texture> items;
-    std::unordered_map<AssetKey, Texture> textures;
-    std::unordered_map<AssetKey, TextureAtlas> textures_atlases;
+    std::unordered_map<TextureKey, Texture> textures;
+    std::unordered_map<TextureKey, TextureAtlas> textures_atlases;
     std::unordered_map<ShaderAssetKey, ShaderPipeline> shaders;
     std::unordered_map<FontKey, Font> fonts;
     std::vector<LLGL::Sampler*> samplers;
@@ -155,42 +155,42 @@ bool Assets::Load() {
     using Constants::MAX_WALL_TEXTURE_HEIGHT;
 
     const uint8_t data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
-    state.textures[AssetKey::TextureStub] = create_texture(1, 1, 4, TextureSampler::Nearest, data);
+    state.textures[TextureKey::Stub] = create_texture(1, 1, 4, TextureSampler::Nearest, data);
 
-    for (const auto& asset : TEXTURE_ASSETS) {
+    for (const auto& [key, asset] : TEXTURE_ASSETS) {
         int width, height, components;
 
-        uint8_t* data = stbi_load(asset.second.path.c_str(), &width, &height, &components, 4);
+        uint8_t* data = stbi_load(asset.path.c_str(), &width, &height, &components, 4);
         if (data == nullptr) {
-            LOG_ERROR("Couldn't load asset: %s", asset.second.path.c_str());
+            LOG_ERROR("Couldn't load asset: %s", asset.path.c_str());
             return false;   
         }
 
-        state.textures[asset.first] = create_texture(width, height, components, asset.second.sampler, data);
+        state.textures[key] = create_texture(width, height, components, asset.sampler, data);
 
         stbi_image_free(data);
     }
 
-    for (const auto& asset : TEXTURE_ATLAS_ASSETS) {
-        state.textures_atlases[asset.first] = TextureAtlas::from_grid(Assets::GetTexture(asset.first), asset.second.tile_size, asset.second.columns, asset.second.rows, asset.second.padding, asset.second.offset);
+    for (const auto& [key, asset] : TEXTURE_ATLAS_ASSETS) {
+        state.textures_atlases[key] = TextureAtlas::from_grid(Assets::GetTexture(key), asset.tile_size, asset.columns, asset.rows, asset.padding, asset.offset);
     }
     
-    for (const auto& asset : ITEM_ASSETS) {
+    for (const auto& [key, asset] : ITEM_ASSETS) {
         int width, height, components;
 
-        uint8_t* data = stbi_load(asset.second.c_str(), &width, &height, &components, 4);
+        uint8_t* data = stbi_load(asset.c_str(), &width, &height, &components, 4);
         if (data == nullptr) {
-            LOG_ERROR("Couldn't load asset: %s", asset.second.c_str());
+            LOG_ERROR("Couldn't load asset: %s", asset.c_str());
             return false;   
         }
 
-        state.items[asset.first] = create_texture(width, height, components, TextureSampler::Nearest, data);
+        state.items[key] = create_texture(width, height, components, TextureSampler::Nearest, data);
 
         stbi_image_free(data);
     }
 
-    state.textures[AssetKey::TextureTiles] = load_texture_array(BLOCK_ASSETS, TextureSampler::NearestMips, true);
-    state.textures[AssetKey::TextureWalls] = load_texture_array(WALL_ASSETS, TextureSampler::Nearest);
+    state.textures[TextureKey::Tiles] = load_texture_array(BLOCK_ASSETS, TextureSampler::NearestMips, true);
+    state.textures[TextureKey::Walls] = load_texture_array(WALL_ASSETS, TextureSampler::Nearest);
 
     return true;
 }
@@ -334,12 +334,12 @@ void Assets::DestroyShaders() {
     }
 }
 
-const Texture& Assets::GetTexture(AssetKey key) {
+const Texture& Assets::GetTexture(TextureKey key) {
     ASSERT(state.textures.contains(key), "Key not found");
     return state.textures[key];
 }
 
-const TextureAtlas& Assets::GetTextureAtlas(AssetKey key) {
+const TextureAtlas& Assets::GetTextureAtlas(TextureKey key) {
     ASSERT(state.textures_atlases.contains(key), "Key not found");
     return state.textures_atlases[key];
 }

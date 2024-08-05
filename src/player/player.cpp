@@ -39,15 +39,15 @@ void spawn_particles_on_dig(const glm::vec2& position, BlockType type) {
 }
 
 void Player::init() {
-    m_hair = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerHair));
-    m_head = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerHead));
-    m_body = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerChest));
-    m_legs = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerLegs));
-    m_left_hand = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerLeftHand));
-    m_left_shoulder = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerLeftShoulder));
-    m_right_arm = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerRightArm));
-    m_left_eye = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerLeftEye));
-    m_right_eye = TextureAtlasSprite(Assets::GetTextureAtlas(AssetKey::TexturePlayerRightEye));
+    m_hair = TextureAtlasSprite(Assets::GetTextureAtlas(TextureKey::PlayerHair));
+    m_head = TextureAtlasSprite(Assets::GetTextureAtlas(TextureKey::PlayerHead));
+    m_body = TextureAtlasSprite(Assets::GetTextureAtlas(TextureKey::PlayerChest));
+    m_legs = TextureAtlasSprite(Assets::GetTextureAtlas(TextureKey::PlayerLegs));
+    m_left_hand = TextureAtlasSprite(Assets::GetTextureAtlas(TextureKey::PlayerLeftHand));
+    m_left_shoulder = TextureAtlasSprite(Assets::GetTextureAtlas(TextureKey::PlayerLeftShoulder));
+    m_right_arm = TextureAtlasSprite(Assets::GetTextureAtlas(TextureKey::PlayerRightArm));
+    m_left_eye = TextureAtlasSprite(Assets::GetTextureAtlas(TextureKey::PlayerLeftEye));
+    m_right_eye = TextureAtlasSprite(Assets::GetTextureAtlas(TextureKey::PlayerRightEye));
     m_walk_anim_timer = Timer(Timer::Duration::zero(), TimerMode::Repeating);
     m_walk_particles_timer = Timer(duration::seconds_float(1.0f / 20.0f), TimerMode::Repeating);
     m_walk_animation_index = 0;

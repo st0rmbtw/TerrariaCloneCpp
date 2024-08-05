@@ -11,27 +11,27 @@
 #include "types/shader_pipeline.hpp"
 #include "types/font.hpp"
 
-enum class AssetKey : uint8_t {
-    TextureStub = 0,
-    TextureTiles,
-    TextureWalls,
-    TextureParticles,
+enum class TextureKey : uint8_t {
+    Stub = 0,
+    Tiles,
+    Walls,
+    Particles,
 
-    TexturePlayerHead,
-    TexturePlayerHair,
-    TexturePlayerChest,
-    TexturePlayerLegs,
-    TexturePlayerLeftShoulder,
-    TexturePlayerLeftHand,
-    TexturePlayerRightArm,
-    TexturePlayerLeftEye,
-    TexturePlayerRightEye,
+    PlayerHead,
+    PlayerHair,
+    PlayerChest,
+    PlayerLegs,
+    PlayerLeftShoulder,
+    PlayerLeftHand,
+    PlayerRightArm,
+    PlayerLeftEye,
+    PlayerRightEye,
 
-    TextureUiCursorForeground,
-    TextureUiCursorBackground,
-    TextureUiInventoryBackground,
-    TextureUiInventorySelected,
-    TextureUiInventoryHotbar,
+    UiCursorForeground,
+    UiCursorBackground,
+    UiInventoryBackground,
+    UiInventorySelected,
+    UiInventoryHotbar,
 };
 
 enum class ShaderAssetKey : uint8_t {
@@ -69,8 +69,8 @@ namespace Assets {
     void DestroySamplers();
     void DestroyFonts();
 
-    const Texture& GetTexture(AssetKey key);
-    const TextureAtlas& GetTextureAtlas(AssetKey key);
+    const Texture& GetTexture(TextureKey key);
+    const TextureAtlas& GetTextureAtlas(TextureKey key);
     const Font& GetFont(FontKey key);
     const Texture& GetItemTexture(size_t index);
     const ShaderPipeline& GetShader(ShaderAssetKey key);

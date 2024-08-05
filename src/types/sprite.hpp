@@ -63,7 +63,6 @@ public:
     }
 
 private:
-    math::Rect m_aabb;
     glm::quat m_rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
     glm::vec2 m_position = glm::vec2(0.0f);
     glm::vec2 m_scale = glm::vec2(1.0f);

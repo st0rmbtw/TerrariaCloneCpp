@@ -81,7 +81,7 @@ void WorldRenderer::render(const World& world) {
     for (const RenderChunk* chunk : walls) {
         commands->UpdateBuffer(*m_transform_buffer, 0, glm::value_ptr(chunk->transform_matrix), sizeof(glm::mat4));
 
-        const Texture& t = Assets::GetTexture(AssetKey::TextureWalls);
+        const Texture& t = Assets::GetTexture(TextureKey::Walls);
 
         commands->SetPipelineState(*m_pipeline);
         commands->SetVertexBuffer(*chunk->wall_vertex_buffer);
@@ -96,7 +96,7 @@ void WorldRenderer::render(const World& world) {
     for (const RenderChunk* chunk : blocks) {
         commands->UpdateBuffer(*m_transform_buffer, 0, glm::value_ptr(chunk->transform_matrix), sizeof(glm::mat4));
 
-        const Texture& t = Assets::GetTexture(AssetKey::TextureTiles);
+        const Texture& t = Assets::GetTexture(TextureKey::Tiles);
 
         commands->SetPipelineState(*m_pipeline);
         commands->SetVertexBuffer(*chunk->block_vertex_buffer);

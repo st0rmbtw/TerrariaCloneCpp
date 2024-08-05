@@ -29,15 +29,15 @@ void UI::Init() {
     state.cursor_background_color = glm::vec4(0.9, 0.9, 0.9, 1.0);
 
     state.cursor_background
-        .set_texture(Assets::GetTexture(AssetKey::TextureUiCursorBackground))
+        .set_texture(Assets::GetTexture(TextureKey::UiCursorBackground))
         .set_color(state.cursor_background_color)
         .set_anchor(Anchor::TopLeft)
         .set_outline_color(state.cursor_background_color)
         .set_outline_thickness(0.03)
-        .set_order(INT_MAX - 1);
+        .set_order(INT_MAX - 2);
 
     state.cursor_foreground
-        .set_texture(Assets::GetTexture(AssetKey::TextureUiCursorForeground))
+        .set_texture(Assets::GetTexture(TextureKey::UiCursorForeground))
         .set_color(state.cursor_foreground_color)
         .set_anchor(Anchor::TopLeft)
         .set_order(INT_MAX);
@@ -100,7 +100,7 @@ void UI::Render(const Camera& camera, const Inventory& inventory) {
     // Sprite shadow = state.cursor_foreground;
     // shadow.set_color(glm::vec4(0.5, 0.5, 0.5, 0.8));
     // shadow.set_position(shadow.position() + glm::vec2(2.0f));
-    // shadow.set_scale(shadow.scale());
+    // shadow.set_order(INT_MAX - 1);
     // Renderer::DrawSprite(shadow, RenderLayer::UI);
 
     Renderer::DrawSprite(state.cursor_foreground, RenderLayer::UI);
@@ -133,7 +133,7 @@ void update_cursor() {
     state.cursor_foreground.set_color(state.cursor_foreground_color * (0.7f + 0.3f * state.cursor_anim_progress));
 }
 
-inline void render_inventory_cell(UiElement element_type, uint8_t index, const glm::vec2& size, const glm::vec2& position, const Texture& texture) {
+inline void render_inventory_cell(UiElement element_type, uint8_t index, const glm::vec2& size, const glm::vec2& position, TextureKey texture) {
     const glm::vec2 pos = INVENTORY_PADDING + position;
     
     state.elements.emplace_back(element_type, index, math::Rect::from_top_left(pos, size));
@@ -142,12 +142,12 @@ inline void render_inventory_cell(UiElement element_type, uint8_t index, const g
     cell_sprite.set_anchor(Anchor::TopLeft);
     cell_sprite.set_custom_size(tl::optional<glm::vec2>(size));
     cell_sprite.set_color(glm::vec4(1.0f, 1.0f, 1.0f, 0.8f));
-    cell_sprite.set_texture(texture);
+    cell_sprite.set_texture(Assets::GetTexture(texture));
     Renderer::DrawSprite(cell_sprite, RenderLayer::UI);
 }
 
 inline void render_cell_item(const glm::vec2& item_size, const glm::vec2& cell_size, const glm::vec2& position, const Texture& texture) {
-    Sprite cell_sprite(INVENTORY_PADDING + position + (cell_size - item_size) / 2.0f);
+    Sprite cell_sprite(INVENTORY_PADDING + position + (cell_size - item_size) * 0.5f);
     cell_sprite.set_anchor(Anchor::TopLeft);
     cell_sprite.set_custom_size(tl::optional<glm::vec2>(item_size));
     cell_sprite.set_texture(texture);
@@ -159,7 +159,7 @@ void render_inventory(const Inventory& inventory) {
     auto item_offset = glm::vec2(0);
 
     for (size_t x = 0; x < CELLS_IN_ROW; ++x) {
-        Texture texture;
+        TextureKey texture;
         auto item_size = glm::vec2(0.0f);
         auto cell_size = glm::vec2(0.0f);
         auto padding = glm::vec2(0.0f);
@@ -174,18 +174,18 @@ void render_inventory(const Inventory& inventory) {
         }
 
         if (state.show_extra_ui) {
-            texture = Assets::GetTexture(AssetKey::TextureUiInventoryHotbar);
+            texture = TextureKey::UiInventoryHotbar;
             cell_size = glm::vec2(INVENTORY_SLOT_SIZE);
             item_size *= 0.95f;
         } else if (item_selected) {
-            texture = Assets::GetTexture(AssetKey::TextureUiInventorySelected);
+            texture = TextureKey::UiInventorySelected;
             cell_size = glm::vec2(HOTBAR_SLOT_SIZE_SELECTED);
             text_size = 16.0f;
         } else {
-            texture = Assets::GetTexture(AssetKey::TextureUiInventoryBackground);
+            texture = TextureKey::UiInventoryBackground;
             item_size *= 0.9f;
             cell_size = glm::vec2(HOTBAR_SLOT_SIZE);
-            padding.y = (HOTBAR_SLOT_SIZE_SELECTED - cell_size.y) / 2.0f;
+            padding.y = (HOTBAR_SLOT_SIZE_SELECTED - cell_size.y) * 0.5f;
         }
 
         render_inventory_cell(UiElement::HotbarCell, x, cell_size, offset + padding, texture);
@@ -203,12 +203,13 @@ void render_inventory(const Inventory& inventory) {
                 index_color = 1.0f;
             }
 
-            Renderer::DrawTextUi(std::to_string((x + 1) % 10), index_size, offset + padding + glm::vec2(16.0f, text_size * 1.7f), glm::vec3(index_color), FontKey::AndyBold);
+            const char index = '0' + x + 1;
+            Renderer::DrawCharUi(index, index_size, offset + padding + glm::vec2(16.0f, text_size * 1.7f), glm::vec3(index_color), FontKey::AndyBold);
         }
 
         // Draw item stack
         if (item.is_some() && item->stack > 1) {
-            Renderer::DrawTextUi(std::to_string(item->stack), text_size, offset + padding + glm::vec2(16.0f, cell_size.y / 2.0f + text_size * 1.6f), glm::vec3(0.8f), FontKey::AndyBold);
+            Renderer::DrawTextUi(std::to_string(item->stack), text_size, offset + padding + glm::vec2(16.0f, cell_size.y * 0.5f + text_size * 1.6f), glm::vec3(0.8f), FontKey::AndyBold);
         }
 
         offset.x += cell_size.x + INVENTORY_CELL_MARGIN;
@@ -216,13 +217,13 @@ void render_inventory(const Inventory& inventory) {
     }
 
     if (state.show_extra_ui) {
-        Renderer::DrawTextUi("Inventory", 22.0f, glm::vec2(INVENTORY_PADDING + INVENTORY_SLOT_SIZE / 2.0f, 22.0f), glm::vec3(0.8f), FontKey::AndyBold);
+        Renderer::DrawTextUi("Inventory", 22.0f, glm::vec2(INVENTORY_PADDING + INVENTORY_SLOT_SIZE * 0.5f, 22.0f), glm::vec3(0.8f), FontKey::AndyBold);
     } else {
         auto item = inventory.get_item(inventory.selected_slot());
         const std::string& title = item.is_some() ? item->name : "Items";
 
         glm::vec2 bounds = calculate_text_bounds(FontKey::AndyBold, title, 22.0f);
-        Renderer::DrawTextUi(title, 22.0f, glm::vec2(offset.x / 2.0f - bounds.x / 2.0f, 22.0f), glm::vec3(0.8f), FontKey::AndyBold);
+        Renderer::DrawTextUi(title, 22.0f, glm::vec2((offset.x - bounds.x) * 0.5f, 22.0f), glm::vec3(0.8f), FontKey::AndyBold);
     }
 
     if (state.show_extra_ui) {
@@ -231,11 +232,11 @@ void render_inventory(const Inventory& inventory) {
 
         const glm::vec2 cell_size = glm::vec2(state.show_extra_ui ? INVENTORY_SLOT_SIZE : HOTBAR_SLOT_SIZE);
 
-        for (size_t y = 1; y < INVENTORY_ROWS; ++y) {
-            for (size_t x = 0; x < CELLS_IN_ROW; ++x) {
-                const size_t index = y * CELLS_IN_ROW + x;
+        for (uint8_t y = 1; y < INVENTORY_ROWS; ++y) {
+            for (uint8_t x = 0; x < CELLS_IN_ROW; ++x) {
+                const uint8_t index = y * CELLS_IN_ROW + x;
 
-                render_inventory_cell(UiElement::InventoryCell, index, cell_size, offset, Assets::GetTexture(AssetKey::TextureUiInventoryBackground));
+                render_inventory_cell(UiElement::InventoryCell, index, cell_size, offset, TextureKey::UiInventoryBackground);
                 offset.x += cell_size.x + INVENTORY_CELL_MARGIN;
             }
 

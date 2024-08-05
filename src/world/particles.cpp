@@ -37,7 +37,7 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
 void ParticleManager::Render() {
     if (state.particles.empty()) return;
 
-    TextureAtlasSprite sprite(Assets::GetTextureAtlas(AssetKey::TextureParticles));
+    TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureKey::Particles));
 
     for (const ParticleData& particle : state.particles) {
         sprite.set_position(particle.position);

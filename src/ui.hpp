@@ -27,9 +27,9 @@ enum class UiElement : uint8_t {
 class Element {
 public:
     enum : uint8_t {
-        None = 1 << 0,
-        Hovered = 1 << 1,
-        Pressed = 1 << 2
+        None = 0,
+        Hovered = 1 << 0,
+        Pressed = 1 << 1
     };
 
     Element(UiElement element_type, int data, const math::Rect& rect) :
@@ -40,7 +40,7 @@ public:
     inline void press() noexcept { m_state = m_state | Pressed; }
     inline void hover() noexcept { m_state = m_state | Hovered; }
 
-    [[nodiscard]] inline bool none() const noexcept { return m_state & None; }
+    [[nodiscard]] inline bool none() const noexcept { return m_state == None; }
     [[nodiscard]] inline bool hovered() const noexcept { return m_state & Hovered; }
     [[nodiscard]] inline bool pressed() const noexcept { return m_state & Pressed; }
 
