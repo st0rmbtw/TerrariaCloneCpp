@@ -36,19 +36,28 @@ namespace Renderer {
     void Begin(const Camera& camera);
     void Render(const World& world);
 
-    void DrawSprite(const Sprite& sprite, RenderLayer render_layer = RenderLayer::Main);
-    void DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer = RenderLayer::Main);
-    void DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, RenderLayer render_layer = RenderLayer::Main);
+    void DrawSprite(const Sprite& sprite, RenderLayer render_layer = RenderLayer::Main, int depth = -1);
+    inline void DrawSprite(const Sprite& sprite, int depth) {
+        DrawSprite(sprite, RenderLayer::Main, depth);
+    }
+    
+    void DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer = RenderLayer::Main, int depth = -1);
+    inline void DrawAtlasSprite(const TextureAtlasSprite& sprite, int depth) {
+        DrawAtlasSprite(sprite, RenderLayer::Main, depth);
+    }
+
+    void DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, RenderLayer render_layer = RenderLayer::Main, int depth = -1);
 
     inline void DrawText(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, RenderLayer render_layer = RenderLayer::Main) {
         DrawText(text.c_str(), text.length(), size, position, color, font, render_layer);
     }
-    inline void DrawTextUi(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontKey font) {
-        DrawText(text, length, size, position, color, font, RenderLayer::UI);
+    inline void DrawTextUi(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, int depth = -1) {
+        DrawText(text, length, size, position, color, font, RenderLayer::UI, depth);
     }
-    inline void DrawTextUi(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontKey font) {
-        DrawText(text.c_str(), text.length(), size, position, color, font, RenderLayer::UI);
+    inline void DrawTextUi(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, int depth = -1) {
+        DrawText(text.c_str(), text.length(), size, position, color, font, RenderLayer::UI, depth);
     }
+
     inline void DrawChar(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, RenderLayer render_layer = RenderLayer::Main) {
         DrawText(&ch, 1, size, position, color, font, render_layer);
     }

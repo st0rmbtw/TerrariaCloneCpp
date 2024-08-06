@@ -9,7 +9,7 @@
 namespace Background {
     void Init(const World& world);
     void Update(const Camera& camera);
-    void Render();
+    void Render(const Camera& camera);
 };
 
 #endif

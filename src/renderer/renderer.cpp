@@ -128,10 +128,14 @@ void Renderer::Begin(const Camera& camera) {
     auto* const commands = Renderer::CommandBuffer();
     auto* const swap_chain = Renderer::SwapChain();
 
-    const glm::vec2 top_left = camera.position() + camera.get_projection_area().min;
-    const glm::vec2 bottom_right = camera.position() + camera.get_projection_area().max;
-
-    const math::Rect camera_frustum = math::Rect::from_corners(top_left, bottom_right);
+    const math::Rect camera_frustum = math::Rect::from_corners(
+        camera.position() + camera.get_projection_area().min,
+        camera.position() + camera.get_projection_area().max
+    );
+    const math::Rect nonscale_camera_frustum = math::Rect::from_corners(
+        camera.position() + camera.get_nonscale_projection_area().min,
+        camera.position() + camera.get_nonscale_projection_area().max
+    );
     const math::Rect ui_frustum = math::Rect::from_corners(glm::vec2(0.0), camera.viewport());
 
     glm::mat4 screen_projection;
@@ -158,6 +162,7 @@ void Renderer::Begin(const Camera& camera) {
 
     state.sprite_batch.begin();
     state.sprite_batch.set_camera_frustum(camera_frustum);
+    state.sprite_batch.set_nonscale_camera_frustum(nonscale_camera_frustum);
     state.sprite_batch.set_ui_frustum(ui_frustum);
 
     state.glyph_batch.begin();
@@ -198,7 +203,7 @@ void Renderer::PrintDebugInfo() {
 }
 #endif
 
-void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer) {
+void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer, int depth) {
     glm::vec4 uv_offset_scale = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
 
     if (sprite.flip_x()) {
@@ -211,10 +216,10 @@ void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer) {
         uv_offset_scale.w *= -1.0f;
     }
 
-    state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.texture(), render_layer == RenderLayer::UI);
+    state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.texture(), render_layer == RenderLayer::UI, depth);
 }
 
-void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer) {
+void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer, int depth) {
     const math::Rect& rect = sprite.atlas().get_rect(sprite.index());
 
     glm::vec4 uv_offset_scale = glm::vec4(
@@ -234,10 +239,10 @@ void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer ren
         uv_offset_scale.w *= -1.0f;
     }
 
-    state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), render_layer == RenderLayer::UI);
+    state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), render_layer == RenderLayer::UI, depth);
 }
 
-void Renderer::DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontKey key, RenderLayer render_layer) {
+void Renderer::DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontKey key, RenderLayer render_layer, int depth) {
     const Font& font = Assets::GetFont(key);
     
     float x = position.x;
@@ -245,6 +250,13 @@ void Renderer::DrawText(const char* text, uint32_t length, float size, const glm
 
     glm::vec2 tex_size = font.texture.size();
     float scale = size / font.font_size;
+
+    uint32_t order = depth;
+    if (order != -1) {
+        state.global_depth_index = glm::max(state.global_depth_index, order + 1);
+    } else {
+        order = state.global_depth_index++;
+    }
 
     for (uint32_t i = 0; i < length; ++i) {
         const char c = text[i];
@@ -266,7 +278,7 @@ void Renderer::DrawText(const char* text, uint32_t length, float size, const glm
         glm::vec2 pos = glm::vec2(xpos, ypos);
         glm::vec2 size = glm::vec2(ch.size) * scale;
 
-        state.glyph_batch.draw_glyph(pos, size, color, font.texture, ch.texture_coords, ch.tex_size, render_layer == RenderLayer::UI);
+        state.glyph_batch.draw_glyph(pos, size, color, font.texture, ch.texture_coords, ch.tex_size, render_layer == RenderLayer::UI, order);
 
         x += (ch.advance >> 6) * scale;
     }
@@ -347,15 +359,29 @@ void RenderBatchSprite::init() {
     }
 }
 
-void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, bool is_ui) {
+void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, bool is_ui, int depth) {
     const math::Rect aabb = sprite.calculate_aabb();
-    
-    if (!is_ui && !this->m_camera_frustum.intersects(aabb)) return;
-    if (is_ui && !this->m_ui_frustum.intersects(aabb)) return;
+
+    if (!is_ui) {
+        if (sprite.nonscalable()) {
+            if (!m_nonscale_camera_frustum.intersects(aabb)) return;
+        } else {
+            if (!m_camera_frustum.intersects(aabb)) return;
+        }
+    } else {
+        if (!m_ui_frustum.intersects(aabb)) return;
+    }
 
     if (m_sprites.size() >= MAX_QUADS) {
         render();
         begin();
+    }
+
+    uint32_t order = depth;
+    if (order != -1) {
+        state.global_depth_index = glm::max(state.global_depth_index, order + 1);
+    } else {
+        order = state.global_depth_index++;
     }
 
     m_sprites.push_back(SpriteData {
@@ -368,7 +394,7 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
         .outline_color = sprite.outline_color(),
         .outline_thickness = sprite.outline_thickness(),
         .texture = sprite_texture,
-        .order = state.global_depth_index++,
+        .order = order,
         .is_ui = is_ui,
         .is_nonscalable = sprite.nonscalable()
     });
@@ -550,7 +576,7 @@ void RenderBatchGlyph::init() {
     }
 }
 
-void RenderBatchGlyph::draw_glyph(const glm::vec2& pos, const glm::vec2& size, const glm::vec3& color, const Texture& font_texture, const glm::vec2& tex_uv, const glm::vec2& tex_size, bool ui) {
+void RenderBatchGlyph::draw_glyph(const glm::vec2& pos, const glm::vec2& size, const glm::vec3& color, const Texture& font_texture, const glm::vec2& tex_uv, const glm::vec2& tex_size, bool ui, uint32_t depth) {
     if (m_glyphs.size() >= MAX_QUADS) {
         render();
         begin();
@@ -563,7 +589,7 @@ void RenderBatchGlyph::draw_glyph(const glm::vec2& pos, const glm::vec2& size, c
         .size = size,
         .tex_size = tex_size,
         .tex_uv = tex_uv,
-        .order = state.global_depth_index++,
+        .order = depth,
         .is_ui = ui
     });
 }

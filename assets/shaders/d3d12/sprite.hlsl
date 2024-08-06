@@ -2,6 +2,7 @@ cbuffer UniformBuffer : register( b1 )
 {
     float4x4 u_screen_projection;
     float4x4 u_view_projection;
+    float4x4 u_nonscale_view_projection;
 };
 
 struct VSInput
@@ -16,6 +17,7 @@ struct VSInput
     float outline_thickness : OutlineThickness;
     int has_texture : HasTexture;
     int is_ui : IsUI;
+    int is_nonscale : IsNonScale;
 };
 
 struct VSOutput
@@ -28,6 +30,7 @@ struct VSOutput
     nointerpolation float order : Order;
     nointerpolation int has_texture : HasTexture;
     nointerpolation int is_ui : IsUI;
+    nointerpolation int is_nonscale: IsNonScale;
 };
 
 struct GSOutput {
@@ -95,6 +98,7 @@ VSOutput VS(VSInput inp)
     outp.order = inp.position.z;
     outp.has_texture = inp.has_texture;
     outp.is_ui = inp.is_ui;
+    outp.is_nonscale = inp.is_nonscale;
 
 	return outp;
 }
@@ -107,11 +111,12 @@ void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
     float4 color = input[0].color;
     float4 outline_color = input[0].outline_color;
     float outline_thickness = input[0].outline_thickness;
-    int is_ui = input[0].is_ui;
     float order = input[0].order;
     int has_texture = input[0].has_texture;
+    bool is_ui = input[0].is_ui > 0;
+    bool is_nonscale = input[0].is_nonscale > 0;
     
-    float4x4 mvp = is_ui > 0 ? mul(u_screen_projection, transform) : mul(u_view_projection, transform);
+    float4x4 mvp = is_ui ? mul(u_screen_projection, transform) : is_nonscale ? mul(u_nonscale_view_projection, transform) : mul(u_view_projection, transform);
 
     GSOutput output;
     output.color = color;

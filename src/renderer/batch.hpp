@@ -65,10 +65,12 @@ public:
     virtual void terminate() = 0;
 
     inline void set_camera_frustum(const math::Rect& camera_frustum) { m_camera_frustum = camera_frustum; }
+    inline void set_nonscale_camera_frustum(const math::Rect& camera_frustum) { m_nonscale_camera_frustum = camera_frustum; }
     inline void set_ui_frustum(const math::Rect& ui_frustum) { m_ui_frustum = ui_frustum; }
 
 protected:
     math::Rect m_camera_frustum;
+    math::Rect m_nonscale_camera_frustum;
     math::Rect m_ui_frustum;
     LLGL::Buffer* m_vertex_buffer = nullptr;
     LLGL::PipelineState* m_pipeline = nullptr;
@@ -76,7 +78,7 @@ protected:
 
 class RenderBatchSprite : public RenderBatch {
 public:
-    void draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, bool ui);
+    void draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, bool ui, int depth);
     void init() override;
     void render() override;
     void begin() override;
@@ -95,7 +97,7 @@ private:
 
 class RenderBatchGlyph : public RenderBatch {
 public:
-    void draw_glyph(const glm::vec2& pos, const glm::vec2& size, const glm::vec3& color, const Texture& font_texture, const glm::vec2& tex_uv, const glm::vec2& tex_size, bool ui);
+    void draw_glyph(const glm::vec2& pos, const glm::vec2& size, const glm::vec3& color, const Texture& font_texture, const glm::vec2& tex_uv, const glm::vec2& tex_size, bool ui, uint32_t depth);
 
     void init() override;
     void render() override;

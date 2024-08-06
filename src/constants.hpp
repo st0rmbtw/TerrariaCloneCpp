@@ -12,7 +12,7 @@ namespace Constants {
 
     constexpr float CAMERA_MAX_ZOOM = 0.2f;
 #if DEBUG
-    constexpr float CAMERA_MIN_ZOOM = 10.0f;
+    constexpr float CAMERA_MIN_ZOOM = 5.0f;
 #else
     constexpr float CAMERA_MIN_ZOOM = 1.5f;
 #endif

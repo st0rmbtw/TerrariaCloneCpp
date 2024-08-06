@@ -269,7 +269,7 @@ void post_update() {
 void render() {
     Renderer::Begin(g.camera);
 
-    Background::Render();
+    Background::Render(g.camera);
 
     Renderer::RenderWorld();
 

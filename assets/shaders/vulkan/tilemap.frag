@@ -8,9 +8,12 @@ layout(set = 0, binding = 4) uniform sampler u_sampler;
 layout(location = 0) in vec2 g_uv;
 layout(location = 1) flat in uint g_tile_id;
 
-layout(location = 0) out vec4 color;
+layout(location = 0) out vec4 frag_color;
 
 
 void main() {
-    color = texture(sampler2DArray(u_texture_array, u_sampler), vec3(g_uv, float(g_tile_id)));
+    vec4 color = texture(sampler2DArray(u_texture_array, u_sampler), vec3(g_uv, float(g_tile_id)));
+    if (color.a < 0.5) discard;
+    
+    frag_color = color;
 }

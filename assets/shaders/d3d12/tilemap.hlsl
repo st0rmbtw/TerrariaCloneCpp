@@ -1,18 +1,20 @@
 cbuffer UniformBuffer : register( b1 )
 {
-    column_major float4x4 u_screen_projection;
-    column_major float4x4 u_view_projection;
+    float4x4 u_screen_projection;
+    float4x4 u_view_projection;
+    float4x4 u_nonscale_view_projection;
 };
 
-cbuffer TransformBuffer : register( b2 )
-{
-    column_major float4x4 u_transform;
-};
+cbuffer OrderBuffer : register( b2 ) {
+    float u_tile_order;
+    float u_wall_order;
+}
 
 struct VSInput
 {
     float2 position: Position;
     float2 atlas_pos: AtlasPos;
+    float2 world_pos: WorldPos;
     nointerpolation uint tile_id: TileId;
     nointerpolation uint tile_type: TileType;
 };
@@ -21,6 +23,7 @@ struct VSOutput
 {
     float4 position : SV_Position;
     float2 atlas_pos: AtlasPos;
+    float2 world_pos: WorldPos;
     nointerpolation uint tile_id: TileId;
     nointerpolation uint tile_type: TileType;
 };
@@ -35,6 +38,7 @@ VSOutput VS(VSInput inp)
 {
 	VSOutput output;
     output.atlas_pos = inp.atlas_pos;
+    output.world_pos = inp.world_pos;
     output.tile_id = inp.tile_id;
     output.tile_type = inp.tile_type;
     output.position = float4(inp.position * 16.0, 0.0, 1.0);
@@ -54,15 +58,18 @@ static const uint TILE_TYPE_WALL = 1u;
 void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
 {
     float2 atlas_pos = input[0].atlas_pos;
+    float2 world_pos = input[0].world_pos;
     uint tile_id = input[0].tile_id;
     uint tile_type = input[0].tile_type;
     float4 position = input[0].position;
 
+    float order = u_tile_order;
     float2 size = float2(TILE_SIZE, TILE_SIZE);
     float2 tex_size = TILE_TEX_SIZE;
     float2 padding = TILE_TEX_PADDING;
 
     if (tile_type == TILE_TYPE_WALL) {
+        order = u_wall_order;
         size = float2(WALL_SIZE, WALL_SIZE);
         tex_size = WALL_TEX_SIZE;
         padding = WALL_TEX_PADDING;
@@ -70,24 +77,35 @@ void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
 
     float2 start_uv = atlas_pos * (tex_size + padding);
 
-    float4x4 mvp = mul(u_view_projection, u_transform);
+    float4x4 transform = float4x4(
+        float4(1.0, 0.0, 0.0, world_pos.x),
+        float4(0.0, 1.0, 0.0, world_pos.y),
+        float4(0.0, 0.0, 1.0, 0.0),
+        float4(0.0, 0.0, 0.0, 1.0)
+    );
+
+    float4x4 mvp = mul(u_view_projection, transform);
 
     GSOutput output;
     output.tile_id = tile_id;
 
     output.position = mul(mvp, position);
+    output.position.z = order;
     output.uv = start_uv;
     OutputStream.Append(output);
 
     output.position = mul(mvp, (position + float4(size.x, 0.0, 0.0, 0.0)));
+    output.position.z = order;
     output.uv = float2(start_uv.x + tex_size.x, start_uv.y);
     OutputStream.Append(output);
 
     output.position = mul(mvp, (position + float4(0.0, size.y, 0.0, 0.0)));
+    output.position.z = order;
     output.uv = float2(start_uv.x, start_uv.y + tex_size.y);
     OutputStream.Append(output);
 
     output.position = mul(mvp, (position + float4(size, 0.0, 0.0)));
+    output.position.z = order;
     output.uv = float2(start_uv.x + tex_size.x, start_uv.y + tex_size.y);
     OutputStream.Append(output);
 }
@@ -97,6 +115,10 @@ SamplerState Sampler : register(s4);
 
 float4 PS(GSOutput inp) : SV_Target
 {
-    return TextureArray.Sample(Sampler, float3(inp.uv, float(inp.tile_id)));
+    float4 color = TextureArray.Sample(Sampler, float3(inp.uv, float(inp.tile_id)));
+
+    if (color.a < 0.5) discard;
+
+    return color;
 };
 
