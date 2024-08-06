@@ -12,8 +12,8 @@ static struct UiState {
     float cursor_anim_progress;
     AnimationDirection cursor_anim_dir;
 
-    glm::vec4 cursor_foreground_color;
-    glm::vec4 cursor_background_color;
+    glm::vec3 cursor_foreground_color;
+    glm::vec3 cursor_background_color;
 
     Sprite cursor_foreground;
     Sprite cursor_background;
@@ -25,22 +25,20 @@ void render_inventory(const Inventory& inventory);
 void update_cursor();
 
 void UI::Init() {
-    state.cursor_foreground_color = glm::vec4(1.0, 0.08, 0.58, 1.0);
-    state.cursor_background_color = glm::vec4(0.9, 0.9, 0.9, 1.0);
+    state.cursor_foreground_color = glm::vec3(1.0, 0.08, 0.58);
+    state.cursor_background_color = glm::vec3(0.9, 0.9, 0.9);
 
     state.cursor_background
         .set_texture(Assets::GetTexture(TextureKey::UiCursorBackground))
         .set_color(state.cursor_background_color)
         .set_anchor(Anchor::TopLeft)
         .set_outline_color(state.cursor_background_color)
-        .set_outline_thickness(0.03)
-        .set_order(INT_MAX - 2);
+        .set_outline_thickness(0.03);
 
     state.cursor_foreground
         .set_texture(Assets::GetTexture(TextureKey::UiCursorForeground))
         .set_color(state.cursor_foreground_color)
-        .set_anchor(Anchor::TopLeft)
-        .set_order(INT_MAX);
+        .set_anchor(Anchor::TopLeft);
 
     state.elements.reserve(100);
 }
@@ -100,7 +98,6 @@ void UI::Render(const Camera& camera, const Inventory& inventory) {
     // Sprite shadow = state.cursor_foreground;
     // shadow.set_color(glm::vec4(0.5, 0.5, 0.5, 0.8));
     // shadow.set_position(shadow.position() + glm::vec2(2.0f));
-    // shadow.set_order(INT_MAX - 1);
     // Renderer::DrawSprite(shadow, RenderLayer::UI);
 
     Renderer::DrawSprite(state.cursor_foreground, RenderLayer::UI);
@@ -138,7 +135,8 @@ inline void render_inventory_cell(UiElement element_type, uint8_t index, const g
     
     state.elements.emplace_back(element_type, index, math::Rect::from_top_left(pos, size));
     
-    Sprite cell_sprite(pos);
+    Sprite cell_sprite;
+    cell_sprite.set_position(pos);
     cell_sprite.set_anchor(Anchor::TopLeft);
     cell_sprite.set_custom_size(tl::optional<glm::vec2>(size));
     cell_sprite.set_color(glm::vec4(1.0f, 1.0f, 1.0f, 0.8f));
@@ -147,7 +145,8 @@ inline void render_inventory_cell(UiElement element_type, uint8_t index, const g
 }
 
 inline void render_cell_item(const glm::vec2& item_size, const glm::vec2& cell_size, const glm::vec2& position, const Texture& texture) {
-    Sprite cell_sprite(INVENTORY_PADDING + position + (cell_size - item_size) * 0.5f);
+    Sprite cell_sprite;
+    cell_sprite.set_position(INVENTORY_PADDING + position + (cell_size - item_size) * 0.5f);
     cell_sprite.set_anchor(Anchor::TopLeft);
     cell_sprite.set_custom_size(tl::optional<glm::vec2>(item_size));
     cell_sprite.set_texture(texture);

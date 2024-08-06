@@ -11,6 +11,7 @@ layout(location = 0) in VS_OUT {
     vec4 color;
     vec4 outline_color;
     float outline_thickness;
+    float order;
     int has_texture;
     int is_ui;
 } gs_in[];
@@ -29,6 +30,7 @@ void main() {
     vec4 color = gs_in[0].color;
     vec4 outline_color = gs_in[0].outline_color;
     float outline_thickness = gs_in[0].outline_thickness;
+    float order = gs_in[0].order;
     mat4 transform = gs_in[0].transform;
     int is_ui = gs_in[0].is_ui;
     int has_texture = gs_in[0].has_texture;
@@ -37,6 +39,7 @@ void main() {
 
     vec2 position = vec2(0.0, 0.0);
     gl_Position = mvp * vec4(position, 0.0, 1.0);
+    gl_Position.z = order;
     g_uv = position * uv_offset_scale.zw + uv_offset_scale.xy;
     g_color = color;
     g_outline_color = outline_color;
@@ -46,6 +49,7 @@ void main() {
 
     position = vec2(1.0, 0.0);
     gl_Position = mvp * vec4(position, 0.0, 1.0);
+    gl_Position.z = order;
     g_uv = position * uv_offset_scale.zw + uv_offset_scale.xy;
     g_color = color;
     g_outline_color = outline_color;
@@ -55,6 +59,7 @@ void main() {
 
     position = vec2(0.0, 1.0);
     gl_Position = mvp * vec4(position, 0.0, 1.0);
+    gl_Position.z = order;
     g_uv = position * uv_offset_scale.zw + uv_offset_scale.xy;
     g_color = color;
     g_outline_color = outline_color;
@@ -64,6 +69,7 @@ void main() {
 
     position = vec2(1.0, 1.0);
     gl_Position = mvp * vec4(position, 0.0, 1.0);
+    gl_Position.z = order;
     g_uv = position * uv_offset_scale.zw + uv_offset_scale.xy;
     g_color = color;
     g_outline_color = outline_color;

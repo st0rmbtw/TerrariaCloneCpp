@@ -10,6 +10,7 @@
 #include "../assets.hpp"
 #include "../log.hpp"
 
+#include "LLGL/PipelineStateFlags.h"
 #include "utils.hpp"
 #include "assets.hpp"
 #include "batch.hpp"
@@ -32,6 +33,8 @@ static struct RendererState {
     RenderBatchGlyph glyph_batch;
     WorldRenderer world_renderer;
     RenderBackend backend;
+    
+    uint32_t global_sprite_index = 0;
 } state;
 
 static constexpr uint32_t MAX_TEXTURES_COUNT = 32;
@@ -149,12 +152,15 @@ void Renderer::Begin(const Camera& camera) {
 
     commands->BeginRenderPass(*swap_chain);
     commands->Clear(LLGL::ClearFlags::Color, LLGL::ClearValue(0.854f, 0.584f, 0.584f, 1.0f));
+    commands->Clear(LLGL::ClearFlags::Depth, LLGL::ClearValue(0.0f));
 
     state.sprite_batch.begin();
     state.sprite_batch.set_camera_frustum(camera_frustum);
     state.sprite_batch.set_ui_frustum(ui_frustum);
 
     state.glyph_batch.begin();
+
+    state.global_sprite_index = 0;
 }
 
 void Renderer::RenderWorld(const World& world) {
@@ -311,6 +317,11 @@ void RenderBatchSprite::init() {
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::PointList;
     pipelineDesc.renderPass = state.swap_chain->GetRenderPass();
     pipelineDesc.rasterizer.frontCCW = true;
+    pipelineDesc.depth = LLGL::DepthDescriptor {
+        .testEnabled = true,
+        .writeEnabled = true,
+        .compareOp = LLGL::CompareOp::GreaterEqual
+    };
     pipelineDesc.blend = LLGL::BlendDescriptor {
         .targets = {
             LLGL::BlendTargetDescriptor {
@@ -351,7 +362,7 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
         .outline_color = sprite.outline_color(),
         .outline_thickness = sprite.outline_thickness(),
         .texture = sprite_texture,
-        .order = sprite.order(),
+        .order = state.global_sprite_index++,
         .is_ui = is_ui
     });
 }
@@ -364,19 +375,10 @@ void RenderBatchSprite::render() {
         sorted_sprites.begin(),
         sorted_sprites.end(),
         [](const SpriteData& a, const SpriteData& b) {
-            if (!a.is_ui && b.is_ui) return true;
-            if (a.is_ui && !b.is_ui) return false;
-
-            if (a.order < b.order) return true;
-            if (b.order < a.order) return false;
-
             const int a_id = a.texture.is_some() ? a.texture->id : -1;
             const int b_id = b.texture.is_some() ? b.texture->id : -1;
 
-            if (a_id < b_id) return true;
-            if (b_id < a_id) return false;
-
-            return false;
+            return a_id < b_id;
         }
     );
     
@@ -399,7 +401,9 @@ void RenderBatchSprite::render() {
             vertex_offset = total_sprite_count;
         }
 
-        m_buffer_ptr->position = sprite_data.position;
+        const float order = static_cast<float>(sprite_data.order) / static_cast<float>(state.global_sprite_index);
+
+        m_buffer_ptr->position = glm::vec3(sprite_data.position, order);
         m_buffer_ptr->rotation = sprite_data.rotation;
         m_buffer_ptr->size = sprite_data.size;
         m_buffer_ptr->offset = sprite_data.offset;
@@ -505,12 +509,17 @@ void RenderBatchGlyph::init() {
     pipelineLayoutDesc.debugName = "GlyphBatch Pipeline";
     pipelineDesc.vertexShader = font_shader.vs;
     pipelineDesc.fragmentShader = font_shader.ps;
-    // pipelineDesc.geometryShader = font_shader.gs;
+    pipelineDesc.geometryShader = font_shader.gs;
     pipelineDesc.pipelineLayout = pipelineLayout;
     pipelineDesc.indexFormat = LLGL::Format::R32UInt;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleList;
     pipelineDesc.renderPass = state.swap_chain->GetRenderPass();
     pipelineDesc.rasterizer.frontCCW = true;
+    pipelineDesc.depth = LLGL::DepthDescriptor {
+        .testEnabled = true,
+        .writeEnabled = true,
+        .compareOp = LLGL::CompareOp::GreaterEqual
+    };
     pipelineDesc.blend = LLGL::BlendDescriptor {
         .targets = {
             LLGL::BlendTargetDescriptor {
@@ -543,7 +552,7 @@ void RenderBatchGlyph::draw_glyph(const glm::vec2& pos, const glm::vec2& size, c
         .size = size,
         .tex_size = tex_size,
         .tex_uv = tex_uv,
-        .order = 0,
+        .order = state.global_sprite_index++,
         .is_ui = ui
     });
 }
@@ -556,16 +565,7 @@ void RenderBatchGlyph::render() {
         sorted_glyphs.begin(),
         sorted_glyphs.end(),
         [](const GlyphData& a, const GlyphData& b) {
-            if (!a.is_ui && b.is_ui) return true;
-            if (a.is_ui && !b.is_ui) return false;
-
-            if (a.order < b.order) return true;
-            if (b.order < a.order) return false;
-
-            if (a.texture.id < b.texture.id) return true;
-            if (b.texture.id < a.texture.id) return false;
-
-            return false;
+            return a.texture.id < b.texture.id;
         }
     );
     
@@ -585,14 +585,16 @@ void RenderBatchGlyph::render() {
             vertex_offset = total_sprite_count * 4;
         }
 
+        const float order = static_cast<float>(glyph_data.order) / static_cast<float>(state.global_sprite_index);
+
         m_buffer_ptr->color = glyph_data.color;
-        m_buffer_ptr->pos = glyph_data.pos;
+        m_buffer_ptr->pos = glm::vec3(glyph_data.pos, order);
         m_buffer_ptr->uv = glyph_data.tex_uv;
         m_buffer_ptr->is_ui = glyph_data.is_ui;
         m_buffer_ptr++;
 
         m_buffer_ptr->color = glyph_data.color;
-        m_buffer_ptr->pos = glyph_data.pos;
+        m_buffer_ptr->pos = glm::vec3(glyph_data.pos, order);
         m_buffer_ptr->pos.x += glyph_data.size.x;
         m_buffer_ptr->uv = glyph_data.tex_uv;
         m_buffer_ptr->uv.x += glyph_data.tex_size.x;
@@ -600,7 +602,7 @@ void RenderBatchGlyph::render() {
         m_buffer_ptr++;
 
         m_buffer_ptr->color = glyph_data.color;
-        m_buffer_ptr->pos = glyph_data.pos;
+        m_buffer_ptr->pos = glm::vec3(glyph_data.pos, order);
         m_buffer_ptr->pos.y += glyph_data.size.y;
         m_buffer_ptr->uv = glyph_data.tex_uv;
         m_buffer_ptr->uv.y += glyph_data.tex_size.y;
@@ -608,7 +610,7 @@ void RenderBatchGlyph::render() {
         m_buffer_ptr++;
 
         m_buffer_ptr->color = glyph_data.color;
-        m_buffer_ptr->pos = glyph_data.pos + glyph_data.size;
+        m_buffer_ptr->pos = glm::vec3(glyph_data.pos + glyph_data.size, order);
         m_buffer_ptr->uv = glyph_data.tex_uv + glyph_data.tex_size;
         m_buffer_ptr->is_ui = glyph_data.is_ui;
         m_buffer_ptr++;

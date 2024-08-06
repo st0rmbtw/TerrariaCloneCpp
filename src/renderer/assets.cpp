@@ -11,7 +11,7 @@ const LLGL::VertexFormat& SpriteVertexFormat() {
     switch (Renderer::Backend()) {
         case RenderBackend::Vulkan:
         case RenderBackend::OpenGL: {
-            vertexFormat.AppendAttribute({"a_position", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"a_position", LLGL::Format::RGB32Float});
             vertexFormat.AppendAttribute({"a_rotation", LLGL::Format::RGBA32Float});
             vertexFormat.AppendAttribute({"a_size", LLGL::Format::RG32Float});
             vertexFormat.AppendAttribute({"a_offset", LLGL::Format::RG32Float});
@@ -25,7 +25,7 @@ const LLGL::VertexFormat& SpriteVertexFormat() {
         break;
         case RenderBackend::D3D11:
         case RenderBackend::D3D12: {
-            vertexFormat.AppendAttribute({"Position", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"Position", LLGL::Format::RGB32Float});
             vertexFormat.AppendAttribute({"Rotation", LLGL::Format::RGBA32Float});
             vertexFormat.AppendAttribute({"Size", LLGL::Format::RG32Float});
             vertexFormat.AppendAttribute({"Offset", LLGL::Format::RG32Float});
@@ -38,16 +38,7 @@ const LLGL::VertexFormat& SpriteVertexFormat() {
         }
         break;
         case RenderBackend::Metal: {
-            vertexFormat.AppendAttribute({"transform0", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"transform1", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"transform2", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"transform3", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"uv_offset_scale", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"color", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"outline_color", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"outline_thickness", LLGL::Format::R32Float});
-            vertexFormat.AppendAttribute({"has_texture", LLGL::Format::R32SInt});
-            vertexFormat.AppendAttribute({"is_ui", LLGL::Format::R32SInt});
+            // TODO
         }
         break;
         default: UNREACHABLE();
@@ -67,7 +58,7 @@ const LLGL::VertexFormat& GlyphVertexFormat() {
         case RenderBackend::Vulkan:
         case RenderBackend::OpenGL: {
             vertexFormat.AppendAttribute({"a_color", LLGL::Format::RGB32Float});
-            vertexFormat.AppendAttribute({"a_position", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"a_position", LLGL::Format::RGB32Float});
             vertexFormat.AppendAttribute({"a_uv", LLGL::Format::RG32Float});
             vertexFormat.AppendAttribute({"a_is_ui", LLGL::Format::R32SInt});
         }
@@ -75,20 +66,13 @@ const LLGL::VertexFormat& GlyphVertexFormat() {
         case RenderBackend::D3D11:
         case RenderBackend::D3D12: {
             vertexFormat.AppendAttribute({"Color", LLGL::Format::RGB32Float});
-            vertexFormat.AppendAttribute({"Position", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"Position", LLGL::Format::RGB32Float});
             vertexFormat.AppendAttribute({"UV", LLGL::Format::RG32Float});
             vertexFormat.AppendAttribute({"IsUI", LLGL::Format::R32SInt});
         }
         break;
         case RenderBackend::Metal: {
-            vertexFormat.AppendAttribute({"transform_col_0", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"transform_col_1", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"transform_col_2", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"transform_col_3", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"color", LLGL::Format::RGB32Float});
-            vertexFormat.AppendAttribute({"size", LLGL::Format::RG32Float});
-            vertexFormat.AppendAttribute({"uv", LLGL::Format::RG32Float});
-            vertexFormat.AppendAttribute({"is_ui", LLGL::Format::R32SInt});
+            // TODO
         }
         break;
         default: UNREACHABLE();

@@ -1,6 +1,6 @@
 #version 450 core
 
-layout(location = 0) in vec2 a_position;
+layout(location = 0) in vec3 a_position;
 layout(location = 1) in vec4 a_rotation;
 layout(location = 2) in vec2 a_size;
 layout(location = 3) in vec2 a_offset;
@@ -17,6 +17,7 @@ layout(location = 0) out VS_OUT {
     vec4 color;
     vec4 outline_color;
     float outline_thickness;
+    float order;
     int has_texture;
     int is_ui;
 } vs_out;
@@ -54,7 +55,7 @@ void main() {
         vec4(1.0, 0.0, 0.0, 0.0),
         vec4(0.0, 1.0, 0.0, 0.0),
         vec4(0.0, 0.0, 1.0, 0.0),
-        vec4(a_position, 0.0, 1.0)
+        vec4(a_position.x, a_position.y, 0.0, 1.0)
     );
 
     transform *= rotation_matrix;
@@ -75,6 +76,7 @@ void main() {
     vs_out.color = a_color;
     vs_out.outline_color = a_outline_color;
     vs_out.outline_thickness = a_outline_thickness;
+    vs_out.order = a_position.z;
     vs_out.has_texture = a_has_texture;
     vs_out.is_ui = a_is_ui;
 }

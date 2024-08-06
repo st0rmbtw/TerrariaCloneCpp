@@ -71,31 +71,21 @@ void Player::init() {
     m_right_eye.set_walk_animation({ .offset = 6, .length = 14 });
 
     m_head.sprite
-        .set_color(glm::vec4(0.92, 0.45, 0.32, 1.0))
-        .set_order(0);
+        .set_color(glm::vec4(0.92, 0.45, 0.32, 1.0));
     m_right_arm.sprite
-        .set_color(glm::vec4(0.92, 0.45, 0.32, 1.0))
-        .set_order(1);
+        .set_color(glm::vec4(0.92, 0.45, 0.32, 1.0));
     m_right_eye.sprite
-        .set_color(glm::vec4(89.0 / 255.0, 76.0 / 255.0, 64.0 / 255.0, 1.0))
-        .set_order(1);
-    m_left_eye.sprite
-        .set_order(1);
+        .set_color(glm::vec4(89.0 / 255.0, 76.0 / 255.0, 64.0 / 255.0, 1.0));
     m_hair.sprite
-        .set_color(glm::vec4(0.55, 0.23, 0.14, 1.0))
-        .set_order(2);
+        .set_color(glm::vec4(0.55, 0.23, 0.14, 1.0));
     m_body.sprite
-        .set_color(glm::vec4(0.58, 0.55, 0.47, 1.0))
-        .set_order(2);
+        .set_color(glm::vec4(0.58, 0.55, 0.47, 1.0));
     m_legs.sprite
-        .set_color(glm::vec4(190.0 / 255.0, 190.0 / 255.0, 156.0 / 255.0, 1.0))
-        .set_order(3);
+        .set_color(glm::vec4(190.0 / 255.0, 190.0 / 255.0, 156.0 / 255.0, 1.0));
     m_left_hand.sprite
-        .set_color(glm::vec4(0.92, 0.45, 0.32, 1.0))
-        .set_order(3);
+        .set_color(glm::vec4(0.92, 0.45, 0.32, 1.0));
     m_left_shoulder.sprite
-        .set_color(glm::vec4(0.58, 0.55, 0.47, 1.0))
-        .set_order(3);
+        .set_color(glm::vec4(0.58, 0.55, 0.47, 1.0));
 }
 
 void Player::set_position(const World& world, const glm::vec2& position) {

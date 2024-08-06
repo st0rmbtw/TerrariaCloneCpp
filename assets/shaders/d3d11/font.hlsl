@@ -7,7 +7,7 @@ cbuffer UniformBuffer : register( b1 )
 struct VSInput
 {
     float3 color : Color;
-    float2 position : Position;
+    float3 position : Position;
     float2 uv : UV;
     int is_ui : IsUI;
 };
@@ -26,7 +26,8 @@ VSOutput VS(VSInput inp)
 	VSOutput outp;
     outp.color = inp.color;
     outp.uv = inp.uv;
-    outp.position = mul(mvp, float4(inp.position, 0.0, 1.0));
+    outp.position = mul(mvp, float4(inp.position.x, inp.position.y, 0.0, 1.0));
+    outp.position.z = inp.position.z;
 
 	return outp;
 }

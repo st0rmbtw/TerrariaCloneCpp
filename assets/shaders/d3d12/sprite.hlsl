@@ -6,7 +6,7 @@ cbuffer UniformBuffer : register( b1 )
 
 struct VSInput
 {
-    float2 position : Position;
+    float3 position : Position;
     float4 rotation : Rotation;
     float2 size : Size;
     float2 offset : Offset;
@@ -25,8 +25,9 @@ struct VSOutput
     nointerpolation float4 color : Color;
     nointerpolation float4 outline_color : OutlineColor;
     nointerpolation float outline_thickness : OutlineThickness;
+    nointerpolation float order : Order;
     nointerpolation int has_texture : HasTexture;
-    nointerpolation float is_ui : IsUI;
+    nointerpolation int is_ui : IsUI;
 };
 
 struct GSOutput {
@@ -91,6 +92,7 @@ VSOutput VS(VSInput inp)
     outp.color = inp.color;
     outp.outline_color = inp.outline_color;
     outp.outline_thickness = inp.outline_thickness;
+    outp.order = inp.position.z;
     outp.has_texture = inp.has_texture;
     outp.is_ui = inp.is_ui;
 
@@ -105,7 +107,8 @@ void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
     float4 color = input[0].color;
     float4 outline_color = input[0].outline_color;
     float outline_thickness = input[0].outline_thickness;
-    float is_ui = input[0].is_ui;
+    int is_ui = input[0].is_ui;
+    float order = input[0].order;
     int has_texture = input[0].has_texture;
     
     float4x4 mvp = is_ui > 0 ? mul(u_screen_projection, transform) : mul(u_view_projection, transform);
@@ -118,21 +121,25 @@ void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
 
     float2 position = float2(0.0, 0.0);
     output.position = mul(mvp, float4(position, 0.0, 1.0));
+    output.position.z = order;
     output.uv = position * uv_offset_scale.zw + uv_offset_scale.xy;
     OutputStream.Append(output);
 
     position = float2(1.0, 0.0);
     output.position = mul(mvp, float4(position, 0.0, 1.0));
+    output.position.z = order;
     output.uv = position * uv_offset_scale.zw + uv_offset_scale.xy;
     OutputStream.Append(output);
 
     position = float2(0.0, 1.0);
     output.position = mul(mvp, float4(position, 0.0, 1.0));
+    output.position.z = order;
     output.uv = position * uv_offset_scale.zw + uv_offset_scale.xy;
     OutputStream.Append(output);
 
     position = float2(1.0, 1.0);
     output.position = mul(mvp, float4(position, 0.0, 1.0));
+    output.position.z = order;
     output.uv = position * uv_offset_scale.zw + uv_offset_scale.xy;
     OutputStream.Append(output);
 }
@@ -142,6 +149,8 @@ SamplerState Sampler : register(s3);
 
 float4 PS(GSOutput inp) : SV_Target
 {
+    float4 color = inp.color;
+
     if (inp.has_texture > 0) {
         if (inp.outline_thickness > 0.0) {
             float outline = Texture.Sample(Sampler, inp.uv + float2(inp.outline_thickness, 0.0)).a;
@@ -154,12 +163,14 @@ float4 PS(GSOutput inp) : SV_Target
             outline += Texture.Sample(Sampler, inp.uv + float2(-inp.outline_thickness, -inp.outline_thickness)).a;
             outline = min(outline, 1.0);
             float4 c = Texture.Sample(Sampler, inp.uv);
-            return lerp(c, inp.outline_color, outline);
+            color = lerp(c, inp.outline_color, outline);
         } else {
-            return Texture.Sample(Sampler, inp.uv) * inp.color;
+            color = Texture.Sample(Sampler, inp.uv) * inp.color;
         }
-    } else {
-        return inp.color;
     }
+
+    if (color.a < 0.5f) discard;
+
+    return color;
 };
 

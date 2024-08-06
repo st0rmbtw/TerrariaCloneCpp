@@ -25,6 +25,8 @@ struct ProjectionsUniform {
     glm::mat4 view_projection_matrix;
 };
 
+constexpr float MAX_Z = 1000.0f;
+
 namespace Renderer {
     bool InitEngine(RenderBackend backend);
     bool Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool vsync, bool fullscreen);
@@ -36,7 +38,7 @@ namespace Renderer {
     void DrawSprite(const Sprite& sprite, RenderLayer render_layer = RenderLayer::Main);
     void DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer = RenderLayer::Main);
     void DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, RenderLayer render_layer = RenderLayer::Main);
-    
+
     inline void DrawText(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, RenderLayer render_layer = RenderLayer::Main) {
         DrawText(text.c_str(), text.length(), size, position, color, font, render_layer);
     }

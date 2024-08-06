@@ -8,7 +8,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 struct SpriteVertex {
-    glm::vec2 position;
+    glm::vec3 position;
     glm::quat rotation;
     glm::vec2 size;
     glm::vec2 offset;

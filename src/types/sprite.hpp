@@ -41,7 +41,6 @@ public:
     inline BaseSprite& set_anchor(Anchor anchor) { m_anchor = anchor; return *this; }
     inline BaseSprite& set_flip_x(bool flip_x) { m_flip_x = flip_x; return *this; }
     inline BaseSprite& set_flip_y(bool flip_y) { m_flip_y = flip_y; return *this; }
-    inline BaseSprite& set_order(int order) { m_order = order; return *this; }
 
     [[nodiscard]] inline const glm::vec2& position() const { return m_position; }
     [[nodiscard]] inline const glm::quat& rotation() const { return m_rotation; }
@@ -53,8 +52,6 @@ public:
     [[nodiscard]] inline Anchor anchor() const { return m_anchor; }
     [[nodiscard]] inline bool flip_x() const { return m_flip_x; }
     [[nodiscard]] inline bool flip_y() const { return m_flip_y; }
-
-    [[nodiscard]] inline int order() const { return m_order; }
 
     [[nodiscard]] virtual glm::vec2 size() const = 0;
 
@@ -69,7 +66,6 @@ private:
     glm::vec4 m_color = glm::vec4(1.0f);
     glm::vec4 m_outline_color = glm::vec4(0.0f);
     float m_outline_thickness = 0.0f;
-    int m_order = 0;
     Anchor m_anchor = Anchor::Center;
     bool m_flip_x = false;
     bool m_flip_y = false;

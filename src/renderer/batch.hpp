@@ -19,7 +19,7 @@ constexpr size_t MAX_INDICES = MAX_QUADS * 6;
 
 struct GlyphVertex {
     glm::vec3 color;
-    glm::vec2 pos;
+    glm::vec3 pos;
     glm::vec2 uv;
     int is_ui;
 };
@@ -34,7 +34,7 @@ struct SpriteData {
     glm::vec4 outline_color;
     float outline_thickness;
     tl::optional<Texture> texture;
-    int order;
+    uint32_t order;
     bool is_ui;
 };
 
@@ -51,7 +51,7 @@ struct GlyphData {
     glm::vec2 size;
     glm::vec2 tex_size;
     glm::vec2 tex_uv;
-    int order;
+    uint32_t order;
     bool is_ui;
 };
 
