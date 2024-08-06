@@ -7,8 +7,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "../time/time.hpp"
-#include "../types/block.hpp"
+#include "time/time.hpp"
+#include "types/block.hpp"
 
 constexpr size_t MAX_PARTICLES_COUNT = 10000;
 constexpr float PARTICLE_SIZE = 8.0f;

@@ -59,6 +59,9 @@ public:
     inline auto get_projection_matrix() const -> const glm::mat4x4& { return m_projection_matrix; }
 
     [[nodiscard]]
+    inline auto get_nonscale_projection_matrix() const -> const glm::mat4x4& { return m_nonscale_projection_matrix; }
+
+    [[nodiscard]]
     inline auto get_view_matrix() const -> const glm::mat4x4& { return m_view_matrix; }
     
     [[nodiscard]]
@@ -66,6 +69,9 @@ public:
 
     [[nodiscard]]
     inline auto get_projection_area() const -> const math::Rect& { return m_area; }
+
+    [[nodiscard]]
+    inline auto get_nonscale_projection_area() const -> const math::Rect& { return m_area_nonscale; }
 
     [[nodiscard]]
     inline float zoom() const { return m_zoom; }
@@ -77,10 +83,12 @@ private:
 
 private:
     glm::mat4x4 m_projection_matrix;
+    glm::mat4x4 m_nonscale_projection_matrix;
     glm::mat4x4 m_view_matrix;
     glm::mat4x4 m_transform_matrix;
 
     math::Rect m_area;
+    math::Rect m_area_nonscale;
 
     glm::uvec2 m_viewport;
     glm::vec2 m_position;

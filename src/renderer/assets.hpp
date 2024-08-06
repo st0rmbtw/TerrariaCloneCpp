@@ -18,6 +18,7 @@ struct SpriteVertex {
     float outline_thickness;
     int has_texture;
     int is_ui;
+    int is_nonscalable;
 };
 
 const LLGL::VertexFormat& SpriteVertexFormat();

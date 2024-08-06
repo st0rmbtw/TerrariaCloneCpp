@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <glm/glm.hpp>
-#include <utility>
 #include <ctime>
 
 #include "../types/block.hpp"

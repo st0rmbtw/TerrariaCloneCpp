@@ -36,6 +36,7 @@ struct SpriteData {
     tl::optional<Texture> texture;
     uint32_t order;
     bool is_ui;
+    bool is_nonscalable;
 };
 
 struct FlushData {

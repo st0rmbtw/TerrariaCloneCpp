@@ -6,10 +6,16 @@
 #include "../assets.hpp"
 #include "../world/chunk.hpp"
 
+#include "LLGL/PipelineStateFlags.h"
 #include "renderer.hpp"
 
+struct __attribute__((aligned(16))) UniformData {
+    float tile_depth;
+    float wall_depth;
+};
+
 void WorldRenderer::init() {
-    m_transform_buffer = Renderer::Context()->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(glm::mat4)));
+    m_order_buffer = Renderer::Context()->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(UniformData)));
 
     const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 3 : 4;
 
@@ -23,7 +29,7 @@ void WorldRenderer::init() {
             LLGL::BindingSlot(1)
         ),
         LLGL::BindingDescriptor(
-            "TransformBuffer",
+            "OrderBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::GeometryStage,
@@ -47,6 +53,11 @@ void WorldRenderer::init() {
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::PointList;
     pipelineDesc.renderPass = Renderer::SwapChain()->GetRenderPass();
     pipelineDesc.rasterizer.frontCCW = true;
+    pipelineDesc.depth = LLGL::DepthDescriptor {
+        .testEnabled = true,
+        .writeEnabled = true,
+        .compareOp = LLGL::CompareOp::GreaterEqual  
+    };
     pipelineDesc.blend = LLGL::BlendDescriptor {
         .targets = {
             LLGL::BlendTargetDescriptor {
@@ -65,51 +76,44 @@ void WorldRenderer::init() {
 void WorldRenderer::render(const World& world) {
     auto* const commands = Renderer::CommandBuffer();
 
-    std::vector<const RenderChunk*> blocks;
-    blocks.reserve(world.visible_chunks().size());
+    auto uniform = UniformData {
+        .tile_depth = static_cast<float>(m_tile_depth) / static_cast<float>(Renderer::GetGlobalDepthIndex()),
+        .wall_depth = static_cast<float>(m_wall_depth) / static_cast<float>(Renderer::GetGlobalDepthIndex()),
+    };
 
-    std::vector<const RenderChunk*> walls;
-    walls.reserve(world.visible_chunks().size());
+    commands->UpdateBuffer(*m_order_buffer, 0, &uniform, sizeof(UniformData));
 
     for (const glm::uvec2& pos : world.visible_chunks()) {
         const RenderChunk& chunk = world.render_chunks().at(pos);
 
-        if (!chunk.blocks_empty()) blocks.push_back(&chunk);
-        if (!chunk.walls_empty()) walls.push_back(&chunk);
-    }
+        if (!chunk.walls_empty()) {
+            const Texture& t = Assets::GetTexture(TextureKey::Walls);
 
-    for (const RenderChunk* chunk : walls) {
-        commands->UpdateBuffer(*m_transform_buffer, 0, glm::value_ptr(chunk->transform_matrix), sizeof(glm::mat4));
+            commands->SetPipelineState(*m_pipeline);
+            commands->SetVertexBuffer(*chunk.wall_vertex_buffer);
+            commands->SetResource(0, *Renderer::ProjectionsUniformBuffer());
+            commands->SetResource(1, *m_order_buffer);
+            commands->SetResource(2, *t.texture);
+            commands->SetResource(3, Assets::GetSampler(t.sampler));
 
-        const Texture& t = Assets::GetTexture(TextureKey::Walls);
+            commands->Draw(chunk.walls_count, 0);
+        }
 
-        commands->SetPipelineState(*m_pipeline);
-        commands->SetVertexBuffer(*chunk->wall_vertex_buffer);
-        commands->SetResource(0, *Renderer::ProjectionsUniformBuffer());
-        commands->SetResource(1, *m_transform_buffer);
-        commands->SetResource(2, *t.texture);
-        commands->SetResource(3, Assets::GetSampler(t.sampler));
+        if (!chunk.blocks_empty()) {
+            const Texture& t = Assets::GetTexture(TextureKey::Tiles);
 
-        commands->Draw(chunk->walls_count, 0);
-    }
+            commands->SetPipelineState(*m_pipeline);
+            commands->SetVertexBuffer(*chunk.block_vertex_buffer);
+            commands->SetResource(0, *Renderer::ProjectionsUniformBuffer());
+            commands->SetResource(1, *m_order_buffer);
+            commands->SetResource(2, *t.texture);
+            commands->SetResource(3, Assets::GetSampler(t.sampler));
 
-    for (const RenderChunk* chunk : blocks) {
-        commands->UpdateBuffer(*m_transform_buffer, 0, glm::value_ptr(chunk->transform_matrix), sizeof(glm::mat4));
-
-        const Texture& t = Assets::GetTexture(TextureKey::Tiles);
-
-        commands->SetPipelineState(*m_pipeline);
-        commands->SetVertexBuffer(*chunk->block_vertex_buffer);
-        commands->SetResource(0, *Renderer::ProjectionsUniformBuffer());
-        commands->SetResource(1, *m_transform_buffer);
-        commands->SetResource(2, *t.texture);
-        commands->SetResource(3, Assets::GetSampler(t.sampler));
-
-        commands->Draw(chunk->blocks_count, 0);
+            commands->Draw(chunk.blocks_count, 0);
+        }
     }
 }
 
 void WorldRenderer::terminate() {
-    if (m_transform_buffer) Renderer::Context()->Release(*m_transform_buffer);
     if (m_pipeline) Renderer::Context()->Release(*m_pipeline);
 }

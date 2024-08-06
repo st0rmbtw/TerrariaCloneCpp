@@ -21,6 +21,7 @@ const LLGL::VertexFormat& SpriteVertexFormat() {
             vertexFormat.AppendAttribute({"a_outline_thickness", LLGL::Format::R32Float});
             vertexFormat.AppendAttribute({"a_has_texture", LLGL::Format::R32SInt});
             vertexFormat.AppendAttribute({"a_is_ui", LLGL::Format::R32SInt});
+            vertexFormat.AppendAttribute({"a_is_nonscale", LLGL::Format::R32SInt});
         }
         break;
         case RenderBackend::D3D11:
@@ -35,6 +36,7 @@ const LLGL::VertexFormat& SpriteVertexFormat() {
             vertexFormat.AppendAttribute({"OutlineThickness", LLGL::Format::R32Float});
             vertexFormat.AppendAttribute({"HasTexture", LLGL::Format::R32SInt});
             vertexFormat.AppendAttribute({"IsUI", LLGL::Format::R32SInt});        
+            vertexFormat.AppendAttribute({"IsNonScale", LLGL::Format::R32SInt});        
         }
         break;
         case RenderBackend::Metal: {
@@ -91,6 +93,7 @@ const LLGL::VertexFormat& TilemapVertexFormat() {
         case RenderBackend::OpenGL: {
             vertexFormat.AppendAttribute({"a_position", LLGL::Format::RG32Float});
             vertexFormat.AppendAttribute({"a_atlas_pos", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"a_world_pos", LLGL::Format::RG32Float});
             vertexFormat.AppendAttribute({"a_tile_id", LLGL::Format::R32UInt});
             vertexFormat.AppendAttribute({"a_tile_type", LLGL::Format::R32UInt});
         }
@@ -99,6 +102,7 @@ const LLGL::VertexFormat& TilemapVertexFormat() {
         case RenderBackend::D3D12: {
             vertexFormat.AppendAttribute({"Position", LLGL::Format::RG32Float});
             vertexFormat.AppendAttribute({"AtlasPos", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"WorldPos", LLGL::Format::RG32Float});
             vertexFormat.AppendAttribute({"TileId", LLGL::Format::R32UInt});
             vertexFormat.AppendAttribute({"TileType", LLGL::Format::R32UInt});
         }

@@ -15,7 +15,7 @@
 #include "../time/timer.hpp"
 #include "../utils.hpp"
 #include "../world/chunk.hpp"
-#include "../world/particles.hpp"
+#include "../particles.hpp"
 
 using Constants::TILE_SIZE;
 

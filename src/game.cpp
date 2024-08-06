@@ -1,6 +1,7 @@
+#include "game.hpp"
+
 #include <GLFW/glfw3.h>
 
-#include "game.hpp"
 #include "constants.hpp"
 #include "glm/gtc/random.hpp"
 #include "renderer/camera.h"
@@ -13,7 +14,8 @@
 #include "ui.hpp"
 #include "world/autotile.hpp"
 #include "player/player.hpp"
-#include "world/particles.hpp"
+#include "particles.hpp"
+#include "background.hpp"
 
 static struct GameState {
     Camera camera;
@@ -57,6 +59,7 @@ GLFWwindow* create_window(LLGL::Extent2D size, bool fullscreen) {
     }
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+    glfwSetWindowSizeLimits(window, 1000, 500, GLFW_DONT_CARE, GLFW_DONT_CARE);
 
     glfwSetKeyCallback(window, handle_keyboard_events);
     glfwSetMouseButtonCallback(window, handle_mouse_button_events);
@@ -128,6 +131,7 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
 
     ParticleManager::Init();
     UI::Init();
+    Background::Init(g.world);
 
     g.player.init();
     g.player.inventory().set_item(0, ITEM_COPPER_AXE);
@@ -238,6 +242,8 @@ void update() {
 
     g.camera.update();
     g.world.update(g.camera);
+
+    Background::Update(g.camera);
     
     UI::Update(g.player.inventory());
     
@@ -263,7 +269,9 @@ void post_update() {
 void render() {
     Renderer::Begin(g.camera);
 
-    Renderer::RenderWorld(g.world);
+    Background::Render();
+
+    Renderer::RenderWorld();
 
     g.player.render();
 
@@ -271,7 +279,7 @@ void render() {
 
     UI::Render(g.camera, g.player.inventory());
 
-    Renderer::Render();
+    Renderer::Render(g.world);
 }
 
 void post_render() {

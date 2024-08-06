@@ -34,7 +34,7 @@ static struct RendererState {
     WorldRenderer world_renderer;
     RenderBackend backend;
     
-    uint32_t global_sprite_index = 0;
+    uint32_t global_depth_index = 0;
 } state;
 
 static constexpr uint32_t MAX_TEXTURES_COUNT = 32;
@@ -46,6 +46,7 @@ LLGL::CommandQueue* Renderer::CommandQueue() { return state.command_queue; }
 const std::shared_ptr<CustomSurface>& Renderer::Surface() { return state.surface; }
 LLGL::Buffer* Renderer::ProjectionsUniformBuffer() { return state.constant_buffer; }
 RenderBackend Renderer::Backend() { return state.backend; }
+uint32_t Renderer::GetGlobalDepthIndex() { return state.global_depth_index; };
 
 bool Renderer::InitEngine(RenderBackend backend) {
     LLGL::Report report;
@@ -143,6 +144,7 @@ void Renderer::Begin(const Camera& camera) {
     auto projections_uniform = ProjectionsUniform {
         .screen_projection_matrix = screen_projection,
         .view_projection_matrix = camera.get_projection_matrix() * camera.get_view_matrix(),
+        .nonscale_view_projection_matrix = camera.get_nonscale_projection_matrix() * camera.get_view_matrix()
     };
 
     commands->Begin();
@@ -151,7 +153,7 @@ void Renderer::Begin(const Camera& camera) {
     commands->UpdateBuffer(*state.constant_buffer, 0, &projections_uniform, sizeof(projections_uniform));
 
     commands->BeginRenderPass(*swap_chain);
-    commands->Clear(LLGL::ClearFlags::Color, LLGL::ClearValue(0.854f, 0.584f, 0.584f, 1.0f));
+    commands->Clear(LLGL::ClearFlags::Color, LLGL::ClearValue(1.f, 0.0f, 0.0f, 1.0f));
     commands->Clear(LLGL::ClearFlags::Depth, LLGL::ClearValue(0.0f));
 
     state.sprite_batch.begin();
@@ -160,18 +162,22 @@ void Renderer::Begin(const Camera& camera) {
 
     state.glyph_batch.begin();
 
-    state.global_sprite_index = 0;
+    state.global_depth_index = 0;
 }
 
-void Renderer::RenderWorld(const World& world) {
-    state.world_renderer.render(world);
+void Renderer::RenderWorld() {
+    const uint32_t wall_depth = state.global_depth_index++;
+    const uint32_t tile_depth = state.global_depth_index++;
+
+    state.world_renderer.set_depth(wall_depth, tile_depth);
 }
 
-void Renderer::Render() {
+void Renderer::Render(const World& world) {
     auto* const commands = Renderer::CommandBuffer();
     auto* const queue = state.command_queue;
     auto* const swap_chain = Renderer::SwapChain();
 
+    state.world_renderer.render(world);
     state.sprite_batch.render();
     state.glyph_batch.render();
 
@@ -362,8 +368,9 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
         .outline_color = sprite.outline_color(),
         .outline_thickness = sprite.outline_thickness(),
         .texture = sprite_texture,
-        .order = state.global_sprite_index++,
-        .is_ui = is_ui
+        .order = state.global_depth_index++,
+        .is_ui = is_ui,
+        .is_nonscalable = sprite.nonscalable()
     });
 }
 
@@ -377,6 +384,9 @@ void RenderBatchSprite::render() {
         [](const SpriteData& a, const SpriteData& b) {
             const int a_id = a.texture.is_some() ? a.texture->id : -1;
             const int b_id = b.texture.is_some() ? b.texture->id : -1;
+
+            if (!a.is_ui && b.is_ui) return true;
+            if (a.is_ui && !b.is_ui) return false;
 
             return a_id < b_id;
         }
@@ -401,7 +411,7 @@ void RenderBatchSprite::render() {
             vertex_offset = total_sprite_count;
         }
 
-        const float order = static_cast<float>(sprite_data.order) / static_cast<float>(state.global_sprite_index);
+        const float order = static_cast<float>(sprite_data.order) / static_cast<float>(state.global_depth_index);
 
         m_buffer_ptr->position = glm::vec3(sprite_data.position, order);
         m_buffer_ptr->rotation = sprite_data.rotation;
@@ -413,6 +423,7 @@ void RenderBatchSprite::render() {
         m_buffer_ptr->outline_thickness = sprite_data.outline_thickness;
         m_buffer_ptr->has_texture = curr_texture_id >= 0;
         m_buffer_ptr->is_ui = sprite_data.is_ui;
+        m_buffer_ptr->is_nonscalable = sprite_data.is_nonscalable;
         m_buffer_ptr++;
 
         sprite_count += 1;
@@ -552,7 +563,7 @@ void RenderBatchGlyph::draw_glyph(const glm::vec2& pos, const glm::vec2& size, c
         .size = size,
         .tex_size = tex_size,
         .tex_uv = tex_uv,
-        .order = state.global_sprite_index++,
+        .order = state.global_depth_index++,
         .is_ui = ui
     });
 }
@@ -585,7 +596,7 @@ void RenderBatchGlyph::render() {
             vertex_offset = total_sprite_count * 4;
         }
 
-        const float order = static_cast<float>(glyph_data.order) / static_cast<float>(state.global_sprite_index);
+        const float order = static_cast<float>(glyph_data.order) / static_cast<float>(state.global_depth_index);
 
         m_buffer_ptr->color = glyph_data.color;
         m_buffer_ptr->pos = glm::vec3(glyph_data.pos, order);

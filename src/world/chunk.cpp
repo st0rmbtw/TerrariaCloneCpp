@@ -10,22 +10,13 @@
 #define TILE_TYPE_BLOCK 0
 #define TILE_TYPE_WALL 1
 
-using Constants::RENDER_CHUNK_SIZE;
-using Constants::RENDER_CHUNK_SIZE_U;
-
 struct ChunkVertex {
     glm::vec2 position;
     glm::vec2 atlas_pos;
+    glm::vec2 world_pos;
     uint32_t tile_id;
     uint32_t tile_type;
 };
-
-RenderChunk::RenderChunk(const glm::uvec2& index, const glm::vec2& world_pos, const World& world) :
-    transform_matrix(glm::translate(glm::mat4(1.), glm::vec3(world_pos.x * RENDER_CHUNK_SIZE, world_pos.y * RENDER_CHUNK_SIZE, 0.0))),
-    index(index)
-{
-    build_mesh(world);
-}
 
 void RenderChunk::destroy() {
     if (block_vertex_buffer) Renderer::Context()->Release(*block_vertex_buffer);
@@ -75,6 +66,7 @@ void RenderChunk::build_mesh(const World& world) {
                     block_vertices.push_back(ChunkVertex {
                         .position = glm::vec2(x, y),
                         .atlas_pos = glm::vec2(atlas_pos.x, atlas_pos.y),
+                        .world_pos = world_pos,
                         .tile_id = static_cast<uint32_t>(block->type),
                         .tile_type = TILE_TYPE_BLOCK
                     });
@@ -100,6 +92,7 @@ void RenderChunk::build_mesh(const World& world) {
                     wall_vertices.push_back(ChunkVertex {
                         .position = glm::vec2(x, y),
                         .atlas_pos = glm::vec2(atlas_pos.x, atlas_pos.y),
+                        .world_pos = world_pos,
                         .tile_id = static_cast<uint32_t>(wall->type),
                         .tile_type = TILE_TYPE_WALL
                     });

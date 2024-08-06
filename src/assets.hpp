@@ -32,6 +32,19 @@ enum class TextureKey : uint8_t {
     UiInventoryBackground,
     UiInventorySelected,
     UiInventoryHotbar,
+
+    Background0,
+    Background7,
+    Background55,
+    Background74,
+    Background77,
+    Background78,
+    Background90,
+    Background91,
+    Background92,
+    Background93,
+    Background112,
+    Background114,
 };
 
 enum class ShaderAssetKey : uint8_t {

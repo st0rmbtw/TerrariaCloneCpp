@@ -23,6 +23,7 @@ enum class RenderLayer : uint8_t {
 struct ProjectionsUniform {
     glm::mat4 screen_projection_matrix;
     glm::mat4 view_projection_matrix;
+    glm::mat4 nonscale_view_projection_matrix;
 };
 
 constexpr float MAX_Z = 1000.0f;
@@ -30,10 +31,10 @@ constexpr float MAX_Z = 1000.0f;
 namespace Renderer {
     bool InitEngine(RenderBackend backend);
     bool Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool vsync, bool fullscreen);
-    void RenderWorld(const World& world);
+    void RenderWorld();
 
     void Begin(const Camera& camera);
-    void Render();
+    void Render(const World& world);
 
     void DrawSprite(const Sprite& sprite, RenderLayer render_layer = RenderLayer::Main);
     void DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer = RenderLayer::Main);
@@ -61,13 +62,14 @@ namespace Renderer {
 
     void Terminate();
 
-    const LLGL::RenderSystemPtr& Context();
-    LLGL::SwapChain* SwapChain();
-    LLGL::CommandBuffer* CommandBuffer();
-    LLGL::CommandQueue* CommandQueue();
-    const std::shared_ptr<CustomSurface>& Surface();
-    LLGL::Buffer* ProjectionsUniformBuffer();
-    RenderBackend Backend();
+    [[nodiscard]] const LLGL::RenderSystemPtr& Context();
+    [[nodiscard]] LLGL::SwapChain* SwapChain();
+    [[nodiscard]] LLGL::CommandBuffer* CommandBuffer();
+    [[nodiscard]] LLGL::CommandQueue* CommandQueue();
+    [[nodiscard]] const std::shared_ptr<CustomSurface>& Surface();
+    [[nodiscard]] LLGL::Buffer* ProjectionsUniformBuffer();
+    [[nodiscard]] RenderBackend Backend();
+    [[nodiscard]] uint32_t GetGlobalDepthIndex();
 };
 
 #endif

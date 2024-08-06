@@ -85,6 +85,18 @@ static const std::pair<TextureKey, AssetTexture> TEXTURE_ASSETS[] = {
     { TextureKey::UiInventorySelected,   AssetTexture("assets/sprites/ui/Inventory_Back14.png", TextureSampler::Linear) },
     { TextureKey::UiInventoryHotbar,     AssetTexture("assets/sprites/ui/Inventory_Back9.png", TextureSampler::Linear) },
 
+    { TextureKey::Background0, AssetTexture("assets/sprites/backgrounds/Background_0.png", TextureSampler::Nearest) },
+    { TextureKey::Background7, AssetTexture("assets/sprites/backgrounds/Background_7.png", TextureSampler::Nearest) },
+    { TextureKey::Background55, AssetTexture("assets/sprites/backgrounds/Background_55.png", TextureSampler::Nearest) },
+    { TextureKey::Background74, AssetTexture("assets/sprites/backgrounds/Background_74.png", TextureSampler::Nearest) },
+    { TextureKey::Background78, AssetTexture("assets/sprites/backgrounds/Background_78.png", TextureSampler::Nearest) },
+    { TextureKey::Background90, AssetTexture("assets/sprites/backgrounds/Background_90.png", TextureSampler::Nearest) },
+    { TextureKey::Background91, AssetTexture("assets/sprites/backgrounds/Background_91.png", TextureSampler::Nearest) },
+    { TextureKey::Background92, AssetTexture("assets/sprites/backgrounds/Background_92.png", TextureSampler::Nearest) },
+    { TextureKey::Background93, AssetTexture("assets/sprites/backgrounds/Background_93.png", TextureSampler::Nearest) },
+    { TextureKey::Background112, AssetTexture("assets/sprites/backgrounds/Background_112.png", TextureSampler::Nearest) },
+    { TextureKey::Background114, AssetTexture("assets/sprites/backgrounds/Background_114.png", TextureSampler::Nearest) },
+
     { TextureKey::Particles, AssetTexture("assets/sprites/Particles.png") }
 };
 

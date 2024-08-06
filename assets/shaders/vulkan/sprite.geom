@@ -3,6 +3,7 @@
 layout(binding = 1) uniform UniformBuffer {
     mat4 screen_projection;
     mat4 view_projection;
+    mat4 nonscale_view_projection;
 } ubo;
 
 layout(location = 0) in VS_OUT {
@@ -13,7 +14,8 @@ layout(location = 0) in VS_OUT {
     float outline_thickness;
     float order;
     int has_texture;
-    int is_ui;
+    bool is_ui;
+    bool is_nonscale;
 } gs_in[];
 
 layout(location = 0) out vec2 g_uv;
@@ -32,10 +34,11 @@ void main() {
     float outline_thickness = gs_in[0].outline_thickness;
     float order = gs_in[0].order;
     mat4 transform = gs_in[0].transform;
-    int is_ui = gs_in[0].is_ui;
+    bool is_ui = gs_in[0].is_ui;
+    bool is_nonscale = gs_in[0].is_nonscale;
     int has_texture = gs_in[0].has_texture;
     
-    mat4 mvp = is_ui > 0.5 ? ubo.screen_projection * transform : ubo.view_projection * transform;
+    mat4 mvp = is_ui ? ubo.screen_projection * transform : is_nonscale ? ubo.nonscale_view_projection * transform : ubo.view_projection * transform;
 
     vec2 position = vec2(0.0, 0.0);
     gl_Position = mvp * vec4(position, 0.0, 1.0);

@@ -12,8 +12,10 @@ public:
         Center = 0,
         TopLeft,
         TopRight,
+        TopCenter,
         BottomLeft,
-        BottomRight    
+        BottomRight,
+        BottomCenter
     };
 
     Anchor() = default;
@@ -28,11 +30,13 @@ public:
 
     [[nodiscard]] constexpr inline glm::vec2 to_vec2() const noexcept {
         switch (m_value) {
-        case Anchor::Center:      return {0.5f, 0.5f};
-        case Anchor::TopLeft:     return {0.0f, 0.0f};
-        case Anchor::TopRight:    return {1.0f, 0.0f};
-        case Anchor::BottomLeft:  return {0.0f, 1.0f};
-        case Anchor::BottomRight: return {1.0f, 1.0f};
+        case Anchor::Center:       return {0.5f, 0.5f};
+        case Anchor::TopLeft:      return {0.0f, 0.0f};
+        case Anchor::TopRight:     return {1.0f, 0.0f};
+        case Anchor::BottomLeft:   return {0.0f, 1.0f};
+        case Anchor::BottomRight:  return {1.0f, 1.0f};
+        case Anchor::TopCenter:    return {0.5f, 0.0f};
+        case Anchor::BottomCenter: return {0.5f, 1.0f};
         }
     }
 

@@ -10,6 +10,7 @@ layout(location = 6) in vec4 a_outline_color;
 layout(location = 7) in float a_outline_thickness;
 layout(location = 8) in int a_has_texture;
 layout(location = 9) in int a_is_ui;
+layout(location = 10) in int a_is_nonscale;
 
 out VS_OUT {
     mat4 transform;
@@ -19,7 +20,8 @@ out VS_OUT {
     float outline_thickness;
     float order;
     int has_texture;
-    int is_ui;
+    bool is_ui;
+    bool is_nonscale;
 } vs_out;
 
 void main() {
@@ -78,5 +80,6 @@ void main() {
     vs_out.outline_thickness = a_outline_thickness;
     vs_out.order = a_position.z;
     vs_out.has_texture = a_has_texture;
-    vs_out.is_ui = a_is_ui;
+    vs_out.is_ui = a_is_ui > 0;
+    vs_out.is_nonscale = a_is_nonscale > 0;
 }

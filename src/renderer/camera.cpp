@@ -8,10 +8,15 @@ void Camera::update_projection_area() {
         -glm::vec2(m_viewport) / 2.0f * m_zoom,
         glm::vec2(m_viewport) / 2.0f * m_zoom
     );
+    m_area_nonscale = math::Rect::from_corners(
+        -glm::vec2(m_viewport) / 2.0f,
+        glm::vec2(m_viewport) / 2.0f
+    );
 }
 
 void Camera::compute_projection_and_view_matrix() {
     const math::Rect& projection_area = get_projection_area();
+    const math::Rect& nonscale_projection_area = get_nonscale_projection_area();
 
     if (Renderer::Backend().IsOpenGL()) {
         m_projection_matrix = glm::orthoRH_NO(
@@ -19,7 +24,11 @@ void Camera::compute_projection_and_view_matrix() {
             projection_area.max.y, projection_area.min.y,
             0.0f, 100.0f
         );
-
+        m_nonscale_projection_matrix = glm::orthoRH_NO(
+            nonscale_projection_area.min.x, nonscale_projection_area.max.x,
+            nonscale_projection_area.max.y, nonscale_projection_area.min.y,
+            0.0f, 100.0f
+        );
         m_view_matrix = glm::lookAtRH(
             glm::vec3(m_position, 50.0f),
             glm::vec3(m_position, 0.0),
@@ -29,6 +38,11 @@ void Camera::compute_projection_and_view_matrix() {
         m_projection_matrix = glm::orthoLH_ZO(
             projection_area.min.x, projection_area.max.x,
             projection_area.max.y, projection_area.min.y,
+            0.0f, 100.0f
+        );
+        m_nonscale_projection_matrix = glm::orthoLH_ZO(
+            nonscale_projection_area.min.x, nonscale_projection_area.max.x,
+            nonscale_projection_area.max.y, nonscale_projection_area.min.y,
             0.0f, 100.0f
         );
         m_view_matrix = glm::lookAtLH(
