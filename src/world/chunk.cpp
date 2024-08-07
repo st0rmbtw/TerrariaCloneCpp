@@ -11,8 +11,8 @@
 #define TILE_TYPE_WALL 1
 
 struct ChunkVertex {
+    glm::vec4 uv_size;
     glm::vec2 position;
-    glm::vec2 atlas_pos;
     glm::vec2 world_pos;
     uint32_t tile_id;
     uint32_t tile_type;
@@ -36,6 +36,15 @@ inline LLGL::BufferDescriptor GetBufferDescriptor() {
 }
 
 void RenderChunk::build_mesh(const World& world) {
+    const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureKey::Tiles).size);
+    const glm::vec2 wall_tex_size = glm::vec2(Assets::GetTexture(TextureKey::Walls).size);
+
+    const glm::vec2 tile_size = glm::vec2(Constants::TILE_SIZE) / tile_tex_size;
+    const glm::vec2 wall_size = glm::vec2(Constants::WALL_SIZE) / wall_tex_size;
+
+    const glm::vec2 tile_padding = glm::vec2(Constants::TILE_TEXTURE_PADDING) / tile_tex_size;
+    const glm::vec2 wall_padding = glm::vec2(Constants::WALL_TEXTURE_PADDING) / wall_tex_size;
+
     std::vector<ChunkVertex> block_vertices;
     std::vector<ChunkVertex> wall_vertices;
 
@@ -61,11 +70,11 @@ void RenderChunk::build_mesh(const World& world) {
                 if (block.is_some()) {
                     blocks_count += 1;
 
-                    const TextureAtlasPos atlas_pos = block->atlas_pos;
+                    const glm::vec2 atlas_pos = glm::vec2(block->atlas_pos.x, block->atlas_pos.y);
 
                     block_vertices.push_back(ChunkVertex {
+                        .uv_size = glm::vec4(atlas_pos * (tile_size + tile_padding), tile_size),
                         .position = glm::vec2(x, y),
-                        .atlas_pos = glm::vec2(atlas_pos.x, atlas_pos.y),
                         .world_pos = world_pos,
                         .tile_id = static_cast<uint32_t>(block->type),
                         .tile_type = TILE_TYPE_BLOCK
@@ -87,11 +96,11 @@ void RenderChunk::build_mesh(const World& world) {
                 if (wall.is_some()) {
                     walls_count += 1;
 
-                    const TextureAtlasPos atlas_pos = wall->atlas_pos;
+                    const glm::vec2 atlas_pos = glm::vec2(wall->atlas_pos.x, wall->atlas_pos.y);
 
                     wall_vertices.push_back(ChunkVertex {
+                        .uv_size = glm::vec4(atlas_pos * (wall_size + wall_padding), wall_size),
                         .position = glm::vec2(x, y),
-                        .atlas_pos = glm::vec2(atlas_pos.x, atlas_pos.y),
                         .world_pos = world_pos,
                         .tile_id = static_cast<uint32_t>(wall->type),
                         .tile_type = TILE_TYPE_WALL

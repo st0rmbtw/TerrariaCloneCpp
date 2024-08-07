@@ -47,15 +47,6 @@ int main(int argc, const char** argv) {
 
         ShaderDef("TILE_SIZE", std::to_string(Constants::TILE_SIZE)),
         ShaderDef("WALL_SIZE", std::to_string(Constants::WALL_SIZE)),
-
-        ShaderDef("TILE_TEXTURE_WIDTH", std::to_string(Constants::MAX_TILE_TEXTURE_WIDTH)),
-        ShaderDef("TILE_TEXTURE_HEIGHT", std::to_string(Constants::MAX_TILE_TEXTURE_HEIGHT)),
-        ShaderDef("TILE_TEXTURE_PADDING", std::to_string(Constants::TILE_TEXTURE_PADDING)),
-
-        ShaderDef("WALL_TEXTURE_WIDTH", std::to_string(Constants::MAX_WALL_TEXTURE_WIDTH)),
-        ShaderDef("WALL_TEXTURE_HEIGHT", std::to_string(Constants::MAX_WALL_TEXTURE_HEIGHT)),
-        ShaderDef("WALL_TEXTURE_PADDING", std::to_string(Constants::WALL_TEXTURE_PADDING)),
-
     };
 
 #ifdef _WIN32

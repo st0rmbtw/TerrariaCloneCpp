@@ -12,8 +12,8 @@ cbuffer OrderBuffer : register( b2 ) {
 
 struct VSInput
 {
+    float4 uv_size : UvSize;
     float2 position: Position;
-    float2 atlas_pos: AtlasPos;
     float2 world_pos: WorldPos;
     nointerpolation uint tile_id: TileId;
     nointerpolation uint tile_type: TileType;
@@ -21,8 +21,8 @@ struct VSInput
 
 struct VSOutput
 {
+    float4 uv_size : UvSize;
     float4 position : SV_Position;
-    float2 atlas_pos: AtlasPos;
     float2 world_pos: WorldPos;
     nointerpolation uint tile_id: TileId;
     nointerpolation uint tile_type: TileType;
@@ -37,7 +37,7 @@ struct GSOutput {
 VSOutput VS(VSInput inp)
 {
 	VSOutput output;
-    output.atlas_pos = inp.atlas_pos;
+    output.uv_size = inp.uv_size;
     output.world_pos = inp.world_pos;
     output.tile_id = inp.tile_id;
     output.tile_type = inp.tile_type;
@@ -46,18 +46,13 @@ VSOutput VS(VSInput inp)
 	return output;
 }
 
-static const float2 TILE_TEX_PADDING = float2(TILE_TEXTURE_PADDING, TILE_TEXTURE_PADDING) / float2(TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT);
-static const float2 WALL_TEX_PADDING = float2(WALL_TEXTURE_PADDING, WALL_TEXTURE_PADDING) / float2(WALL_TEXTURE_WIDTH, WALL_TEXTURE_HEIGHT);
-
-static const float2 TILE_TEX_SIZE = float2(TILE_SIZE, TILE_SIZE) / float2(TILE_TEXTURE_WIDTH, TILE_TEXTURE_HEIGHT);
-static const float2 WALL_TEX_SIZE = float2(WALL_SIZE, WALL_SIZE) / float2(WALL_TEXTURE_WIDTH, WALL_TEXTURE_HEIGHT);
-
 static const uint TILE_TYPE_WALL = 1u;
 
 [maxvertexcount(4)]
 void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
 {
-    float2 atlas_pos = input[0].atlas_pos;
+    float2 start_uv = input[0].uv_size.xy;
+    float2 tex_size = input[0].uv_size.zw;
     float2 world_pos = input[0].world_pos;
     uint tile_id = input[0].tile_id;
     uint tile_type = input[0].tile_type;
@@ -65,17 +60,11 @@ void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
 
     float order = u_tile_order;
     float2 size = float2(TILE_SIZE, TILE_SIZE);
-    float2 tex_size = TILE_TEX_SIZE;
-    float2 padding = TILE_TEX_PADDING;
 
     if (tile_type == TILE_TYPE_WALL) {
         order = u_wall_order;
         size = float2(WALL_SIZE, WALL_SIZE);
-        tex_size = WALL_TEX_SIZE;
-        padding = WALL_TEX_PADDING;
     }
-
-    float2 start_uv = atlas_pos * (tex_size + padding);
 
     float4x4 transform = float4x4(
         float4(1.0, 0.0, 0.0, world_pos.x),
@@ -106,7 +95,7 @@ void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
 
     output.position = mul(mvp, (position + float4(size, 0.0, 0.0)));
     output.position.z = order;
-    output.uv = float2(start_uv.x + tex_size.x, start_uv.y + tex_size.y);
+    output.uv = start_uv + tex_size;
     OutputStream.Append(output);
 }
 

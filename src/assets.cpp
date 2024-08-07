@@ -161,11 +161,6 @@ template <size_t T>
 Texture load_texture_array(const std::array<std::pair<uint16_t, std::string>, T>& assets, int sampler, bool generate_mip_maps = false);
 
 bool Assets::Load() {
-    using Constants::MAX_TILE_TEXTURE_WIDTH;
-    using Constants::MAX_TILE_TEXTURE_HEIGHT;
-    using Constants::MAX_WALL_TEXTURE_WIDTH;
-    using Constants::MAX_WALL_TEXTURE_HEIGHT;
-
     const uint8_t data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
     state.textures[TextureKey::Stub] = create_texture(1, 1, 4, TextureSampler::Nearest, data);
 
