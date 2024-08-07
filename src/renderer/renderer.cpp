@@ -12,7 +12,6 @@
 
 #include "LLGL/PipelineStateFlags.h"
 #include "utils.hpp"
-#include "assets.hpp"
 #include "batch.hpp"
 #include "world_renderer.hpp"
 
@@ -35,6 +34,10 @@ static struct RendererState {
     RenderBackend backend;
     
     uint32_t global_depth_index = 0;
+
+    math::Rect ui_frustum;
+    math::Rect nonscale_camera_frustum;
+    math::Rect camera_frustum;
 } state;
 
 static constexpr uint32_t MAX_TEXTURES_COUNT = 32;
@@ -138,15 +141,12 @@ void Renderer::Begin(const Camera& camera) {
     );
     const math::Rect ui_frustum = math::Rect::from_corners(glm::vec2(0.0), camera.viewport());
 
-    glm::mat4 screen_projection;
-    if (state.backend.IsOpenGL()) {
-        screen_projection = glm::orthoRH_NO(0.0f, static_cast<float>(camera.viewport().x), static_cast<float>(camera.viewport().y), 0.0f, -1.0f, 1.0f);
-    } else {
-        screen_projection = glm::orthoLH_ZO(0.0f, static_cast<float>(camera.viewport().x), static_cast<float>(camera.viewport().y), 0.0f, 0.0f, 1.0f);
-    }
+    state.camera_frustum = camera_frustum;
+    state.nonscale_camera_frustum = nonscale_camera_frustum;
+    state.ui_frustum = ui_frustum;
 
     auto projections_uniform = ProjectionsUniform {
-        .screen_projection_matrix = screen_projection,
+        .screen_projection_matrix = camera.get_screen_projection_matrix(),
         .view_projection_matrix = camera.get_projection_matrix() * camera.get_view_matrix(),
         .nonscale_view_projection_matrix = camera.get_nonscale_projection_matrix() * camera.get_view_matrix()
     };
@@ -161,10 +161,6 @@ void Renderer::Begin(const Camera& camera) {
     commands->Clear(LLGL::ClearFlags::Depth, LLGL::ClearValue(0.0f));
 
     state.sprite_batch.begin();
-    state.sprite_batch.set_camera_frustum(camera_frustum);
-    state.sprite_batch.set_nonscale_camera_frustum(nonscale_camera_frustum);
-    state.sprite_batch.set_ui_frustum(ui_frustum);
-
     state.glyph_batch.begin();
 
     state.global_depth_index = 0;
@@ -203,7 +199,7 @@ void Renderer::PrintDebugInfo() {
 }
 #endif
 
-void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer, int depth) {
+inline void add_sprite_to_batch(const Sprite& sprite, bool is_ui, int depth) {
     glm::vec4 uv_offset_scale = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
 
     if (sprite.flip_x()) {
@@ -216,17 +212,17 @@ void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer, int de
         uv_offset_scale.w *= -1.0f;
     }
 
-    state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.texture(), render_layer == RenderLayer::UI, depth);
+    state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.texture(), is_ui, depth);
 }
 
-void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer, int depth) {
+inline void add_atlas_sprite_to_batch(const TextureAtlasSprite& sprite, bool is_ui, int depth) {
     const math::Rect& rect = sprite.atlas().get_rect(sprite.index());
 
     glm::vec4 uv_offset_scale = glm::vec4(
-        rect.min.x / sprite.atlas().texture().size().x,
-        rect.min.y / sprite.atlas().texture().size().y,
-        rect.size().x / sprite.atlas().texture().size().x,
-        rect.size().y / sprite.atlas().texture().size().y
+        rect.min.x / sprite.atlas().texture().size.x,
+        rect.min.y / sprite.atlas().texture().size.y,
+        rect.size().x / sprite.atlas().texture().size.x,
+        rect.size().y / sprite.atlas().texture().size.y
     );
 
     if (sprite.flip_x()) {
@@ -239,16 +235,53 @@ void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer ren
         uv_offset_scale.w *= -1.0f;
     }
 
-    state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), render_layer == RenderLayer::UI, depth);
+    state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), is_ui, depth);
 }
 
-void Renderer::DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontKey key, RenderLayer render_layer, int depth) {
+void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer, int depth) {
+    const math::Rect aabb = sprite.calculate_aabb();
+
+    if (sprite.nonscalable()) {
+        if (!state.nonscale_camera_frustum.intersects(aabb)) return;
+    } else {
+        if (!state.camera_frustum.intersects(aabb)) return;
+    }
+
+    add_sprite_to_batch(sprite, false, depth);
+}
+
+void Renderer::DrawSpriteUI(const Sprite& sprite, int depth) {
+    const math::Rect aabb = sprite.calculate_aabb();
+    if (!state.ui_frustum.intersects(aabb)) return;
+
+    add_sprite_to_batch(sprite, true, depth);
+}
+
+void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer, int depth) {
+    const math::Rect aabb = sprite.calculate_aabb();
+
+    if (sprite.nonscalable()) {
+        if (!state.nonscale_camera_frustum.intersects(aabb)) return;
+    } else {
+        if (!state.camera_frustum.intersects(aabb)) return;
+    }
+
+    add_atlas_sprite_to_batch(sprite, false, depth);
+}
+
+void Renderer::DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, int depth) {
+    const math::Rect aabb = sprite.calculate_aabb();
+    if (!state.ui_frustum.intersects(aabb)) return;
+
+    add_atlas_sprite_to_batch(sprite, true, depth);
+}
+
+void Renderer::DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontKey key, bool is_ui, int depth) {
     const Font& font = Assets::GetFont(key);
     
     float x = position.x;
     float y = position.y;
 
-    glm::vec2 tex_size = font.texture.size();
     float scale = size / font.font_size;
 
     uint32_t order = depth;
@@ -278,7 +311,7 @@ void Renderer::DrawText(const char* text, uint32_t length, float size, const glm
         glm::vec2 pos = glm::vec2(xpos, ypos);
         glm::vec2 size = glm::vec2(ch.size) * scale;
 
-        state.glyph_batch.draw_glyph(pos, size, color, font.texture, ch.texture_coords, ch.tex_size, render_layer == RenderLayer::UI, order);
+        state.glyph_batch.draw_glyph(pos, size, color, font.texture, ch.texture_coords, ch.tex_size, is_ui, order);
 
         x += (ch.advance >> 6) * scale;
     }
@@ -300,6 +333,10 @@ void Renderer::Terminate() {
 
     LLGL::RenderSystem::Unload(std::move(state.context));
 }
+
+//
+// ------------------ Batch ---------------------
+//
 
 void RenderBatchSprite::init() {
     m_buffer = new SpriteVertex[MAX_QUADS];
@@ -360,18 +397,6 @@ void RenderBatchSprite::init() {
 }
 
 void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, bool is_ui, int depth) {
-    const math::Rect aabb = sprite.calculate_aabb();
-
-    if (!is_ui) {
-        if (sprite.nonscalable()) {
-            if (!m_nonscale_camera_frustum.intersects(aabb)) return;
-        } else {
-            if (!m_camera_frustum.intersects(aabb)) return;
-        }
-    } else {
-        if (!m_ui_frustum.intersects(aabb)) return;
-    }
-
     if (m_sprites.size() >= MAX_QUADS) {
         render();
         begin();

@@ -12,7 +12,7 @@ struct Layer {
     float scale = 1.0f;
     glm::vec2 speed = glm::vec2(0.0f);
     glm::vec2 position = glm::vec2(0.0f);
-    glm::vec2 initial_pos;
+    float y;
     bool fill_screen_height = false;
     Anchor anchor = Anchor::Center;
 };
@@ -68,30 +68,34 @@ void Background::Init(const World& world) {
         .texture = Assets::GetTexture(TextureKey::Background93),
         .scale = 2.0f,
         .speed = glm::vec2(0.2f, 0.4f),
-        .initial_pos = glm::vec2(0.0f, (world.layers().underground + world.layers().dirt_height * 0.5f) * Constants::TILE_SIZE),
-        .anchor = Anchor::BottomLeft
+        .y = world.layers().underground * Constants::TILE_SIZE,
+        .anchor = Anchor::BottomCenter
     });
 
     state.layers.push_back(Layer {
         .texture = Assets::GetTexture(TextureKey::Background114),
         .scale = 2.0f,
         .speed = glm::vec2(0.4f, 0.5f),
-        .initial_pos = glm::vec2(0.0f, (world.layers().underground + world.layers().dirt_height * 0.5f) * Constants::TILE_SIZE),
-        .anchor = Anchor::BottomLeft
+        .y = (world.layers().underground + world.layers().dirt_height * 0.5f) * Constants::TILE_SIZE,
+        .anchor = Anchor::BottomCenter
     });
 
     state.layers.push_back(Layer {
         .texture = Assets::GetTexture(TextureKey::Background55),
-        .scale = 2.5f,
+        .scale = 2.0f,
         .speed = glm::vec2(0.8f, 0.6f),
-        .initial_pos = glm::vec2(0.0f, (world.layers().underground + world.layers().dirt_height * 0.5f) * Constants::TILE_SIZE),
-        .anchor = Anchor::BottomLeft
+        .y = (world.layers().underground + world.layers().dirt_height * 0.5f) * Constants::TILE_SIZE,
+        .anchor = Anchor::BottomCenter
     });
 }
 
 void Background::Update(const Camera &camera) {
     for (Layer& layer : state.layers) {
-        layer.position = camera.position() + (layer.initial_pos - camera.position()) * layer.speed;
+        const float texture_width = layer.texture.size.x;
+
+        layer.position.y = camera.position().y + (layer.y - camera.position().y) * layer.speed.y;
+        layer.position.x = camera.position().x + (0.0f - camera.position().x) * (1.0f - layer.speed.x);
+        layer.position.x = camera.position().x - fmod(layer.position.x, texture_width * 2.0f);
     }
 }
 
@@ -106,13 +110,14 @@ void Background::Render(const Camera& camera) {
         sprite.set_anchor(layer.anchor);
         sprite.set_texture(layer.texture);
 
-        const glm::vec2 position = layer.position;
-        const glm::vec2 texture_size = layer.texture.size();
-        int count = static_cast<float>(camera.viewport().x) / (texture_size.x * layer.scale * 0.5f);
+        const glm::vec2& position = layer.position;
+        const float texture_width = layer.texture.size.x;
+
+        int count = static_cast<float>(camera.viewport().x) / (texture_width * layer.scale * 0.5f) + 1;
         count = glm::max(count, 1);
 
         for (int i = -count; i <= count; ++i) {
-            sprite.set_position(position + glm::vec2(texture_size.x * i * 2.0f, 0.0f));
+            sprite.set_position(position + glm::vec2(texture_width * 2.0f * i, 0.0f));
 
             Renderer::DrawSprite(sprite, depth);
         }

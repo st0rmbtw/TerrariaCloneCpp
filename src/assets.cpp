@@ -401,6 +401,7 @@ Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int
     texture.id = state.texture_index++;
     texture.texture = Renderer::Context()->CreateTexture(texture_desc, &image_view);
     texture.sampler = sampler;
+    texture.size = glm::uvec2(width, height);
 
     return texture;
 }
@@ -424,6 +425,7 @@ Texture create_texture_array(uint32_t width, uint32_t height, uint32_t layers, u
     texture.id = state.texture_index++;
     texture.texture = Renderer::Context()->CreateTexture(texture_desc, &image_view);
     texture.sampler = sampler;
+    texture.size = glm::uvec2(width, height);
 
     return texture;
 }

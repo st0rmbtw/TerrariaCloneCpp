@@ -7,7 +7,6 @@
 #include <vector>
 #include <LLGL/LLGL.h>
 
-#include "../math/rect.hpp"
 #include "../types/sprite.hpp"
 #include "../optional.hpp"
 
@@ -64,14 +63,7 @@ public:
     virtual void begin() = 0;
     virtual void terminate() = 0;
 
-    inline void set_camera_frustum(const math::Rect& camera_frustum) { m_camera_frustum = camera_frustum; }
-    inline void set_nonscale_camera_frustum(const math::Rect& camera_frustum) { m_nonscale_camera_frustum = camera_frustum; }
-    inline void set_ui_frustum(const math::Rect& ui_frustum) { m_ui_frustum = ui_frustum; }
-
 protected:
-    math::Rect m_camera_frustum;
-    math::Rect m_nonscale_camera_frustum;
-    math::Rect m_ui_frustum;
     LLGL::Buffer* m_vertex_buffer = nullptr;
     LLGL::PipelineState* m_pipeline = nullptr;
 };

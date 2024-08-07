@@ -93,14 +93,14 @@ void UI::PostUpdate() {
 void UI::Render(const Camera& camera, const Inventory& inventory) {
     render_inventory(inventory);
 
-    Renderer::DrawSprite(state.cursor_background, RenderLayer::UI);
+    Renderer::DrawSpriteUI(state.cursor_background);
 
     // Sprite shadow = state.cursor_foreground;
     // shadow.set_color(glm::vec4(0.5, 0.5, 0.5, 0.8));
     // shadow.set_position(shadow.position() + glm::vec2(2.0f));
-    // Renderer::DrawSprite(shadow, RenderLayer::UI);
+    // Renderer::DrawSpriteUI(shadow);
 
-    Renderer::DrawSprite(state.cursor_foreground, RenderLayer::UI);
+    Renderer::DrawSpriteUI(state.cursor_foreground);
 }
 
 void update_cursor() {
@@ -141,7 +141,7 @@ inline void render_inventory_cell(UiElement element_type, uint8_t index, const g
     cell_sprite.set_custom_size(tl::optional<glm::vec2>(size));
     cell_sprite.set_color(glm::vec4(1.0f, 1.0f, 1.0f, 0.8f));
     cell_sprite.set_texture(Assets::GetTexture(texture));
-    Renderer::DrawSprite(cell_sprite, RenderLayer::UI, depth);
+    Renderer::DrawSpriteUI(cell_sprite, depth);
 }
 
 inline void render_cell_item(const glm::vec2& item_size, const glm::vec2& cell_size, const glm::vec2& position, const Texture& texture, int depth) {
@@ -150,7 +150,7 @@ inline void render_cell_item(const glm::vec2& item_size, const glm::vec2& cell_s
     cell_sprite.set_anchor(Anchor::TopLeft);
     cell_sprite.set_custom_size(tl::optional<glm::vec2>(item_size));
     cell_sprite.set_texture(texture);
-    Renderer::DrawSprite(cell_sprite, RenderLayer::UI, depth);
+    Renderer::DrawSpriteUI(cell_sprite, depth);
 }
 
 void render_inventory(const Inventory& inventory) {
@@ -172,7 +172,7 @@ void render_inventory(const Inventory& inventory) {
         const bool item_selected = inventory.selected_slot() == x;
 
         if (item.is_some()) {
-            item_size = Assets::GetItemTexture(item->id).size();
+            item_size = Assets::GetItemTexture(item->id).size;
             item_size = glm::min(item_size, glm::vec2(32.0f)); // The maximum size of an item image is 32px
         }
 

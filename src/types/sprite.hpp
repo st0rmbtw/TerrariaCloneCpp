@@ -97,7 +97,7 @@ public:
     [[nodiscard]] glm::vec2 size() const override {
         auto size = glm::vec2(1.0f);
 
-        if (m_texture.is_some()) size = m_texture->size();
+        if (m_texture.is_some()) size = m_texture->size;
         if (m_custom_size.is_some()) size = m_custom_size.value();
 
         return size * scale();

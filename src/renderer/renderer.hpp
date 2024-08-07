@@ -17,7 +17,6 @@
 enum class RenderLayer : uint8_t {
     Main = 0,
     World = 1,
-    UI = 2
 };
 
 struct ProjectionsUniform {
@@ -46,23 +45,26 @@ namespace Renderer {
         DrawAtlasSprite(sprite, RenderLayer::Main, depth);
     }
 
-    void DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, RenderLayer render_layer = RenderLayer::Main, int depth = -1);
+    void DrawSpriteUI(const Sprite& sprite, int depth = -1);
+    void DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, int depth = -1);
 
-    inline void DrawText(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, RenderLayer render_layer = RenderLayer::Main) {
-        DrawText(text.c_str(), text.length(), size, position, color, font, render_layer);
+    void DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, bool is_ui = false, int depth = -1);
+
+    inline void DrawText(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontKey font) {
+        DrawText(text.c_str(), text.length(), size, position, color, font, false);
     }
     inline void DrawTextUi(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, int depth = -1) {
-        DrawText(text, length, size, position, color, font, RenderLayer::UI, depth);
+        DrawText(text, length, size, position, color, font, true, depth);
     }
     inline void DrawTextUi(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, int depth = -1) {
-        DrawText(text.c_str(), text.length(), size, position, color, font, RenderLayer::UI, depth);
+        DrawText(text.c_str(), text.length(), size, position, color, font, true, depth);
     }
 
-    inline void DrawChar(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, RenderLayer render_layer = RenderLayer::Main) {
-        DrawText(&ch, 1, size, position, color, font, render_layer);
+    inline void DrawChar(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontKey font) {
+        DrawText(&ch, 1, size, position, color, font, false);
     }
     inline void DrawCharUi(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontKey font) {
-        DrawText(&ch, 1, size, position, color, font, RenderLayer::UI);
+        DrawText(&ch, 1, size, position, color, font, true);
     }
 
 #if DEBUG

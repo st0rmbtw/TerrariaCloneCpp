@@ -14,6 +14,8 @@ public:
         m_position(0.0f),
         m_viewport(0),
         m_projection_matrix(),
+        m_screen_projection_matrix(),
+        m_nonscale_projection_matrix(),
         m_view_matrix(),
         m_transform_matrix() {}
 
@@ -21,6 +23,8 @@ public:
         m_position(0.0f),
         m_viewport(std::move(viewport)),
         m_projection_matrix(),
+        m_screen_projection_matrix(),
+        m_nonscale_projection_matrix(),
         m_view_matrix(),
         m_transform_matrix()
     {
@@ -42,9 +46,13 @@ public:
 
     inline void set_viewport(const glm::uvec2& viewport) {
         m_viewport = viewport;
+        m_screen_projection_matrix = glm::ortho(0.0f, static_cast<float>(viewport.x), static_cast<float>(viewport.y), 0.0f);
+        m_area_nonscale = math::Rect::from_corners(
+            -glm::vec2(m_viewport) / 2.0f,
+            glm::vec2(m_viewport) / 2.0f
+        );
         update_projection_area();
     }
-
 
     [[nodiscard]]
     auto screen_to_world(const glm::vec2 &screen_pos) const -> glm::vec2;
@@ -57,6 +65,9 @@ public:
 
     [[nodiscard]]
     inline auto get_projection_matrix() const -> const glm::mat4x4& { return m_projection_matrix; }
+
+    [[nodiscard]]
+    inline auto get_screen_projection_matrix() const -> const glm::mat4x4& { return m_screen_projection_matrix; }
 
     [[nodiscard]]
     inline auto get_nonscale_projection_matrix() const -> const glm::mat4x4& { return m_nonscale_projection_matrix; }
@@ -83,6 +94,7 @@ private:
 
 private:
     glm::mat4x4 m_projection_matrix;
+    glm::mat4x4 m_screen_projection_matrix;
     glm::mat4x4 m_nonscale_projection_matrix;
     glm::mat4x4 m_view_matrix;
     glm::mat4x4 m_transform_matrix;

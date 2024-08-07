@@ -146,6 +146,22 @@ public:
     rect<T> operator-(const T rhs) const noexcept {
         return from_corners(this->min - rhs, this->max - rhs);
     }
+
+    rect<T> operator-(const vec& rhs) const noexcept {
+        return from_corners(this->min - rhs, this->max - rhs);
+    }
+
+    rect<T> operator/(const vec& rhs) const noexcept {
+        return from_corners(this->min / rhs, this->max / rhs);
+    }
+
+    rect<T> operator*(const vec& rhs) const noexcept {
+        return from_corners(this->min * rhs, this->max * rhs);
+    }
+
+    rect<T> operator+(const vec& rhs) const noexcept {
+        return from_corners(this->min + rhs, this->max + rhs);
+    }
 };
 
 using Rect = rect<glm::float32>;

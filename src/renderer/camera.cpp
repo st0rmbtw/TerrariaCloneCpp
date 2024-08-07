@@ -8,10 +8,6 @@ void Camera::update_projection_area() {
         -glm::vec2(m_viewport) / 2.0f * m_zoom,
         glm::vec2(m_viewport) / 2.0f * m_zoom
     );
-    m_area_nonscale = math::Rect::from_corners(
-        -glm::vec2(m_viewport) / 2.0f,
-        glm::vec2(m_viewport) / 2.0f
-    );
 }
 
 void Camera::compute_projection_and_view_matrix() {
