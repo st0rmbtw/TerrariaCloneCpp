@@ -123,7 +123,7 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
 
     ParticleManager::Init();
     UI::Init();
-    Background::Init(g.world);
+    Background::Init(g.camera, g.world);
 
     g.player.init();
     g.player.inventory().set_item(0, ITEM_COPPER_AXE);
@@ -226,10 +226,12 @@ void update() {
 
     if (Input::Pressed(Key::Minus)) {
         g.camera.set_zoom(g.camera.zoom() + scale_speed * Time::delta_seconds());
+        Background::ResizeSprites(g.camera);
     }
 
     if (Input::Pressed(Key::Equals)) {
         g.camera.set_zoom(g.camera.zoom() - scale_speed * Time::delta_seconds());
+        Background::ResizeSprites(g.camera);
     }
 
     g.camera.update();
@@ -372,6 +374,8 @@ static void handle_window_resize_events(GLFWwindow* window, int width, int heigh
 
     g.camera.set_viewport({new_size.width, new_size.height});
     g.camera.update();
+
+    Background::ResizeSprites(g.camera);
 
     render();
 }

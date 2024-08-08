@@ -89,6 +89,7 @@ static const std::pair<TextureKey, AssetTexture> TEXTURE_ASSETS[] = {
     { TextureKey::Background7, AssetTexture("assets/sprites/backgrounds/Background_7.png", TextureSampler::Nearest) },
     { TextureKey::Background55, AssetTexture("assets/sprites/backgrounds/Background_55.png", TextureSampler::Nearest) },
     { TextureKey::Background74, AssetTexture("assets/sprites/backgrounds/Background_74.png", TextureSampler::Nearest) },
+    { TextureKey::Background77, AssetTexture("assets/sprites/backgrounds/Background_77.png", TextureSampler::Nearest) },
     { TextureKey::Background78, AssetTexture("assets/sprites/backgrounds/Background_78.png", TextureSampler::Nearest) },
     { TextureKey::Background90, AssetTexture("assets/sprites/backgrounds/Background_90.png", TextureSampler::Nearest) },
     { TextureKey::Background91, AssetTexture("assets/sprites/backgrounds/Background_91.png", TextureSampler::Nearest) },

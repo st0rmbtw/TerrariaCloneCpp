@@ -7,9 +7,10 @@
 #include "world/world.hpp"
 
 namespace Background {
-    void Init(const World& world);
+    void Init(const Camera& camera, const World& world);
     void Update(const Camera& camera);
     void Render(const Camera& camera);
+    void ResizeSprites(const Camera& camera);
 };
 
 #endif
