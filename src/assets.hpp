@@ -53,6 +53,7 @@ enum class ShaderAssetKey : uint8_t {
     NinepatchShader,
     PostProcessShader,
     FontShader,
+    BackgroundShader,
 };
 
 enum class FontKey : uint8_t {

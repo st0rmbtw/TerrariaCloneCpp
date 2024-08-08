@@ -123,7 +123,8 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
 
     ParticleManager::Init();
     UI::Init();
-    Background::Init(g.camera, g.world);
+    Background::InitRenderer();
+    Background::SetupWorldBackground(g.world);
 
     g.player.init();
     g.player.inventory().set_item(0, ITEM_COPPER_AXE);
@@ -226,12 +227,10 @@ void update() {
 
     if (Input::Pressed(Key::Minus)) {
         g.camera.set_zoom(g.camera.zoom() + scale_speed * Time::delta_seconds());
-        Background::ResizeSprites(g.camera);
     }
 
     if (Input::Pressed(Key::Equals)) {
         g.camera.set_zoom(g.camera.zoom() - scale_speed * Time::delta_seconds());
-        Background::ResizeSprites(g.camera);
     }
 
     g.camera.update();
@@ -329,6 +328,10 @@ glm::vec2 camera_free() {
     if (Input::Pressed(Key::W)) position.y -= speed * dt;
     if (Input::Pressed(Key::S)) position.y += speed * dt;
 
+    const math::Rect& camera_area = g.camera.get_projection_area();
+
+    if (position.y + camera_area.min.y < 0.0f) position.y = 0.0f - camera_area.min.y;
+
     return position;
 }
 #endif
@@ -374,8 +377,6 @@ static void handle_window_resize_events(GLFWwindow* window, int width, int heigh
 
     g.camera.set_viewport({new_size.width, new_size.height});
     g.camera.update();
-
-    Background::ResizeSprites(g.camera);
 
     render();
 }

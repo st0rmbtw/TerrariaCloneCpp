@@ -148,7 +148,10 @@ void Renderer::Begin(const Camera& camera) {
     auto projections_uniform = ProjectionsUniform {
         .screen_projection_matrix = camera.get_screen_projection_matrix(),
         .view_projection_matrix = camera.get_projection_matrix() * camera.get_view_matrix(),
-        .nonscale_view_projection_matrix = camera.get_nonscale_projection_matrix() * camera.get_view_matrix()
+        .nonscale_view_projection_matrix = camera.get_nonscale_projection_matrix() * camera.get_view_matrix(),
+        .nonscale_projection_matrix = camera.get_nonscale_projection_matrix(),
+        .projection_matrix = camera.get_projection_matrix(),
+        .transform_matrix = camera.get_transform_matrix()
     };
 
     commands->Begin();

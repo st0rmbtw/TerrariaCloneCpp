@@ -23,6 +23,9 @@ struct ProjectionsUniform {
     glm::mat4 screen_projection_matrix;
     glm::mat4 view_projection_matrix;
     glm::mat4 nonscale_view_projection_matrix;
+    glm::mat4 nonscale_projection_matrix;
+    glm::mat4 projection_matrix;
+    glm::mat4 transform_matrix;
 };
 
 constexpr float MAX_Z = 1000.0f;

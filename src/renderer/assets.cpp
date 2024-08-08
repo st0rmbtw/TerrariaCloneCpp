@@ -114,3 +114,37 @@ const LLGL::VertexFormat& TilemapVertexFormat() {
 
     return vertexFormat;
 }
+
+const LLGL::VertexFormat& BackgroundVertexFormat() {
+    static LLGL::VertexFormat vertexFormat;
+
+    if (!vertexFormat.attributes.empty()) return vertexFormat;
+
+    switch (Renderer::Backend()) {
+        case RenderBackend::Vulkan:
+        case RenderBackend::OpenGL: {
+            vertexFormat.AppendAttribute({"a_position", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"a_uv", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"a_size", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"a_tex_size", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"a_speed", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"a_nonscale", LLGL::Format::R32SInt});
+        }
+        break;
+        case RenderBackend::D3D11:
+        case RenderBackend::D3D12: {
+            vertexFormat.AppendAttribute({"Position", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"Uv", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"Size", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"TexSize", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"Speed", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"NonScale", LLGL::Format::R32SInt});
+        }
+        break;
+        case RenderBackend::Metal: // TODO
+        break;
+        default: UNREACHABLE()
+    }
+
+    return vertexFormat;
+}

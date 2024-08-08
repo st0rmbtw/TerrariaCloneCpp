@@ -570,7 +570,7 @@ WorldData world_generate(uint32_t width, uint32_t height, uint32_t seed) {
     const math::IRect area = math::IRect::from_corners(glm::vec2(0), glm::ivec2(width, height) + glm::ivec2(16));
     const math::IRect playable_area = math::IRect::from_corners(area.min + glm::ivec2(8), area.max - glm::ivec2(8));
 
-    const int surface_level = (playable_area.min.y + playable_area.height() / 10);
+    const int surface_level = (playable_area.min.y + playable_area.height() / 5);
     const int underground_level = (playable_area.min.y + playable_area.height() / 3);
     const int cavern_level = (playable_area.min.y + playable_area.height() / 2);
 
