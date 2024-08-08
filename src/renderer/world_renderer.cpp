@@ -22,7 +22,7 @@ void WorldRenderer::init() {
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.bindings = {
         LLGL::BindingDescriptor(
-            "UniformBuffer",
+            "GlobalUniformBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::GeometryStage,
@@ -91,7 +91,7 @@ void WorldRenderer::render(const World& world) {
 
             commands->SetPipelineState(*m_pipeline);
             commands->SetVertexBuffer(*chunk.wall_vertex_buffer);
-            commands->SetResource(0, *Renderer::ProjectionsUniformBuffer());
+            commands->SetResource(0, *Renderer::GlobalUniformBuffer());
             commands->SetResource(1, *m_order_buffer);
             commands->SetResource(2, *t.texture);
             commands->SetResource(3, Assets::GetSampler(t.sampler));
@@ -104,7 +104,7 @@ void WorldRenderer::render(const World& world) {
 
             commands->SetPipelineState(*m_pipeline);
             commands->SetVertexBuffer(*chunk.block_vertex_buffer);
-            commands->SetResource(0, *Renderer::ProjectionsUniformBuffer());
+            commands->SetResource(0, *Renderer::GlobalUniformBuffer());
             commands->SetResource(1, *m_order_buffer);
             commands->SetResource(2, *t.texture);
             commands->SetResource(3, Assets::GetSampler(t.sampler));

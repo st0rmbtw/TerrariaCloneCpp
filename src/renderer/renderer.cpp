@@ -10,10 +10,12 @@
 #include "../assets.hpp"
 #include "../log.hpp"
 
+#include "LLGL/CommandBufferFlags.h"
 #include "LLGL/PipelineStateFlags.h"
 #include "utils.hpp"
 #include "batch.hpp"
 #include "world_renderer.hpp"
+#include "background_renderer.hpp"
 
 static struct RendererState {
     LLGL::RenderSystemPtr context = nullptr;
@@ -31,6 +33,7 @@ static struct RendererState {
     RenderBatchSprite sprite_batch;
     RenderBatchGlyph glyph_batch;
     WorldRenderer world_renderer;
+    BackgroundRenderer background_renderer;
     RenderBackend backend;
     
     uint32_t global_depth_index = 0;
@@ -47,7 +50,7 @@ LLGL::SwapChain* Renderer::SwapChain() { return state.swap_chain; }
 LLGL::CommandBuffer* Renderer::CommandBuffer() { return state.command_buffer; }
 LLGL::CommandQueue* Renderer::CommandQueue() { return state.command_queue; }
 const std::shared_ptr<CustomSurface>& Renderer::Surface() { return state.surface; }
-LLGL::Buffer* Renderer::ProjectionsUniformBuffer() { return state.constant_buffer; }
+LLGL::Buffer* Renderer::GlobalUniformBuffer() { return state.constant_buffer; }
 RenderBackend Renderer::Backend() { return state.backend; }
 uint32_t Renderer::GetGlobalDepthIndex() { return state.global_depth_index; };
 
@@ -123,6 +126,7 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     state.sprite_batch.init();
     state.glyph_batch.init();
     state.world_renderer.init();
+    state.background_renderer.init();
 
     return true;
 }
@@ -150,8 +154,9 @@ void Renderer::Begin(const Camera& camera) {
         .view_projection_matrix = camera.get_projection_matrix() * camera.get_view_matrix(),
         .nonscale_view_projection_matrix = camera.get_nonscale_projection_matrix() * camera.get_view_matrix(),
         .nonscale_projection_matrix = camera.get_nonscale_projection_matrix(),
-        .projection_matrix = camera.get_projection_matrix(),
-        .transform_matrix = camera.get_transform_matrix()
+        .transform_matrix = camera.get_transform_matrix(),
+        .camera_position = camera.position(),
+        .window_size = camera.viewport()
     };
 
     commands->Begin();
@@ -159,9 +164,10 @@ void Renderer::Begin(const Camera& camera) {
 
     commands->UpdateBuffer(*state.constant_buffer, 0, &projections_uniform, sizeof(projections_uniform));
 
+    LLGL::ClearValue clear_value = LLGL::ClearValue(1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+
     commands->BeginRenderPass(*swap_chain);
-    commands->Clear(LLGL::ClearFlags::Color, LLGL::ClearValue(1.f, 0.0f, 0.0f, 1.0f));
-    commands->Clear(LLGL::ClearFlags::Depth, LLGL::ClearValue(0.0f));
+    commands->Clear(LLGL::ClearFlags::ColorDepth, clear_value);
 
     state.sprite_batch.begin();
     state.glyph_batch.begin();
@@ -181,6 +187,7 @@ void Renderer::Render(const World& world) {
     auto* const queue = state.command_queue;
     auto* const swap_chain = Renderer::SwapChain();
 
+    state.background_renderer.render();
     state.world_renderer.render(world);
     state.sprite_batch.render();
     state.glyph_batch.render();
@@ -320,11 +327,24 @@ void Renderer::DrawText(const char* text, uint32_t length, float size, const glm
     }
 }
 
+void Renderer::DrawBackground(const BackgroundLayer& layer) {
+    const math::Rect aabb = math::Rect::from_top_left(layer.position() - layer.anchor().to_vec2() * layer.size(), layer.size());
+
+    if (layer.nonscale()) {
+        if (!state.nonscale_camera_frustum.intersects(aabb)) return;
+    } else {
+        if (!state.camera_frustum.intersects(aabb)) return;
+    }
+
+    state.background_renderer.draw_layer(layer);
+}
+
 void Renderer::Terminate() {
     Assets::DestroyShaders();
 
     state.sprite_batch.terminate();
     state.world_renderer.terminate();
+    state.background_renderer.terminate();
 
     if (state.constant_buffer) state.context->Release(*state.constant_buffer);
 
@@ -351,7 +371,7 @@ void RenderBatchSprite::init() {
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.bindings = {
         LLGL::BindingDescriptor(
-            "UniformBuffer",
+            "GlobalUniformBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::GeometryStage,
@@ -556,7 +576,7 @@ void RenderBatchGlyph::init() {
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.bindings = {
         LLGL::BindingDescriptor(
-            "UniformBuffer",
+            "GlobalUniformBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::VertexStage,

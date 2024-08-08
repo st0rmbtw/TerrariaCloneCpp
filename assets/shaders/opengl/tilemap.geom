@@ -1,9 +1,8 @@
 #version 330 core
 
-layout(std140) uniform UniformBuffer {
+layout(std140) uniform GlobalUniformBuffer {
     mat4 screen_projection;
     mat4 view_projection;
-    mat4 nonscale_view_projection;
 } ubo;
 
 layout(std140) uniform OrderBuffer {

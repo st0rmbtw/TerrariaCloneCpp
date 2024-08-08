@@ -123,7 +123,6 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
 
     ParticleManager::Init();
     UI::Init();
-    Background::InitRenderer();
     Background::SetupWorldBackground(g.world);
 
     g.player.init();

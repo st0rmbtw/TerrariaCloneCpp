@@ -20,8 +20,8 @@ layout(location = 0) out VS_OUT {
     float outline_thickness;
     float order;
     int has_texture;
-    bool is_ui;
-    bool is_nonscale;
+    int is_ui;
+    int is_nonscale;
 } vs_out;
 
 void main() {
@@ -80,6 +80,6 @@ void main() {
     vs_out.outline_thickness = a_outline_thickness;
     vs_out.order = a_position.z;
     vs_out.has_texture = a_has_texture;
-    vs_out.is_ui = a_is_ui > 0;
-    vs_out.is_nonscale = a_is_nonscale > 0;
+    vs_out.is_ui = a_is_ui;
+    vs_out.is_nonscale = a_is_nonscale;
 }

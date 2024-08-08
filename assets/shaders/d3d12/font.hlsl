@@ -1,8 +1,12 @@
-cbuffer UniformBuffer : register( b1 )
+cbuffer GlobalUniformBuffer : register( b1 )
 {
     float4x4 u_screen_projection;
     float4x4 u_view_projection;
     float4x4 u_nonscale_view_projection;
+    float4x4 u_nonscale_projection;
+    float4x4 u_transform_matrix;
+    float2 u_camera_position;
+    float2 u_window_size;
 };
 
 struct VSInput

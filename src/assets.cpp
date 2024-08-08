@@ -260,7 +260,7 @@ bool Assets::LoadFonts() {
 }
 
 bool Assets::InitSamplers() {
-    state.samplers.resize(5);
+    state.samplers.resize(4);
     {
         LLGL::SamplerDescriptor sampler_desc;
         sampler_desc.addressModeU = LLGL::SamplerAddressMode::Clamp;
@@ -320,22 +320,6 @@ bool Assets::InitSamplers() {
         sampler_desc.maxAnisotropy = 1;
 
         state.samplers[TextureSampler::NearestMips] = Renderer::Context()->CreateSampler(sampler_desc);
-    }
-
-    {
-        LLGL::SamplerDescriptor sampler_desc;
-        sampler_desc.addressModeU = LLGL::SamplerAddressMode::Repeat;
-        sampler_desc.addressModeV = LLGL::SamplerAddressMode::Repeat;
-        sampler_desc.addressModeW = LLGL::SamplerAddressMode::Repeat;
-        sampler_desc.magFilter = LLGL::SamplerFilter::Nearest;
-        sampler_desc.minFilter = LLGL::SamplerFilter::Nearest;
-        sampler_desc.mipMapFilter = LLGL::SamplerFilter::Linear;
-        sampler_desc.minLOD = 0.0f;
-        sampler_desc.maxLOD = 1.0f;
-        sampler_desc.mipMapEnabled = false;
-        sampler_desc.maxAnisotropy = 1;
-
-        state.samplers[TextureSampler::NearestRepeat] = Renderer::Context()->CreateSampler(sampler_desc);
     }
 
     return true;

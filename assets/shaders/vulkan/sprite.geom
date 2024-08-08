@@ -1,6 +1,6 @@
 #version 450 core
 
-layout(binding = 1) uniform UniformBuffer {
+layout(binding = 1) uniform GlobalUniformBuffer {
     mat4 screen_projection;
     mat4 view_projection;
     mat4 nonscale_view_projection;
@@ -14,8 +14,8 @@ layout(location = 0) in VS_OUT {
     float outline_thickness;
     float order;
     int has_texture;
-    bool is_ui;
-    bool is_nonscale;
+    int is_ui;
+    int is_nonscale;
 } gs_in[];
 
 layout(location = 0) out vec2 g_uv;
@@ -34,8 +34,8 @@ void main() {
     float outline_thickness = gs_in[0].outline_thickness;
     float order = gs_in[0].order;
     mat4 transform = gs_in[0].transform;
-    bool is_ui = gs_in[0].is_ui;
-    bool is_nonscale = gs_in[0].is_nonscale;
+    bool is_ui = gs_in[0].is_ui > 0;
+    bool is_nonscale = gs_in[0].is_nonscale > 0;
     int has_texture = gs_in[0].has_texture;
     
     mat4 mvp = is_ui ? ubo.screen_projection * transform : is_nonscale ? ubo.nonscale_view_projection * transform : ubo.view_projection * transform;

@@ -12,7 +12,6 @@ namespace TextureSampler {
         LinearMips,
         Nearest,
         NearestMips,
-        NearestRepeat
     };
 };
 

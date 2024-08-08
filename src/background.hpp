@@ -7,7 +7,6 @@
 #include "world/world.hpp"
 
 namespace Background {
-    void InitRenderer();
     void SetupWorldBackground(const World& world);
     void SetupMenuBackground();
     

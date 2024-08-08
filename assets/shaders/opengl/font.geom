@@ -1,6 +1,6 @@
 #version 330 core
 
-uniform UniformBuffer {
+uniform GlobalUniformBuffer {
     mat4 screen_projection;
     mat4 view_projection;
 } ubo;

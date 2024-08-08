@@ -8,6 +8,7 @@
 
 #include "../types/sprite.hpp"
 #include "../types/backend.hpp"
+#include "../types/background_layer.hpp"
 #include "../world/world.hpp"
 #include "../assets.hpp"
 
@@ -24,8 +25,9 @@ struct ProjectionsUniform {
     glm::mat4 view_projection_matrix;
     glm::mat4 nonscale_view_projection_matrix;
     glm::mat4 nonscale_projection_matrix;
-    glm::mat4 projection_matrix;
     glm::mat4 transform_matrix;
+    glm::vec2 camera_position;
+    glm::vec2 window_size;
 };
 
 constexpr float MAX_Z = 1000.0f;
@@ -70,6 +72,8 @@ namespace Renderer {
         DrawText(&ch, 1, size, position, color, font, true);
     }
 
+    void DrawBackground(const BackgroundLayer& layer);
+
 #if DEBUG
     void PrintDebugInfo();
 #endif
@@ -81,7 +85,7 @@ namespace Renderer {
     [[nodiscard]] LLGL::CommandBuffer* CommandBuffer();
     [[nodiscard]] LLGL::CommandQueue* CommandQueue();
     [[nodiscard]] const std::shared_ptr<CustomSurface>& Surface();
-    [[nodiscard]] LLGL::Buffer* ProjectionsUniformBuffer();
+    [[nodiscard]] LLGL::Buffer* GlobalUniformBuffer();
     [[nodiscard]] RenderBackend Backend();
     [[nodiscard]] uint32_t GetGlobalDepthIndex();
 };

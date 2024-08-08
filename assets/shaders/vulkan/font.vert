@@ -5,7 +5,7 @@ layout(location = 1) in vec3 a_position;
 layout(location = 2) in vec2 a_uv;
 layout(location = 3) in int a_ui;
 
-layout(binding = 1) uniform UniformBuffer {
+layout(binding = 1) uniform GlobalUniformBuffer {
     mat4 screen_projection;
     mat4 view_projection;
 } ubo;
