@@ -65,10 +65,10 @@ namespace Renderer {
         DrawText(text.c_str(), text.length(), size, position, color, font, true, depth);
     }
 
-    inline void DrawChar(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontKey font) {
+    inline void DrawChar(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, int depth = -1) {
         DrawText(&ch, 1, size, position, color, font, false);
     }
-    inline void DrawCharUi(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontKey font) {
+    inline void DrawCharUi(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontKey font, int depth = -1) {
         DrawText(&ch, 1, size, position, color, font, true);
     }
 

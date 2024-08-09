@@ -441,7 +441,7 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
         .color = sprite.color(),
         .outline_color = sprite.outline_color(),
         .outline_thickness = sprite.outline_thickness(),
-        .texture = sprite_texture,
+        .texture = sprite_texture.is_some() ? sprite_texture.get() : Texture(),
         .order = order,
         .is_ui = is_ui,
         .is_nonscalable = sprite.nonscalable()
@@ -451,29 +451,25 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
 void RenderBatchSprite::render() {
     if (is_empty()) return;
 
-    std::vector<SpriteData> sorted_sprites = m_sprites;
     std::sort(
-        sorted_sprites.begin(),
-        sorted_sprites.end(),
+        m_sprites.begin(),
+        m_sprites.end(),
         [](const SpriteData& a, const SpriteData& b) {
-            const int a_id = a.texture.is_some() ? a.texture->id : -1;
-            const int b_id = b.texture.is_some() ? b.texture->id : -1;
-
             if (!a.is_ui && b.is_ui) return true;
             if (a.is_ui && !b.is_ui) return false;
 
-            return a_id < b_id;
+            return a.texture.id < b.texture.id;
         }
     );
     
-    tl::optional<Texture> prev_texture = sorted_sprites[0].texture;
+    Texture prev_texture = m_sprites[0].texture;
     uint32_t sprite_count = 0;
     uint32_t total_sprite_count = 0;
     int vertex_offset = 0;
 
-    for (const SpriteData& sprite_data : sorted_sprites) {
-        const int prev_texture_id = prev_texture.is_some() ? prev_texture->id : -1;
-        const int curr_texture_id = sprite_data.texture.is_some() ? sprite_data.texture->id : -1;
+    for (const SpriteData& sprite_data : m_sprites) {
+        const int prev_texture_id = prev_texture.id;
+        const int curr_texture_id = sprite_data.texture.id;
 
         if (prev_texture_id >= 0 && prev_texture_id != curr_texture_id) {
             m_sprite_flush_queue.push_back(FlushData {
@@ -531,7 +527,7 @@ void RenderBatchSprite::flush() {
     commands->SetResource(0, *state.constant_buffer);
 
     for (const FlushData& flush_data : m_sprite_flush_queue) {
-        const Texture& t = flush_data.texture.is_some() ? flush_data.texture.get() : Assets::GetTexture(TextureKey::Stub);
+        const Texture& t = flush_data.texture.id >= 0 ? flush_data.texture : Assets::GetTexture(TextureKey::Stub);
 
         commands->SetResource(1, *t.texture);
         commands->SetResource(2, Assets::GetSampler(t.sampler));
@@ -732,7 +728,7 @@ void RenderBatchGlyph::flush() {
     commands->SetResource(0, *state.constant_buffer);
 
     for (const FlushData& flush_data : m_glyphs_flush_queue) {
-        const Texture& t = flush_data.texture.get();
+        const Texture& t = flush_data.texture;
 
         commands->SetResource(1, *t.texture);
         commands->SetResource(2, Assets::GetSampler(t.sampler));

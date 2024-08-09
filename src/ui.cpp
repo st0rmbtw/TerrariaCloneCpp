@@ -206,7 +206,9 @@ void render_inventory(const Inventory& inventory) {
                 index_color = 1.0f;
             }
 
-            Renderer::DrawTextUi(std::to_string(x + 1), index_size, offset + padding + glm::vec2(16.0f, text_size * 1.7f), glm::vec3(index_color), FontKey::AndyBold, text_depth);
+            const char index = '0' + (x + 1) % 10;
+
+            Renderer::DrawCharUi(index, index_size, offset + padding + glm::vec2(16.0f, text_size * 1.7f), glm::vec3(index_color), FontKey::AndyBold, text_depth);
         }
 
         // Draw item stack

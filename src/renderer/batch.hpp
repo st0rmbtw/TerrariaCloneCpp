@@ -32,14 +32,14 @@ struct SpriteData {
     glm::vec4 color;
     glm::vec4 outline_color;
     float outline_thickness;
-    tl::optional<Texture> texture;
+    Texture texture;
     uint32_t order;
     bool is_ui;
     bool is_nonscalable;
 };
 
 struct FlushData {
-    tl::optional<Texture> texture;
+    Texture texture;
     int offset;
     uint32_t count;
 };
