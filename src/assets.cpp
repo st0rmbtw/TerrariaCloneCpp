@@ -12,8 +12,8 @@
 #include <ft2build.h>
 #include <freetype/freetype.h>
 
-#include "renderer/particle_renderer.hpp"
 #include "renderer/renderer.hpp"
+#include "renderer/types.hpp"
 #include "log.hpp"
 #include "utils.hpp"
 #include "types/shader_pipeline.hpp"
@@ -159,11 +159,11 @@ static const std::array FONT_ASSETS = std::to_array<std::pair<FontAsset, std::st
 });
 
 const std::pair<ShaderAsset, AssetShader> SHADER_ASSETS[] = {
-    { ShaderAsset::SpriteShader, AssetShader("sprite", ShaderStages::Vertex | ShaderStages::Fragment | ShaderStages::Geometry, VertexFormatAsset::SpriteVertex) },
-    { ShaderAsset::TilemapShader, AssetShader("tilemap", ShaderStages::Vertex | ShaderStages::Fragment | ShaderStages::Geometry, VertexFormatAsset::TilemapVertex) },
-    { ShaderAsset::FontShader, AssetShader("font", ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::FontVertex) },
+    { ShaderAsset::TilemapShader,    AssetShader("tilemap",    ShaderStages::Vertex | ShaderStages::Fragment  | ShaderStages::Geometry, VertexFormatAsset::TilemapVertex) },
     { ShaderAsset::BackgroundShader, AssetShader("background", ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::BackgroundVertex) },
-    { ShaderAsset::ParticleShader, AssetShader("particle", ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::ParticleVertex, VertexFormatAsset::ParticleInstance }) },
+    { ShaderAsset::FontShader,       AssetShader("font",       ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::FontVertex,     VertexFormatAsset::FontInstance     }) },
+    { ShaderAsset::SpriteShader,     AssetShader("sprite",     ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::SpriteVertex,   VertexFormatAsset::SpriteInstance   }) },
+    { ShaderAsset::ParticleShader,   AssetShader("particle",   ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::ParticleVertex, VertexFormatAsset::ParticleInstance }) },
 };
 
 const std::pair<ComputeShaderAsset, AssetComputeShader> COMPUTE_SHADER_ASSETS[] = {
@@ -366,36 +366,46 @@ void Assets::InitVertexFormats() {
     const RenderBackend backend = Renderer::Backend();
 
     LLGL::VertexFormat sprite_vertex_format;
+    LLGL::VertexFormat sprite_instance_format;
     LLGL::VertexFormat tilemap_vertex_format;
     LLGL::VertexFormat font_vertex_format;
+    LLGL::VertexFormat font_instance_format;
     LLGL::VertexFormat background_vertex_format;
     LLGL::VertexFormat particle_vertex_format;
     LLGL::VertexFormat particle_instance_format;
 
     if (backend.IsGLSL()) {
-        sprite_vertex_format.AppendAttribute({"a_position", LLGL::Format::RGB32Float});
-        sprite_vertex_format.AppendAttribute({"a_rotation", LLGL::Format::RGBA32Float});
-        sprite_vertex_format.AppendAttribute({"a_size", LLGL::Format::RG32Float});
-        sprite_vertex_format.AppendAttribute({"a_offset", LLGL::Format::RG32Float});
-        sprite_vertex_format.AppendAttribute({"a_uv_offset_scale", LLGL::Format::RGBA32Float});
-        sprite_vertex_format.AppendAttribute({"a_color", LLGL::Format::RGBA32Float});
-        sprite_vertex_format.AppendAttribute({"a_outline_color", LLGL::Format::RGBA32Float});
-        sprite_vertex_format.AppendAttribute({"a_outline_thickness", LLGL::Format::R32Float});
-        sprite_vertex_format.AppendAttribute({"a_has_texture", LLGL::Format::R32SInt});
-        sprite_vertex_format.AppendAttribute({"a_is_ui", LLGL::Format::R32SInt});
-        sprite_vertex_format.AppendAttribute({"a_is_nonscale", LLGL::Format::R32SInt});
+        sprite_vertex_format.AppendAttribute({ "a_position", LLGL::Format::RG32Float, 0, 0, sizeof(SpriteVertex), 0, 0 });
     } else if (backend.IsHLSL()) {
-        sprite_vertex_format.AppendAttribute({"Position", LLGL::Format::RGB32Float});
-        sprite_vertex_format.AppendAttribute({"Rotation", LLGL::Format::RGBA32Float});
-        sprite_vertex_format.AppendAttribute({"Size", LLGL::Format::RG32Float});
-        sprite_vertex_format.AppendAttribute({"Offset", LLGL::Format::RG32Float});
-        sprite_vertex_format.AppendAttribute({"UvOffsetScale", LLGL::Format::RGBA32Float});
-        sprite_vertex_format.AppendAttribute({"Color", LLGL::Format::RGBA32Float});
-        sprite_vertex_format.AppendAttribute({"OutlineColor", LLGL::Format::RGBA32Float});
-        sprite_vertex_format.AppendAttribute({"OutlineThickness", LLGL::Format::R32Float});
-        sprite_vertex_format.AppendAttribute({"HasTexture", LLGL::Format::R32SInt});
-        sprite_vertex_format.AppendAttribute({"IsUI", LLGL::Format::R32SInt});
-        sprite_vertex_format.AppendAttribute({"IsNonScale", LLGL::Format::R32SInt});
+        sprite_vertex_format.AppendAttribute({ "Position",   LLGL::Format::RG32Float, 0, 0, sizeof(SpriteVertex), 0, 0 });
+    } else {
+        // TODO
+    }
+
+    if (backend.IsGLSL()) {
+        sprite_instance_format.AppendAttribute({"i_position",           LLGL::Format::RGB32Float,  1,  offsetof(SpriteInstance,position),          sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"i_rotation",           LLGL::Format::RGBA32Float, 2,  offsetof(SpriteInstance,rotation),          sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"i_size",               LLGL::Format::RG32Float,   3,  offsetof(SpriteInstance,size),              sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"i_offset",             LLGL::Format::RG32Float,   4,  offsetof(SpriteInstance,offset),            sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"i_uv_offset_scale",    LLGL::Format::RGBA32Float, 5,  offsetof(SpriteInstance,uv_offset_scale),   sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"i_color",              LLGL::Format::RGBA32Float, 6,  offsetof(SpriteInstance,color),             sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"i_outline_color",      LLGL::Format::RGBA32Float, 7,  offsetof(SpriteInstance,outline_color),     sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"i_outline_thickness",  LLGL::Format::R32Float,    8,  offsetof(SpriteInstance,outline_thickness), sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"i_has_texture",        LLGL::Format::R32SInt,     9,  offsetof(SpriteInstance,has_texture),       sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"i_is_ui",              LLGL::Format::R32SInt,     10, offsetof(SpriteInstance,is_ui),             sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"i_is_non_scale",       LLGL::Format::R32SInt,     11, offsetof(SpriteInstance,is_nonscalable),    sizeof(SpriteInstance), 1, 1 });
+    } else if (backend.IsHLSL()) {
+        sprite_instance_format.AppendAttribute({"I_Position",         LLGL::Format::RGB32Float,  1,  offsetof(SpriteInstance,position),          sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"I_Rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(SpriteInstance,rotation),          sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"I_Size",             LLGL::Format::RG32Float,   3,  offsetof(SpriteInstance,size),              sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"I_Offset",           LLGL::Format::RG32Float,   4,  offsetof(SpriteInstance,offset),            sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"I_UvOffsetScale",    LLGL::Format::RGBA32Float, 5,  offsetof(SpriteInstance,uv_offset_scale),   sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"I_Color",            LLGL::Format::RGBA32Float, 6,  offsetof(SpriteInstance,color),             sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"I_OutlineColor",     LLGL::Format::RGBA32Float, 7,  offsetof(SpriteInstance,outline_color),     sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"I_OutlineThickness", LLGL::Format::R32Float,    8,  offsetof(SpriteInstance,outline_thickness), sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"I_HasTexture",       LLGL::Format::R32SInt,     9,  offsetof(SpriteInstance,has_texture),       sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"I_IsUI",             LLGL::Format::R32SInt,     10, offsetof(SpriteInstance,is_ui),             sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"I_IsNonScale",       LLGL::Format::R32SInt,     11, offsetof(SpriteInstance,is_nonscalable),    sizeof(SpriteInstance), 1, 1 });
     } else {
         // TODO
     }
@@ -417,15 +427,27 @@ void Assets::InitVertexFormats() {
     }
 
     if (backend.IsGLSL()) {
-        font_vertex_format.AppendAttribute({"a_color", LLGL::Format::RGB32Float});
-        font_vertex_format.AppendAttribute({"a_position", LLGL::Format::RGB32Float});
-        font_vertex_format.AppendAttribute({"a_uv", LLGL::Format::RG32Float});
-        font_vertex_format.AppendAttribute({"a_is_ui", LLGL::Format::R32SInt});
+        font_vertex_format.AppendAttribute({"a_position", LLGL::Format::RG32Float, 0, 0, sizeof(GlyphVertex), 0, 0});
     } else if (backend.IsHLSL()) {
-        font_vertex_format.AppendAttribute({"Color", LLGL::Format::RGB32Float});
-        font_vertex_format.AppendAttribute({"Position", LLGL::Format::RGB32Float});
-        font_vertex_format.AppendAttribute({"UV", LLGL::Format::RG32Float});
-        font_vertex_format.AppendAttribute({"IsUI", LLGL::Format::R32SInt});
+        font_vertex_format.AppendAttribute({"Position",   LLGL::Format::RG32Float, 0, 0, sizeof(GlyphVertex), 0, 0});
+    } else {
+        // TODO
+    }
+
+    if (backend.IsGLSL()) {
+        font_instance_format.AppendAttribute({"i_color",     LLGL::Format::RGB32Float, 0, offsetof(GlyphInstance,color),    sizeof(GlyphInstance), 1, 1});
+        font_instance_format.AppendAttribute({"i_position",  LLGL::Format::RGB32Float, 1, offsetof(GlyphInstance,pos),      sizeof(GlyphInstance), 1, 1});
+        font_instance_format.AppendAttribute({"i_size",      LLGL::Format::RG32Float,  2, offsetof(GlyphInstance,size),     sizeof(GlyphInstance), 1, 1});
+        font_instance_format.AppendAttribute({"i_tex_size",  LLGL::Format::RG32Float,  3, offsetof(GlyphInstance,tex_size), sizeof(GlyphInstance), 1, 1});
+        font_instance_format.AppendAttribute({"i_uv",        LLGL::Format::RG32Float,  4, offsetof(GlyphInstance,uv),       sizeof(GlyphInstance), 1, 1});
+        font_instance_format.AppendAttribute({"i_is_ui",     LLGL::Format::R32SInt,    5, offsetof(GlyphInstance,is_ui),    sizeof(GlyphInstance), 1, 1});
+    } else if (backend.IsHLSL()) {
+        font_instance_format.AppendAttribute({"I_Color",    LLGL::Format::RGB32Float, 0, offsetof(GlyphInstance,color),    sizeof(GlyphInstance), 1, 1});
+        font_instance_format.AppendAttribute({"I_Position", LLGL::Format::RGB32Float, 1, offsetof(GlyphInstance,pos),      sizeof(GlyphInstance), 1, 1});
+        font_instance_format.AppendAttribute({"I_Size",     LLGL::Format::RG32Float,  2, offsetof(GlyphInstance,size),     sizeof(GlyphInstance), 1, 1});
+        font_instance_format.AppendAttribute({"I_TexSize",  LLGL::Format::RG32Float,  3, offsetof(GlyphInstance,tex_size), sizeof(GlyphInstance), 1, 1});
+        font_instance_format.AppendAttribute({"I_UV",       LLGL::Format::RG32Float,  4, offsetof(GlyphInstance,uv),       sizeof(GlyphInstance), 1, 1});
+        font_instance_format.AppendAttribute({"I_IsUI",     LLGL::Format::R32SInt,    5, offsetof(GlyphInstance,is_ui),    sizeof(GlyphInstance), 1, 1});
     } else {
         // TODO
     }
@@ -471,8 +493,10 @@ void Assets::InitVertexFormats() {
     }
 
     state.vertex_formats[VertexFormatAsset::SpriteVertex] = sprite_vertex_format;
+    state.vertex_formats[VertexFormatAsset::SpriteInstance] = sprite_instance_format;
     state.vertex_formats[VertexFormatAsset::TilemapVertex] = tilemap_vertex_format;
     state.vertex_formats[VertexFormatAsset::FontVertex] = font_vertex_format;
+    state.vertex_formats[VertexFormatAsset::FontInstance] = font_instance_format;
     state.vertex_formats[VertexFormatAsset::BackgroundVertex] = background_vertex_format;
     state.vertex_formats[VertexFormatAsset::ParticleVertex] = particle_vertex_format;
     state.vertex_formats[VertexFormatAsset::ParticleInstance] = particle_instance_format;

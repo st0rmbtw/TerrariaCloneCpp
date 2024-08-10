@@ -8,20 +8,10 @@
 #include <LLGL/BufferArray.h>
 #include <LLGL/PipelineState.h>
 
+#include "types.hpp"
+
 #include "../particles.hpp"
 #include "../types/texture_atlas.hpp"
-
-struct ParticleVertex {
-    float x;
-    float y;
-    glm::vec2 inv_tex_size;
-    glm::vec2 tex_size;
-};
-
-struct ParticleInstance {
-    glm::vec2 uv;
-    float depth;
-};
 
 class ParticleRenderer {
 public:

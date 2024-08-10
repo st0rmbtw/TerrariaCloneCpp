@@ -7,33 +7,14 @@
 #include <vector>
 #include <LLGL/LLGL.h>
 
+#include "types.hpp"
+
 #include "../types/sprite.hpp"
 #include "../optional.hpp"
 
 constexpr size_t MAX_QUADS = 5000;
 constexpr size_t MAX_VERTICES = MAX_QUADS * 4;
 constexpr size_t MAX_INDICES = MAX_QUADS * 6;
-
-struct SpriteVertex {
-    glm::vec3 position;
-    glm::quat rotation;
-    glm::vec2 size;
-    glm::vec2 offset;
-    glm::vec4 uv_offset_scale;
-    glm::vec4 color;
-    glm::vec4 outline_color;
-    float outline_thickness;
-    int has_texture;
-    int is_ui;
-    int is_nonscalable;
-};
-
-struct GlyphVertex {
-    glm::vec3 color;
-    glm::vec3 pos;
-    glm::vec2 uv;
-    int is_ui;
-};
 
 struct SpriteData {
     glm::vec2 position;
@@ -77,6 +58,9 @@ public:
 
 protected:
     LLGL::Buffer* m_vertex_buffer = nullptr;
+    LLGL::Buffer* m_instance_buffer = nullptr;
+    LLGL::BufferArray* m_buffer_array = nullptr;
+
     LLGL::PipelineState* m_pipeline = nullptr;
 };
 
@@ -95,8 +79,9 @@ private:
     std::vector<SpriteData> m_sprites;
     std::vector<FlushData> m_sprite_flush_queue;
 
-    SpriteVertex* m_buffer = nullptr;
-    SpriteVertex* m_buffer_ptr = nullptr;
+    SpriteInstance* m_buffer = nullptr;
+    SpriteInstance* m_buffer_ptr = nullptr;
+
 };
 
 class RenderBatchGlyph : public RenderBatch {
@@ -115,9 +100,8 @@ private:
     std::vector<GlyphData> m_glyphs;
     std::vector<FlushData> m_glyphs_flush_queue;
 
-    GlyphVertex* m_buffer = nullptr;
-    GlyphVertex* m_buffer_ptr = nullptr;
-    LLGL::Buffer* m_index_buffer = nullptr;
+    GlyphInstance* m_buffer = nullptr;
+    GlyphInstance* m_buffer_ptr = nullptr;
 };
 
 #endif

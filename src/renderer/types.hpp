@@ -27,8 +27,15 @@ struct SpriteInstance {
 };
 
 struct GlyphVertex {
+    float x;
+    float y;
+};
+
+struct GlyphInstance {
     glm::vec3 color;
     glm::vec3 pos;
+    glm::vec2 size;
+    glm::vec2 tex_size;
     glm::vec2 uv;
     int is_ui;
 };

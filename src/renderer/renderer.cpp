@@ -389,9 +389,22 @@ void Renderer::Terminate() {
 //
 
 void RenderBatchSprite::init() {
-    m_buffer = new SpriteVertex[MAX_QUADS];
+    const auto& context = Renderer::Context();
 
-    m_vertex_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(SpriteVertex), Assets::GetVertexFormat(VertexFormatAsset::SpriteVertex), "SpriteBatch VertexBuffer");
+    m_buffer = new SpriteInstance[MAX_QUADS];
+
+    const SpriteVertex vertices[] = {
+        SpriteVertex(0.0f, 0.0f),
+        SpriteVertex(0.0f, 1.0f),
+        SpriteVertex(1.0f, 0.0f),
+        SpriteVertex(1.0f, 1.0f),
+    };
+
+    m_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::SpriteVertex), "SpriteBatch VertexBuffer");
+    m_instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(SpriteInstance), Assets::GetVertexFormat(VertexFormatAsset::SpriteInstance), "SpriteBatch InstanceBuffer");
+
+    LLGL::Buffer* buffers[] = { m_vertex_buffer, m_instance_buffer };
+    m_buffer_array = context->CreateBufferArray(2, buffers);
 
     const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
 
@@ -408,7 +421,7 @@ void RenderBatchSprite::init() {
         LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(samplerBinding)),
     };
 
-    LLGL::PipelineLayout* pipelineLayout = state.context->CreatePipelineLayout(pipelineLayoutDesc);
+    LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
     const ShaderPipeline& sprite_shader = Assets::GetShader(ShaderAsset::SpriteShader);
 
@@ -419,7 +432,7 @@ void RenderBatchSprite::init() {
     pipelineDesc.geometryShader = sprite_shader.gs;
     pipelineDesc.pipelineLayout = pipelineLayout;
     pipelineDesc.indexFormat = LLGL::Format::Undefined;
-    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::PointList;
+    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = state.swap_chain->GetRenderPass();
     pipelineDesc.rasterizer.frontCCW = true;
     pipelineDesc.depth = LLGL::DepthDescriptor {
@@ -439,7 +452,7 @@ void RenderBatchSprite::init() {
         }
     };
 
-    m_pipeline = state.context->CreatePipelineState(pipelineDesc);
+    m_pipeline = context->CreatePipelineState(pipelineDesc);
 
     if (const LLGL::Report* report = m_pipeline->GetReport()) {
         if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
@@ -543,12 +556,12 @@ void RenderBatchSprite::flush() {
 
     const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
     if (size <= (1 << 16)) {
-        commands->UpdateBuffer(*m_vertex_buffer, 0, m_buffer, size);
+        commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, size);
     } else {
-        Renderer::Context()->WriteBuffer(*m_vertex_buffer, 0, m_buffer, size);
+        Renderer::Context()->WriteBuffer(*m_instance_buffer, 0, m_buffer, size);
     }
     
-    commands->SetVertexBuffer(*m_vertex_buffer);
+    commands->SetVertexBufferArray(*m_buffer_array);
 
     commands->SetPipelineState(*m_pipeline);
     commands->SetResource(0, *state.constant_buffer);
@@ -558,7 +571,7 @@ void RenderBatchSprite::flush() {
 
         commands->SetResource(1, *t.texture);
         commands->SetResource(2, Assets::GetSampler(t.sampler));
-        commands->Draw(flush_data.count, flush_data.offset);
+        commands->DrawInstanced(4, 0, flush_data.count, flush_data.offset);
     }
 }
 
@@ -577,22 +590,22 @@ void RenderBatchSprite::terminate() {
 
 
 void RenderBatchGlyph::init() {
-    m_buffer = new GlyphVertex[MAX_VERTICES];
+    const auto& context = Renderer::Context();
 
-    uint32_t indices[MAX_INDICES];
-    uint32_t offset = 0;
-    for (size_t i = 0; i < MAX_INDICES; i += 6) {
-        indices[i + 0] = 0 + offset;
-        indices[i + 1] = 1 + offset;
-        indices[i + 2] = 2 + offset;
-        indices[i + 3] = 2 + offset;
-        indices[i + 4] = 3 + offset;
-        indices[i + 5] = 1 + offset;
-        offset += 4;
-    }
+    m_buffer = new GlyphInstance[MAX_VERTICES];
 
-    m_vertex_buffer = CreateVertexBuffer(MAX_VERTICES * sizeof(GlyphVertex), Assets::GetVertexFormat(VertexFormatAsset::FontVertex), "GlyphBatch VertexBuffer");
-    m_index_buffer = CreateIndexBuffer(indices, LLGL::Format::R32UInt, "GlyphBatch IndexBuffer");
+    const GlyphVertex vertices[] = {
+        GlyphVertex(0.0f, 0.0f),
+        GlyphVertex(0.0f, 1.0f),
+        GlyphVertex(1.0f, 0.0f),
+        GlyphVertex(1.0f, 1.0f),
+    };
+
+    m_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::FontVertex), "GlyphBatch VertexBuffer");
+    m_instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(GlyphInstance), Assets::GetVertexFormat(VertexFormatAsset::FontInstance), "GlyphBatch InstanceBuffer");
+
+    LLGL::Buffer* buffers[] = { m_vertex_buffer, m_instance_buffer };
+    m_buffer_array = context->CreateBufferArray(2, buffers);
 
     const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
 
@@ -609,7 +622,7 @@ void RenderBatchGlyph::init() {
         LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(samplerBinding)),
     };
 
-    LLGL::PipelineLayout* pipelineLayout = state.context->CreatePipelineLayout(pipelineLayoutDesc);
+    LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
     const ShaderPipeline& font_shader = Assets::GetShader(ShaderAsset::FontShader);
 
@@ -620,7 +633,7 @@ void RenderBatchGlyph::init() {
     pipelineDesc.geometryShader = font_shader.gs;
     pipelineDesc.pipelineLayout = pipelineLayout;
     pipelineDesc.indexFormat = LLGL::Format::R32UInt;
-    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleList;
+    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = state.swap_chain->GetRenderPass();
     pipelineDesc.rasterizer.frontCCW = true;
     pipelineDesc.depth = LLGL::DepthDescriptor {
@@ -640,7 +653,7 @@ void RenderBatchGlyph::init() {
         }
     };
 
-    m_pipeline = state.context->CreatePipelineState(pipelineDesc);
+    m_pipeline = context->CreatePipelineState(pipelineDesc);
 
     if (const LLGL::Report* report = m_pipeline->GetReport()) {
         if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
@@ -687,39 +700,19 @@ void RenderBatchGlyph::render() {
             m_glyphs_flush_queue.push_back(FlushData {
                 .texture = prev_texture,
                 .offset = vertex_offset,
-                .count = sprite_count * 6
+                .count = sprite_count
             });
             sprite_count = 0;
-            vertex_offset = total_sprite_count * 4;
+            vertex_offset = total_sprite_count;
         }
 
         const float order = static_cast<float>(glyph_data.order);
 
         m_buffer_ptr->color = glyph_data.color;
         m_buffer_ptr->pos = glm::vec3(glyph_data.pos, order);
+        m_buffer_ptr->size = glyph_data.size;
+        m_buffer_ptr->tex_size = glyph_data.tex_size;
         m_buffer_ptr->uv = glyph_data.tex_uv;
-        m_buffer_ptr->is_ui = glyph_data.is_ui;
-        m_buffer_ptr++;
-
-        m_buffer_ptr->color = glyph_data.color;
-        m_buffer_ptr->pos = glm::vec3(glyph_data.pos, order);
-        m_buffer_ptr->pos.x += glyph_data.size.x;
-        m_buffer_ptr->uv = glyph_data.tex_uv;
-        m_buffer_ptr->uv.x += glyph_data.tex_size.x;
-        m_buffer_ptr->is_ui = glyph_data.is_ui;
-        m_buffer_ptr++;
-
-        m_buffer_ptr->color = glyph_data.color;
-        m_buffer_ptr->pos = glm::vec3(glyph_data.pos, order);
-        m_buffer_ptr->pos.y += glyph_data.size.y;
-        m_buffer_ptr->uv = glyph_data.tex_uv;
-        m_buffer_ptr->uv.y += glyph_data.tex_size.y;
-        m_buffer_ptr->is_ui = glyph_data.is_ui;
-        m_buffer_ptr++;
-
-        m_buffer_ptr->color = glyph_data.color;
-        m_buffer_ptr->pos = glm::vec3(glyph_data.pos + glyph_data.size, order);
-        m_buffer_ptr->uv = glyph_data.tex_uv + glyph_data.tex_size;
         m_buffer_ptr->is_ui = glyph_data.is_ui;
         m_buffer_ptr++;
 
@@ -732,7 +725,7 @@ void RenderBatchGlyph::render() {
     m_glyphs_flush_queue.push_back(FlushData {
         .texture = prev_texture,
         .offset = vertex_offset,
-        .count = sprite_count * 6
+        .count = sprite_count
     });
 
     flush();
@@ -743,13 +736,12 @@ void RenderBatchGlyph::flush() {
 
     const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
     if (size <= (1 << 16)) {
-        commands->UpdateBuffer(*m_vertex_buffer, 0, m_buffer, size);
+        commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, size);
     } else {
-        Renderer::Context()->WriteBuffer(*m_vertex_buffer, 0, m_buffer, size);
+        Renderer::Context()->WriteBuffer(*m_instance_buffer, 0, m_buffer, size);
     }
     
-    commands->SetVertexBuffer(*m_vertex_buffer);
-    commands->SetIndexBuffer(*m_index_buffer);
+    commands->SetVertexBufferArray(*m_buffer_array);
 
     commands->SetPipelineState(*m_pipeline);
     commands->SetResource(0, *state.constant_buffer);
@@ -759,7 +751,7 @@ void RenderBatchGlyph::flush() {
 
         commands->SetResource(1, *t.texture);
         commands->SetResource(2, Assets::GetSampler(t.sampler));
-        commands->DrawIndexed(flush_data.count, 0, flush_data.offset);
+        commands->DrawInstanced(4, 0, flush_data.count, flush_data.offset);
     }
 }
 
