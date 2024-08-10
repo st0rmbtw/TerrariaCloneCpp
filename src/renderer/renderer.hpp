@@ -21,7 +21,7 @@ enum class RenderLayer : uint8_t {
     World = 1,
 };
 
-struct ProjectionsUniform {
+struct __attribute__((aligned(16))) ProjectionsUniform {
     glm::mat4 screen_projection_matrix;
     glm::mat4 view_projection_matrix;
     glm::mat4 nonscale_view_projection_matrix;
@@ -29,6 +29,7 @@ struct ProjectionsUniform {
     glm::mat4 transform_matrix;
     glm::vec2 camera_position;
     glm::vec2 window_size;
+    float max_depth;
 };
 
 constexpr float MAX_Z = 1000.0f;
@@ -39,7 +40,7 @@ namespace Renderer {
     void RenderWorld();
 
     void Begin(const Camera& camera);
-    void Render(const World& world);
+    void Render(const Camera& camera, const World& world);
 
     void DrawSprite(const Sprite& sprite, RenderLayer render_layer = RenderLayer::Main, int depth = -1);
     inline void DrawSprite(const Sprite& sprite, int depth) {
@@ -74,7 +75,7 @@ namespace Renderer {
     }
 
     void DrawBackground(const BackgroundLayer& layer);
-    void DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant);
+    void DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, int depth = -1);
 
 #if DEBUG
     void PrintDebugInfo();
@@ -90,6 +91,7 @@ namespace Renderer {
     [[nodiscard]] LLGL::Buffer* GlobalUniformBuffer();
     [[nodiscard]] RenderBackend Backend();
     [[nodiscard]] uint32_t GetGlobalDepthIndex();
+    [[nodiscard]] const LLGL::RenderPass* DefaultRenderPass();
 };
 
 #endif

@@ -1,4 +1,5 @@
 #include "assets.hpp"
+#include "particle_renderer.hpp"
 #include "renderer.hpp"
 
 const LLGL::VertexFormat& SpriteVertexFormat() {
@@ -157,20 +158,42 @@ const LLGL::VertexFormat& ParticleVertexFormat() {
     switch (Renderer::Backend()) {
         case RenderBackend::Vulkan:
         case RenderBackend::OpenGL: {
-            vertexFormat.AppendAttribute({"a_position", LLGL::Format::RG32Float});
-            vertexFormat.AppendAttribute({"a_rotation", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"a_uv", LLGL::Format::RG32Float});
-            vertexFormat.AppendAttribute({"a_tex_size", LLGL::Format::RG32Float});
-            vertexFormat.AppendAttribute({"a_scale", LLGL::Format::R32Float});
+            vertexFormat.AppendAttribute({ "a_position",      LLGL::Format::RG32Float, 0, 0,                                      sizeof(ParticleVertex), 0 });
+            vertexFormat.AppendAttribute({ "a_inv_tex_size",  LLGL::Format::RG32Float, 1, offsetof(ParticleVertex, inv_tex_size), sizeof(ParticleVertex), 0 });
+            vertexFormat.AppendAttribute({ "a_tex_size",      LLGL::Format::RG32Float, 2, offsetof(ParticleVertex, tex_size),     sizeof(ParticleVertex), 0 });
         }
         break;
         case RenderBackend::D3D11:
         case RenderBackend::D3D12: {
-            vertexFormat.AppendAttribute({"Position", LLGL::Format::RG32Float});
-            vertexFormat.AppendAttribute({"Rotation", LLGL::Format::RGBA32Float});
-            vertexFormat.AppendAttribute({"UV", LLGL::Format::RG32Float});
-            vertexFormat.AppendAttribute({"TexSize", LLGL::Format::RG32Float});
-            vertexFormat.AppendAttribute({"Scale", LLGL::Format::R32Float});
+            vertexFormat.AppendAttribute({ "Position",   LLGL::Format::RG32Float, 0, 0,                                      sizeof(ParticleVertex), 0 });
+            vertexFormat.AppendAttribute({ "InvTexSize", LLGL::Format::RG32Float, 1, offsetof(ParticleVertex, inv_tex_size), sizeof(ParticleVertex), 0 });
+            vertexFormat.AppendAttribute({ "TexSize",    LLGL::Format::RG32Float, 2, offsetof(ParticleVertex, tex_size),     sizeof(ParticleVertex), 0 });
+        }
+        break;
+        case RenderBackend::Metal: // TODO
+        break;
+        default: UNREACHABLE()
+    }
+
+    return vertexFormat;
+}
+
+const LLGL::VertexFormat& ParticleInstanceFormat() {
+    static LLGL::VertexFormat vertexFormat;
+
+    if (!vertexFormat.attributes.empty()) return vertexFormat;
+
+    switch (Renderer::Backend()) {
+        case RenderBackend::Vulkan:
+        case RenderBackend::OpenGL: {
+            vertexFormat.AppendAttribute({ "i_uv",    LLGL::Format::RG32Float, 1, offsetof(ParticleInstance, uv),    sizeof(ParticleInstance), 1, 1});
+            vertexFormat.AppendAttribute({ "i_depth", LLGL::Format::R32Float,  2, offsetof(ParticleInstance, depth), sizeof(ParticleInstance), 1, 1});
+        }
+        break;
+        case RenderBackend::D3D11:
+        case RenderBackend::D3D12: {
+            vertexFormat.AppendAttribute({ "I_UV",    LLGL::Format::RG32Float, 1, offsetof(ParticleInstance, uv),    sizeof(ParticleInstance), 1, 1 });
+            vertexFormat.AppendAttribute({ "I_Depth", LLGL::Format::R32Float,  2, offsetof(ParticleInstance, depth), sizeof(ParticleInstance), 1, 1 });
         }
         break;
         case RenderBackend::Metal: // TODO

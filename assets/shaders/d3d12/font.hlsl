@@ -7,6 +7,7 @@ cbuffer GlobalUniformBuffer : register( b1 )
     float4x4 u_transform_matrix;
     float2 u_camera_position;
     float2 u_window_size;
+    float u_max_depth;
 };
 
 struct VSInput
@@ -32,7 +33,7 @@ VSOutput VS(VSInput inp)
     outp.color = inp.color;
     outp.uv = inp.uv;
     outp.position = mul(mvp, float4(inp.position.x, inp.position.y, 0.0, 1.0));
-    outp.position.z = inp.position.z;
+    outp.position.z = inp.position.z / u_max_depth;
 
 	return outp;
 }
@@ -44,7 +45,7 @@ float4 PS(VSOutput inp) : SV_Target
 {
     float4 color = float4(inp.color, Texture.Sample(Sampler, inp.uv).r);
 
-    if (color.a == 0.0) discard;
+    clip(color.a - 0.05f);
 
     return color;
 };

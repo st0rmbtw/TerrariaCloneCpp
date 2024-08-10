@@ -55,6 +55,8 @@ endif()
 add_compile_options("-Wno-ignored-attributes")
 add_compile_options("-march=native")
 
+add_compile_definitions(GLM_FORCE_INTRINSICS)
+
 set(LLGL_BUILD_RENDERER_NULL OFF CACHE BOOL "" FORCE)
 
 if (APPLE)
@@ -66,6 +68,7 @@ endif()
 if (WIN32)
     set(LLGL_BUILD_RENDERER_DIRECT3D12 ON CACHE BOOL "" FORCE)
     set(LLGL_BUILD_RENDERER_DIRECT3D11 ON CACHE BOOL "" FORCE)
+    set(LLGL_D3D11_ENABLE_FEATURELEVEL "Direct3D 11.1" CACHE STRING "" FORCE)
 else()
     set(LLGL_BUILD_RENDERER_DIRECT3D12 OFF CACHE BOOL "" FORCE)
     set(LLGL_BUILD_RENDERER_DIRECT3D11 OFF CACHE BOOL "" FORCE)

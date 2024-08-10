@@ -245,12 +245,12 @@ void update() {
     g.player.update(g.camera, g.world);
 
     if (Input::Pressed(Key::K)) {
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 500; i++) {
             const glm::vec2 position = g.camera.screen_to_world(Input::MouseScreenPosition());
             const glm::vec2 velocity = glm::diskRand(1.0f) * 1.5f;
 
             ParticleManager::SpawnParticle(
-                ParticleBuilder::create(Particle::Type::Grass, position, velocity, 1.5f)
+                ParticleBuilder::create(Particle::Type::Grass, position, velocity, 5.0f)
                     .with_rotation_speed(glm::pi<float>() / 12.0f)
             );
         }
@@ -274,7 +274,7 @@ void render() {
 
     UI::Render(g.camera, g.player.inventory());
 
-    Renderer::Render(g.world);
+    Renderer::Render(g.camera, g.world);
 }
 
 void post_render() {

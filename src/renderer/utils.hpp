@@ -33,6 +33,13 @@ inline LLGL::Buffer* CreateVertexBuffer(size_t size, const LLGL::VertexFormat& v
     return Renderer::Context()->CreateBuffer(bufferDesc, nullptr);
 }
 
+inline LLGL::Buffer* CreateVertexBufferInit(size_t size, const void* data, const LLGL::VertexFormat& vertexFormat, const char* debug_name = nullptr)
+{
+    LLGL::BufferDescriptor bufferDesc = LLGL::VertexBufferDesc(size, vertexFormat);
+    bufferDesc.debugName = debug_name;
+    return Renderer::Context()->CreateBuffer(bufferDesc, data);
+}
+
 template <typename Container>
 inline LLGL::Buffer* CreateIndexBuffer(const Container& indices, const LLGL::Format format, const char* debug_name = nullptr)
 {

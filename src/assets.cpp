@@ -48,24 +48,44 @@ namespace ShaderStages {
     enum : uint8_t {
         Vertex = 1 << 0,
         Fragment = 1 << 1,
-        Geometry = 1 << 2
+        Geometry = 1 << 2,
+        Compute = 1 << 3
     };
 }
 
 struct AssetShader {
-    std::string name;
+    std::string file_name;
     uint8_t stages;
     std::vector<LLGL::VertexAttribute> vertex_attributes;
 
-    explicit AssetShader(std::string name, uint8_t stages) :
-        name(std::move(name)),
+    explicit AssetShader(std::string file_name, uint8_t stages) :
+        file_name(std::move(file_name)),
         stages(stages),
         vertex_attributes() {}
 
-    explicit AssetShader(std::string name, uint8_t stages, const LLGL::VertexFormat& vertex_format) :
-        name(std::move(name)),
+    explicit AssetShader(std::string file_name, uint8_t stages, const LLGL::VertexFormat& vertex_format) :
+        file_name(std::move(file_name)),
         stages(stages),
         vertex_attributes(vertex_format.attributes) {}
+
+    explicit AssetShader(std::string file_name, uint8_t stages, const std::vector<LLGL::VertexFormat> vertex_formats) :
+        file_name(std::move(file_name)),
+        stages(stages),
+        vertex_attributes()
+    {
+        for (LLGL::VertexFormat vertex_format : vertex_formats) {
+            vertex_attributes.insert(vertex_attributes.end(), vertex_format.attributes.begin(), vertex_format.attributes.end());
+        }
+    }
+};
+
+struct AssetComputeShader {
+    std::string file_name;
+    std::string func_name;
+
+    explicit AssetComputeShader(std::string file_name, std::string func_name) :
+        file_name(std::move(file_name)),
+        func_name(std::move(func_name)) {}
 };
 
 static const std::pair<TextureKey, AssetTexture> TEXTURE_ASSETS[] = {
@@ -148,6 +168,7 @@ static struct AssetsState {
     std::unordered_map<TextureKey, Texture> textures;
     std::unordered_map<TextureKey, TextureAtlas> textures_atlases;
     std::unordered_map<ShaderAssetKey, ShaderPipeline> shaders;
+    std::unordered_map<ComputeShaderAssetKey, LLGL::Shader*> compute_shaders;
     std::unordered_map<FontKey, Font> fonts;
     std::vector<LLGL::Sampler*> samplers;
     uint32_t texture_index = 0;
@@ -156,6 +177,7 @@ static struct AssetsState {
 Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data, bool generate_mip_maps = false);
 Texture create_texture_array(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler, const uint8_t* data, size_t data_size, bool generate_mip_maps = false);
 LLGL::Shader* load_shader(ShaderType shader_type, const std::string& name, const std::vector<ShaderDef>& shader_defs, const std::vector<LLGL::VertexAttribute>& vertex_attributes = {});
+LLGL::Shader* load_compute_shader(const std::string& name, const std::string& func_name, const std::vector<ShaderDef>& shader_defs);
 bool load_font(FT_Library ft, const std::string& path, Font& font);
 
 template <size_t T>
@@ -209,28 +231,37 @@ bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
         { ShaderAssetKey::TilemapShader, AssetShader("tilemap", ShaderStages::Vertex | ShaderStages::Fragment | ShaderStages::Geometry, TilemapVertexFormat()) },
         { ShaderAssetKey::FontShader, AssetShader("font", ShaderStages::Vertex | ShaderStages::Fragment, GlyphVertexFormat()) },
         { ShaderAssetKey::BackgroundShader, AssetShader("background", ShaderStages::Vertex | ShaderStages::Fragment, BackgroundVertexFormat()) },
-        { ShaderAssetKey::ParticleShader, AssetShader("particle", ShaderStages::Vertex | ShaderStages::Fragment | ShaderStages::Geometry, ParticleVertexFormat()) },
+        { ShaderAssetKey::ParticleShader, AssetShader("particle", ShaderStages::Vertex | ShaderStages::Fragment, { ParticleVertexFormat(), ParticleInstanceFormat() }) },
+    };
+
+    const std::pair<ComputeShaderAssetKey, AssetComputeShader> COMPUTE_SHADER_ASSETS[] = {
+        { ComputeShaderAssetKey::ParticleComputeTransformShader, AssetComputeShader("particle", "CSComputeTransform") },
     };
 
     for (const auto& [key, asset] : SHADER_ASSETS) {
         ShaderPipeline shader_pipeline;
 
         if ((asset.stages & ShaderStages::Vertex) == ShaderStages::Vertex) {
-            if (!(shader_pipeline.vs = load_shader(ShaderType::Vertex, asset.name, shader_defs, asset.vertex_attributes)))
+            if (!(shader_pipeline.vs = load_shader(ShaderType::Vertex, asset.file_name, shader_defs, asset.vertex_attributes)))
                 return false;
         }
         
         if ((asset.stages & ShaderStages::Fragment) == ShaderStages::Fragment) {
-            if (!(shader_pipeline.ps = load_shader(ShaderType::Fragment, asset.name, shader_defs)))
+            if (!(shader_pipeline.ps = load_shader(ShaderType::Fragment, asset.file_name, shader_defs)))
                 return false;
         }
 
         if ((asset.stages & ShaderStages::Geometry) == ShaderStages::Geometry) {
-            if (!(shader_pipeline.gs = load_shader(ShaderType::Geometry, asset.name, shader_defs)))
+            if (!(shader_pipeline.gs = load_shader(ShaderType::Geometry, asset.file_name, shader_defs)))
                 return false;
         }
 
         state.shaders[key] = shader_pipeline;
+    }
+
+    for (const auto& [key, asset] : COMPUTE_SHADER_ASSETS) {
+        if (!(state.compute_shaders[key] = load_compute_shader(asset.file_name, asset.func_name, shader_defs)))
+            return false;
     }
 
     return true;
@@ -367,6 +398,11 @@ const Texture& Assets::GetItemTexture(size_t index) {
 const ShaderPipeline& Assets::GetShader(ShaderAssetKey key) {
     ASSERT(state.shaders.contains(key), "Key not found");
     return state.shaders[key];
+}
+
+LLGL::Shader* Assets::GetComputeShader(ComputeShaderAssetKey key) {
+    ASSERT(state.compute_shaders.contains(key), "Key not found");
+    return state.compute_shaders[key];
 }
 
 LLGL::Sampler& Assets::GetSampler(size_t index) {
@@ -513,9 +549,78 @@ LLGL::Shader* load_shader(
         shader_desc.source = path.c_str();
         shader_desc.sourceType = LLGL::ShaderSourceType::BinaryFile;
     } else {
+        shader_desc.entryPoint = shader_type.EntryPoint(backend);
         shader_desc.source = shader_source.c_str();
         shader_desc.sourceSize = shader_source.length();
-        shader_desc.entryPoint = shader_type.EntryPoint(backend);
+        shader_desc.profile = shader_type.Profile(backend);
+        if (backend.IsMetal()) {
+            shader_desc.flags |= LLGL::ShaderCompileFlags::DefaultLibrary;
+        }
+    }
+
+#if DEBUG
+    shader_desc.flags |= LLGL::ShaderCompileFlags::NoOptimization;
+#else
+    shader_desc.flags |= LLGL::ShaderCompileFlags::OptimizationLevel3;
+#endif
+
+    LLGL::Shader* shader = Renderer::Context()->CreateShader(shader_desc);
+    if (const LLGL::Report* report = shader->GetReport()) {
+        if (*report->GetText() != '\0') {
+            if (report->HasErrors()) {
+                LOG_ERROR("Failed to create a shader. File: %s\nError: %s", path.c_str(), report->GetText());
+                return nullptr;
+            }
+            
+            LOG_INFO("%s", report->GetText());
+        }
+    }
+
+    return shader;
+}
+
+LLGL::Shader* load_compute_shader(const std::string& name, const std::string& func_name, const std::vector<ShaderDef>& shader_defs) {
+    const RenderBackend backend = Renderer::Backend();
+    const ShaderType shader_type = ShaderType::Compute;
+
+    const std::string path = backend.AssetFolder() + name + shader_type.FileExtension(backend);
+
+    if (!FileExists(path.c_str())) {
+        LOG_ERROR("Failed to find shader '%s'", path.c_str());
+        return nullptr;
+    }
+
+    std::ifstream shader_file;
+    shader_file.open(path);
+
+    std::stringstream shader_source_str;
+    shader_source_str << shader_file.rdbuf();
+
+    std::string shader_source = shader_source_str.str();
+
+    for (const ShaderDef& shader_def : shader_defs) {
+        size_t pos;
+        while ((pos = shader_source.find(shader_def.name)) != std::string::npos) {
+            shader_source.replace(pos, shader_def.name.length(), shader_def.value);
+        }
+    }
+
+    shader_file.close();
+
+    LLGL::ShaderDescriptor shader_desc;
+    shader_desc.type = shader_type.ToLLGLType();
+    shader_desc.sourceType = LLGL::ShaderSourceType::CodeString;
+
+    if (backend.IsVulkan()) {
+        shader_desc.source = path.c_str();
+        shader_desc.sourceType = LLGL::ShaderSourceType::BinaryFile;
+    } else {
+        if (!backend.IsOpenGL()) {
+            shader_desc.entryPoint = func_name.c_str();
+        }
+        
+        shader_desc.source = shader_source.c_str();
+        shader_desc.sourceSize = shader_source.length();
         shader_desc.profile = shader_type.Profile(backend);
         if (backend.IsMetal()) {
             shader_desc.flags |= LLGL::ShaderCompileFlags::DefaultLibrary;
@@ -558,7 +663,7 @@ bool load_font(FT_Library ft, const std::string& path, Font& font) {
     constexpr uint32_t texture_width = 512;
     constexpr uint32_t texture_height = 512;
 
-    constexpr glm::vec2 texture_size = glm::vec2(texture_width, texture_height);
+    const glm::vec2 texture_size = glm::vec2(texture_width, texture_height);
 
     uint32_t row = 0;
     uint32_t col = PADDING;

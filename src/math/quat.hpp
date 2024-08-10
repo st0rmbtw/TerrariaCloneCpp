@@ -7,7 +7,7 @@
 
 namespace Quat {
     [[nodiscard]]
-    constexpr inline glm::quat from_rotation_z(float angle) {
+    inline glm::quat from_rotation_z(float angle) {
         const float s = glm::sin(angle * 0.5f);
         const float c = glm::cos(angle * 0.5f);
         return {c, 0.0f, 0.0f, -s};

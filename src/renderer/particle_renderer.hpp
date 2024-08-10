@@ -5,17 +5,22 @@
 #pragma once
 
 #include <LLGL/Buffer.h>
+#include <LLGL/BufferArray.h>
 #include <LLGL/PipelineState.h>
 
 #include "../particles.hpp"
 #include "../types/texture_atlas.hpp"
 
 struct ParticleVertex {
-    glm::vec2 position;
-    glm::quat rotation;
-    glm::vec2 uv;
+    float x;
+    float y;
+    glm::vec2 inv_tex_size;
     glm::vec2 tex_size;
-    float scale;
+};
+
+struct ParticleInstance {
+    glm::vec2 uv;
+    float depth;
 };
 
 class ParticleRenderer {
@@ -24,16 +29,36 @@ public:
     void render();
     void terminate();
 
-    void draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant);
+    void draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, int depth);
 
 private:
     LLGL::PipelineState* m_pipeline = nullptr;
+    LLGL::PipelineState* m_compute_pipeline = nullptr;
+    LLGL::BufferArray* m_buffer_array = nullptr;
+    LLGL::Buffer* m_instance_buffer = nullptr;
     LLGL::Buffer* m_vertex_buffer = nullptr;
-    ParticleVertex* m_buffer = nullptr;
-    ParticleVertex* m_buffer_ptr = nullptr;
+
+    LLGL::Buffer* m_position_buffer = nullptr;
+    LLGL::Buffer* m_rotation_buffer = nullptr;
+    LLGL::Buffer* m_scale_buffer = nullptr;
+
+    LLGL::Buffer* m_transform_buffer = nullptr;
+
+    ParticleInstance* m_instance_buffer_data = nullptr;
+    ParticleInstance* m_instance_buffer_data_ptr = nullptr;
+
+    glm::vec2* m_position_buffer_data = nullptr;
+    glm::vec2* m_position_buffer_data_ptr = nullptr;
+
+    glm::quat* m_rotation_buffer_data = nullptr;
+    glm::quat* m_rotation_buffer_data_ptr = nullptr;
+
+    float* m_scale_buffer_data = nullptr;
+    float* m_scale_buffer_data_ptr = nullptr;
+
     TextureAtlas m_atlas;
 
-    size_t m_particle_count;
+    uint32_t m_particle_count;
 };
 
 #endif

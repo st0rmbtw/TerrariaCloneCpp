@@ -15,7 +15,8 @@ public:
     enum Value : uint8_t {
         Vertex = 0,
         Fragment,
-        Geometry
+        Geometry,
+        Compute
     };
 
     ShaderType() = default;
@@ -30,6 +31,7 @@ public:
             case Value::Vertex: return LLGL::ShaderType::Vertex; break;
             case Value::Fragment: return LLGL::ShaderType::Fragment; break;
             case Value::Geometry: return LLGL::ShaderType::Geometry; break;
+            case Value::Compute: return LLGL::ShaderType::Compute; break;
             default: UNREACHABLE()
         };
     }
@@ -52,17 +54,19 @@ public:
 
         switch (backend) {
         case RenderBackend::D3D11: switch (m_value) {
-            case Value::Vertex: return "vs_4_0"; break;
-            case Value::Fragment: return "ps_4_0"; break;
-            case Value::Geometry: return "gs_4_0"; break;
+            case Value::Vertex: return "vs_5_0"; break;
+            case Value::Fragment: return "ps_5_0"; break;
+            case Value::Geometry: return "gs_5_0"; break;
+            case Value::Compute: return "cs_5_0"; break;
             default: UNREACHABLE()
         };
         break;
 
         case RenderBackend::D3D12: switch (m_value) {
-            case Value::Vertex: return "vs_5_0"; break;
-            case Value::Fragment: return "ps_5_0"; break;
-            case Value::Geometry: return "gs_5_0"; break;
+            case Value::Vertex: return "vs_6_0"; break;
+            case Value::Fragment: return "ps_6_0"; break;
+            case Value::Geometry: return "gs_6_0"; break;
+            case Value::Compute: return "cs_6_0"; break;
             default: UNREACHABLE()
         };
         break;
@@ -98,6 +102,7 @@ public:
     [[nodiscard]] inline constexpr bool IsVertex() const { return m_value == Value::Vertex; }
     [[nodiscard]] inline constexpr bool IsFragment() const { return m_value == Value::Fragment; }
     [[nodiscard]] inline constexpr bool IsGeometry() const { return m_value == Value::Geometry; }
+    [[nodiscard]] inline constexpr bool IsCompute() const { return m_value == Value::Compute; }
 
 private:
     Value m_value = Value::Vertex;

@@ -57,6 +57,10 @@ enum class ShaderAssetKey : uint8_t {
     ParticleShader,
 };
 
+enum class ComputeShaderAssetKey : uint8_t {
+    ParticleComputeTransformShader = 0
+};
+
 enum class FontKey : uint8_t {
     AndyBold = 0,
     AndyRegular
@@ -89,6 +93,7 @@ namespace Assets {
     const Font& GetFont(FontKey key);
     const Texture& GetItemTexture(size_t index);
     const ShaderPipeline& GetShader(ShaderAssetKey key);
+    LLGL::Shader* GetComputeShader(ComputeShaderAssetKey key);
     LLGL::Sampler& GetSampler(size_t index);
 };
 

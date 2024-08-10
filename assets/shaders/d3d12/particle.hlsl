@@ -7,42 +7,70 @@ cbuffer GlobalUniformBuffer : register( b1 )
     float4x4 u_transform_matrix;
     float2 u_camera_position;
     float2 u_window_size;
+    float u_max_depth;
 };
 
 struct VSInput
 {
     float2 position : Position;
-    float4 rotation : Rotation;
-    float2 uv : UV;
+    float2 inv_tex_size : InvTexSize;
     float2 tex_size : TexSize;
-    float scale : Scale;
+    float2 i_uv : I_UV;
+    float i_depth : I_Depth;
+    uint id : SV_InstanceID;
 };
 
 struct VSOutput
 {
-    nointerpolation float4x4 transform : Transform;
-    nointerpolation float2 uv : UV;
-    nointerpolation float2 tex_size : TexSize;
-};
-
-struct GSOutput {
     float4 position : SV_Position;
     float2 uv : UV;
 };
 
 static const float2 PARTICLE_SIZE = float2(8.0, 8.0);
 
+RWBuffer<float4> transforms : register(u4);
+Buffer<float2> positions : register(t5);
+Buffer<float4> rotations : register(t6);
+Buffer<float> scales : register(t7);
+
 VSOutput VS(VSInput inp)
 {
-    float qxx = inp.rotation.x * inp.rotation.x;
-    float qyy = inp.rotation.y * inp.rotation.y;
-    float qzz = inp.rotation.z * inp.rotation.z;
-    float qxz = inp.rotation.x * inp.rotation.z;
-    float qxy = inp.rotation.x * inp.rotation.y;
-    float qyz = inp.rotation.y * inp.rotation.z;
-    float qwx = inp.rotation.w * inp.rotation.x;
-    float qwy = inp.rotation.w * inp.rotation.y;
-    float qwz = inp.rotation.w * inp.rotation.z;
+    float2 position = inp.position;
+    float4x4 mvp = float4x4(
+        transforms[inp.id * 4 + 0],
+        transforms[inp.id * 4 + 1],
+        transforms[inp.id * 4 + 2],
+        transforms[inp.id * 4 + 3]
+    );
+
+    float2 uv = inp.i_uv / inp.tex_size;
+
+    VSOutput output;
+    output.position = mul(mvp, float4(position, 0.0, 1.0));
+    output.position.z = inp.i_depth / u_max_depth;
+    output.uv = uv + position * inp.inv_tex_size;
+
+	return output;
+}
+
+[numthreads(10, 1, 1)]
+void CSComputeTransform(uint3 thread_id : SV_DispatchThreadID)
+{
+    uint id = thread_id.x + thread_id.y * 100;
+
+    float2 position = positions[id];
+    float4 rotation = rotations[id];
+    float scale = scales[id];
+
+    float qxx = rotation.x * rotation.x;
+    float qyy = rotation.y * rotation.y;
+    float qzz = rotation.z * rotation.z;
+    float qxz = rotation.x * rotation.z;
+    float qxy = rotation.x * rotation.y;
+    float qyz = rotation.y * rotation.z;
+    float qwx = rotation.w * rotation.x;
+    float qwy = rotation.w * rotation.y;
+    float qwz = rotation.w * rotation.z;
 
     float4x4 rotation_matrix = float4x4(
         float4(1.0 - 2.0 * (qyy + qzz), 2.0 * (qxy - qwz)      , 2.0 * (qxz + qwy)      , 0.0),
@@ -51,17 +79,17 @@ VSOutput VS(VSInput inp)
         float4(0.0                    , 0.0                    , 0.0                    , 1.0)
     );
 
+    float2 size = PARTICLE_SIZE * scale;
+    float2 offset = -0.5 * size;
+
     float4x4 transform = float4x4(
-        float4(1.0, 0.0, 0.0, inp.position.x),
-        float4(0.0, 1.0, 0.0, inp.position.y),
+        float4(1.0, 0.0, 0.0, position.x),
+        float4(0.0, 1.0, 0.0, position.y),
         float4(0.0, 0.0, 1.0, 0.0),
         float4(0.0, 0.0, 0.0, 1.0)
     );
 
     transform = mul(transform, rotation_matrix);
-
-    float2 size = PARTICLE_SIZE * inp.scale;
-    float2 offset = -0.5 * size;
 
     // translate
     transform[0][3] = transform[0][0] * offset[0] + transform[0][1] * offset[1] + transform[0][2] * 0.0 + transform[0][3];
@@ -80,58 +108,22 @@ VSOutput VS(VSInput inp)
     transform[2][1] = transform[2][1] * size[1];
     transform[3][1] = transform[3][1] * size[1];
 
-	VSOutput outp;
-    outp.transform = transform;
-    outp.uv = inp.uv / inp.tex_size;
-    outp.tex_size = PARTICLE_SIZE / inp.tex_size;
-
-	return outp;
-}
-
-[maxvertexcount(4)]
-void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
-{
-    float4x4 transform = input[0].transform;
-    float2 uv = input[0].uv;
-    float2 tex_size = input[0].tex_size;
-    
     float4x4 mvp = mul(u_view_projection, transform);
 
-    GSOutput output;
-
-    float2 position = float2(0.0, 0.0);
-    output.position = mul(mvp, float4(position, 0.0, 1.0));
-    output.position.z = 1.0f;
-    output.uv = uv;
-    OutputStream.Append(output);
-
-    position = float2(1.0, 0.0);
-    output.position = mul(mvp, float4(position, 0.0, 1.0));
-    output.position.z = 1.0f;
-    output.uv = uv + float2(tex_size.x, 0.0);
-    OutputStream.Append(output);
-
-    position = float2(0.0, 1.0);
-    output.position = mul(mvp, float4(position, 0.0, 1.0));
-    output.position.z = 1.0f;
-    output.uv = uv + float2(0.0, tex_size.y);
-    OutputStream.Append(output);
-
-    position = float2(1.0, 1.0);
-    output.position = mul(mvp, float4(position, 0.0, 1.0));
-    output.position.z = 1.0f;
-    output.uv = uv + tex_size;
-    OutputStream.Append(output);
+    transforms[id * 4 + 0] = mvp[0];
+    transforms[id * 4 + 1] = mvp[1];
+    transforms[id * 4 + 2] = mvp[2];
+    transforms[id * 4 + 3] = mvp[3];
 }
 
 Texture2D Texture : register(t2);
 SamplerState Sampler : register(s3);
 
-float4 PS(GSOutput inp) : SV_Target
+float4 PS(VSOutput inp) : SV_Target
 {
     float4 color = Texture.Sample(Sampler, inp.uv);
 
-    if (color.a < 0.5f) discard;
+    clip(color.a - 0.5f);
 
     return color;
 };

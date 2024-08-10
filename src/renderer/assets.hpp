@@ -26,5 +26,6 @@ const LLGL::VertexFormat& TilemapVertexFormat();
 const LLGL::VertexFormat& GlyphVertexFormat();
 const LLGL::VertexFormat& BackgroundVertexFormat();
 const LLGL::VertexFormat& ParticleVertexFormat();
+const LLGL::VertexFormat& ParticleInstanceFormat();
 
 #endif

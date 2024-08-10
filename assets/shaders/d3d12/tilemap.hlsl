@@ -7,6 +7,7 @@ cbuffer GlobalUniformBuffer : register( b1 )
     float4x4 u_transform_matrix;
     float2 u_camera_position;
     float2 u_window_size;
+    float u_max_depth;
 };
 
 cbuffer OrderBuffer : register( b2 ) {
@@ -70,6 +71,8 @@ void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
         size = float2(WALL_SIZE, WALL_SIZE);
     }
 
+    order /= u_max_depth;
+
     float4x4 transform = float4x4(
         float4(1.0, 0.0, 0.0, world_pos.x),
         float4(0.0, 1.0, 0.0, world_pos.y),
@@ -110,7 +113,7 @@ float4 PS(GSOutput inp) : SV_Target
 {
     float4 color = TextureArray.Sample(Sampler, float3(inp.uv, float(inp.tile_id)));
 
-    if (color.a < 0.5) discard;
+    clip(color.a - 0.5);
 
     return color;
 };

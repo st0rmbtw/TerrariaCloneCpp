@@ -7,6 +7,7 @@ cbuffer GlobalUniformBuffer : register( b1 )
     float4x4 u_transform_matrix;
     float2 u_camera_position;
     float2 u_window_size;
+    float u_max_depth;
 };
 
 struct VSInput
@@ -99,7 +100,7 @@ VSOutput VS(VSInput inp)
     outp.color = inp.color;
     outp.outline_color = inp.outline_color;
     outp.outline_thickness = inp.outline_thickness;
-    outp.order = inp.position.z;
+    outp.order = inp.position.z / u_max_depth;
     outp.has_texture = inp.has_texture;
     outp.is_ui = inp.is_ui;
     outp.is_nonscale = inp.is_nonscale;
@@ -178,7 +179,7 @@ float4 PS(GSOutput inp) : SV_Target
         }
     }
 
-    if (color.a < 0.5f) discard;
+    clip(color.a - 0.5);
 
     return color;
 };

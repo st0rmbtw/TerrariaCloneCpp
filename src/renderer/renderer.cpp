@@ -30,6 +30,7 @@ static struct RendererState {
 #endif
 
     LLGL::Buffer* constant_buffer = nullptr;
+    LLGL::RenderPass* render_pass = nullptr;
     
     RenderBatchSprite sprite_batch;
     RenderBatchGlyph glyph_batch;
@@ -55,6 +56,7 @@ const std::shared_ptr<CustomSurface>& Renderer::Surface() { return state.surface
 LLGL::Buffer* Renderer::GlobalUniformBuffer() { return state.constant_buffer; }
 RenderBackend Renderer::Backend() { return state.backend; }
 uint32_t Renderer::GetGlobalDepthIndex() { return state.global_depth_index; };
+const LLGL::RenderPass* Renderer::DefaultRenderPass() { return state.render_pass; };
 
 bool Renderer::InitEngine(RenderBackend backend) {
     LLGL::Report report;
@@ -125,6 +127,17 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
     state.constant_buffer = CreateConstantBuffer(sizeof(ProjectionsUniform));
 
+    LLGL::RenderPassDescriptor render_pass_desc;
+    render_pass_desc.colorAttachments[0].format = state.swap_chain->GetColorFormat();
+    render_pass_desc.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Load;
+    render_pass_desc.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
+
+    render_pass_desc.depthAttachment.format = state.swap_chain->GetDepthStencilFormat();
+    render_pass_desc.depthAttachment.loadOp = LLGL::AttachmentLoadOp::Load;
+    render_pass_desc.depthAttachment.storeOp = LLGL::AttachmentStoreOp::Store;
+
+    state.render_pass = context->CreateRenderPass(render_pass_desc);
+
     state.sprite_batch.init();
     state.glyph_batch.init();
     state.world_renderer.init();
@@ -152,25 +165,14 @@ void Renderer::Begin(const Camera& camera) {
     state.nonscale_camera_frustum = nonscale_camera_frustum;
     state.ui_frustum = ui_frustum;
 
-    auto projections_uniform = ProjectionsUniform {
-        .screen_projection_matrix = camera.get_screen_projection_matrix(),
-        .view_projection_matrix = camera.get_projection_matrix() * camera.get_view_matrix(),
-        .nonscale_view_projection_matrix = camera.get_nonscale_projection_matrix() * camera.get_view_matrix(),
-        .nonscale_projection_matrix = camera.get_nonscale_projection_matrix(),
-        .transform_matrix = camera.get_transform_matrix(),
-        .camera_position = camera.position(),
-        .window_size = camera.viewport()
-    };
-
     commands->Begin();
     commands->SetViewport(LLGL::Extent2D(camera.viewport().x, camera.viewport().y));
-
-    commands->UpdateBuffer(*state.constant_buffer, 0, &projections_uniform, sizeof(projections_uniform));
 
     LLGL::ClearValue clear_value = LLGL::ClearValue(1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
 
     commands->BeginRenderPass(*swap_chain);
     commands->Clear(LLGL::ClearFlags::ColorDepth, clear_value);
+    commands->EndRenderPass();
 
     state.sprite_batch.begin();
     state.glyph_batch.begin();
@@ -185,15 +187,31 @@ void Renderer::RenderWorld() {
     state.world_renderer.set_depth(wall_depth, tile_depth);
 }
 
-void Renderer::Render(const World& world) {
+void Renderer::Render(const Camera& camera, const World& world) {
     auto* const commands = Renderer::CommandBuffer();
     auto* const queue = state.command_queue;
     auto* const swap_chain = Renderer::SwapChain();
 
+    auto projections_uniform = ProjectionsUniform {
+        .screen_projection_matrix = camera.get_screen_projection_matrix(),
+        .view_projection_matrix = camera.get_projection_matrix() * camera.get_view_matrix(),
+        .nonscale_view_projection_matrix = camera.get_nonscale_projection_matrix() * camera.get_view_matrix(),
+        .nonscale_projection_matrix = camera.get_nonscale_projection_matrix(),
+        .transform_matrix = camera.get_transform_matrix(),
+        .camera_position = camera.position(),
+        .window_size = camera.viewport(),
+        .max_depth = static_cast<float>(state.global_depth_index),
+    };
+
+    commands->UpdateBuffer(*state.constant_buffer, 0, &projections_uniform, sizeof(projections_uniform));
+
+    state.particle_renderer.render();
+
+    commands->BeginRenderPass(*Renderer::SwapChain(), Renderer::DefaultRenderPass());
+
     state.background_renderer.render();
     state.world_renderer.render(world);
     state.sprite_batch.render();
-    state.particle_renderer.render();
     state.glyph_batch.render();
 
     commands->EndRenderPass();
@@ -343,8 +361,8 @@ void Renderer::DrawBackground(const BackgroundLayer& layer) {
     state.background_renderer.draw_layer(layer);
 }
 
-void Renderer::DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant) {
-    state.particle_renderer.draw_particle(position, rotation, scale, type, variant);
+void Renderer::DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, int depth) {
+    state.particle_renderer.draw_particle(position, rotation, scale, type, variant, depth);
 }
 
 void Renderer::Terminate() {
@@ -490,7 +508,7 @@ void RenderBatchSprite::render() {
             vertex_offset = total_sprite_count;
         }
 
-        const float order = static_cast<float>(sprite_data.order) / static_cast<float>(state.global_depth_index);
+        const float order = static_cast<float>(sprite_data.order);
 
         m_buffer_ptr->position = glm::vec3(sprite_data.position, order);
         m_buffer_ptr->rotation = sprite_data.rotation;
@@ -675,7 +693,7 @@ void RenderBatchGlyph::render() {
             vertex_offset = total_sprite_count * 4;
         }
 
-        const float order = static_cast<float>(glyph_data.order) / static_cast<float>(state.global_depth_index);
+        const float order = static_cast<float>(glyph_data.order);
 
         m_buffer_ptr->color = glyph_data.color;
         m_buffer_ptr->pos = glm::vec3(glyph_data.pos, order);

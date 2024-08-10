@@ -9,6 +9,7 @@ namespace Constants {
     constexpr double FIXED_UPDATE_INTERVAL = 1.0 / 60.0;
     constexpr float TILE_SIZE = 16.0f;
     constexpr float WALL_SIZE = 32.0f;
+    constexpr float PARTICLE_SIZE = 8.0f;
 
     constexpr float CAMERA_MAX_ZOOM = 0.2f;
 #if DEBUG

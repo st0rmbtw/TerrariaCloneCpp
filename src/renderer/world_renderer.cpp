@@ -77,8 +77,8 @@ void WorldRenderer::render(const World& world) {
     auto* const commands = Renderer::CommandBuffer();
 
     auto uniform = UniformData {
-        .tile_depth = static_cast<float>(m_tile_depth) / static_cast<float>(Renderer::GetGlobalDepthIndex()),
-        .wall_depth = static_cast<float>(m_wall_depth) / static_cast<float>(Renderer::GetGlobalDepthIndex()),
+        .tile_depth = static_cast<float>(m_tile_depth),
+        .wall_depth = static_cast<float>(m_wall_depth),
     };
 
     commands->UpdateBuffer(*m_order_buffer, 0, &uniform, sizeof(UniformData));

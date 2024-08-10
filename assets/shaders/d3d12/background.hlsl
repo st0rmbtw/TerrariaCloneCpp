@@ -7,6 +7,7 @@ cbuffer GlobalUniformBuffer : register( b1 )
     float4x4 u_transform_matrix;
     float2 u_camera_position;
     float2 u_window_size;
+    float u_max_depth;
 };
 
 struct VSInput
@@ -83,12 +84,11 @@ float4 PS(VSOutput inp) : SV_Target
 {
     float4x4 mvp = mul(u_nonscale_projection, u_transform_matrix);
 
-    float4 clip = mul(mvp, float4(u_camera_position.x, u_camera_position.y, 0.0, 1.0));
-    float2 offset = clip.xy;
+    float2 offset = mul(mvp, float4(u_camera_position.x, u_camera_position.y, 0.0, 1.0)).xy;
 
     float4 color = scroll(inp.speed, inp.uv, offset, inp.tex_size, inp.size, inp.nonscale > 0);
 
-    if (color.a == 0.0) discard;
+    clip(color.a - 0.05f);
 
     return color;
 };

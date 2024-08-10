@@ -43,7 +43,7 @@ void ParticleManager::Init() {
     state.rotation = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), 32);
     state.rotation_speed = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), 32);
     state.gravity = new bool[MAX_PARTICLES_COUNT];
-    state.active = new bool[MAX_PARTICLES_COUNT](); // If it's not initilized with false, particles wouldn't spawn
+    state.active = new bool[MAX_PARTICLES_COUNT](false); // If it's not initilized with false, particles wouldn't spawn
     state.type = new Particle::Type[MAX_PARTICLES_COUNT];
     state.variant = new uint8_t[MAX_PARTICLES_COUNT];
 }
@@ -82,6 +82,8 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
 }
 
 void ParticleManager::Render() {
+    const uint32_t depth = Renderer::GetGlobalDepthIndex();
+
     for (size_t i = 0; i < state.active_count; ++i) {
         glm::vec2 position;
         position.x = state.position[i * 2 + 0];
@@ -93,7 +95,7 @@ void ParticleManager::Render() {
         const Particle::Type type = state.type[i];
         const uint8_t variant = state.variant[i];
 
-        Renderer::DrawParticle(position, *reinterpret_cast<const glm::quat*>(&rotation), scale, type, variant);
+        Renderer::DrawParticle(position, *reinterpret_cast<const glm::quat*>(&rotation), scale, type, variant, depth);
     }
 }
 
@@ -107,7 +109,7 @@ void ParticleManager::Update() {
         }
     }
     
-    // A vec2 type is the size of 64 bit, allowing us to pack 4 into 256 bit vector.
+    // The size of a vec2 type is 64 bit, so it can be packed as 4 into 256 bit vector.
     for (size_t i = 0; i < state.active_count * 2; i += 8) {
         const __m256 positionVector = _mm256_load_ps(&state.position[i]);
         const __m256 velocityVector = _mm256_load_ps(&state.velocity[i]);
@@ -115,7 +117,7 @@ void ParticleManager::Update() {
         _mm256_storeu_ps(&state.position[i], newPosition);
     }
 
-    // A quat type is the size of 128 bit, allowing us to pack 2 into 256 bit vector.
+    // The size of a quat type is 128 bit, so it can be packed as 2 into 256 bit vector.
     for (size_t i = 0; i < state.active_count * 4; i += 8) {
         const __m256 xyzw = _mm256_load_ps(&state.rotation[i]);
         const __m256 abcd = _mm256_load_ps(&state.rotation_speed[i]);
@@ -159,8 +161,8 @@ void ParticleManager::DeleteExpired() {
         if (!active) break;
 
         if (Time::elapsed_seconds() >= spawn_time + lifetime) {
-            state.active_count--;
             active = false;
+            state.active_count--;
             std::swap(state.position[i * 2], state.position[state.active_count * 2]);
             std::swap(state.position[i * 2 + 1], state.position[state.active_count * 2 + 1]);
 
