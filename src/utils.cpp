@@ -19,7 +19,7 @@ bool FileExists(const char *path) {
     return exists;
 }
 
-glm::vec2 calculate_text_bounds(FontKey key, const std::string &text, float size) {
+glm::vec2 calculate_text_bounds(FontAsset key, const std::string &text, float size) {
     const Font& font = Assets::GetFont(key);
 
     auto bounds = glm::vec2(0.0f);

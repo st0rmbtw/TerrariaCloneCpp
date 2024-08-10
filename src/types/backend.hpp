@@ -61,6 +61,9 @@ public:
     [[nodiscard]] inline constexpr bool IsD3D12() const { return m_value == Value::D3D12; }
     [[nodiscard]] inline constexpr bool IsMetal() const { return m_value == Value::Metal; }
     [[nodiscard]] inline constexpr bool IsOpenGL() const { return m_value == Value::OpenGL; }
+    
+    [[nodiscard]] inline constexpr bool IsGLSL() const { return m_value == Value::OpenGL || m_value == Value::Vulkan; }
+    [[nodiscard]] inline constexpr bool IsHLSL() const { return m_value == Value::D3D11 || m_value == Value::D3D12; }
 
 private:
     Value m_value = Value::Vulkan;

@@ -5,7 +5,6 @@
 #include "../types/block.hpp"
 #include "../types/texture_atlas_pos.hpp"
 #include "../renderer/renderer.hpp"
-#include "../renderer/assets.hpp"
 
 #define TILE_TYPE_BLOCK 0
 #define TILE_TYPE_WALL 1
@@ -31,13 +30,13 @@ inline LLGL::BufferDescriptor GetBufferDescriptor() {
     buffer_desc.bindFlags = LLGL::BindFlags::VertexBuffer;
     buffer_desc.size = sizeof(ChunkVertex) * RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U;
     buffer_desc.stride = sizeof(ChunkVertex);
-    buffer_desc.vertexAttribs = TilemapVertexFormat().attributes;
+    buffer_desc.vertexAttribs = Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex).attributes;
     return buffer_desc;
 }
 
 void RenderChunk::build_mesh(const World& world) {
-    const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureKey::Tiles).size);
-    const glm::vec2 wall_tex_size = glm::vec2(Assets::GetTexture(TextureKey::Walls).size);
+    const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Tiles).size);
+    const glm::vec2 wall_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Walls).size);
 
     const glm::vec2 tile_size = glm::vec2(Constants::TILE_SIZE) / tile_tex_size;
     const glm::vec2 wall_size = glm::vec2(Constants::WALL_SIZE) / wall_tex_size;

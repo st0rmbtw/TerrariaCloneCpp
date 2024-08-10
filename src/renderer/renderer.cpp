@@ -308,7 +308,7 @@ void Renderer::DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, int depth) {
     add_atlas_sprite_to_batch(sprite, true, depth);
 }
 
-void Renderer::DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontKey key, bool is_ui, int depth) {
+void Renderer::DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontAsset key, bool is_ui, int depth) {
     const Font& font = Assets::GetFont(key);
     
     float x = position.x;
@@ -391,7 +391,7 @@ void Renderer::Terminate() {
 void RenderBatchSprite::init() {
     m_buffer = new SpriteVertex[MAX_QUADS];
 
-    m_vertex_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(SpriteVertex), SpriteVertexFormat(), "SpriteBatch VertexBuffer");
+    m_vertex_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(SpriteVertex), Assets::GetVertexFormat(VertexFormatAsset::SpriteVertex), "SpriteBatch VertexBuffer");
 
     const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
 
@@ -410,7 +410,7 @@ void RenderBatchSprite::init() {
 
     LLGL::PipelineLayout* pipelineLayout = state.context->CreatePipelineLayout(pipelineLayoutDesc);
 
-    const ShaderPipeline& sprite_shader = Assets::GetShader(ShaderAssetKey::SpriteShader);
+    const ShaderPipeline& sprite_shader = Assets::GetShader(ShaderAsset::SpriteShader);
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
     pipelineLayoutDesc.debugName = "SpriteBatch Pipeline";
@@ -554,7 +554,7 @@ void RenderBatchSprite::flush() {
     commands->SetResource(0, *state.constant_buffer);
 
     for (const FlushData& flush_data : m_sprite_flush_queue) {
-        const Texture& t = flush_data.texture.id >= 0 ? flush_data.texture : Assets::GetTexture(TextureKey::Stub);
+        const Texture& t = flush_data.texture.id >= 0 ? flush_data.texture : Assets::GetTexture(TextureAsset::Stub);
 
         commands->SetResource(1, *t.texture);
         commands->SetResource(2, Assets::GetSampler(t.sampler));
@@ -591,7 +591,7 @@ void RenderBatchGlyph::init() {
         offset += 4;
     }
 
-    m_vertex_buffer = CreateVertexBuffer(MAX_VERTICES * sizeof(GlyphVertex), GlyphVertexFormat(), "GlyphBatch VertexBuffer");
+    m_vertex_buffer = CreateVertexBuffer(MAX_VERTICES * sizeof(GlyphVertex), Assets::GetVertexFormat(VertexFormatAsset::FontVertex), "GlyphBatch VertexBuffer");
     m_index_buffer = CreateIndexBuffer(indices, LLGL::Format::R32UInt, "GlyphBatch IndexBuffer");
 
     const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
@@ -611,7 +611,7 @@ void RenderBatchGlyph::init() {
 
     LLGL::PipelineLayout* pipelineLayout = state.context->CreatePipelineLayout(pipelineLayoutDesc);
 
-    const ShaderPipeline& font_shader = Assets::GetShader(ShaderAssetKey::FontShader);
+    const ShaderPipeline& font_shader = Assets::GetShader(ShaderAsset::FontShader);
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
     pipelineLayoutDesc.debugName = "GlyphBatch Pipeline";

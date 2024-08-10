@@ -4,6 +4,7 @@
 #pragma once
 
 #include <LLGL/Sampler.h>
+#include <LLGL/Utils/VertexFormat.h>
 #include <glm/glm.hpp>
 
 #include "types/texture_atlas.hpp"
@@ -11,7 +12,7 @@
 #include "types/shader_pipeline.hpp"
 #include "types/font.hpp"
 
-enum class TextureKey : uint8_t {
+enum class TextureAsset : uint8_t {
     Stub = 0,
     Tiles,
     Walls,
@@ -47,7 +48,7 @@ enum class TextureKey : uint8_t {
     Background114,
 };
 
-enum class ShaderAssetKey : uint8_t {
+enum class ShaderAsset : uint8_t {
     TilemapShader = 0,
     SpriteShader,
     NinepatchShader,
@@ -57,13 +58,22 @@ enum class ShaderAssetKey : uint8_t {
     ParticleShader,
 };
 
-enum class ComputeShaderAssetKey : uint8_t {
+enum class ComputeShaderAsset : uint8_t {
     ParticleComputeTransformShader = 0
 };
 
-enum class FontKey : uint8_t {
+enum class FontAsset : uint8_t {
     AndyBold = 0,
     AndyRegular
+};
+
+enum class VertexFormatAsset : uint8_t {
+    SpriteVertex = 0,
+    TilemapVertex,
+    FontVertex,
+    BackgroundVertex,
+    ParticleVertex,
+    ParticleInstance,
 };
 
 struct ShaderDef {
@@ -82,19 +92,21 @@ namespace Assets {
     bool LoadShaders(const std::vector<ShaderDef>& shader_defs);
     bool LoadFonts();
     bool InitSamplers();
+    void InitVertexFormats();
 
     void DestroyTextures();
     void DestroyShaders();
     void DestroySamplers();
     void DestroyFonts();
 
-    const Texture& GetTexture(TextureKey key);
-    const TextureAtlas& GetTextureAtlas(TextureKey key);
-    const Font& GetFont(FontKey key);
+    const Texture& GetTexture(TextureAsset key);
+    const TextureAtlas& GetTextureAtlas(TextureAsset key);
+    const Font& GetFont(FontAsset key);
     const Texture& GetItemTexture(size_t index);
-    const ShaderPipeline& GetShader(ShaderAssetKey key);
-    LLGL::Shader* GetComputeShader(ComputeShaderAssetKey key);
+    const ShaderPipeline& GetShader(ShaderAsset key);
+    LLGL::Shader* GetComputeShader(ComputeShaderAsset key);
     LLGL::Sampler& GetSampler(size_t index);
+    const LLGL::VertexFormat& GetVertexFormat(VertexFormatAsset key);
 };
 
 #endif

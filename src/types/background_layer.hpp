@@ -10,7 +10,7 @@
 
 class BackgroundLayer {
 public:
-    BackgroundLayer(TextureKey key, float scale) {
+    BackgroundLayer(TextureAsset key, float scale) {
         const Texture& texture = Assets::GetTexture(key);
 
         m_texture = texture;

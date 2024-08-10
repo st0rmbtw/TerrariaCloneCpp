@@ -37,6 +37,6 @@ static const T& list_at(const std::list<T>& list, int index) {
     return *it;
 }
 
-glm::vec2 calculate_text_bounds(FontKey key, const std::string &text, float size);
+glm::vec2 calculate_text_bounds(FontAsset key, const std::string &text, float size);
 
 #endif

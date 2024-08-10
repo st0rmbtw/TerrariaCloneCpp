@@ -12,7 +12,7 @@
 #include <ft2build.h>
 #include <freetype/freetype.h>
 
-#include "renderer/assets.hpp"
+#include "renderer/particle_renderer.hpp"
 #include "renderer/renderer.hpp"
 #include "log.hpp"
 #include "utils.hpp"
@@ -56,27 +56,22 @@ namespace ShaderStages {
 struct AssetShader {
     std::string file_name;
     uint8_t stages;
-    std::vector<LLGL::VertexAttribute> vertex_attributes;
+    std::vector<VertexFormatAsset> vertex_format_assets;
 
     explicit AssetShader(std::string file_name, uint8_t stages) :
         file_name(std::move(file_name)),
         stages(stages),
-        vertex_attributes() {}
+        vertex_format_assets() {}
 
-    explicit AssetShader(std::string file_name, uint8_t stages, const LLGL::VertexFormat& vertex_format) :
+    explicit AssetShader(std::string file_name, uint8_t stages, VertexFormatAsset vertex_format) :
         file_name(std::move(file_name)),
         stages(stages),
-        vertex_attributes(vertex_format.attributes) {}
+        vertex_format_assets({vertex_format}) {}
 
-    explicit AssetShader(std::string file_name, uint8_t stages, const std::vector<LLGL::VertexFormat> vertex_formats) :
+    explicit AssetShader(std::string file_name, uint8_t stages, const std::vector<VertexFormatAsset> vertex_formats) :
         file_name(std::move(file_name)),
         stages(stages),
-        vertex_attributes()
-    {
-        for (LLGL::VertexFormat vertex_format : vertex_formats) {
-            vertex_attributes.insert(vertex_attributes.end(), vertex_format.attributes.begin(), vertex_format.attributes.end());
-        }
-    }
+        vertex_format_assets(vertex_formats) {}
 };
 
 struct AssetComputeShader {
@@ -88,50 +83,50 @@ struct AssetComputeShader {
         func_name(std::move(func_name)) {}
 };
 
-static const std::pair<TextureKey, AssetTexture> TEXTURE_ASSETS[] = {
-    { TextureKey::PlayerHair,         AssetTexture("assets/sprites/player/Player_Hair_1.png") },
-    { TextureKey::PlayerHead,         AssetTexture("assets/sprites/player/Player_0_0.png") },
-    { TextureKey::PlayerChest,        AssetTexture("assets/sprites/player/Player_Body.png") },
-    { TextureKey::PlayerLegs,         AssetTexture("assets/sprites/player/Player_0_11.png") },
-    { TextureKey::PlayerLeftHand,     AssetTexture("assets/sprites/player/Player_Left_Hand.png") },
-    { TextureKey::PlayerLeftShoulder, AssetTexture("assets/sprites/player/Player_Left_Shoulder.png") },
-    { TextureKey::PlayerRightArm,     AssetTexture("assets/sprites/player/Player_Right_Arm.png") },
-    { TextureKey::PlayerLeftEye,      AssetTexture("assets/sprites/player/Player_0_1.png") },
-    { TextureKey::PlayerRightEye,     AssetTexture("assets/sprites/player/Player_0_2.png") },
+static const std::pair<TextureAsset, AssetTexture> TEXTURE_ASSETS[] = {
+    { TextureAsset::PlayerHair,         AssetTexture("assets/sprites/player/Player_Hair_1.png") },
+    { TextureAsset::PlayerHead,         AssetTexture("assets/sprites/player/Player_0_0.png") },
+    { TextureAsset::PlayerChest,        AssetTexture("assets/sprites/player/Player_Body.png") },
+    { TextureAsset::PlayerLegs,         AssetTexture("assets/sprites/player/Player_0_11.png") },
+    { TextureAsset::PlayerLeftHand,     AssetTexture("assets/sprites/player/Player_Left_Hand.png") },
+    { TextureAsset::PlayerLeftShoulder, AssetTexture("assets/sprites/player/Player_Left_Shoulder.png") },
+    { TextureAsset::PlayerRightArm,     AssetTexture("assets/sprites/player/Player_Right_Arm.png") },
+    { TextureAsset::PlayerLeftEye,      AssetTexture("assets/sprites/player/Player_0_1.png") },
+    { TextureAsset::PlayerRightEye,     AssetTexture("assets/sprites/player/Player_0_2.png") },
 
-    { TextureKey::UiCursorForeground,    AssetTexture("assets/sprites/ui/Cursor_0.png", TextureSampler::Linear) },
-    { TextureKey::UiCursorBackground,    AssetTexture("assets/sprites/ui/Cursor_11.png", TextureSampler::Linear) },
-    { TextureKey::UiInventoryBackground, AssetTexture("assets/sprites/ui/Inventory_Back.png", TextureSampler::Linear) },
-    { TextureKey::UiInventorySelected,   AssetTexture("assets/sprites/ui/Inventory_Back14.png", TextureSampler::Linear) },
-    { TextureKey::UiInventoryHotbar,     AssetTexture("assets/sprites/ui/Inventory_Back9.png", TextureSampler::Linear) },
+    { TextureAsset::UiCursorForeground,    AssetTexture("assets/sprites/ui/Cursor_0.png", TextureSampler::Linear) },
+    { TextureAsset::UiCursorBackground,    AssetTexture("assets/sprites/ui/Cursor_11.png", TextureSampler::Linear) },
+    { TextureAsset::UiInventoryBackground, AssetTexture("assets/sprites/ui/Inventory_Back.png", TextureSampler::Linear) },
+    { TextureAsset::UiInventorySelected,   AssetTexture("assets/sprites/ui/Inventory_Back14.png", TextureSampler::Linear) },
+    { TextureAsset::UiInventoryHotbar,     AssetTexture("assets/sprites/ui/Inventory_Back9.png", TextureSampler::Linear) },
 
-    { TextureKey::Background0, AssetTexture("assets/sprites/backgrounds/Background_0.png", TextureSampler::Nearest) },
-    { TextureKey::Background7, AssetTexture("assets/sprites/backgrounds/Background_7.png", TextureSampler::Nearest) },
-    { TextureKey::Background55, AssetTexture("assets/sprites/backgrounds/Background_55.png", TextureSampler::Nearest) },
-    { TextureKey::Background74, AssetTexture("assets/sprites/backgrounds/Background_74.png", TextureSampler::Nearest) },
-    { TextureKey::Background77, AssetTexture("assets/sprites/backgrounds/Background_77.png", TextureSampler::Nearest) },
-    { TextureKey::Background78, AssetTexture("assets/sprites/backgrounds/Background_78.png", TextureSampler::Nearest) },
-    { TextureKey::Background90, AssetTexture("assets/sprites/backgrounds/Background_90.png", TextureSampler::Nearest) },
-    { TextureKey::Background91, AssetTexture("assets/sprites/backgrounds/Background_91.png", TextureSampler::Nearest) },
-    { TextureKey::Background92, AssetTexture("assets/sprites/backgrounds/Background_92.png", TextureSampler::Nearest) },
-    { TextureKey::Background93, AssetTexture("assets/sprites/backgrounds/Background_93.png", TextureSampler::Nearest) },
-    { TextureKey::Background112, AssetTexture("assets/sprites/backgrounds/Background_112.png", TextureSampler::Nearest) },
-    { TextureKey::Background114, AssetTexture("assets/sprites/backgrounds/Background_114.png", TextureSampler::Nearest) },
+    { TextureAsset::Background0, AssetTexture("assets/sprites/backgrounds/Background_0.png", TextureSampler::Nearest) },
+    { TextureAsset::Background7, AssetTexture("assets/sprites/backgrounds/Background_7.png", TextureSampler::Nearest) },
+    { TextureAsset::Background55, AssetTexture("assets/sprites/backgrounds/Background_55.png", TextureSampler::Nearest) },
+    { TextureAsset::Background74, AssetTexture("assets/sprites/backgrounds/Background_74.png", TextureSampler::Nearest) },
+    { TextureAsset::Background77, AssetTexture("assets/sprites/backgrounds/Background_77.png", TextureSampler::Nearest) },
+    { TextureAsset::Background78, AssetTexture("assets/sprites/backgrounds/Background_78.png", TextureSampler::Nearest) },
+    { TextureAsset::Background90, AssetTexture("assets/sprites/backgrounds/Background_90.png", TextureSampler::Nearest) },
+    { TextureAsset::Background91, AssetTexture("assets/sprites/backgrounds/Background_91.png", TextureSampler::Nearest) },
+    { TextureAsset::Background92, AssetTexture("assets/sprites/backgrounds/Background_92.png", TextureSampler::Nearest) },
+    { TextureAsset::Background93, AssetTexture("assets/sprites/backgrounds/Background_93.png", TextureSampler::Nearest) },
+    { TextureAsset::Background112, AssetTexture("assets/sprites/backgrounds/Background_112.png", TextureSampler::Nearest) },
+    { TextureAsset::Background114, AssetTexture("assets/sprites/backgrounds/Background_114.png", TextureSampler::Nearest) },
 
-    { TextureKey::Particles, AssetTexture("assets/sprites/Particles.png") }
+    { TextureAsset::Particles, AssetTexture("assets/sprites/Particles.png") }
 };
 
-static const std::pair<TextureKey, AssetTextureAtlas> TEXTURE_ATLAS_ASSETS[] = {
-    { TextureKey::PlayerHair,         AssetTextureAtlas(1, 14, glm::uvec2(40, 64)) },
-    { TextureKey::PlayerHead,         AssetTextureAtlas(1, 14, glm::uvec2(40, 48)) },
-    { TextureKey::PlayerChest,        AssetTextureAtlas(1, 14, glm::uvec2(32, 64), glm::uvec2(8, 0)) },
-    { TextureKey::PlayerLegs,         AssetTextureAtlas(1, 19, glm::uvec2(40, 64)) },
-    { TextureKey::PlayerLeftHand,     AssetTextureAtlas(27, 1, glm::uvec2(32, 64)) },
-    { TextureKey::PlayerLeftShoulder, AssetTextureAtlas(27, 1, glm::uvec2(32, 64)) },
-    { TextureKey::PlayerRightArm,     AssetTextureAtlas(18, 1, glm::uvec2(32, 80)) },
-    { TextureKey::PlayerLeftEye,      AssetTextureAtlas(1, 20, glm::uvec2(40, 64)) },
-    { TextureKey::PlayerRightEye,     AssetTextureAtlas(1, 20, glm::uvec2(40, 64)) },
-    { TextureKey::Particles,          AssetTextureAtlas(PARTICLES_ATLAS_COLUMNS, 12, glm::uvec2(8), glm::uvec2(2)) }
+static const std::pair<TextureAsset, AssetTextureAtlas> TEXTURE_ATLAS_ASSETS[] = {
+    { TextureAsset::PlayerHair,         AssetTextureAtlas(1, 14, glm::uvec2(40, 64)) },
+    { TextureAsset::PlayerHead,         AssetTextureAtlas(1, 14, glm::uvec2(40, 48)) },
+    { TextureAsset::PlayerChest,        AssetTextureAtlas(1, 14, glm::uvec2(32, 64), glm::uvec2(8, 0)) },
+    { TextureAsset::PlayerLegs,         AssetTextureAtlas(1, 19, glm::uvec2(40, 64)) },
+    { TextureAsset::PlayerLeftHand,     AssetTextureAtlas(27, 1, glm::uvec2(32, 64)) },
+    { TextureAsset::PlayerLeftShoulder, AssetTextureAtlas(27, 1, glm::uvec2(32, 64)) },
+    { TextureAsset::PlayerRightArm,     AssetTextureAtlas(18, 1, glm::uvec2(32, 80)) },
+    { TextureAsset::PlayerLeftEye,      AssetTextureAtlas(1, 20, glm::uvec2(40, 64)) },
+    { TextureAsset::PlayerRightEye,     AssetTextureAtlas(1, 20, glm::uvec2(40, 64)) },
+    { TextureAsset::Particles,          AssetTextureAtlas(PARTICLES_ATLAS_COLUMNS, 12, glm::uvec2(8), glm::uvec2(2)) }
 };
 
 static const std::array BLOCK_ASSETS = std::to_array<std::pair<uint16_t, std::string>>({
@@ -158,18 +153,31 @@ static const std::pair<uint16_t, std::string> ITEM_ASSETS[] = {
     { 3509, "assets/sprites/items/Item_3509.png" },
 };
 
-static const std::array FONT_ASSETS = std::to_array<std::pair<FontKey, std::string>>({
-    { FontKey::AndyBold, "assets/fonts/andy_bold.ttf" },
-    { FontKey::AndyRegular, "assets/fonts/andy_regular.otf" },
+static const std::array FONT_ASSETS = std::to_array<std::pair<FontAsset, std::string>>({
+    { FontAsset::AndyBold, "assets/fonts/andy_bold.ttf" },
+    { FontAsset::AndyRegular, "assets/fonts/andy_regular.otf" },
 });
+
+const std::pair<ShaderAsset, AssetShader> SHADER_ASSETS[] = {
+    { ShaderAsset::SpriteShader, AssetShader("sprite", ShaderStages::Vertex | ShaderStages::Fragment | ShaderStages::Geometry, VertexFormatAsset::SpriteVertex) },
+    { ShaderAsset::TilemapShader, AssetShader("tilemap", ShaderStages::Vertex | ShaderStages::Fragment | ShaderStages::Geometry, VertexFormatAsset::TilemapVertex) },
+    { ShaderAsset::FontShader, AssetShader("font", ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::FontVertex) },
+    { ShaderAsset::BackgroundShader, AssetShader("background", ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::BackgroundVertex) },
+    { ShaderAsset::ParticleShader, AssetShader("particle", ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::ParticleVertex, VertexFormatAsset::ParticleInstance }) },
+};
+
+const std::pair<ComputeShaderAsset, AssetComputeShader> COMPUTE_SHADER_ASSETS[] = {
+    { ComputeShaderAsset::ParticleComputeTransformShader, AssetComputeShader("particle", "CSComputeTransform") },
+};
 
 static struct AssetsState {
     std::unordered_map<uint16_t, Texture> items;
-    std::unordered_map<TextureKey, Texture> textures;
-    std::unordered_map<TextureKey, TextureAtlas> textures_atlases;
-    std::unordered_map<ShaderAssetKey, ShaderPipeline> shaders;
-    std::unordered_map<ComputeShaderAssetKey, LLGL::Shader*> compute_shaders;
-    std::unordered_map<FontKey, Font> fonts;
+    std::unordered_map<TextureAsset, Texture> textures;
+    std::unordered_map<TextureAsset, TextureAtlas> textures_atlases;
+    std::unordered_map<ShaderAsset, ShaderPipeline> shaders;
+    std::unordered_map<ComputeShaderAsset, LLGL::Shader*> compute_shaders;
+    std::unordered_map<FontAsset, Font> fonts;
+    std::unordered_map<VertexFormatAsset, LLGL::VertexFormat> vertex_formats;
     std::vector<LLGL::Sampler*> samplers;
     uint32_t texture_index = 0;
 } state;
@@ -185,7 +193,7 @@ Texture load_texture_array(const std::array<std::pair<uint16_t, std::string>, T>
 
 bool Assets::Load() {
     const uint8_t data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
-    state.textures[TextureKey::Stub] = create_texture(1, 1, 4, TextureSampler::Nearest, data);
+    state.textures[TextureAsset::Stub] = create_texture(1, 1, 4, TextureSampler::Nearest, data);
 
     for (const auto& [key, asset] : TEXTURE_ASSETS) {
         int width, height, components;
@@ -219,30 +227,27 @@ bool Assets::Load() {
         stbi_image_free(data);
     }
 
-    state.textures[TextureKey::Tiles] = load_texture_array(BLOCK_ASSETS, TextureSampler::NearestMips, true);
-    state.textures[TextureKey::Walls] = load_texture_array(WALL_ASSETS, TextureSampler::Nearest);
+    state.textures[TextureAsset::Tiles] = load_texture_array(BLOCK_ASSETS, TextureSampler::NearestMips, true);
+    state.textures[TextureAsset::Walls] = load_texture_array(WALL_ASSETS, TextureSampler::Nearest);
 
     return true;
 }
 
 bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
-    const std::pair<ShaderAssetKey, AssetShader> SHADER_ASSETS[] = {
-        { ShaderAssetKey::SpriteShader, AssetShader("sprite", ShaderStages::Vertex | ShaderStages::Fragment | ShaderStages::Geometry, SpriteVertexFormat()) },
-        { ShaderAssetKey::TilemapShader, AssetShader("tilemap", ShaderStages::Vertex | ShaderStages::Fragment | ShaderStages::Geometry, TilemapVertexFormat()) },
-        { ShaderAssetKey::FontShader, AssetShader("font", ShaderStages::Vertex | ShaderStages::Fragment, GlyphVertexFormat()) },
-        { ShaderAssetKey::BackgroundShader, AssetShader("background", ShaderStages::Vertex | ShaderStages::Fragment, BackgroundVertexFormat()) },
-        { ShaderAssetKey::ParticleShader, AssetShader("particle", ShaderStages::Vertex | ShaderStages::Fragment, { ParticleVertexFormat(), ParticleInstanceFormat() }) },
-    };
-
-    const std::pair<ComputeShaderAssetKey, AssetComputeShader> COMPUTE_SHADER_ASSETS[] = {
-        { ComputeShaderAssetKey::ParticleComputeTransformShader, AssetComputeShader("particle", "CSComputeTransform") },
-    };
+    InitVertexFormats();
 
     for (const auto& [key, asset] : SHADER_ASSETS) {
         ShaderPipeline shader_pipeline;
 
+        std::vector<LLGL::VertexAttribute> attributes;
+
+        for (VertexFormatAsset asset : asset.vertex_format_assets) {
+            const LLGL::VertexFormat& vertex_format = Assets::GetVertexFormat(asset);
+            attributes.insert(attributes.end(), vertex_format.attributes.begin(), vertex_format.attributes.end());
+        }
+
         if ((asset.stages & ShaderStages::Vertex) == ShaderStages::Vertex) {
-            if (!(shader_pipeline.vs = load_shader(ShaderType::Vertex, asset.file_name, shader_defs, asset.vertex_attributes)))
+            if (!(shader_pipeline.vs = load_shader(ShaderType::Vertex, asset.file_name, shader_defs, attributes)))
                 return false;
         }
         
@@ -357,6 +362,122 @@ bool Assets::InitSamplers() {
     return true;
 }
 
+void Assets::InitVertexFormats() {
+    const RenderBackend backend = Renderer::Backend();
+
+    LLGL::VertexFormat sprite_vertex_format;
+    LLGL::VertexFormat tilemap_vertex_format;
+    LLGL::VertexFormat font_vertex_format;
+    LLGL::VertexFormat background_vertex_format;
+    LLGL::VertexFormat particle_vertex_format;
+    LLGL::VertexFormat particle_instance_format;
+
+    if (backend.IsGLSL()) {
+        sprite_vertex_format.AppendAttribute({"a_position", LLGL::Format::RGB32Float});
+        sprite_vertex_format.AppendAttribute({"a_rotation", LLGL::Format::RGBA32Float});
+        sprite_vertex_format.AppendAttribute({"a_size", LLGL::Format::RG32Float});
+        sprite_vertex_format.AppendAttribute({"a_offset", LLGL::Format::RG32Float});
+        sprite_vertex_format.AppendAttribute({"a_uv_offset_scale", LLGL::Format::RGBA32Float});
+        sprite_vertex_format.AppendAttribute({"a_color", LLGL::Format::RGBA32Float});
+        sprite_vertex_format.AppendAttribute({"a_outline_color", LLGL::Format::RGBA32Float});
+        sprite_vertex_format.AppendAttribute({"a_outline_thickness", LLGL::Format::R32Float});
+        sprite_vertex_format.AppendAttribute({"a_has_texture", LLGL::Format::R32SInt});
+        sprite_vertex_format.AppendAttribute({"a_is_ui", LLGL::Format::R32SInt});
+        sprite_vertex_format.AppendAttribute({"a_is_nonscale", LLGL::Format::R32SInt});
+    } else if (backend.IsHLSL()) {
+        sprite_vertex_format.AppendAttribute({"Position", LLGL::Format::RGB32Float});
+        sprite_vertex_format.AppendAttribute({"Rotation", LLGL::Format::RGBA32Float});
+        sprite_vertex_format.AppendAttribute({"Size", LLGL::Format::RG32Float});
+        sprite_vertex_format.AppendAttribute({"Offset", LLGL::Format::RG32Float});
+        sprite_vertex_format.AppendAttribute({"UvOffsetScale", LLGL::Format::RGBA32Float});
+        sprite_vertex_format.AppendAttribute({"Color", LLGL::Format::RGBA32Float});
+        sprite_vertex_format.AppendAttribute({"OutlineColor", LLGL::Format::RGBA32Float});
+        sprite_vertex_format.AppendAttribute({"OutlineThickness", LLGL::Format::R32Float});
+        sprite_vertex_format.AppendAttribute({"HasTexture", LLGL::Format::R32SInt});
+        sprite_vertex_format.AppendAttribute({"IsUI", LLGL::Format::R32SInt});
+        sprite_vertex_format.AppendAttribute({"IsNonScale", LLGL::Format::R32SInt});
+    } else {
+        // TODO
+    }
+
+    if (backend.IsGLSL()) {
+        tilemap_vertex_format.AppendAttribute({"a_uv_size", LLGL::Format::RGBA32Float});
+        tilemap_vertex_format.AppendAttribute({"a_position", LLGL::Format::RG32Float});
+        tilemap_vertex_format.AppendAttribute({"a_world_pos", LLGL::Format::RG32Float});
+        tilemap_vertex_format.AppendAttribute({"a_tile_id", LLGL::Format::R32UInt});
+        tilemap_vertex_format.AppendAttribute({"a_tile_type", LLGL::Format::R32UInt});
+    } else if (backend.IsHLSL()) {
+        tilemap_vertex_format.AppendAttribute({"UvSize", LLGL::Format::RGBA32Float});
+        tilemap_vertex_format.AppendAttribute({"Position", LLGL::Format::RG32Float});
+        tilemap_vertex_format.AppendAttribute({"WorldPos", LLGL::Format::RG32Float});
+        tilemap_vertex_format.AppendAttribute({"TileId", LLGL::Format::R32UInt});
+        tilemap_vertex_format.AppendAttribute({"TileType", LLGL::Format::R32UInt});
+    } else {
+        // TODO
+    }
+
+    if (backend.IsGLSL()) {
+        font_vertex_format.AppendAttribute({"a_color", LLGL::Format::RGB32Float});
+        font_vertex_format.AppendAttribute({"a_position", LLGL::Format::RGB32Float});
+        font_vertex_format.AppendAttribute({"a_uv", LLGL::Format::RG32Float});
+        font_vertex_format.AppendAttribute({"a_is_ui", LLGL::Format::R32SInt});
+    } else if (backend.IsHLSL()) {
+        font_vertex_format.AppendAttribute({"Color", LLGL::Format::RGB32Float});
+        font_vertex_format.AppendAttribute({"Position", LLGL::Format::RGB32Float});
+        font_vertex_format.AppendAttribute({"UV", LLGL::Format::RG32Float});
+        font_vertex_format.AppendAttribute({"IsUI", LLGL::Format::R32SInt});
+    } else {
+        // TODO
+    }
+
+    if (backend.IsGLSL()) {
+        background_vertex_format.AppendAttribute({"a_position", LLGL::Format::RG32Float});
+        background_vertex_format.AppendAttribute({"a_uv", LLGL::Format::RG32Float});
+        background_vertex_format.AppendAttribute({"a_size", LLGL::Format::RG32Float});
+        background_vertex_format.AppendAttribute({"a_tex_size", LLGL::Format::RG32Float});
+        background_vertex_format.AppendAttribute({"a_speed", LLGL::Format::RG32Float});
+        background_vertex_format.AppendAttribute({"a_nonscale", LLGL::Format::R32SInt});
+    } else if (backend.IsHLSL()) {
+        background_vertex_format.AppendAttribute({"Position", LLGL::Format::RG32Float});
+        background_vertex_format.AppendAttribute({"Uv", LLGL::Format::RG32Float});
+        background_vertex_format.AppendAttribute({"Size", LLGL::Format::RG32Float});
+        background_vertex_format.AppendAttribute({"TexSize", LLGL::Format::RG32Float});
+        background_vertex_format.AppendAttribute({"Speed", LLGL::Format::RG32Float});
+        background_vertex_format.AppendAttribute({"NonScale", LLGL::Format::R32SInt});
+    } else {
+        // TODO
+    }
+
+    if (backend.IsGLSL()) {
+        particle_vertex_format.AppendAttribute({ "a_position",      LLGL::Format::RG32Float, 0, 0,                                      sizeof(ParticleVertex), 0 });
+        particle_vertex_format.AppendAttribute({ "a_inv_tex_size",  LLGL::Format::RG32Float, 1, offsetof(ParticleVertex, inv_tex_size), sizeof(ParticleVertex), 0 });
+        particle_vertex_format.AppendAttribute({ "a_tex_size",      LLGL::Format::RG32Float, 2, offsetof(ParticleVertex, tex_size),     sizeof(ParticleVertex), 0 });
+    } else if (backend.IsHLSL()) {
+        particle_vertex_format.AppendAttribute({ "Position",   LLGL::Format::RG32Float, 0, 0,                                      sizeof(ParticleVertex), 0 });
+        particle_vertex_format.AppendAttribute({ "InvTexSize", LLGL::Format::RG32Float, 1, offsetof(ParticleVertex, inv_tex_size), sizeof(ParticleVertex), 0 });
+        particle_vertex_format.AppendAttribute({ "TexSize",    LLGL::Format::RG32Float, 2, offsetof(ParticleVertex, tex_size),     sizeof(ParticleVertex), 0 });
+    } else {
+        // TODO
+    }
+
+    if (backend.IsGLSL()) {
+        particle_instance_format.AppendAttribute({ "i_uv",    LLGL::Format::RG32Float, 1, offsetof(ParticleInstance, uv),    sizeof(ParticleInstance), 1, 1});
+        particle_instance_format.AppendAttribute({ "i_depth", LLGL::Format::R32Float,  2, offsetof(ParticleInstance, depth), sizeof(ParticleInstance), 1, 1});
+    } else if (backend.IsHLSL()) {
+        particle_instance_format.AppendAttribute({ "I_UV",    LLGL::Format::RG32Float, 1, offsetof(ParticleInstance, uv),    sizeof(ParticleInstance), 1, 1 });
+        particle_instance_format.AppendAttribute({ "I_Depth", LLGL::Format::R32Float,  2, offsetof(ParticleInstance, depth), sizeof(ParticleInstance), 1, 1 });
+    } else {
+        // TODO
+    }
+
+    state.vertex_formats[VertexFormatAsset::SpriteVertex] = sprite_vertex_format;
+    state.vertex_formats[VertexFormatAsset::TilemapVertex] = tilemap_vertex_format;
+    state.vertex_formats[VertexFormatAsset::FontVertex] = font_vertex_format;
+    state.vertex_formats[VertexFormatAsset::BackgroundVertex] = background_vertex_format;
+    state.vertex_formats[VertexFormatAsset::ParticleVertex] = particle_vertex_format;
+    state.vertex_formats[VertexFormatAsset::ParticleInstance] = particle_instance_format;
+}
+
 void Assets::DestroyTextures() {
     for (auto& entry : state.textures) {
         Renderer::Context()->Release(*entry.second.texture);
@@ -375,19 +496,19 @@ void Assets::DestroyShaders() {
     }
 }
 
-const Texture& Assets::GetTexture(TextureKey key) {
+const Texture& Assets::GetTexture(TextureAsset key) {
     ASSERT(state.textures.contains(key), "Key not found");
-    return state.textures[key];
+    return state.textures.find(key)->second;
 }
 
-const TextureAtlas& Assets::GetTextureAtlas(TextureKey key) {
+const TextureAtlas& Assets::GetTextureAtlas(TextureAsset key) {
     ASSERT(state.textures_atlases.contains(key), "Key not found");
-    return state.textures_atlases[key];
+    return state.textures_atlases.find(key)->second;
 }
 
-const Font& Assets::GetFont(FontKey key) {
+const Font& Assets::GetFont(FontAsset key) {
     ASSERT(state.fonts.contains(key), "Key not found");
-    return state.fonts[key];
+    return state.fonts.find(key)->second;
 }
 
 const Texture& Assets::GetItemTexture(size_t index) {
@@ -395,19 +516,24 @@ const Texture& Assets::GetItemTexture(size_t index) {
     return state.items[index];
 }
 
-const ShaderPipeline& Assets::GetShader(ShaderAssetKey key) {
+const ShaderPipeline& Assets::GetShader(ShaderAsset key) {
     ASSERT(state.shaders.contains(key), "Key not found");
-    return state.shaders[key];
+    return state.shaders.find(key)->second;
 }
 
-LLGL::Shader* Assets::GetComputeShader(ComputeShaderAssetKey key) {
+LLGL::Shader* Assets::GetComputeShader(ComputeShaderAsset key) {
     ASSERT(state.compute_shaders.contains(key), "Key not found");
-    return state.compute_shaders[key];
+    return state.compute_shaders.find(key)->second;
 }
 
 LLGL::Sampler& Assets::GetSampler(size_t index) {
     ASSERT(index < state.samplers.size(), "Index is out of bounds");
     return *state.samplers[index];
+}
+
+const LLGL::VertexFormat& Assets::GetVertexFormat(VertexFormatAsset key) {
+    ASSERT(state.vertex_formats.contains(key), "Key not found");
+    return state.vertex_formats.find(key)->second;
 }
 
 Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data, bool generate_mip_maps) {

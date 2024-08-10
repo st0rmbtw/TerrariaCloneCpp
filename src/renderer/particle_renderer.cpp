@@ -2,7 +2,7 @@
 
 #include "LLGL/Format.h"
 #include "LLGL/ShaderFlags.h"
-#include "assets.hpp"
+#include "../assets.hpp"
 #include "renderer.hpp"
 
 #include "../log.hpp"
@@ -23,7 +23,7 @@ void ParticleRenderer::init() {
     const auto& context = Renderer::Context();
     const auto* swap_chain = Renderer::SwapChain();
 
-    m_atlas = Assets::GetTextureAtlas(TextureKey::Particles);
+    m_atlas = Assets::GetTextureAtlas(TextureAsset::Particles);
 
     m_instance_buffer_data = new ParticleInstance[MAX_PARTICLES_COUNT];
     m_instance_buffer_data_ptr = m_instance_buffer_data;
@@ -40,14 +40,12 @@ void ParticleRenderer::init() {
     const ParticleVertex vertices[] = {
         ParticleVertex(0.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)), // 0
         ParticleVertex(0.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)), // 1
+        ParticleVertex(1.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)), // 2
         ParticleVertex(1.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)), // 2
-        ParticleVertex(1.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)), // 2
-        ParticleVertex(1.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)), // 3
-        ParticleVertex(0.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size))  // 0
     };
 
-    m_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, ParticleVertexFormat(), "ParticleRenderer VertexBuffer");
-    m_instance_buffer = CreateVertexBuffer(MAX_PARTICLES_COUNT * sizeof(ParticleInstance), ParticleInstanceFormat(), "ParticleRenderer InstanceBuffer");
+    m_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::ParticleVertex), "ParticleRenderer VertexBuffer");
+    m_instance_buffer = CreateVertexBuffer(MAX_PARTICLES_COUNT * sizeof(ParticleInstance), Assets::GetVertexFormat(VertexFormatAsset::ParticleInstance), "ParticleRenderer InstanceBuffer");
 
     LLGL::Buffer* buffers[] = { m_vertex_buffer, m_instance_buffer };
     m_buffer_array = context->CreateBufferArray(2, buffers);
@@ -116,7 +114,7 @@ void ParticleRenderer::init() {
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
-    const ShaderPipeline& particle_shader = Assets::GetShader(ShaderAssetKey::ParticleShader);
+    const ShaderPipeline& particle_shader = Assets::GetShader(ShaderAsset::ParticleShader);
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
     pipelineLayoutDesc.debugName = "ParticleRenderer Pipeline";
@@ -125,7 +123,7 @@ void ParticleRenderer::init() {
     pipelineDesc.fragmentShader = particle_shader.ps;
     pipelineDesc.pipelineLayout = pipelineLayout;
     pipelineDesc.indexFormat = LLGL::Format::Undefined;
-    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleList;
+    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = swap_chain->GetRenderPass();
     pipelineDesc.rasterizer.frontCCW = true;
     pipelineDesc.depth = LLGL::DepthDescriptor {
@@ -184,7 +182,7 @@ void ParticleRenderer::init() {
 
     LLGL::PipelineLayout* compute_pipeline_layout = context->CreatePipelineLayout(compute_pipeline_layout_desc);
 
-    LLGL::Shader* computeShader = Assets::GetComputeShader(ComputeShaderAssetKey::ParticleComputeTransformShader);
+    LLGL::Shader* computeShader = Assets::GetComputeShader(ComputeShaderAsset::ParticleComputeTransformShader);
 
     LLGL::ComputePipelineDescriptor compute_pipeline_desc;
     compute_pipeline_desc.pipelineLayout = compute_pipeline_layout;
@@ -275,7 +273,7 @@ void ParticleRenderer::render() {
         commands->SetResource(2, Assets::GetSampler(t.sampler));
         commands->SetResource(3, *m_transform_buffer);
 
-        commands->DrawInstanced(6, 0, m_particle_count, 0);
+        commands->DrawInstanced(4, 0, m_particle_count, 0);
     commands->EndRenderPass();
 
     m_instance_buffer_data_ptr = m_instance_buffer_data;

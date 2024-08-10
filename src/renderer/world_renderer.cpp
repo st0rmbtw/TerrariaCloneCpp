@@ -41,7 +41,7 @@ void WorldRenderer::init() {
 
     LLGL::PipelineLayout* pipelineLayout = Renderer::Context()->CreatePipelineLayout(pipelineLayoutDesc);
 
-    const ShaderPipeline& tilemap_shader = Assets::GetShader(ShaderAssetKey::TilemapShader);
+    const ShaderPipeline& tilemap_shader = Assets::GetShader(ShaderAsset::TilemapShader);
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
     pipelineDesc.debugName = "World Pipeline";
@@ -87,7 +87,7 @@ void WorldRenderer::render(const World& world) {
         const RenderChunk& chunk = world.render_chunks().at(pos);
 
         if (!chunk.walls_empty()) {
-            const Texture& t = Assets::GetTexture(TextureKey::Walls);
+            const Texture& t = Assets::GetTexture(TextureAsset::Walls);
 
             commands->SetPipelineState(*m_pipeline);
             commands->SetVertexBuffer(*chunk.wall_vertex_buffer);
@@ -100,7 +100,7 @@ void WorldRenderer::render(const World& world) {
         }
 
         if (!chunk.blocks_empty()) {
-            const Texture& t = Assets::GetTexture(TextureKey::Tiles);
+            const Texture& t = Assets::GetTexture(TextureAsset::Tiles);
 
             commands->SetPipelineState(*m_pipeline);
             commands->SetVertexBuffer(*chunk.block_vertex_buffer);

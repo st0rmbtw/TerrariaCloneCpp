@@ -1,7 +1,6 @@
 #include "background_renderer.hpp"
 
 #include "LLGL/ShaderFlags.h"
-#include "assets.hpp"
 #include "renderer.hpp"
 #include "utils.hpp"
 
@@ -30,7 +29,7 @@ void BackgroundRenderer::init() {
         offset += 4;
     }
 
-    m_vertex_buffer = CreateVertexBuffer(MAX_VERTICES * sizeof(BackgroundVertex), BackgroundVertexFormat(), "BackgroundRenderer VertexBuffer");
+    m_vertex_buffer = CreateVertexBuffer(MAX_VERTICES * sizeof(BackgroundVertex), Assets::GetVertexFormat(VertexFormatAsset::BackgroundVertex), "BackgroundRenderer VertexBuffer");
     m_index_buffer = CreateIndexBuffer(indices, LLGL::Format::R32UInt, "BackgroundRenderer IndexBuffer");
 
     const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
@@ -50,7 +49,7 @@ void BackgroundRenderer::init() {
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
-    const ShaderPipeline& background_shader = Assets::GetShader(ShaderAssetKey::BackgroundShader);
+    const ShaderPipeline& background_shader = Assets::GetShader(ShaderAsset::BackgroundShader);
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
     pipelineLayoutDesc.debugName = "BackgroundRenderer Pipeline";
