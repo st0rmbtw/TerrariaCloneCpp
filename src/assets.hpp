@@ -54,6 +54,7 @@ enum class ShaderAssetKey : uint8_t {
     PostProcessShader,
     FontShader,
     BackgroundShader,
+    ParticleShader,
 };
 
 enum class FontKey : uint8_t {

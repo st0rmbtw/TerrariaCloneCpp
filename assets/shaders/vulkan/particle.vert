@@ -1,28 +1,18 @@
-#version 330 core
+#version 450 core
 
-layout(location = 0) in vec3 a_position;
+layout(location = 0) in vec2 a_position;
 layout(location = 1) in vec4 a_rotation;
-layout(location = 2) in vec2 a_size;
-layout(location = 3) in vec2 a_offset;
-layout(location = 4) in vec4 a_uv_offset_scale;
-layout(location = 5) in vec4 a_color;
-layout(location = 6) in vec4 a_outline_color;
-layout(location = 7) in float a_outline_thickness;
-layout(location = 8) in int a_has_texture;
-layout(location = 9) in int a_is_ui;
-layout(location = 10) in int a_is_nonscale;
+layout(location = 2) in vec2 a_uv;
+layout(location = 3) in vec2 a_tex_size;
+layout(location = 4) in float a_scale;
 
-out VS_OUT {
+layout(location = 0) out VS_OUT {
     mat4 transform;
-    vec4 uv_offset_scale;
-    vec4 color;
-    vec4 outline_color;
-    float outline_thickness;
-    float order;
-    int has_texture;
-    bool is_ui;
-    bool is_nonscale;
+    vec2 uv;
+    vec2 tex_size;
 } vs_out;
+
+const vec2 PARTICLE_SIZE = vec2(8.0);
 
 void main() {
     float qxx = a_rotation.x * a_rotation.x;
@@ -49,26 +39,21 @@ void main() {
         vec4(a_position.x, a_position.y, 0.0, 1.0)
     );
 
-    transform *= rotation_matrix;
+    transform = transform * rotation_matrix;
 
-    vec2 offset = -a_offset * a_size;
+    vec2 size = PARTICLE_SIZE * a_scale;
+    vec2 offset = -0.5 * size;
 
     // translate
     transform[3] = transform[0] * offset[0] + transform[1] * offset[1] + transform[2] * 0.0 + transform[3];
 
     // scale
-    transform[0] = transform[0] * a_size[0];
-    transform[1] = transform[1] * a_size[1];
-
-    gl_Position = vec4(1.0);
-
+    transform[0] = transform[0] * size[0];
+    transform[1] = transform[1] * size[1];
+	
     vs_out.transform = transform;
-    vs_out.uv_offset_scale = a_uv_offset_scale;
-    vs_out.color = a_color;
-    vs_out.outline_color = a_outline_color;
-    vs_out.outline_thickness = a_outline_thickness;
-    vs_out.order = a_position.z;
-    vs_out.has_texture = a_has_texture;
-    vs_out.is_ui = a_is_ui > 0;
-    vs_out.is_nonscale = a_is_nonscale > 0;
+    vs_out.uv = a_uv / a_tex_size;
+    vs_out.tex_size = PARTICLE_SIZE / a_tex_size;
+
+    gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
 }

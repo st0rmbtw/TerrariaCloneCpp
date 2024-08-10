@@ -180,6 +180,9 @@ void Game::Destroy() {
    
         Renderer::Terminate();
     }
+
+    ParticleManager::Terminate();
+
     glfwTerminate();
 }
 

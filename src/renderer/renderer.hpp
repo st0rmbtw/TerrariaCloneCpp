@@ -11,6 +11,7 @@
 #include "../types/background_layer.hpp"
 #include "../world/world.hpp"
 #include "../assets.hpp"
+#include "../particles.hpp"
 
 #include "custom_surface.hpp"
 #include "camera.h"
@@ -73,6 +74,7 @@ namespace Renderer {
     }
 
     void DrawBackground(const BackgroundLayer& layer);
+    void DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant);
 
 #if DEBUG
     void PrintDebugInfo();

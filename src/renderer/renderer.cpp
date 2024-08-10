@@ -16,6 +16,7 @@
 #include "batch.hpp"
 #include "world_renderer.hpp"
 #include "background_renderer.hpp"
+#include "particle_renderer.hpp"
 
 static struct RendererState {
     LLGL::RenderSystemPtr context = nullptr;
@@ -34,6 +35,7 @@ static struct RendererState {
     RenderBatchGlyph glyph_batch;
     WorldRenderer world_renderer;
     BackgroundRenderer background_renderer;
+    ParticleRenderer particle_renderer;
     RenderBackend backend;
     
     uint32_t global_depth_index = 0;
@@ -127,6 +129,7 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     state.glyph_batch.init();
     state.world_renderer.init();
     state.background_renderer.init();
+    state.particle_renderer.init();
 
     return true;
 }
@@ -190,6 +193,7 @@ void Renderer::Render(const World& world) {
     state.background_renderer.render();
     state.world_renderer.render(world);
     state.sprite_batch.render();
+    state.particle_renderer.render();
     state.glyph_batch.render();
 
     commands->EndRenderPass();
@@ -339,12 +343,17 @@ void Renderer::DrawBackground(const BackgroundLayer& layer) {
     state.background_renderer.draw_layer(layer);
 }
 
+void Renderer::DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant) {
+    state.particle_renderer.draw_particle(position, rotation, scale, type, variant);
+}
+
 void Renderer::Terminate() {
     Assets::DestroyShaders();
 
     state.sprite_batch.terminate();
     state.world_renderer.terminate();
     state.background_renderer.terminate();
+    state.particle_renderer.terminate();
 
     if (state.constant_buffer) state.context->Release(*state.constant_buffer);
 

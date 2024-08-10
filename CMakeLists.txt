@@ -53,6 +53,7 @@ if (WIN32)
 endif()
 
 add_compile_options("-Wno-ignored-attributes")
+add_compile_options("-march=native")
 
 set(LLGL_BUILD_RENDERER_NULL OFF CACHE BOOL "" FORCE)
 

@@ -1,6 +1,7 @@
 #ifndef WORLD_PARTICLES_HPP
 #define WORLD_PARTICLES_HPP
 
+#include "math/quat.hpp"
 #pragma once
 
 #include <cstdint>
@@ -10,8 +11,7 @@
 #include "time/time.hpp"
 #include "types/block.hpp"
 
-constexpr size_t MAX_PARTICLES_COUNT = 10000;
-constexpr float PARTICLE_SIZE = 8.0f;
+constexpr size_t MAX_PARTICLES_COUNT = 1000000;
 
 namespace Particle {
 
@@ -38,7 +38,7 @@ struct ParticleData {
     glm::vec2 velocity;
     float spawn_time;
     float lifetime;
-    float rotation_speed;
+    glm::quat rotation_speed;
     float custom_scale;
     float scale;
     glm::quat rotation;
@@ -78,7 +78,7 @@ public:
             .velocity       = this->velocity,
             .spawn_time     = Time::elapsed_seconds(),
             .lifetime       = this->lifetime,
-            .rotation_speed = this->rotation_speed,
+            .rotation_speed = Quat::from_rotation_z(this->rotation_speed),
             .custom_scale   = this->scale,
             .scale          = this->scale,
             .rotation       = glm::mat4(1.0f),
@@ -107,6 +107,8 @@ namespace ParticleManager {
     void DeleteExpired();
 
     void SpawnParticle(const ParticleBuilder& builder);
+
+    void Terminate();
 };
 
 #endif

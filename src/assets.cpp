@@ -209,6 +209,7 @@ bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
         { ShaderAssetKey::TilemapShader, AssetShader("tilemap", ShaderStages::Vertex | ShaderStages::Fragment | ShaderStages::Geometry, TilemapVertexFormat()) },
         { ShaderAssetKey::FontShader, AssetShader("font", ShaderStages::Vertex | ShaderStages::Fragment, GlyphVertexFormat()) },
         { ShaderAssetKey::BackgroundShader, AssetShader("background", ShaderStages::Vertex | ShaderStages::Fragment, BackgroundVertexFormat()) },
+        { ShaderAssetKey::ParticleShader, AssetShader("particle", ShaderStages::Vertex | ShaderStages::Fragment | ShaderStages::Geometry, ParticleVertexFormat()) },
     };
 
     for (const auto& [key, asset] : SHADER_ASSETS) {

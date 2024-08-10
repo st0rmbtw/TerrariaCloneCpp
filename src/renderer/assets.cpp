@@ -148,3 +148,35 @@ const LLGL::VertexFormat& BackgroundVertexFormat() {
 
     return vertexFormat;
 }
+
+const LLGL::VertexFormat& ParticleVertexFormat() {
+    static LLGL::VertexFormat vertexFormat;
+
+    if (!vertexFormat.attributes.empty()) return vertexFormat;
+
+    switch (Renderer::Backend()) {
+        case RenderBackend::Vulkan:
+        case RenderBackend::OpenGL: {
+            vertexFormat.AppendAttribute({"a_position", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"a_rotation", LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"a_uv", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"a_tex_size", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"a_scale", LLGL::Format::R32Float});
+        }
+        break;
+        case RenderBackend::D3D11:
+        case RenderBackend::D3D12: {
+            vertexFormat.AppendAttribute({"Position", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"Rotation", LLGL::Format::RGBA32Float});
+            vertexFormat.AppendAttribute({"UV", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"TexSize", LLGL::Format::RG32Float});
+            vertexFormat.AppendAttribute({"Scale", LLGL::Format::R32Float});
+        }
+        break;
+        case RenderBackend::Metal: // TODO
+        break;
+        default: UNREACHABLE()
+    }
+
+    return vertexFormat;
+}

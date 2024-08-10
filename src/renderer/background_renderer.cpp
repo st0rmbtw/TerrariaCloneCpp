@@ -160,4 +160,6 @@ void BackgroundRenderer::terminate() {
     if (m_vertex_buffer) context->Release(*m_vertex_buffer);
     if (m_index_buffer) context->Release(*m_index_buffer);
     if (m_pipeline) context->Release(*m_pipeline);
+
+    delete[] m_buffer;
 }
