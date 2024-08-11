@@ -595,7 +595,7 @@ Texture create_texture_array(uint32_t width, uint32_t height, uint32_t layers, u
     texture_desc.type = LLGL::TextureType::Texture2DArray;
     texture_desc.extent = LLGL::Extent3D(width, height, 1);
     texture_desc.arrayLayers = layers;
-    texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
+    texture_desc.bindFlags = LLGL::BindFlags::Sampled;
     texture_desc.cpuAccessFlags = 0;
     texture_desc.miscFlags = LLGL::MiscFlags::GenerateMips * generate_mip_maps;
 

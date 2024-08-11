@@ -111,7 +111,7 @@ void ParticleRenderer::init() {
             "TransformBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::Storage,
-            LLGL::StageFlags::VertexStage | LLGL::StageFlags::ComputeStage,
+            LLGL::StageFlags::VertexStage,
             LLGL::BindingSlot(4)
         ),
     };
@@ -154,6 +154,13 @@ void ParticleRenderer::init() {
 
     LLGL::PipelineLayoutDescriptor compute_pipeline_layout_desc;
     compute_pipeline_layout_desc.bindings = {
+        LLGL::BindingDescriptor(
+            "GlobalUniformBuffer",
+            LLGL::ResourceType::Buffer,
+            LLGL::BindFlags::ConstantBuffer,
+            LLGL::StageFlags::ComputeStage,
+            LLGL::BindingSlot(1)
+        ),
         LLGL::BindingDescriptor(
             "TransformBuffer",
             LLGL::ResourceType::Buffer,
@@ -255,10 +262,11 @@ void ParticleRenderer::render() {
     {
         commands->SetPipelineState(*m_compute_pipeline);
 
-        commands->SetResource(0, *m_transform_buffer);
-        commands->SetResource(1, *m_position_buffer);
-        commands->SetResource(2, *m_rotation_buffer);
-        commands->SetResource(3, *m_scale_buffer);
+        commands->SetResource(0, *Renderer::GlobalUniformBuffer());
+        commands->SetResource(1, *m_transform_buffer);
+        commands->SetResource(2, *m_position_buffer);
+        commands->SetResource(3, *m_rotation_buffer);
+        commands->SetResource(4, *m_scale_buffer);
 
         // m_particles_count < 1_000_000, 1_000_000 / 64 = 15625 < 65535
         const uint32_t x = (m_particle_count + 64 - 1) / 64;

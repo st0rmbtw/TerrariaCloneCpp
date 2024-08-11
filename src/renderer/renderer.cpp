@@ -414,7 +414,7 @@ void RenderBatchSprite::init() {
             "GlobalUniformBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
-            LLGL::StageFlags::GeometryStage,
+            LLGL::StageFlags::VertexStage,
             LLGL::BindingSlot(1)
         ),
         LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(2)),

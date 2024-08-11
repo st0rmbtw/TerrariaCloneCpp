@@ -87,12 +87,14 @@ public:
                 case Value::Vertex:   return ".vert"; break;
                 case Value::Fragment: return ".frag"; break;
                 case Value::Geometry: return ".geom"; break;
+                case Value::Compute: return ".comp"; break;
                 default: UNREACHABLE()
             };
             case RenderBackend::Vulkan: switch (m_value) {
                 case Value::Vertex:   return ".vert.spv"; break;
                 case Value::Fragment: return ".frag.spv"; break;
                 case Value::Geometry: return ".geom.spv"; break;
+                case Value::Compute: return ".comp.spv"; break;
                 default: UNREACHABLE()
             };
             default: UNREACHABLE()
