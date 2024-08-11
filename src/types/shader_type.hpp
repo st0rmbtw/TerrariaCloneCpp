@@ -63,10 +63,10 @@ public:
         break;
 
         case RenderBackend::D3D12: switch (m_value) {
-            case Value::Vertex: return "vs_6_0"; break;
-            case Value::Fragment: return "ps_6_0"; break;
-            case Value::Geometry: return "gs_6_0"; break;
-            case Value::Compute: return "cs_6_0"; break;
+            case Value::Vertex: return "vs_5_0"; break;
+            case Value::Fragment: return "ps_5_0"; break;
+            case Value::Geometry: return "gs_5_0"; break;
+            case Value::Compute: return "cs_5_0"; break;
             default: UNREACHABLE()
         };
         break;

@@ -33,15 +33,15 @@ static struct ParticlesState {
 } state;
 
 void ParticleManager::Init() {
-    state.position = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 2 * sizeof(float), 32);
-    state.velocity = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 2 * sizeof(float), 32);
+    state.position = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 2 * sizeof(float), sizeof(__m256));
+    state.velocity = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 2 * sizeof(float), sizeof(__m256));
     state.spawn_time = new float[MAX_PARTICLES_COUNT];
     state.lifetime = new float[MAX_PARTICLES_COUNT];
     state.rotation_speed = new float[MAX_PARTICLES_COUNT];
     state.custom_scale = new float[MAX_PARTICLES_COUNT];
     state.scale = new float[MAX_PARTICLES_COUNT];
-    state.rotation = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), 32);
-    state.rotation_speed = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), 32);
+    state.rotation = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), sizeof(__m256));
+    state.rotation_speed = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), sizeof(__m256));
     state.gravity = new bool[MAX_PARTICLES_COUNT];
     state.active = new bool[MAX_PARTICLES_COUNT](false); // If it's not initilized with false, particles wouldn't spawn
     state.type = new Particle::Type[MAX_PARTICLES_COUNT];
@@ -114,7 +114,7 @@ void ParticleManager::Update() {
         const __m256 positionVector = _mm256_load_ps(&state.position[i]);
         const __m256 velocityVector = _mm256_load_ps(&state.velocity[i]);
         const __m256 newPosition = _mm256_add_ps(positionVector, velocityVector);
-        _mm256_storeu_ps(&state.position[i], newPosition);
+        _mm256_store_ps(&state.position[i], newPosition);
     }
 
     // The size of a quat type is 128 bit, so it can be packed as 2 into 256 bit vector.
@@ -147,7 +147,7 @@ void ParticleManager::Update() {
                                     _mm256_shuffle_ps(ZnXWY, XZYnW, _MM_SHUFFLE(2,3,0,1)));
 
         /* now we only need to shuffle the components in place and return the result      */
-		_mm256_storeu_ps(&state.rotation[i], _mm256_shuffle_ps(XZWY, XZWY, _MM_SHUFFLE(2,1,3,0)));
+		_mm256_store_ps(&state.rotation[i], _mm256_shuffle_ps(XZWY, XZWY, _MM_SHUFFLE(2,1,3,0)));
     }
 }
 

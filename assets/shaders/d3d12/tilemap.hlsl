@@ -56,12 +56,12 @@ static const uint TILE_TYPE_WALL = 1u;
 [maxvertexcount(4)]
 void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
 {
-    float2 start_uv = input[0].uv_size.xy;
-    float2 tex_size = input[0].uv_size.zw;
-    float2 world_pos = input[0].world_pos;
-    uint tile_id = input[0].tile_id;
-    uint tile_type = input[0].tile_type;
-    float4 position = input[0].position;
+    const float2 start_uv = input[0].uv_size.xy;
+    const float2 tex_size = input[0].uv_size.zw;
+    const float2 world_pos = input[0].world_pos;
+    const uint tile_id = input[0].tile_id;
+    const uint tile_type = input[0].tile_type;
+    const float4 position = input[0].position;
 
     float order = u_tile_order;
     float2 size = float2(TILE_SIZE, TILE_SIZE);
@@ -73,14 +73,14 @@ void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
 
     order /= u_max_depth;
 
-    float4x4 transform = float4x4(
+    const float4x4 transform = float4x4(
         float4(1.0, 0.0, 0.0, world_pos.x),
         float4(0.0, 1.0, 0.0, world_pos.y),
         float4(0.0, 0.0, 1.0, 0.0),
         float4(0.0, 0.0, 0.0, 1.0)
     );
 
-    float4x4 mvp = mul(u_view_projection, transform);
+    const float4x4 mvp = mul(u_view_projection, transform);
 
     GSOutput output;
     output.tile_id = tile_id;
@@ -111,7 +111,7 @@ SamplerState Sampler : register(s4);
 
 float4 PS(GSOutput inp) : SV_Target
 {
-    float4 color = TextureArray.Sample(Sampler, float3(inp.uv, float(inp.tile_id)));
+    const float4 color = TextureArray.Sample(Sampler, float3(inp.uv, float(inp.tile_id)));
 
     clip(color.a - 0.5);
 

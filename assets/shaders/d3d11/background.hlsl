@@ -47,7 +47,7 @@ float4 scroll(
     float2 size,
     bool nonscale
 ) {
-    float2 new_offset = float2(-offset.x, offset.y);
+    const float2 new_offset = float2(-offset.x, offset.y);
 
     if (!nonscale) {
         speed.x = speed.x / (size.x / tex_size.x);
@@ -66,7 +66,7 @@ float4 scroll(
 
 VSOutput VS(VSInput inp)
 {
-    float4x4 mvp = inp.nonscale > 0 ? u_nonscale_view_projection : u_view_projection;
+    const float4x4 mvp = inp.nonscale > 0 ? u_nonscale_view_projection : u_view_projection;
 
 	VSOutput outp;
     outp.position = mul(mvp, float4(inp.position.x, inp.position.y, 0.0, 1.0));
@@ -82,11 +82,11 @@ VSOutput VS(VSInput inp)
 
 float4 PS(VSOutput inp) : SV_Target
 {
-    float4x4 mvp = mul(u_nonscale_projection, u_transform_matrix);
+    const float4x4 mvp = mul(u_nonscale_projection, u_transform_matrix);
 
-    float2 offset = mul(mvp, float4(u_camera_position.x, u_camera_position.y, 0.0, 1.0)).xy;
+    const float2 offset = mul(mvp, float4(u_camera_position.x, u_camera_position.y, 0.0, 1.0)).xy;
 
-    float4 color = scroll(inp.speed, inp.uv, offset, inp.tex_size, inp.size, inp.nonscale > 0);
+    const float4 color = scroll(inp.speed, inp.uv, offset, inp.tex_size, inp.size, inp.nonscale > 0);
 
     clip(color.a - 0.05f);
 

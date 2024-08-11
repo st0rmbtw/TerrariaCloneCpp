@@ -53,6 +53,7 @@ void ParticleRenderer::init() {
     {
         long bindFlags = LLGL::BindFlags::Storage;
         LLGL::BufferDescriptor bufferDesc;
+        bufferDesc.debugName = "Particle TransformBuffer";
         bufferDesc.size         = sizeof(glm::mat4) * MAX_PARTICLES_COUNT;
         bufferDesc.bindFlags    = bindFlags;
         bufferDesc.format       = LLGL::Format::RGBA32Float;
@@ -63,6 +64,7 @@ void ParticleRenderer::init() {
     {
         long bindFlags = LLGL::BindFlags::Sampled;
         LLGL::BufferDescriptor bufferDesc;
+        bufferDesc.debugName = "Particle PositionBuffer";
         bufferDesc.size         = sizeof(glm::vec2) * MAX_PARTICLES_COUNT;
         bufferDesc.bindFlags    = bindFlags;
         bufferDesc.format       = LLGL::Format::RG32Float;
@@ -73,6 +75,7 @@ void ParticleRenderer::init() {
     {
         long bindFlags = LLGL::BindFlags::Sampled;
         LLGL::BufferDescriptor bufferDesc;
+        bufferDesc.debugName = "Particle RotationBuffer";
         bufferDesc.size         = sizeof(glm::vec4) * MAX_PARTICLES_COUNT;
         bufferDesc.bindFlags    = bindFlags;
         bufferDesc.format       = LLGL::Format::RGBA32Float;
@@ -83,12 +86,13 @@ void ParticleRenderer::init() {
     {
         long bindFlags = LLGL::BindFlags::Sampled;
         LLGL::BufferDescriptor bufferDesc;
+        bufferDesc.debugName = "Particle ScaleBuffer";
         bufferDesc.size         = sizeof(float) * MAX_PARTICLES_COUNT;
         bufferDesc.bindFlags    = bindFlags;
         bufferDesc.format       = LLGL::Format::R32Float;
 
         m_scale_buffer = context->CreateBuffer(bufferDesc);
-    } 
+    }
 
     const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
 
@@ -216,34 +220,35 @@ void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat&
 void ParticleRenderer::render() {
     if (m_particle_count == 0) return;
 
+    const auto& context = Renderer::Context();
     auto* const commands = Renderer::CommandBuffer();
 
     ptrdiff_t size = (uint8_t*) m_instance_buffer_data_ptr - (uint8_t*) m_instance_buffer_data;
     if (size <= (1 << 16)) {
         commands->UpdateBuffer(*m_instance_buffer, 0, m_instance_buffer_data, size);
     } else {
-        Renderer::Context()->WriteBuffer(*m_instance_buffer, 0, m_instance_buffer_data, size);
+        context->WriteBuffer(*m_instance_buffer, 0, m_instance_buffer_data, size);
     }
 
     size = (uint8_t*) m_position_buffer_data_ptr - (uint8_t*) m_position_buffer_data;
     if (size <= (1 << 16)) {
         commands->UpdateBuffer(*m_position_buffer, 0, m_position_buffer_data, size);
     } else {
-        Renderer::Context()->WriteBuffer(*m_position_buffer, 0, m_position_buffer_data, size);
+        context->WriteBuffer(*m_position_buffer, 0, m_position_buffer_data, size);
     }
 
     size = (uint8_t*) m_rotation_buffer_data_ptr - (uint8_t*) m_rotation_buffer_data;
     if (size <= (1 << 16)) {
         commands->UpdateBuffer(*m_rotation_buffer, 0, m_rotation_buffer_data, size);
     } else {
-        Renderer::Context()->WriteBuffer(*m_rotation_buffer, 0, m_rotation_buffer_data, size);
+        context->WriteBuffer(*m_rotation_buffer, 0, m_rotation_buffer_data, size);
     }
 
     size = (uint8_t*) m_scale_buffer_data_ptr - (uint8_t*) m_scale_buffer_data;
     if (size <= (1 << 16)) {
         commands->UpdateBuffer(*m_scale_buffer, 0, m_scale_buffer_data, size);
     } else {
-        Renderer::Context()->WriteBuffer(*m_scale_buffer, 0, m_scale_buffer_data, size);
+        context->WriteBuffer(*m_scale_buffer, 0, m_scale_buffer_data, size);
     }
 
     commands->PushDebugGroup("CS ComputeTransform");
@@ -255,9 +260,10 @@ void ParticleRenderer::render() {
         commands->SetResource(2, *m_rotation_buffer);
         commands->SetResource(3, *m_scale_buffer);
 
-        const uint32_t y = glm::max(1u, m_particle_count / 100);
+        // m_particles_count < 1_000_000, 1_000_000 / 64 = 15625 < 65535
+        const uint32_t x = (m_particle_count + 64 - 1) / 64;
 
-        commands->Dispatch(10, y, 1);
+        commands->Dispatch(x, 1, 1);
     }
     commands->PopDebugGroup();
     

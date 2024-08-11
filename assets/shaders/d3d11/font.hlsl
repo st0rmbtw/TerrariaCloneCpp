@@ -31,10 +31,10 @@ struct VSOutput
 
 VSOutput VS(VSInput inp)
 {
-    float4x4 mvp = inp.i_is_ui > 0 ? u_screen_projection : u_view_projection;
+    const float4x4 mvp = inp.i_is_ui > 0 ? u_screen_projection : u_view_projection;
 
-    float2 position = inp.i_position.xy + inp.position * inp.i_size;
-    float2 uv = inp.i_uv + inp.position * inp.i_tex_size;
+    const float2 position = inp.i_position.xy + inp.position * inp.i_size;
+    const float2 uv = inp.i_uv + inp.position * inp.i_tex_size;
 
 	VSOutput outp;
     outp.color = inp.i_color;
@@ -50,7 +50,7 @@ SamplerState Sampler : register(s3);
 
 float4 PS(VSOutput inp) : SV_Target
 {
-    float4 color = float4(inp.color, Texture.Sample(Sampler, inp.uv).r);
+    const float4 color = float4(inp.color, Texture.Sample(Sampler, inp.uv).r);
 
     clip(color.a - 0.05f);
 

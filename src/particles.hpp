@@ -11,7 +11,7 @@
 #include "time/time.hpp"
 #include "types/block.hpp"
 
-constexpr size_t MAX_PARTICLES_COUNT = 1000000;
+constexpr size_t MAX_PARTICLES_COUNT = 10 * 100000;
 
 namespace Particle {
 

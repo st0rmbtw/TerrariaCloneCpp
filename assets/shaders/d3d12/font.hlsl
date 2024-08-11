@@ -12,10 +12,14 @@ cbuffer GlobalUniformBuffer : register( b1 )
 
 struct VSInput
 {
-    float3 color : Color;
-    float3 position : Position;
-    float2 uv : UV;
-    int is_ui : IsUI;
+    float2 position : Position;
+    
+    float3 i_color : I_Color;
+    float3 i_position : I_Position;
+    float2 i_size : I_Size;
+    float2 i_tex_size : I_TexSize;
+    float2 i_uv : I_UV;
+    int i_is_ui : I_IsUI;
 };
 
 struct VSOutput
@@ -27,13 +31,16 @@ struct VSOutput
 
 VSOutput VS(VSInput inp)
 {
-    float4x4 mvp = inp.is_ui > 0 ? u_screen_projection : u_view_projection;
+    const float4x4 mvp = inp.i_is_ui > 0 ? u_screen_projection : u_view_projection;
+
+    const float2 position = inp.i_position.xy + inp.position * inp.i_size;
+    const float2 uv = inp.i_uv + inp.position * inp.i_tex_size;
 
 	VSOutput outp;
-    outp.color = inp.color;
-    outp.uv = inp.uv;
-    outp.position = mul(mvp, float4(inp.position.x, inp.position.y, 0.0, 1.0));
-    outp.position.z = inp.position.z / u_max_depth;
+    outp.color = inp.i_color;
+    outp.uv = uv;
+    outp.position = mul(mvp, float4(position, 0.0, 1.0));
+    outp.position.z = inp.i_position.z / u_max_depth;
 
 	return outp;
 }
@@ -43,7 +50,7 @@ SamplerState Sampler : register(s3);
 
 float4 PS(VSOutput inp) : SV_Target
 {
-    float4 color = float4(inp.color, Texture.Sample(Sampler, inp.uv).r);
+    const float4 color = float4(inp.color, Texture.Sample(Sampler, inp.uv).r);
 
     clip(color.a - 0.05f);
 

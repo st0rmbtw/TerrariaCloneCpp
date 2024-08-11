@@ -39,17 +39,17 @@ struct VSOutput
 
 VSOutput VS(VSInput inp)
 {
-    float qxx = inp.i_rotation.x * inp.i_rotation.x;
-    float qyy = inp.i_rotation.y * inp.i_rotation.y;
-    float qzz = inp.i_rotation.z * inp.i_rotation.z;
-    float qxz = inp.i_rotation.x * inp.i_rotation.z;
-    float qxy = inp.i_rotation.x * inp.i_rotation.y;
-    float qyz = inp.i_rotation.y * inp.i_rotation.z;
-    float qwx = inp.i_rotation.w * inp.i_rotation.x;
-    float qwy = inp.i_rotation.w * inp.i_rotation.y;
-    float qwz = inp.i_rotation.w * inp.i_rotation.z;
+    const float qxx = inp.i_rotation.x * inp.i_rotation.x;
+    const float qyy = inp.i_rotation.y * inp.i_rotation.y;
+    const float qzz = inp.i_rotation.z * inp.i_rotation.z;
+    const float qxz = inp.i_rotation.x * inp.i_rotation.z;
+    const float qxy = inp.i_rotation.x * inp.i_rotation.y;
+    const float qyz = inp.i_rotation.y * inp.i_rotation.z;
+    const float qwx = inp.i_rotation.w * inp.i_rotation.x;
+    const float qwy = inp.i_rotation.w * inp.i_rotation.y;
+    const float qwz = inp.i_rotation.w * inp.i_rotation.z;
 
-    float4x4 rotation_matrix = float4x4(
+    const float4x4 rotation_matrix = float4x4(
         float4(1.0 - 2.0 * (qyy + qzz), 2.0 * (qxy - qwz)      , 2.0 * (qxz + qwy)      , 0.0),
         float4(2.0 * (qxy + qwz)      , 1.0 - 2.0 * (qxx + qzz), 2.0 * (qyz - qwx)      , 0.0),
         float4(2.0 * (qxz - qwy)      , 2.0 * (qyz + qwx)      , 1.0 - 2.0 * (qxx + qyy), 0.0),
@@ -65,7 +65,7 @@ VSOutput VS(VSInput inp)
 
     transform = mul(transform, rotation_matrix);
 
-    float2 offset = -inp.i_offset * inp.i_size;
+    const float2 offset = -inp.i_offset * inp.i_size;
 
     // translate
     transform[0][3] = transform[0][0] * offset[0] + transform[0][1] * offset[1] + transform[0][2] * 0.0 + transform[0][3];
@@ -84,10 +84,10 @@ VSOutput VS(VSInput inp)
     transform[2][1] = transform[2][1] * inp.i_size[1];
     transform[3][1] = transform[3][1] * inp.i_size[1];
 
-    float4x4 mvp = inp.i_is_ui ? mul(u_screen_projection, transform) : inp.i_is_nonscale ? mul(u_nonscale_view_projection, transform) : mul(u_view_projection, transform);
-    float4 uv_offset_scale = inp.i_uv_offset_scale;
-    float2 position = inp.position;
-    float order = inp.i_position.z / u_max_depth;
+    const float4x4 mvp = inp.i_is_ui ? mul(u_screen_projection, transform) : inp.i_is_nonscale ? mul(u_nonscale_view_projection, transform) : mul(u_view_projection, transform);
+    const float4 uv_offset_scale = inp.i_uv_offset_scale;
+    const float2 position = inp.position;
+    const float order = inp.i_position.z / u_max_depth;
 
 	VSOutput outp;
     outp.position = mul(mvp, float4(position, 0.0, 1.0));

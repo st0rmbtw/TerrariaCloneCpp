@@ -119,6 +119,8 @@ void update_cursor() {
         break;
     }
 
+    state.cursor_anim_progress = glm::clamp(state.cursor_anim_progress, 0.0f, 1.0f);
+
     const float scale = MIN_CURSOR_SCALE + state.cursor_anim_progress * (MAX_CURSOR_SCALE - MIN_CURSOR_SCALE);
 
     state.cursor_background.set_position(Input::MouseScreenPosition());
