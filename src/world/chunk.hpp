@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/hash.hpp>
 #include <LLGL/Buffer.h>
+#include <LLGL/BufferArray.h>
 #include "../constants.hpp"
 
 using Constants::RENDER_CHUNK_SIZE;
@@ -15,8 +16,10 @@ using Constants::RENDER_CHUNK_SIZE_U;
 struct RenderChunk {
     glm::vec2 world_pos;
     glm::uvec2 index;
-    LLGL::Buffer* block_vertex_buffer = nullptr;
-    LLGL::Buffer* wall_vertex_buffer = nullptr;
+    LLGL::BufferArray* block_buffer_array = nullptr;
+    LLGL::BufferArray* wall_buffer_array = nullptr;
+    LLGL::Buffer* wall_instance_buffer = nullptr;
+    LLGL::Buffer* block_instance_buffer = nullptr;
     uint16_t blocks_count = 0;
     uint16_t walls_count = 0;
     bool blocks_dirty = true;

@@ -71,6 +71,7 @@ enum class VertexFormatAsset : uint8_t {
     SpriteVertex = 0,
     SpriteInstance,
     TilemapVertex,
+    TilemapInstance,
     FontVertex,
     FontInstance,
     BackgroundVertex,

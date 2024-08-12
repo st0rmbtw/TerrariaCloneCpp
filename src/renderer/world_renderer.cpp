@@ -25,14 +25,14 @@ void WorldRenderer::init() {
             "GlobalUniformBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
-            LLGL::StageFlags::GeometryStage,
+            LLGL::StageFlags::VertexStage,
             LLGL::BindingSlot(1)
         ),
         LLGL::BindingDescriptor(
             "OrderBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
-            LLGL::StageFlags::GeometryStage,
+            LLGL::StageFlags::VertexStage,
             LLGL::BindingSlot(2)
         ),
         LLGL::BindingDescriptor("u_texture_array", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
@@ -50,7 +50,7 @@ void WorldRenderer::init() {
     pipelineDesc.geometryShader = tilemap_shader.gs;
     pipelineDesc.pipelineLayout = pipelineLayout;
     pipelineDesc.indexFormat = LLGL::Format::Undefined;
-    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::PointList;
+    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = Renderer::SwapChain()->GetRenderPass();
     pipelineDesc.rasterizer.frontCCW = true;
     pipelineDesc.depth = LLGL::DepthDescriptor {
@@ -90,26 +90,26 @@ void WorldRenderer::render(const World& world) {
             const Texture& t = Assets::GetTexture(TextureAsset::Walls);
 
             commands->SetPipelineState(*m_pipeline);
-            commands->SetVertexBuffer(*chunk.wall_vertex_buffer);
+            commands->SetVertexBufferArray(*chunk.wall_buffer_array);
             commands->SetResource(0, *Renderer::GlobalUniformBuffer());
             commands->SetResource(1, *m_order_buffer);
             commands->SetResource(2, *t.texture);
             commands->SetResource(3, Assets::GetSampler(t.sampler));
 
-            commands->Draw(chunk.walls_count, 0);
+            commands->DrawInstanced(4, 0, chunk.walls_count);
         }
 
         if (!chunk.blocks_empty()) {
             const Texture& t = Assets::GetTexture(TextureAsset::Tiles);
 
             commands->SetPipelineState(*m_pipeline);
-            commands->SetVertexBuffer(*chunk.block_vertex_buffer);
+            commands->SetVertexBufferArray(*chunk.block_buffer_array);
             commands->SetResource(0, *Renderer::GlobalUniformBuffer());
             commands->SetResource(1, *m_order_buffer);
             commands->SetResource(2, *t.texture);
             commands->SetResource(3, Assets::GetSampler(t.sampler));
 
-            commands->Draw(chunk.blocks_count, 0);
+            commands->DrawInstanced(4, 0, chunk.blocks_count);
         }
     }
 }

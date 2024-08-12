@@ -52,4 +52,20 @@ struct ParticleInstance {
     float depth;
 };
 
+struct ChunkInstance {
+    glm::vec2 position;
+    glm::vec2 atlas_pos;
+    glm::vec2 world_pos;
+    uint32_t tile_id;
+    uint32_t tile_type;
+};
+
+struct ChunkVertex {
+    float x, y;
+    glm::vec2 wall_tex_size;
+    glm::vec2 tile_tex_size;
+    glm::vec2 wall_padding;
+    glm::vec2 tile_padding;
+};
+
 #endif

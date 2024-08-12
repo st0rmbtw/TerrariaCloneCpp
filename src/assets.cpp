@@ -159,8 +159,8 @@ static const std::array FONT_ASSETS = std::to_array<std::pair<FontAsset, std::st
 });
 
 const std::pair<ShaderAsset, AssetShader> SHADER_ASSETS[] = {
-    { ShaderAsset::TilemapShader,    AssetShader("tilemap",    ShaderStages::Vertex | ShaderStages::Fragment  | ShaderStages::Geometry, VertexFormatAsset::TilemapVertex) },
     { ShaderAsset::BackgroundShader, AssetShader("background", ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::BackgroundVertex) },
+    { ShaderAsset::TilemapShader,    AssetShader("tilemap",    ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::TilemapVertex,  VertexFormatAsset::TilemapInstance  }) },
     { ShaderAsset::FontShader,       AssetShader("font",       ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::FontVertex,     VertexFormatAsset::FontInstance     }) },
     { ShaderAsset::SpriteShader,     AssetShader("sprite",     ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::SpriteVertex,   VertexFormatAsset::SpriteInstance   }) },
     { ShaderAsset::ParticleShader,   AssetShader("particle",   ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::ParticleVertex, VertexFormatAsset::ParticleInstance }) },
@@ -368,6 +368,7 @@ void Assets::InitVertexFormats() {
     LLGL::VertexFormat sprite_vertex_format;
     LLGL::VertexFormat sprite_instance_format;
     LLGL::VertexFormat tilemap_vertex_format;
+    LLGL::VertexFormat tilemap_instance_format;
     LLGL::VertexFormat font_vertex_format;
     LLGL::VertexFormat font_instance_format;
     LLGL::VertexFormat background_vertex_format;
@@ -411,17 +412,33 @@ void Assets::InitVertexFormats() {
     }
 
     if (backend.IsGLSL()) {
-        tilemap_vertex_format.AppendAttribute({"a_uv_size", LLGL::Format::RGBA32Float});
-        tilemap_vertex_format.AppendAttribute({"a_position", LLGL::Format::RG32Float});
-        tilemap_vertex_format.AppendAttribute({"a_world_pos", LLGL::Format::RG32Float});
-        tilemap_vertex_format.AppendAttribute({"a_tile_id", LLGL::Format::R32UInt});
-        tilemap_vertex_format.AppendAttribute({"a_tile_type", LLGL::Format::R32UInt});
+        tilemap_vertex_format.AppendAttribute({"a_position", LLGL::Format::RG32Float, 0, 0, sizeof(ChunkVertex), 0, 0 });
+        tilemap_vertex_format.AppendAttribute({"a_wall_tex_size", LLGL::Format::RG32Float, 1, offsetof(ChunkVertex,wall_tex_size), sizeof(ChunkVertex), 0, 0});
+        tilemap_vertex_format.AppendAttribute({"a_tile_tex_size", LLGL::Format::RG32Float, 3, offsetof(ChunkVertex,tile_tex_size), sizeof(ChunkVertex), 0, 0});
+        tilemap_vertex_format.AppendAttribute({"a_wall_padding",  LLGL::Format::RG32Float, 2, offsetof(ChunkVertex,wall_padding),  sizeof(ChunkVertex), 0, 0});
+        tilemap_vertex_format.AppendAttribute({"a_tile_padding",  LLGL::Format::RG32Float, 4, offsetof(ChunkVertex,tile_padding),  sizeof(ChunkVertex), 0, 0});
     } else if (backend.IsHLSL()) {
-        tilemap_vertex_format.AppendAttribute({"UvSize", LLGL::Format::RGBA32Float});
-        tilemap_vertex_format.AppendAttribute({"Position", LLGL::Format::RG32Float});
-        tilemap_vertex_format.AppendAttribute({"WorldPos", LLGL::Format::RG32Float});
-        tilemap_vertex_format.AppendAttribute({"TileId", LLGL::Format::R32UInt});
-        tilemap_vertex_format.AppendAttribute({"TileType", LLGL::Format::R32UInt});
+        tilemap_vertex_format.AppendAttribute({"Position"   , LLGL::Format::RG32Float, 0, 0, sizeof(ChunkVertex), 0, 0 });
+        tilemap_vertex_format.AppendAttribute({"WallTexSize", LLGL::Format::RG32Float, 1, offsetof(ChunkVertex, wall_tex_size), sizeof(ChunkVertex), 0, 0});
+        tilemap_vertex_format.AppendAttribute({"TileTexSize", LLGL::Format::RG32Float, 3, offsetof(ChunkVertex, tile_tex_size), sizeof(ChunkVertex), 0, 0});
+        tilemap_vertex_format.AppendAttribute({"WallPadding", LLGL::Format::RG32Float, 2, offsetof(ChunkVertex, wall_padding) , sizeof(ChunkVertex), 0, 0});
+        tilemap_vertex_format.AppendAttribute({"TilePadding", LLGL::Format::RG32Float, 4, offsetof(ChunkVertex, tile_padding) , sizeof(ChunkVertex), 0, 0});
+    } else {
+        // TODO
+    }
+
+    if (backend.IsGLSL()) {
+        tilemap_instance_format.AppendAttribute({"i_position",  LLGL::Format::RG32Float,   5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"i_atlas_pos", LLGL::Format::RG32Float,   6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"i_world_pos", LLGL::Format::RG32Float,   7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"i_tile_id",   LLGL::Format::R32UInt,     8, offsetof(ChunkInstance,tile_id),   sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"i_tile_type", LLGL::Format::R32UInt,     9, offsetof(ChunkInstance,tile_type), sizeof(ChunkInstance), 1, 1});
+    } else if (backend.IsHLSL()) {
+        tilemap_instance_format.AppendAttribute({"I_Position",  LLGL::Format::RG32Float,   5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"I_AtlasPos",  LLGL::Format::RG32Float,   6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"I_WorldPos",  LLGL::Format::RG32Float,   7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"I_TileId",    LLGL::Format::R32UInt,     8, offsetof(ChunkInstance,tile_id),   sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"I_TileType",  LLGL::Format::R32UInt,     9, offsetof(ChunkInstance,tile_type), sizeof(ChunkInstance), 1, 1});
     } else {
         // TODO
     }
@@ -495,6 +512,7 @@ void Assets::InitVertexFormats() {
     state.vertex_formats[VertexFormatAsset::SpriteVertex] = sprite_vertex_format;
     state.vertex_formats[VertexFormatAsset::SpriteInstance] = sprite_instance_format;
     state.vertex_formats[VertexFormatAsset::TilemapVertex] = tilemap_vertex_format;
+    state.vertex_formats[VertexFormatAsset::TilemapInstance] = tilemap_instance_format;
     state.vertex_formats[VertexFormatAsset::FontVertex] = font_vertex_format;
     state.vertex_formats[VertexFormatAsset::FontInstance] = font_instance_format;
     state.vertex_formats[VertexFormatAsset::BackgroundVertex] = background_vertex_format;
@@ -595,7 +613,7 @@ Texture create_texture_array(uint32_t width, uint32_t height, uint32_t layers, u
     texture_desc.type = LLGL::TextureType::Texture2DArray;
     texture_desc.extent = LLGL::Extent3D(width, height, 1);
     texture_desc.arrayLayers = layers;
-    texture_desc.bindFlags = LLGL::BindFlags::Sampled;
+    texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
     texture_desc.cpuAccessFlags = 0;
     texture_desc.miscFlags = LLGL::MiscFlags::GenerateMips * generate_mip_maps;
 

@@ -31,6 +31,8 @@ static struct RendererState {
 
     LLGL::Buffer* constant_buffer = nullptr;
     LLGL::RenderPass* render_pass = nullptr;
+
+    LLGL::Buffer* chunk_vertex_buffer = nullptr;
     
     RenderBatchSprite sprite_batch;
     RenderBatchGlyph glyph_batch;
@@ -57,6 +59,7 @@ LLGL::Buffer* Renderer::GlobalUniformBuffer() { return state.constant_buffer; }
 RenderBackend Renderer::Backend() { return state.backend; }
 uint32_t Renderer::GetGlobalDepthIndex() { return state.global_depth_index; };
 const LLGL::RenderPass* Renderer::DefaultRenderPass() { return state.render_pass; };
+LLGL::Buffer* Renderer::ChunkVertexBuffer() { return state.chunk_vertex_buffer; }
 
 bool Renderer::InitEngine(RenderBackend backend) {
     LLGL::Report report;
@@ -143,6 +146,24 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     state.world_renderer.init();
     state.background_renderer.init();
     state.particle_renderer.init();
+
+    const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Tiles).size);
+    const glm::vec2 wall_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Walls).size);
+
+    const glm::vec2 tile_size = glm::vec2(Constants::TILE_SIZE) / tile_tex_size;
+    const glm::vec2 wall_size = glm::vec2(Constants::WALL_SIZE) / wall_tex_size;
+
+    const glm::vec2 tile_padding = glm::vec2(Constants::TILE_TEXTURE_PADDING) / tile_tex_size;
+    const glm::vec2 wall_padding = glm::vec2(Constants::WALL_TEXTURE_PADDING) / wall_tex_size;
+
+    const ChunkVertex vertices[] = {
+        ChunkVertex(0.0, 0.0, wall_size, tile_size, wall_padding, tile_padding), // 0
+        ChunkVertex(0.0, 1.0, wall_size, tile_size, wall_padding, tile_padding), // 1
+        ChunkVertex(1.0, 0.0, wall_size, tile_size, wall_padding, tile_padding), // 2
+        ChunkVertex(1.0, 1.0, wall_size, tile_size, wall_padding, tile_padding), // 2
+    };
+
+    state.chunk_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex), "WorldRenderer VertexBuffer");
 
     return true;
 }

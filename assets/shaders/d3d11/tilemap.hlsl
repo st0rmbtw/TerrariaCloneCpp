@@ -17,58 +17,43 @@ cbuffer OrderBuffer : register( b2 ) {
 
 struct VSInput
 {
-    float4 uv_size : UvSize;
     float2 position: Position;
-    float2 world_pos: WorldPos;
-    nointerpolation uint tile_id: TileId;
-    nointerpolation uint tile_type: TileType;
+    float2 wall_tex_size : WallTexSize;
+    float2 tile_tex_size : TileTexSize;
+    float2 wall_padding : WallPadding;
+    float2 tile_padding : TilePadding;
+
+    float2 i_position: I_Position;
+    float2 i_atlas_pos : I_AtlasPos;
+    float2 i_world_pos: I_WorldPos;
+    nointerpolation uint i_tile_id: I_TileId;
+    nointerpolation uint i_tile_type: I_TileType;
 };
 
-struct VSOutput
-{
-    float4 uv_size : UvSize;
-    float4 position : SV_Position;
-    float2 world_pos: WorldPos;
-    nointerpolation uint tile_id: TileId;
-    nointerpolation uint tile_type: TileType;
-};
-
-struct GSOutput {
+struct VSOutput {
     float4 position : SV_Position;
     float2 uv : UV;
     nointerpolation uint tile_id : TileId;
 };
 
-VSOutput VS(VSInput inp)
-{
-	VSOutput output;
-    output.uv_size = inp.uv_size;
-    output.world_pos = inp.world_pos;
-    output.tile_id = inp.tile_id;
-    output.tile_type = inp.tile_type;
-    output.position = float4(inp.position * 16.0, 0.0, 1.0);
-
-	return output;
-}
-
 static const uint TILE_TYPE_WALL = 1u;
 
-[maxvertexcount(4)]
-void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
+VSOutput VS(VSInput inp)
 {
-    const float2 start_uv = input[0].uv_size.xy;
-    const float2 tex_size = input[0].uv_size.zw;
-    const float2 world_pos = input[0].world_pos;
-    const uint tile_id = input[0].tile_id;
-    const uint tile_type = input[0].tile_type;
-    const float4 position = input[0].position;
+    const float2 world_pos = inp.i_world_pos;
+    const uint tile_id = inp.i_tile_id;
+    const uint tile_type = inp.i_tile_type;
 
     float order = u_tile_order;
     float2 size = float2(TILE_SIZE, TILE_SIZE);
+    float2 start_uv = inp.i_atlas_pos * (inp.tile_tex_size + inp.tile_padding);
+    float2 tex_size = inp.tile_tex_size;
 
     if (tile_type == TILE_TYPE_WALL) {
         order = u_wall_order;
         size = float2(WALL_SIZE, WALL_SIZE);
+        start_uv = inp.i_atlas_pos * (inp.wall_tex_size + inp.wall_padding);
+        tex_size = inp.wall_tex_size;
     }
 
     order /= u_max_depth;
@@ -81,35 +66,21 @@ void GS(point VSOutput input[1], inout TriangleStream<GSOutput> OutputStream)
     );
 
     const float4x4 mvp = mul(u_view_projection, transform);
+    const float2 position = inp.i_position * 16.0 + inp.position * size;
 
-    GSOutput output;
-    output.tile_id = tile_id;
-
-    output.position = mul(mvp, position);
+	VSOutput output;
+    output.uv = start_uv + inp.position * tex_size;
+    output.tile_id = inp.i_tile_id;
+    output.position = mul(mvp, float4(position, 0.0, 1.0));
     output.position.z = order;
-    output.uv = start_uv;
-    OutputStream.Append(output);
 
-    output.position = mul(mvp, (position + float4(size.x, 0.0, 0.0, 0.0)));
-    output.position.z = order;
-    output.uv = float2(start_uv.x + tex_size.x, start_uv.y);
-    OutputStream.Append(output);
-
-    output.position = mul(mvp, (position + float4(0.0, size.y, 0.0, 0.0)));
-    output.position.z = order;
-    output.uv = float2(start_uv.x, start_uv.y + tex_size.y);
-    OutputStream.Append(output);
-
-    output.position = mul(mvp, (position + float4(size, 0.0, 0.0)));
-    output.position.z = order;
-    output.uv = start_uv + tex_size;
-    OutputStream.Append(output);
+	return output;
 }
 
 Texture2DArray TextureArray : register(t3);
 SamplerState Sampler : register(s4);
 
-float4 PS(GSOutput inp) : SV_Target
+float4 PS(VSOutput inp) : SV_Target
 {
     const float4 color = TextureArray.Sample(Sampler, float3(inp.uv, float(inp.tile_id)));
 

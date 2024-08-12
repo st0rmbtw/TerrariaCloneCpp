@@ -92,6 +92,7 @@ namespace Renderer {
     [[nodiscard]] RenderBackend Backend();
     [[nodiscard]] uint32_t GetGlobalDepthIndex();
     [[nodiscard]] const LLGL::RenderPass* DefaultRenderPass();
+    [[nodiscard]] LLGL::Buffer* ChunkVertexBuffer();
 };
 
 #endif
