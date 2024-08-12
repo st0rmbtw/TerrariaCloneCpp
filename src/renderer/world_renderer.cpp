@@ -15,7 +15,10 @@ struct __attribute__((aligned(16))) UniformData {
 };
 
 void WorldRenderer::init() {
-    m_order_buffer = Renderer::Context()->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(UniformData)));
+    const auto& context = Renderer::Context();
+    const auto* render_pass = Renderer::DefaultRenderPass();
+
+    m_order_buffer = context->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(UniformData)));
 
     const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 3 : 4;
 
@@ -39,7 +42,7 @@ void WorldRenderer::init() {
         LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, samplerBinding),
     };
 
-    LLGL::PipelineLayout* pipelineLayout = Renderer::Context()->CreatePipelineLayout(pipelineLayoutDesc);
+    LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
     const ShaderPipeline& tilemap_shader = Assets::GetShader(ShaderAsset::TilemapShader);
 
@@ -51,7 +54,7 @@ void WorldRenderer::init() {
     pipelineDesc.pipelineLayout = pipelineLayout;
     pipelineDesc.indexFormat = LLGL::Format::Undefined;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
-    pipelineDesc.renderPass = Renderer::SwapChain()->GetRenderPass();
+    pipelineDesc.renderPass = render_pass;
     pipelineDesc.rasterizer.frontCCW = true;
     pipelineDesc.depth = LLGL::DepthDescriptor {
         .testEnabled = true,
@@ -70,10 +73,10 @@ void WorldRenderer::init() {
         }
     };
 
-    m_pipeline = Renderer::Context()->CreatePipelineState(pipelineDesc);
+    m_pipeline = context->CreatePipelineState(pipelineDesc);
 }
 
-void WorldRenderer::render(const World& world) {
+void WorldRenderer::render(const ChunkManager& chunk_manager) {
     auto* const commands = Renderer::CommandBuffer();
 
     auto uniform = UniformData {
@@ -83,8 +86,8 @@ void WorldRenderer::render(const World& world) {
 
     commands->UpdateBuffer(*m_order_buffer, 0, &uniform, sizeof(UniformData));
 
-    for (const glm::uvec2& pos : world.visible_chunks()) {
-        const RenderChunk& chunk = world.render_chunks().at(pos);
+    for (const glm::uvec2& pos : chunk_manager.visible_chunks()) {
+        const RenderChunk& chunk = chunk_manager.render_chunks().at(pos);
 
         if (!chunk.walls_empty()) {
             const Texture& t = Assets::GetTexture(TextureAsset::Walls);

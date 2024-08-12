@@ -1,6 +1,5 @@
 #include "chunk.hpp"
 
-#include "world.hpp"
 #include "../optional.hpp"
 #include "../types/block.hpp"
 #include "../types/texture_atlas_pos.hpp"
@@ -27,7 +26,7 @@ inline LLGL::BufferDescriptor GetBufferDescriptor() {
     return buffer_desc;
 }
 
-void RenderChunk::build_mesh(const World& world) {
+void RenderChunk::build_mesh(const WorldData& world) {
     std::vector<ChunkInstance> block_instance;
     std::vector<ChunkInstance> wall_instance;
 

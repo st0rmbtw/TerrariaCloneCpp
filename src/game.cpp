@@ -176,7 +176,7 @@ void Game::Destroy() {
         Renderer::CommandQueue()->WaitIdle();
     }
     if (Renderer::Context()) {
-        g.world.destroy_chunks();
+        g.world.chunk_manager().destroy();
    
         Renderer::Terminate();
     }
@@ -274,17 +274,13 @@ void render() {
 
     UI::Render(g.camera, g.player.inventory());
 
-    Renderer::Render(g.camera, g.world);
+    Renderer::Render(g.camera, g.world.chunk_manager());
 }
 
 void post_render() {
-    std::deque<RenderChunk>& chunks = g.world.chunks_to_destroy();
-    if (!chunks.empty()) {
+    if (g.world.chunk_manager().any_chunks_to_destroy()) {
         Renderer::CommandQueue()->WaitIdle();
-        while (!chunks.empty()) {
-            chunks.back().destroy();
-            chunks.pop_back();
-        }
+        g.world.chunk_manager().destroy_hidden_chunks();
     }
 
 #if DEBUG

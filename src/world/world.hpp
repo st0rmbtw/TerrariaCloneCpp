@@ -4,9 +4,6 @@
 #pragma once
 
 #include <cstdint>
-#include <unordered_map>
-#include <unordered_set>
-#include <deque>
 
 #include "../math/rect.hpp"
 #include "../renderer/camera.h"
@@ -16,86 +13,13 @@
 #include "../types/tile_pos.hpp"
 #include "../optional.hpp"
 
-#include "chunk.hpp"
-
-struct Layers {
-    int surface;
-    int underground;
-    int cavern;
-    int dirt_height;
-};
-
-struct WorldData {
-    tl::optional<Block>* blocks;
-    tl::optional<Wall>* walls;
-    math::IRect area;
-    math::IRect playable_area;
-    Layers layers;
-    glm::uvec2 spawn_point;
-
-    [[nodiscard]]
-    inline size_t get_tile_index(TilePos pos) const {
-        return (pos.y * this->area.width()) + pos.x;
-    }
-    
-    [[nodiscard]]
-    inline bool is_tilepos_valid(TilePos pos) const {
-        return (pos.x >= 0 && pos.y >= 0 && pos.x < this->area.width() && pos.y < this->area.height());
-    }
-
-    [[nodiscard]]
-    tl::optional<const Block&> get_block(TilePos pos) const;
-
-    [[nodiscard]]
-    tl::optional<const Wall&> get_wall(TilePos pos) const;
-
-    [[nodiscard]]
-    tl::optional<Block&> get_block_mut(TilePos pos);
-
-    [[nodiscard]]
-    tl::optional<Wall&> get_wall_mut(TilePos pos);
-
-    [[nodiscard]]
-    inline bool block_exists(TilePos pos) const {
-        if (!is_tilepos_valid(pos)) return false;
-        return blocks[this->get_tile_index(pos)].is_some();
-    }
-
-    [[nodiscard]]
-    inline bool wall_exists(TilePos pos) const {
-        if (!is_tilepos_valid(pos)) return false;
-        return walls[this->get_tile_index(pos)].is_some();
-    }
-
-    [[nodiscard]]
-    tl::optional<BlockType> get_block_type(TilePos pos) const;
-
-    [[nodiscard]]
-    Neighbors<const Block&> get_block_neighbors(TilePos pos) const;
-
-    [[nodiscard]]
-    Neighbors<Block&> get_block_neighbors_mut(TilePos pos);
-
-    [[nodiscard]]
-    Neighbors<const Wall&> get_wall_neighbors(TilePos pos) const;
-
-    [[nodiscard]]
-    Neighbors<Wall&> get_wall_neighbors_mut(TilePos pos);
-    
-    [[nodiscard]]
-    bool block_exists_with_type(TilePos pos, BlockType block_type) const {
-        const tl::optional<BlockType> block = this->get_block_type(pos);
-        if (block.is_none()) return false;
-        return block.value() == block_type;
-    }
-};
+#include "chunk_manager.hpp"
 
 class World {
 public:
     World() = default;
 
     void generate(uint32_t width, uint32_t height, uint32_t seed);
-
 
     void set_block(TilePos pos, const Block& block);
     void set_block(TilePos pos, BlockType block_type);
@@ -108,8 +32,6 @@ public:
     void update_tile_sprite_index(TilePos pos);
 
     void update(const Camera& camera);
-
-    void manage_chunks(const Camera& camera);
 
     [[nodiscard]] inline tl::optional<const Block&> get_block(TilePos pos) const { return m_data.get_block(pos); }
     [[nodiscard]] inline tl::optional<Block&> get_block_mut(TilePos pos) { return m_data.get_block_mut(pos); }
@@ -137,23 +59,14 @@ public:
 
     [[nodiscard]] inline bool is_changed() const { return m_changed; }
 
-    [[nodiscard]] inline const std::unordered_map<glm::uvec2, RenderChunk>& render_chunks() const { return m_render_chunks; }
-    [[nodiscard]] inline const std::unordered_set<glm::uvec2>& visible_chunks() const { return m_visible_chunks; }
-    [[nodiscard]] inline std::deque<RenderChunk>& chunks_to_destroy() { return m_chunks_to_destroy; }
-
-    inline void destroy_chunks() {
-        for (auto& entry : m_render_chunks) {
-            entry.second.destroy();
-        }
-    }
+    [[nodiscard]] inline const ChunkManager& chunk_manager() const { return m_chunk_manager; }
+    [[nodiscard]] inline ChunkManager& chunk_manager() { return m_chunk_manager; }
 private:
     void update_neighbors(TilePos pos);
 
 private:
     WorldData m_data;
-    std::unordered_map<glm::uvec2, RenderChunk> m_render_chunks;
-    std::unordered_set<glm::uvec2> m_visible_chunks;
-    std::deque<RenderChunk> m_chunks_to_destroy;
+    ChunkManager m_chunk_manager;
     bool m_changed = false;
 };
 

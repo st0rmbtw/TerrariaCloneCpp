@@ -4,14 +4,14 @@
 #define TERRARIA_RENDERER_WORLD_RENDERER
 
 #include <LLGL/LLGL.h>
-#include "../world/world.hpp"
+#include "../world/chunk_manager.hpp"
 
 class WorldRenderer {
 public:
     WorldRenderer() = default;
 
     void init();
-    void render(const World& world);
+    void render(const ChunkManager& world);
     void terminate();
 
     inline void set_depth(uint32_t wall_depth, uint32_t tile_depth) {

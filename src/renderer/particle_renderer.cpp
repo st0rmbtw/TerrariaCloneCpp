@@ -38,10 +38,10 @@ void ParticleRenderer::init() {
     m_scale_buffer_data_ptr = m_scale_buffer_data;
 
     const ParticleVertex vertices[] = {
-        ParticleVertex(0.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)), // 0
-        ParticleVertex(0.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)), // 1
-        ParticleVertex(1.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)), // 2
-        ParticleVertex(1.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)), // 2
+        ParticleVertex(0.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)),
+        ParticleVertex(0.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)),
+        ParticleVertex(1.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)),
+        ParticleVertex(1.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)),
     };
 
     m_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::ParticleVertex), "ParticleRenderer VertexBuffer");
@@ -301,6 +301,16 @@ void ParticleRenderer::render() {
 void ParticleRenderer::terminate() {
     const auto& context = Renderer::Context();
 
+    if (m_buffer_array) context->Release(*m_buffer_array);
+    if (m_instance_buffer) context->Release(*m_instance_buffer);
     if (m_vertex_buffer) context->Release(*m_vertex_buffer);
+
+    if (m_position_buffer) context->Release(*m_position_buffer);
+    if (m_rotation_buffer) context->Release(*m_rotation_buffer);
+    if (m_scale_buffer) context->Release(*m_scale_buffer);
+
+    if (m_transform_buffer) context->Release(*m_transform_buffer);
+
     if (m_pipeline) context->Release(*m_pipeline);
+    if (m_compute_pipeline) context->Release(*m_compute_pipeline);
 }

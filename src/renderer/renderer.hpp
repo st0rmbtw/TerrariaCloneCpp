@@ -9,9 +9,10 @@
 #include "../types/sprite.hpp"
 #include "../types/backend.hpp"
 #include "../types/background_layer.hpp"
-#include "../world/world.hpp"
 #include "../assets.hpp"
 #include "../particles.hpp"
+
+#include "../world/chunk_manager.hpp"
 
 #include "custom_surface.hpp"
 #include "camera.h"
@@ -40,7 +41,7 @@ namespace Renderer {
     void RenderWorld();
 
     void Begin(const Camera& camera);
-    void Render(const Camera& camera, const World& world);
+    void Render(const Camera& camera, const ChunkManager& chunk_manager);
 
     void DrawSprite(const Sprite& sprite, RenderLayer render_layer = RenderLayer::Main, int depth = -1);
     inline void DrawSprite(const Sprite& sprite, int depth) {

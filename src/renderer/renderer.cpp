@@ -157,10 +157,10 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     const glm::vec2 wall_padding = glm::vec2(Constants::WALL_TEXTURE_PADDING) / wall_tex_size;
 
     const ChunkVertex vertices[] = {
-        ChunkVertex(0.0, 0.0, wall_size, tile_size, wall_padding, tile_padding), // 0
-        ChunkVertex(0.0, 1.0, wall_size, tile_size, wall_padding, tile_padding), // 1
-        ChunkVertex(1.0, 0.0, wall_size, tile_size, wall_padding, tile_padding), // 2
-        ChunkVertex(1.0, 1.0, wall_size, tile_size, wall_padding, tile_padding), // 2
+        ChunkVertex(0.0, 0.0, wall_size, tile_size, wall_padding, tile_padding),
+        ChunkVertex(0.0, 1.0, wall_size, tile_size, wall_padding, tile_padding),
+        ChunkVertex(1.0, 0.0, wall_size, tile_size, wall_padding, tile_padding),
+        ChunkVertex(1.0, 1.0, wall_size, tile_size, wall_padding, tile_padding),
     };
 
     state.chunk_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex), "WorldRenderer VertexBuffer");
@@ -208,7 +208,7 @@ void Renderer::RenderWorld() {
     state.world_renderer.set_depth(wall_depth, tile_depth);
 }
 
-void Renderer::Render(const Camera& camera, const World& world) {
+void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
     auto* const commands = Renderer::CommandBuffer();
     auto* const queue = state.command_queue;
     auto* const swap_chain = Renderer::SwapChain();
@@ -231,7 +231,7 @@ void Renderer::Render(const Camera& camera, const World& world) {
     commands->BeginRenderPass(*Renderer::SwapChain(), Renderer::DefaultRenderPass());
 
     state.background_renderer.render();
-    state.world_renderer.render(world);
+    state.world_renderer.render(chunk_manager);
     state.sprite_batch.render();
     state.glyph_batch.render();
 
