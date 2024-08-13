@@ -224,20 +224,13 @@ void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat&
     m_particle_count++;
 }
 
-void ParticleRenderer::render() {
+void ParticleRenderer::compute() {
     if (m_particle_count == 0) return;
 
     const auto& context = Renderer::Context();
     auto* const commands = Renderer::CommandBuffer();
 
-    ptrdiff_t size = (uint8_t*) m_instance_buffer_data_ptr - (uint8_t*) m_instance_buffer_data;
-    if (size <= (1 << 16)) {
-        commands->UpdateBuffer(*m_instance_buffer, 0, m_instance_buffer_data, size);
-    } else {
-        context->WriteBuffer(*m_instance_buffer, 0, m_instance_buffer_data, size);
-    }
-
-    size = (uint8_t*) m_position_buffer_data_ptr - (uint8_t*) m_position_buffer_data;
+    ptrdiff_t size = (uint8_t*) m_position_buffer_data_ptr - (uint8_t*) m_position_buffer_data;
     if (size <= (1 << 16)) {
         commands->UpdateBuffer(*m_position_buffer, 0, m_position_buffer_data, size);
     } else {
@@ -274,21 +267,32 @@ void ParticleRenderer::render() {
         commands->Dispatch(x, 1, 1);
     }
     commands->PopDebugGroup();
-    
+}
+
+void ParticleRenderer::render() {
+    if (m_particle_count == 0) return;
+
+    const auto& context = Renderer::Context();
+    auto* const commands = Renderer::CommandBuffer();
+
+    const ptrdiff_t size = (uint8_t*) m_instance_buffer_data_ptr - (uint8_t*) m_instance_buffer_data;
+    if (size <= (1 << 16)) {
+        commands->UpdateBuffer(*m_instance_buffer, 0, m_instance_buffer_data, size);
+    } else {
+        context->WriteBuffer(*m_instance_buffer, 0, m_instance_buffer_data, size);
+    }
+
     commands->SetVertexBufferArray(*m_buffer_array);
+    commands->SetPipelineState(*m_pipeline);
 
-    commands->BeginRenderPass(*Renderer::SwapChain(), Renderer::DefaultRenderPass());
-        commands->SetPipelineState(*m_pipeline);
+    const Texture& t = m_atlas.texture();
 
-        const Texture& t = m_atlas.texture();
+    commands->SetResource(0, *Renderer::GlobalUniformBuffer());
+    commands->SetResource(1, *t.texture);
+    commands->SetResource(2, Assets::GetSampler(t.sampler));
+    commands->SetResource(3, *m_transform_buffer);
 
-        commands->SetResource(0, *Renderer::GlobalUniformBuffer());
-        commands->SetResource(1, *t.texture);
-        commands->SetResource(2, Assets::GetSampler(t.sampler));
-        commands->SetResource(3, *m_transform_buffer);
-
-        commands->DrawInstanced(4, 0, m_particle_count, 0);
-    commands->EndRenderPass();
+    commands->DrawInstanced(4, 0, m_particle_count, 0);
 
     m_instance_buffer_data_ptr = m_instance_buffer_data;
     m_rotation_buffer_data_ptr = m_rotation_buffer_data;

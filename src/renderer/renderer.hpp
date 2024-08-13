@@ -9,6 +9,7 @@
 #include "../types/sprite.hpp"
 #include "../types/backend.hpp"
 #include "../types/background_layer.hpp"
+#include "../types/render_layer.hpp"
 #include "../assets.hpp"
 #include "../particles.hpp"
 
@@ -16,11 +17,6 @@
 
 #include "custom_surface.hpp"
 #include "camera.h"
-
-enum class RenderLayer : uint8_t {
-    Main = 0,
-    World = 1,
-};
 
 struct __attribute__((aligned(16))) ProjectionsUniform {
     glm::mat4 screen_projection_matrix;
@@ -32,6 +28,7 @@ struct __attribute__((aligned(16))) ProjectionsUniform {
     glm::vec2 camera_position;
     glm::vec2 window_size;
     float max_depth;
+    float max_world_depth;
 };
 
 constexpr float MAX_Z = 1000.0f;
@@ -40,7 +37,7 @@ namespace Renderer {
     bool InitEngine(RenderBackend backend);
     bool Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool vsync, bool fullscreen);
     void InitWorldRenderer(const WorldData& world);
-    void RenderWorld();
+    void ResizeTextures(LLGL::Extent2D resolution);
 
     void Begin(const Camera& camera);
     void Render(const Camera& camera, const ChunkManager& chunk_manager);
@@ -94,6 +91,7 @@ namespace Renderer {
     [[nodiscard]] LLGL::Buffer* GlobalUniformBuffer();
     [[nodiscard]] RenderBackend Backend();
     [[nodiscard]] uint32_t GetGlobalDepthIndex();
+    [[nodiscard]] uint32_t GetWorldDepthIndex();
     [[nodiscard]] const LLGL::RenderPass* DefaultRenderPass();
     [[nodiscard]] LLGL::Buffer* ChunkVertexBuffer();
 };

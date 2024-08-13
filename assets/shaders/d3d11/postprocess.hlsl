@@ -52,14 +52,11 @@ VSOutput VS(VSInput inp)
 Texture2D BackgroundTexture : register(t2); 
 SamplerState BackgroundTextureSampler : register(s3);
 
-Texture2D WorldBackgroundTexture : register(t4); 
-SamplerState WorldBackgroundTextureSampler : register(s5);
+Texture2D WorldTexture : register(t4);
+SamplerState WorldTextureSampler : register(s5);
 
-Texture2D WorldTexture : register(t6);
-SamplerState WorldTextureSampler : register(s7);
-
-Texture2D LightMap : register(t8);
-SamplerState LightMapSampler : register(s9);
+Texture2D LightMap : register(t6);
+SamplerState LightMapSampler : register(s7);
 
 float4 blend(float4 foreground, float4 background) {
     return foreground * foreground.a + background * (1.0 - foreground.a);
@@ -70,9 +67,8 @@ float4 PS(VSOutput inp) : SV_Target
     const float4 light = float4(LightMap.Sample(LightMapSampler, float2(inp.light_uv)).rgb, 1.0f);
 
     const float4 background = BackgroundTexture.Sample(BackgroundTextureSampler, float2(inp.uv));
-    const float4 background_world = WorldBackgroundTexture.Sample(WorldBackgroundTextureSampler, float2(inp.uv)) * light;
     const float4 world = WorldTexture.Sample(WorldTextureSampler, float2(inp.uv)) * light;
 
-    return blend(world, blend(background_world, background));
+    return blend(world, background);
 };
 

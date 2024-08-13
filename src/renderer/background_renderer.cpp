@@ -64,22 +64,6 @@ void BackgroundRenderer::init() {
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleList;
     pipelineDesc.renderPass = swap_chain->GetRenderPass();
     pipelineDesc.rasterizer.frontCCW = true;
-    // pipelineDesc.depth = LLGL::DepthDescriptor {
-    //     .testEnabled = true,
-    //     .writeEnabled = true,
-    //     .compareOp = LLGL::CompareOp::GreaterEqual
-    // };
-    pipelineDesc.blend = LLGL::BlendDescriptor {
-        .targets = {
-            LLGL::BlendTargetDescriptor {
-                .blendEnabled = true,
-                .srcColor = LLGL::BlendOp::SrcAlpha,
-                .dstColor = LLGL::BlendOp::InvSrcAlpha,
-                .srcAlpha = LLGL::BlendOp::SrcAlpha,
-                .dstAlpha = LLGL::BlendOp::InvSrcAlpha
-            }
-        }
-    };
 
     m_pipeline = context->CreatePipelineState(pipelineDesc);
 

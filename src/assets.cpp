@@ -397,6 +397,7 @@ void Assets::InitVertexFormats() {
         sprite_instance_format.AppendAttribute({"i_has_texture",        LLGL::Format::R32SInt,     9,  offsetof(SpriteInstance,has_texture),       sizeof(SpriteInstance), 1, 1 });
         sprite_instance_format.AppendAttribute({"i_is_ui",              LLGL::Format::R32SInt,     10, offsetof(SpriteInstance,is_ui),             sizeof(SpriteInstance), 1, 1 });
         sprite_instance_format.AppendAttribute({"i_is_non_scale",       LLGL::Format::R32SInt,     11, offsetof(SpriteInstance,is_nonscalable),    sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"i_is_world",           LLGL::Format::R32SInt,     12, offsetof(SpriteInstance,is_world),          sizeof(SpriteInstance), 1, 1 });
     } else if (backend.IsHLSL()) {
         sprite_instance_format.AppendAttribute({"I_Position",         LLGL::Format::RGB32Float,  1,  offsetof(SpriteInstance,position),          sizeof(SpriteInstance), 1, 1 });
         sprite_instance_format.AppendAttribute({"I_Rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(SpriteInstance,rotation),          sizeof(SpriteInstance), 1, 1 });
@@ -409,6 +410,7 @@ void Assets::InitVertexFormats() {
         sprite_instance_format.AppendAttribute({"I_HasTexture",       LLGL::Format::R32SInt,     9,  offsetof(SpriteInstance,has_texture),       sizeof(SpriteInstance), 1, 1 });
         sprite_instance_format.AppendAttribute({"I_IsUI",             LLGL::Format::R32SInt,     10, offsetof(SpriteInstance,is_ui),             sizeof(SpriteInstance), 1, 1 });
         sprite_instance_format.AppendAttribute({"I_IsNonScale",       LLGL::Format::R32SInt,     11, offsetof(SpriteInstance,is_nonscalable),    sizeof(SpriteInstance), 1, 1 });
+        sprite_instance_format.AppendAttribute({"I_IsWorld",          LLGL::Format::R32SInt,     12, offsetof(SpriteInstance,is_world),          sizeof(SpriteInstance), 1, 1 });
     } else {
         // TODO
     }

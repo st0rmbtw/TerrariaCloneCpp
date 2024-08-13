@@ -17,7 +17,12 @@ struct __attribute__((aligned(16))) DepthUniformData {
 void WorldRenderer::init() {
     const auto& context = Renderer::Context();
 
-    m_depth_buffer = context->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(DepthUniformData)));
+    auto depth_uniform = DepthUniformData {
+        .tile_depth = 2,
+        .wall_depth = 1
+    };
+
+    m_depth_buffer = context->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(DepthUniformData)), &depth_uniform);
 
     const auto* render_pass = Renderer::DefaultRenderPass();
     const RenderBackend backend = Renderer::Backend();
@@ -56,11 +61,11 @@ void WorldRenderer::init() {
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = render_pass;
     pipelineDesc.rasterizer.frontCCW = true;
-    // pipelineDesc.depth = LLGL::DepthDescriptor {
-    //     .testEnabled = true,
-    //     .writeEnabled = true,
-    //     .compareOp = LLGL::CompareOp::GreaterEqual  
-    // };
+    pipelineDesc.depth = LLGL::DepthDescriptor {
+        .testEnabled = true,
+        .writeEnabled = true,
+        .compareOp = LLGL::CompareOp::GreaterEqual  
+    };
     pipelineDesc.blend = LLGL::BlendDescriptor {
         .targets = {
             LLGL::BlendTargetDescriptor {
@@ -78,13 +83,6 @@ void WorldRenderer::init() {
 
 void WorldRenderer::render(const ChunkManager& chunk_manager) {
     auto* const commands = Renderer::CommandBuffer();
-
-    auto uniform = DepthUniformData {
-        .tile_depth = static_cast<float>(m_tile_depth),
-        .wall_depth = static_cast<float>(m_wall_depth),
-    };
-
-    commands->UpdateBuffer(*m_depth_buffer, 0, &uniform, sizeof(DepthUniformData));
 
     for (const glm::uvec2& pos : chunk_manager.visible_chunks()) {
         const RenderChunk& chunk = chunk_manager.render_chunks().at(pos);

@@ -14,7 +14,6 @@
 #include "../math/rect.hpp"
 #include "../time/timer.hpp"
 #include "../utils.hpp"
-#include "../world/chunk.hpp"
 #include "../particles.hpp"
 
 using Constants::TILE_SIZE;
@@ -464,7 +463,7 @@ void Player::render() const {
     Renderer::DrawAtlasSprite(m_body.sprite, RenderLayer::World);
     Renderer::DrawAtlasSprite(m_legs.sprite, RenderLayer::World);
 
-    int depth = Renderer::GetGlobalDepthIndex();
+    int depth = Renderer::GetWorldDepthIndex();
 
     Renderer::DrawAtlasSprite(m_left_eye.sprite, RenderLayer::World, depth);
     Renderer::DrawAtlasSprite(m_right_eye.sprite, RenderLayer::World, depth);
@@ -473,7 +472,7 @@ void Player::render() const {
         Renderer::DrawSprite(m_using_item, RenderLayer::World);
     }
 
-    depth = Renderer::GetGlobalDepthIndex();
+    depth = Renderer::GetWorldDepthIndex();
 
     Renderer::DrawAtlasSprite(m_left_hand.sprite, RenderLayer::World, depth);
     Renderer::DrawAtlasSprite(m_left_shoulder.sprite, RenderLayer::World, depth);

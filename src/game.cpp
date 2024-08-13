@@ -268,8 +268,6 @@ void render() {
 
     Background::Render();
 
-    Renderer::RenderWorld();
-
     g.player.render();
 
     ParticleManager::Render();
@@ -373,7 +371,9 @@ static void handle_window_resize_events(GLFWwindow* window, int width, int heigh
 
     const auto new_size = LLGL::Extent2D(width * resScale, height * resScale);
 
+    Renderer::CommandQueue()->WaitIdle();
     Renderer::SwapChain()->ResizeBuffers(new_size);
+    Renderer::ResizeTextures(new_size);
 
     g.camera.set_viewport({new_size.width, new_size.height});
     g.camera.update();
