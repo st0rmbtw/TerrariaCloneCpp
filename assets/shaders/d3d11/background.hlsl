@@ -5,6 +5,7 @@ cbuffer GlobalUniformBuffer : register( b1 )
     float4x4 u_nonscale_view_projection;
     float4x4 u_nonscale_projection;
     float4x4 u_transform_matrix;
+    float4x4 u_inv_view_proj;
     float2 u_camera_position;
     float2 u_window_size;
     float u_max_depth;
@@ -28,6 +29,7 @@ struct VSOutput
     nointerpolation float2 tex_size : TexSize;
     nointerpolation float2 speed : Speed;
     nointerpolation int nonscale : NonScale;
+    nointerpolation float2 offset : Offset;
 };
 
 // Bidirectional mod
@@ -66,27 +68,27 @@ float4 scroll(
 
 VSOutput VS(VSInput inp)
 {
-    const float4x4 mvp = inp.nonscale > 0 ? u_nonscale_view_projection : u_view_projection;
+    const float4x4 view_proj = inp.nonscale > 0 ? u_nonscale_view_projection : u_view_projection;
+    const float4x4 proj_model = mul(u_nonscale_projection, u_transform_matrix);
+
+    const float2 offset = mul(proj_model, float4(u_camera_position.x, u_camera_position.y, 0.0, 1.0)).xy;
 
 	VSOutput outp;
-    outp.position = mul(mvp, float4(inp.position.x, inp.position.y, 0.0, 1.0));
+    outp.position = mul(view_proj, float4(inp.position.x, inp.position.y, 0.0, 1.0));
     outp.position.z = 0.0;
     outp.uv = inp.uv;
     outp.tex_size = inp.tex_size;
     outp.size = inp.size;
     outp.speed = inp.speed;
     outp.nonscale = inp.nonscale;
+    outp.offset = offset;
 
 	return outp;
 }
 
 float4 PS(VSOutput inp) : SV_Target
 {
-    const float4x4 mvp = mul(u_nonscale_projection, u_transform_matrix);
-
-    const float2 offset = mul(mvp, float4(u_camera_position.x, u_camera_position.y, 0.0, 1.0)).xy;
-
-    const float4 color = scroll(inp.speed, inp.uv, offset, inp.tex_size, inp.size, inp.nonscale > 0);
+    const float4 color = scroll(inp.speed, inp.uv, inp.offset, inp.tex_size, inp.size, inp.nonscale > 0);
 
     clip(color.a - 0.05f);
 

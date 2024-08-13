@@ -28,6 +28,7 @@ struct __attribute__((aligned(16))) ProjectionsUniform {
     glm::mat4 nonscale_view_projection_matrix;
     glm::mat4 nonscale_projection_matrix;
     glm::mat4 transform_matrix;
+    glm::mat4 inv_view_proj_matrix;
     glm::vec2 camera_position;
     glm::vec2 window_size;
     float max_depth;
@@ -38,6 +39,7 @@ constexpr float MAX_Z = 1000.0f;
 namespace Renderer {
     bool InitEngine(RenderBackend backend);
     bool Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool vsync, bool fullscreen);
+    void InitWorldRenderer(const WorldData& world);
     void RenderWorld();
 
     void Begin(const Camera& camera);

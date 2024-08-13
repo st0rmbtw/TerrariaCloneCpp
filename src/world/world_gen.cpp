@@ -12,6 +12,8 @@
 
 #include "autotile.hpp"
 
+using Constants::SUBDIVISION;
+
 static inline void set_block(WorldData& world, TilePos pos, BlockType block) {
     const size_t index = world.get_tile_index(pos);
     world.blocks[index] = Block(block);
@@ -562,6 +564,110 @@ static void world_grassify(WorldData& world) {
     }
 }
 
+inline float get_decay(const WorldData& world, TilePos pos) {
+    if (world.block_exists(pos / SUBDIVISION)) {
+        return Constants::LightDecay(true);
+    } else {
+        return Constants::LightDecay(false);
+    }
+}
+
+void blur(WorldData& world, TilePos pos, glm::vec3& prev_light, float& prev_decay) {
+    glm::vec3 this_light = world.get_color(pos);
+
+    if (prev_light.x < this_light.x) {
+        prev_light.x = this_light.x;
+    } else {
+        this_light.x = prev_light.x;
+    }
+    
+    if (prev_light.y < this_light.y) {
+        prev_light.y = this_light.y;
+    } else {
+        this_light.y = prev_light.y;
+    }
+    
+    if (prev_light.z < this_light.z) {
+        prev_light.z = this_light.z;
+    } else {
+        this_light.z = prev_light.z;
+    }
+    
+    world.set_color(pos, this_light);
+    
+    prev_light = prev_light * prev_decay;
+    prev_decay = get_decay(world, pos);
+}
+
+static void world_generate_lightmap(WorldData& world) {
+    const int width = world.area.width() * SUBDIVISION;
+    const int min_y = world.playable_area.min.y * SUBDIVISION;
+    const int max_y = world.playable_area.max.y * SUBDIVISION;
+
+    for (int y = min_y; y < max_y; ++y) {
+        for (int x = 0; x < width; ++x) {
+            const auto color_pos = TilePos(x, y);
+
+            if (x < world.playable_area.min.x * SUBDIVISION || x > world.playable_area.max.x * SUBDIVISION) {
+                world.set_color(color_pos, glm::vec3(1.0f));
+                continue;
+            }
+
+            if (y >= world.layers.underground * SUBDIVISION) {
+                world.set_color(color_pos, glm::vec3(0.0f));
+                continue;
+            }
+
+            if (world.block_exists(color_pos / SUBDIVISION) || world.wall_exists(color_pos / SUBDIVISION)) {
+                world.set_color(color_pos, glm::vec3(0.0f));
+            } else {
+                world.set_color(color_pos, glm::vec3(1.0f));
+            }
+        }
+    }
+
+    const int height = world.area.height() * SUBDIVISION;
+    
+    for (int i = 0; i < 3; ++i) {
+        // Left to right
+        for (int y = 0; y < height; ++y) {
+            glm::vec3 prev_light = glm::vec3(0.0f);
+            float prev_decay = 0.0;
+
+            for (int x = 0; x < width; ++x) {
+                blur(world, TilePos(x, y), prev_light, prev_decay);
+            }
+        }
+
+        // Top to bottom
+        for (int x = 0; x < width; ++x) {
+            glm::vec3 prev_light = glm::vec3(0.0f);
+            float prev_decay = 0.0;
+            for (int y = 0; y < height; ++y) {
+                blur(world, TilePos(x, y), prev_light, prev_decay);
+            }
+        }
+
+        // Right to left
+        for (int y = 0; y < height; ++y) {
+            glm::vec3 prev_light = glm::vec3(0.0f);
+            float prev_decay = 0.0;
+            for (int x = width - 1; x >= 0; --x) {
+                blur(world, TilePos(x, y), prev_light, prev_decay);
+            }
+        }
+
+        // Bottom to top
+        for (int x = 0; x < width; ++x) {
+            glm::vec3 prev_light = glm::vec3(0.0f);
+            float prev_decay = 0.0;
+            for (int y = height - 1; y >= 0; --y) {
+                blur(world, TilePos(x, y), prev_light, prev_decay);
+            }
+        }
+    }
+}
+
 WorldData world_generate(uint32_t width, uint32_t height, uint32_t seed) {
     srand(seed);
 
@@ -583,6 +689,7 @@ WorldData world_generate(uint32_t width, uint32_t height, uint32_t seed) {
 
     world.blocks = new tl::optional<Block>[area.width() * area.height()];
     world.walls = new tl::optional<Wall>[area.width() * area.height()];
+    world.colors = new Color[area.width() * SUBDIVISION * area.height() * SUBDIVISION];
     world.playable_area = playable_area;
     world.area = area;
     world.layers = layers;
@@ -607,6 +714,8 @@ WorldData world_generate(uint32_t width, uint32_t height, uint32_t seed) {
     world_remove_walls_from_surface(world);
 
     world_update_tile_sprite_index(world);
+
+    world_generate_lightmap(world);
     
     world.spawn_point = world_get_spawn_point(world);
     

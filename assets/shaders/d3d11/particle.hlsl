@@ -5,6 +5,7 @@ cbuffer GlobalUniformBuffer : register( b1 )
     float4x4 u_nonscale_view_projection;
     float4x4 u_nonscale_projection;
     float4x4 u_transform_matrix;
+    float4x4 u_inv_view_proj;
     float2 u_camera_position;
     float2 u_window_size;
     float u_max_depth;

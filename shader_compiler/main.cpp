@@ -56,7 +56,7 @@ int main(int argc, const char** argv) {
 #endif
 
     if (!fs::exists(executable)) {
-        printf("%s doesn't exist.\n", source_dir.string().c_str());
+        printf("%s doesn't exist.\n", executable.string().c_str());
         return -1;
     }
 

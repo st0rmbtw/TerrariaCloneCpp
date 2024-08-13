@@ -33,6 +33,18 @@ static struct RendererState {
     LLGL::RenderPass* render_pass = nullptr;
 
     LLGL::Buffer* chunk_vertex_buffer = nullptr;
+    LLGL::RenderTarget* world_render_target = nullptr;
+    LLGL::Texture* world_render_texture = nullptr;
+    LLGL::Texture* lightmap_texture = nullptr;
+
+    LLGL::Texture* background_render_texture = nullptr;
+    LLGL::RenderTarget* background_render_target = nullptr;
+
+    LLGL::Texture* world_background_render_texture = nullptr;
+    LLGL::RenderTarget* world_background_render_target = nullptr;
+
+    LLGL::PipelineState* postprocess_pipeline = nullptr;
+    LLGL::Buffer* fullscreen_triangle_vertex_buffer = nullptr;
     
     RenderBatchSprite sprite_batch;
     RenderBatchGlyph glyph_batch;
@@ -99,6 +111,7 @@ bool Renderer::InitEngine(RenderBackend backend) {
 
 bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool vsync, bool fullscreen) {
     const LLGL::RenderSystemPtr& context = state.context;
+    const RenderBackend backend = state.backend;
 
     state.surface = std::make_shared<CustomSurface>(window, resolution);
 
@@ -156,16 +169,121 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     const glm::vec2 tile_padding = glm::vec2(Constants::TILE_TEXTURE_PADDING) / tile_tex_size;
     const glm::vec2 wall_padding = glm::vec2(Constants::WALL_TEXTURE_PADDING) / wall_tex_size;
 
-    const ChunkVertex vertices[] = {
-        ChunkVertex(0.0, 0.0, wall_size, tile_size, wall_padding, tile_padding),
-        ChunkVertex(0.0, 1.0, wall_size, tile_size, wall_padding, tile_padding),
-        ChunkVertex(1.0, 0.0, wall_size, tile_size, wall_padding, tile_padding),
-        ChunkVertex(1.0, 1.0, wall_size, tile_size, wall_padding, tile_padding),
+    {
+        const ChunkVertex vertices[] = {
+            ChunkVertex(0.0, 0.0, wall_size, tile_size, wall_padding, tile_padding),
+            ChunkVertex(0.0, 1.0, wall_size, tile_size, wall_padding, tile_padding),
+            ChunkVertex(1.0, 0.0, wall_size, tile_size, wall_padding, tile_padding),
+            ChunkVertex(1.0, 1.0, wall_size, tile_size, wall_padding, tile_padding),
+        };
+
+        state.chunk_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex), "WorldRenderer VertexBuffer");
+    }
+
+    LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
+    pipelineLayoutDesc.bindings = {
+        LLGL::BindingDescriptor(
+            "GlobalUniformBuffer",
+            LLGL::ResourceType::Buffer,
+            LLGL::BindFlags::ConstantBuffer,
+            LLGL::StageFlags::VertexStage,
+            LLGL::BindingSlot(1)
+        ),
+
+        LLGL::BindingDescriptor("u_background", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(2)),
+        LLGL::BindingDescriptor("u_background_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 2 : 3),
+
+        LLGL::BindingDescriptor("u_world_background", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4)),
+        LLGL::BindingDescriptor("u_world_background_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 4 : 5),
+
+        LLGL::BindingDescriptor("u_world", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(6)),
+        LLGL::BindingDescriptor("u_world_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 6 : 7),
+
+        LLGL::BindingDescriptor("u_lightmap", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(8)),
+        LLGL::BindingDescriptor("u_lightmap_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 8 : 9),
     };
 
-    state.chunk_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex), "WorldRenderer VertexBuffer");
+    LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
+
+    const ShaderPipeline& postprocess_shader = Assets::GetShader(ShaderAsset::PostProcessShader);
+
+    LLGL::GraphicsPipelineDescriptor pipelineDesc;
+    pipelineDesc.debugName = "LightMap Pipeline";
+    pipelineDesc.vertexShader = postprocess_shader.vs;
+    pipelineDesc.fragmentShader = postprocess_shader.ps;
+    pipelineDesc.pipelineLayout = pipelineLayout;
+    pipelineDesc.indexFormat = LLGL::Format::Undefined;
+    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
+    pipelineDesc.rasterizer.frontCCW = true;
+
+    state.postprocess_pipeline = context->CreatePipelineState(pipelineDesc);
+
+    LLGL::TextureDescriptor texture_desc;
+    texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
+    texture_desc.miscFlags = 0;
+    texture_desc.cpuAccessFlags = 0;
+
+    state.world_render_texture = context->CreateTexture(texture_desc);
+    
+    LLGL::RenderTargetDescriptor render_target_desc;
+    render_target_desc.resolution = resolution;
+    render_target_desc.colorAttachments[0] = state.world_render_texture;
+
+    state.world_render_target = context->CreateRenderTarget(render_target_desc);
+
+    state.background_render_texture = context->CreateTexture(texture_desc);
+    
+    LLGL::RenderTargetDescriptor background_target_desc;
+    background_target_desc.resolution = resolution;
+    background_target_desc.colorAttachments[0] = state.background_render_texture;
+
+    state.background_render_target = context->CreateRenderTarget(background_target_desc);
+
+    state.world_background_render_texture = context->CreateTexture(texture_desc);
+    
+    LLGL::RenderTargetDescriptor world_background_target_desc;
+    world_background_target_desc.resolution = resolution;
+    world_background_target_desc.colorAttachments[0] = state.world_background_render_texture;
+
+    state.world_background_render_target = context->CreateRenderTarget(world_background_target_desc);
 
     return true;
+}
+
+void Renderer::InitWorldRenderer(const WorldData &world) {
+    using Constants::SUBDIVISION;
+    using Constants::TILE_SIZE;
+
+    const auto& context = state.context;
+
+    if (state.lightmap_texture) context->Release(*state.lightmap_texture);
+    if (state.fullscreen_triangle_vertex_buffer) context->Release(*state.fullscreen_triangle_vertex_buffer);
+
+    const glm::vec2 world_size = glm::vec2(world.area.size()) * TILE_SIZE;
+
+    const glm::vec2 vertices[] = {
+        glm::vec2(-1.0f, 1.0f),  glm::vec2(0.0f, 0.0f), world_size,
+        glm::vec2(3.0f,  1.0f),  glm::vec2(2.0f, 0.0f), world_size,
+        glm::vec2(-1.0f, -3.0f), glm::vec2(0.0f, 2.0f), world_size,
+    };
+    state.fullscreen_triangle_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::PostProcessVertex));
+
+    const glm::uvec2 size = world.area.size() * 16;
+
+    LLGL::TextureDescriptor lightmap_texture_desc;
+    lightmap_texture_desc.type      = LLGL::TextureType::Texture2D;
+    lightmap_texture_desc.format    = LLGL::Format::RGBA8UNorm;
+    lightmap_texture_desc.extent    = LLGL::Extent3D(world.area.width() * SUBDIVISION, world.area.height() * SUBDIVISION, 1);
+    lightmap_texture_desc.miscFlags = 0;
+    lightmap_texture_desc.bindFlags = LLGL::BindFlags::Sampled;
+
+    LLGL::ImageView image_view;
+    image_view.format   = LLGL::ImageFormat::RGBA;
+    image_view.dataType = LLGL::DataType::UInt8;
+    image_view.data     = world.colors;
+    image_view.dataSize = world.area.width() * SUBDIVISION * world.area.height() * SUBDIVISION * 4;
+
+    state.lightmap_texture = context->CreateTexture(lightmap_texture_desc, &image_view);
 }
 
 void Renderer::Begin(const Camera& camera) {
@@ -215,10 +333,11 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
 
     auto projections_uniform = ProjectionsUniform {
         .screen_projection_matrix = camera.get_screen_projection_matrix(),
-        .view_projection_matrix = camera.get_projection_matrix() * camera.get_view_matrix(),
-        .nonscale_view_projection_matrix = camera.get_nonscale_projection_matrix() * camera.get_view_matrix(),
+        .view_projection_matrix = camera.get_view_projection_matrix(),
+        .nonscale_view_projection_matrix = camera.get_nonscale_view_projection_matrix(),
         .nonscale_projection_matrix = camera.get_nonscale_projection_matrix(),
         .transform_matrix = camera.get_transform_matrix(),
+        .inv_view_proj_matrix = camera.get_inv_view_projection_matrix(),
         .camera_position = camera.position(),
         .window_size = camera.viewport(),
         .max_depth = static_cast<float>(state.global_depth_index),
@@ -228,16 +347,43 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
 
     state.particle_renderer.render();
 
+    commands->BeginRenderPass(*state.background_render_target);
+        commands->Clear(LLGL::ClearFlags::Color, LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f));
+        state.background_renderer.render();
+    commands->EndRenderPass();
+
+    commands->BeginRenderPass(*state.world_background_render_target);
+        commands->Clear(LLGL::ClearFlags::Color, LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f));
+        state.background_renderer.render_world();
+    commands->EndRenderPass();
+
+    commands->BeginRenderPass(*state.world_render_target);
+        commands->Clear(LLGL::ClearFlags::Color, LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f));
+        state.world_renderer.render(chunk_manager);
+    commands->EndRenderPass();
+
     commands->BeginRenderPass(*Renderer::SwapChain(), Renderer::DefaultRenderPass());
+        commands->SetVertexBuffer(*state.fullscreen_triangle_vertex_buffer);
+        commands->SetPipelineState(*state.postprocess_pipeline);
+        commands->SetResource(0, *state.constant_buffer);
 
-    state.background_renderer.render();
-    state.world_renderer.render(chunk_manager);
-    state.sprite_batch.render();
-    state.glyph_batch.render();
+        commands->SetResource(1, *state.background_render_texture);
+        commands->SetResource(2, Assets::GetSampler(TextureSampler::Nearest));
 
+        commands->SetResource(3, *state.world_background_render_texture);
+        commands->SetResource(4, Assets::GetSampler(TextureSampler::Nearest));
+
+        commands->SetResource(5, *state.world_render_texture);
+        commands->SetResource(6, Assets::GetSampler(TextureSampler::Nearest));
+
+        commands->SetResource(7, *state.lightmap_texture);
+        commands->SetResource(8, Assets::GetSampler(TextureSampler::Nearest));
+        commands->Draw(3, 0);
+
+        state.sprite_batch.render();
+        state.glyph_batch.render();
     commands->EndRenderPass();
     commands->End();
-
     queue->Submit(*commands);
 
     swap_chain->Present();
@@ -379,7 +525,7 @@ void Renderer::DrawBackground(const BackgroundLayer& layer) {
         if (!state.camera_frustum.intersects(aabb)) return;
     }
 
-    state.background_renderer.draw_layer(layer);
+    layer.is_world() ? state.background_renderer.draw_world_layer(layer) : state.background_renderer.draw_layer(layer);
 }
 
 void Renderer::DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, int depth) {

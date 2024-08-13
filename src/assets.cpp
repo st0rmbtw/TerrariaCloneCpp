@@ -160,6 +160,7 @@ static const std::array FONT_ASSETS = std::to_array<std::pair<FontAsset, std::st
 
 const std::pair<ShaderAsset, AssetShader> SHADER_ASSETS[] = {
     { ShaderAsset::BackgroundShader, AssetShader("background", ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::BackgroundVertex) },
+    { ShaderAsset::PostProcessShader,AssetShader("postprocess",ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::PostProcessVertex) },
     { ShaderAsset::TilemapShader,    AssetShader("tilemap",    ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::TilemapVertex,  VertexFormatAsset::TilemapInstance  }) },
     { ShaderAsset::FontShader,       AssetShader("font",       ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::FontVertex,     VertexFormatAsset::FontInstance     }) },
     { ShaderAsset::SpriteShader,     AssetShader("sprite",     ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::SpriteVertex,   VertexFormatAsset::SpriteInstance   }) },
@@ -374,6 +375,7 @@ void Assets::InitVertexFormats() {
     LLGL::VertexFormat background_vertex_format;
     LLGL::VertexFormat particle_vertex_format;
     LLGL::VertexFormat particle_instance_format;
+    LLGL::VertexFormat lightmap_vertex_format;
 
     if (backend.IsGLSL()) {
         sprite_vertex_format.AppendAttribute({ "a_position", LLGL::Format::RG32Float, 0, 0, sizeof(SpriteVertex), 0, 0 });
@@ -428,16 +430,16 @@ void Assets::InitVertexFormats() {
     }
 
     if (backend.IsGLSL()) {
-        tilemap_instance_format.AppendAttribute({"i_position",  LLGL::Format::RG32Float,   5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1});
-        tilemap_instance_format.AppendAttribute({"i_atlas_pos", LLGL::Format::RG32Float,   6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1});
-        tilemap_instance_format.AppendAttribute({"i_world_pos", LLGL::Format::RG32Float,   7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1});
-        tilemap_instance_format.AppendAttribute({"i_tile_id",   LLGL::Format::R32UInt,     8, offsetof(ChunkInstance,tile_id),   sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"i_position",  LLGL::Format::RG32Float,   5,  offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"i_atlas_pos", LLGL::Format::RG32Float,   6,  offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"i_world_pos", LLGL::Format::RG32Float,   7,  offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"i_tile_id",   LLGL::Format::R32UInt,     8,  offsetof(ChunkInstance,tile_id),   sizeof(ChunkInstance), 1, 1});
         tilemap_instance_format.AppendAttribute({"i_tile_type", LLGL::Format::R32UInt,     9, offsetof(ChunkInstance,tile_type), sizeof(ChunkInstance), 1, 1});
     } else if (backend.IsHLSL()) {
-        tilemap_instance_format.AppendAttribute({"I_Position",  LLGL::Format::RG32Float,   5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1});
-        tilemap_instance_format.AppendAttribute({"I_AtlasPos",  LLGL::Format::RG32Float,   6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1});
-        tilemap_instance_format.AppendAttribute({"I_WorldPos",  LLGL::Format::RG32Float,   7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1});
-        tilemap_instance_format.AppendAttribute({"I_TileId",    LLGL::Format::R32UInt,     8, offsetof(ChunkInstance,tile_id),   sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"I_Position",  LLGL::Format::RG32Float,   5,  offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"I_AtlasPos",  LLGL::Format::RG32Float,   6,  offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"I_WorldPos",  LLGL::Format::RG32Float,   7,  offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1});
+        tilemap_instance_format.AppendAttribute({"I_TileId",    LLGL::Format::R32UInt,     8,  offsetof(ChunkInstance,tile_id),   sizeof(ChunkInstance), 1, 1});
         tilemap_instance_format.AppendAttribute({"I_TileType",  LLGL::Format::R32UInt,     9, offsetof(ChunkInstance,tile_type), sizeof(ChunkInstance), 1, 1});
     } else {
         // TODO
@@ -509,6 +511,18 @@ void Assets::InitVertexFormats() {
         // TODO
     }
 
+    if (backend.IsGLSL()) {
+        lightmap_vertex_format.AppendAttribute({ "a_position",   LLGL::Format::RG32Float });
+        lightmap_vertex_format.AppendAttribute({ "a_uv",         LLGL::Format::RG32Float });
+        lightmap_vertex_format.AppendAttribute({ "a_world_size", LLGL::Format::RG32Float });
+    } else if (backend.IsHLSL()) {
+        lightmap_vertex_format.AppendAttribute({ "Position",  LLGL::Format::RG32Float });
+        lightmap_vertex_format.AppendAttribute({ "UV",        LLGL::Format::RG32Float });
+        lightmap_vertex_format.AppendAttribute({ "WorldSize", LLGL::Format::RG32Float });
+    } else {
+        // TODO
+    }
+
     state.vertex_formats[VertexFormatAsset::SpriteVertex] = sprite_vertex_format;
     state.vertex_formats[VertexFormatAsset::SpriteInstance] = sprite_instance_format;
     state.vertex_formats[VertexFormatAsset::TilemapVertex] = tilemap_vertex_format;
@@ -518,6 +532,7 @@ void Assets::InitVertexFormats() {
     state.vertex_formats[VertexFormatAsset::BackgroundVertex] = background_vertex_format;
     state.vertex_formats[VertexFormatAsset::ParticleVertex] = particle_vertex_format;
     state.vertex_formats[VertexFormatAsset::ParticleInstance] = particle_instance_format;
+    state.vertex_formats[VertexFormatAsset::PostProcessVertex] = lightmap_vertex_format;
 }
 
 void Assets::DestroyTextures() {

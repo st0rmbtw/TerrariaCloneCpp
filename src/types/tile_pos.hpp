@@ -21,16 +21,16 @@ enum class TileOffset: uint8_t {
 struct TilePos {
     int x, y;
 
-    TilePos() : x(0), y(0) {}
+    constexpr TilePos() : x(0), y(0) {}
 
-    TilePos(int x, int y) : x(x), y(y) {}
-    TilePos(const glm::ivec2& pos) : x(pos.x), y(pos.y) {}
+    constexpr TilePos(int x, int y) : x(x), y(y) {}
+    constexpr TilePos(const glm::ivec2& pos) : x(pos.x), y(pos.y) {}
 
-    TilePos(uint32_t x, uint32_t y) : x(static_cast<int>(x)), y(static_cast<int>(y)) {}
-    TilePos(const glm::uvec2& pos) : x(static_cast<int>(pos.x)), y(static_cast<int>(pos.y)) {}
+    constexpr TilePos(uint32_t x, uint32_t y) : x(static_cast<int>(x)), y(static_cast<int>(y)) {}
+    constexpr TilePos(const glm::uvec2& pos) : x(static_cast<int>(pos.x)), y(static_cast<int>(pos.y)) {}
 
     [[nodiscard]] 
-    TilePos offset(TileOffset offset) const {
+    constexpr TilePos offset(TileOffset offset) const {
         switch (offset) {
         case TileOffset::Top: 
             return {this->x, this->y - 1};
@@ -62,6 +62,10 @@ struct TilePos {
     [[nodiscard]]
     inline glm::vec2 to_world_pos_center() const {
         return glm::vec2(x, y) * Constants::TILE_SIZE + glm::vec2(8.0f);
+    }
+
+    constexpr inline TilePos operator/(int d) const {
+        return TilePos(x / d, y / d);
     }
 };
 
