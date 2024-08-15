@@ -119,7 +119,7 @@ void ReadFromPipe(HANDLE pipe) {
    } 
 }
 
-bool CompileVulkanShader(const std::string& executable, const std::string& stage, const char* shaderSource, size_t shaderSourceSize, const char* outputPath)
+bool CompileVulkanShader(const std::string& executable, const std::string& stage, const char* shaderSource, size_t shaderSourceSize, const std::string& outputPath)
 {
     SECURITY_ATTRIBUTES saAttr; 
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES); 

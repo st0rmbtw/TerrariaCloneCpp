@@ -138,7 +138,7 @@ foreach(shader ${VULKAN_SHADERS})
     get_filename_component(shader_name ${shader} NAME)
     add_custom_command(
         OUTPUT assets/shaders/vulkan/${shader_name}.spv
-        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/shader_compiler/ShaderCompiler.exe ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${shader}
+        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/shader_compiler/ShaderCompiler${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${shader}
         DEPENDS ${shader}
     )
     list(APPEND VULKAN_SHADERS_OUTPUT assets/shaders/vulkan/${shader_name}.spv)
