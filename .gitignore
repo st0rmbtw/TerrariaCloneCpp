@@ -1,3 +1,4 @@
+.DS_Store
 .vscode/
 __MACOSX/
 out/
@@ -6,3 +7,4 @@ build/
 build_release/
 .cache/
 glslang.exe
+glslang
