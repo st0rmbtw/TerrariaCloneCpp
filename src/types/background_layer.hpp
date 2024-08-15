@@ -29,6 +29,7 @@ public:
     inline BackgroundLayer& set_follow_camera(bool follow) { m_follow_camera = follow; return *this; }
     inline BackgroundLayer& set_fill_screen_height() { m_fill_screen_height = true; return *this; }
     inline BackgroundLayer& set_fill_screen_width() { m_fill_screen_width = true; return *this; }
+    inline BackgroundLayer& set_world_background() { m_world = true; return *this; }
 
     [[nodiscard]] inline const Texture& texture() const { return m_texture; }
     [[nodiscard]] inline const glm::vec2& position() const { return m_position; }
@@ -43,6 +44,7 @@ public:
     [[nodiscard]] inline bool follow_camera() const { return m_follow_camera; }
     [[nodiscard]] inline bool fill_screen_height() const { return m_fill_screen_height; }
     [[nodiscard]] inline bool fill_screen_width() const { return m_fill_screen_width; }
+    [[nodiscard]] inline bool is_world() const { return m_world; }
 
 private:
     Texture m_texture;
@@ -57,6 +59,7 @@ private:
     bool m_follow_camera = true;
     bool m_fill_screen_height = false;
     bool m_fill_screen_width = false;
+    bool m_world = false;
 };
 
 #endif

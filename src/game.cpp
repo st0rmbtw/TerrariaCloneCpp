@@ -121,6 +121,8 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     
     if (!Renderer::Init(window, resolution, config.vsync, config.fullscreen)) return false;
 
+    Renderer::InitWorldRenderer(g.world.data());
+
     ParticleManager::Init();
     UI::Init();
     Background::SetupWorldBackground(g.world);
@@ -264,9 +266,7 @@ void post_update() {
 void render() {
     Renderer::Begin(g.camera);
 
-    Background::Render(g.camera);
-
-    Renderer::RenderWorld();
+    Background::Render();
 
     g.player.render();
 
@@ -371,7 +371,9 @@ static void handle_window_resize_events(GLFWwindow* window, int width, int heigh
 
     const auto new_size = LLGL::Extent2D(width * resScale, height * resScale);
 
+    Renderer::CommandQueue()->WaitIdle();
     Renderer::SwapChain()->ResizeBuffers(new_size);
+    Renderer::ResizeTextures(new_size);
 
     g.camera.set_viewport({new_size.width, new_size.height});
     g.camera.update();

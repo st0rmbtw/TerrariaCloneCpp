@@ -61,6 +61,9 @@ public:
 
     [[nodiscard]] inline const ChunkManager& chunk_manager() const { return m_chunk_manager; }
     [[nodiscard]] inline ChunkManager& chunk_manager() { return m_chunk_manager; }
+
+    [[nodiscard]] inline const WorldData& data() const { return m_data; }
+    [[nodiscard]] inline WorldData& data() { return m_data; }
 private:
     void update_neighbors(TilePos pos);
 

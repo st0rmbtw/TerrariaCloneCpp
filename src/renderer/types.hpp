@@ -24,6 +24,7 @@ struct SpriteInstance {
     int has_texture;
     int is_ui;
     int is_nonscalable;
+    int is_world;
 };
 
 struct GlyphVertex {

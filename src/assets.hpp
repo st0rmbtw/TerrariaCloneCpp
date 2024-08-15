@@ -77,6 +77,7 @@ enum class VertexFormatAsset : uint8_t {
     BackgroundVertex,
     ParticleVertex,
     ParticleInstance,
+    PostProcessVertex,
 };
 
 struct ShaderDef {

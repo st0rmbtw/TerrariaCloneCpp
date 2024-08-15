@@ -4,6 +4,7 @@
 #pragma once
 
 #include <stdint.h>
+
 #include "../optional.hpp"
 #include "texture_atlas_pos.hpp"
 
@@ -67,18 +68,18 @@ inline constexpr static bool block_dusty(BlockType block_type) {
 }
 
 struct Block {
-    BlockType type;
-    int16_t hp;
-    uint8_t variant;
     TextureAtlasPos atlas_pos;
+    int16_t hp;
+    BlockType type;
+    uint8_t variant;
     uint8_t merge_id = 0xFF;
     bool is_merged = false;
 
-    Block(BlockType block_type) : 
-        type(block_type),
+    Block(BlockType block_type) :
+        atlas_pos(),
         hp(block_hp(block_type)),
-        variant(static_cast<uint8_t>(rand() % 3)),
-        atlas_pos{} {}
+        type(block_type),
+        variant(static_cast<uint8_t>(rand() % 3)) {}
 };
 
 #endif

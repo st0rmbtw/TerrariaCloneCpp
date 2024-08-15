@@ -5,9 +5,11 @@ cbuffer GlobalUniformBuffer : register( b1 )
     float4x4 u_nonscale_view_projection;
     float4x4 u_nonscale_projection;
     float4x4 u_transform_matrix;
+    float4x4 u_inv_view_proj;
     float2 u_camera_position;
     float2 u_window_size;
     float u_max_depth;
+    float u_max_world_depth;
 };
 
 struct VSInput
@@ -25,6 +27,7 @@ struct VSInput
     int i_has_texture : I_HasTexture;
     int i_is_ui : I_IsUI;
     int i_is_nonscale : I_IsNonScale;
+    int i_is_world : I_IsWorld;
 };
 
 struct VSOutput
@@ -84,12 +87,17 @@ VSOutput VS(VSInput inp)
     transform[2][1] = transform[2][1] * inp.i_size[1];
     transform[3][1] = transform[3][1] * inp.i_size[1];
 
-    const float4x4 mvp = inp.i_is_ui ? mul(u_screen_projection, transform) : inp.i_is_nonscale ? mul(u_nonscale_view_projection, transform) : mul(u_view_projection, transform);
+    const bool is_ui = inp.i_is_ui > 0;
+    const bool is_nonscale = inp.i_is_nonscale > 0;
+    const bool is_world = inp.i_is_world > 0;
+
+    const float4x4 mvp = is_ui ? mul(u_screen_projection, transform) : is_nonscale ? mul(u_nonscale_view_projection, transform) : mul(u_view_projection, transform);
     const float4 uv_offset_scale = inp.i_uv_offset_scale;
     const float2 position = inp.position;
-    const float order = inp.i_position.z / u_max_depth;
+    const float max_depth = is_world ? u_max_world_depth : u_max_depth;
+    const float order = inp.i_position.z / max_depth;
 
-	VSOutput outp;
+    VSOutput outp;
     outp.position = mul(mvp, float4(position, 0.0, 1.0));
     outp.position.z = order;
     outp.uv = position * uv_offset_scale.zw + uv_offset_scale.xy;

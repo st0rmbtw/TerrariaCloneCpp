@@ -7,14 +7,26 @@
 #include "../src/constants.hpp"
 
 #if defined(WIN32) || defined(_WIN32)
-#include <Windows.h>
+    #include <Windows.h>
+    #define PLATFORM_WINDOWS
+#elif defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+    #include <unistd.h>
+    #include <sys/types.h>
+    #include <sys/wait.h>
+    #define PLATFORM_POSIX
 #else
-// TODO
+    #error "UNKNOWN PLATFORM"
+#endif
+
+#if DEBUG
+    #define GLSLANG_FLAGS ""
+#else
+    #define GLSLANG_FLAGS "-g0"
 #endif
 
 namespace fs = std::filesystem;
 
-bool CompileVulkanShader(const std::string& executable, const std::string& stage, const char* shaderSource, size_t shaderSourceSize, const char* outputPath);
+bool CompileVulkanShader(const std::string& executable, const std::string& stage, const char* shaderSource, size_t shaderSourceSize, const std::string& outputPath);
 
 struct ShaderDef {
     std::string name;
@@ -49,14 +61,14 @@ int main(int argc, const char** argv) {
         ShaderDef("WALL_SIZE", std::to_string(Constants::WALL_SIZE)),
     };
 
-#ifdef _WIN32
+#ifdef PLATFORM_WINDOWS
     const fs::path executable = source_dir / "glslang.exe";
 #else
     const fs::path executable = source_dir / "glslang";
 #endif
 
     if (!fs::exists(executable)) {
-        printf("%s doesn't exist.\n", source_dir.string().c_str());
+        printf("%s doesn't exist.\n", executable.string().c_str());
         return -1;
     }
 
@@ -84,12 +96,12 @@ int main(int argc, const char** argv) {
     const std::string stage = file.extension().string().substr(1);
     
     printf("Compiling %s\n", file.string().c_str());
-    if (!CompileVulkanShader(executable.string(), stage, shader_source.c_str(), shader_source.length(), output_path.string().c_str())) return -1;
+    if (!CompileVulkanShader(executable.string(), stage, shader_source.c_str(), shader_source.length(), output_path.string())) return -1;
 
     return 0;
 }
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(PLATFORM_WINDOWS)
 
 void ReadFromPipe(HANDLE pipe) { 
    DWORD dwRead, dwWritten; 
@@ -107,7 +119,7 @@ void ReadFromPipe(HANDLE pipe) {
    } 
 }
 
-bool CompileVulkanShader(const std::string& executable, const std::string& stage, const char* shaderSource, size_t shaderSourceSize, const char* outputPath)
+bool CompileVulkanShader(const std::string& executable, const std::string& stage, const char* shaderSource, size_t shaderSourceSize, const std::string& outputPath)
 {
     SECURITY_ATTRIBUTES saAttr; 
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES); 
@@ -161,13 +173,7 @@ bool CompileVulkanShader(const std::string& executable, const std::string& stage
     si.hStdOutput = hStdOutWr;
     si.hStdError = hStdOutWr;
 
-#if DEBUG
-    const std::string strip_debug_info = "";
-#else
-    const std::string strip_debug_info = " -g0";
-#endif
-
-    const std::string args = executable + strip_debug_info + " --quiet -V --enhanced-msgs --stdin -S " + stage + " -o " + outputPath;
+    const std::string args = executable + " " + GLSLANG_FLAGS + " --quiet -V --enhanced-msgs --stdin -S " + stage + " -o " + outputPath;
 
     // start the program up
     success = CreateProcessA(executable.c_str(), const_cast<char*>(args.c_str()), NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
@@ -191,6 +197,95 @@ bool CompileVulkanShader(const std::string& executable, const std::string& stage
     return true;
 }
 
-#else
-// TODO
+#elif defined(PLATFORM_POSIX)
+
+#define PIPE_READ 0
+#define PIPE_WRITE 1
+
+void read_pipe(int* pipe) {
+    ssize_t nbytes = 0;
+    char buffer[1024];
+    while ((nbytes=read(pipe[PIPE_READ], buffer, sizeof(buffer))) > 0) {
+        write(STDOUT_FILENO, buffer, nbytes);
+    }
+}
+
+bool CompileVulkanShader(const std::string& executable, const std::string& stage, const char* shaderSource, size_t shaderSourceSize, const std::string& outputPath) {
+    pid_t pid;
+    int stdoutPipe[2];
+    int stdinPipe[2];
+    int status = 0;
+
+    if (pipe(stdoutPipe) < 0) {
+        printf("Couldn't create a stdout pipe.\n");
+        return false;
+    }
+
+    if (pipe(stdinPipe) < 0) {
+        close(stdoutPipe[PIPE_READ]);
+        close(stdoutPipe[PIPE_WRITE]);
+        printf("Couldn't create a stdin pipe.\n");
+        return false;
+    }
+
+    if ((pid = fork()) < 0) {
+        close(stdoutPipe[PIPE_READ]);
+        close(stdoutPipe[PIPE_WRITE]);
+        close(stdinPipe[PIPE_READ]);
+        close(stdinPipe[PIPE_WRITE]);
+        printf("Couldn't create a child process.\n");
+        return false;
+    }
+
+    if (pid == 0) {
+        close(stdinPipe[PIPE_WRITE]);
+        close(stdoutPipe[PIPE_READ]);
+
+        if (dup2(stdinPipe[PIPE_READ], STDIN_FILENO) == -1) {
+            printf("Couldn't redirect stdin pipe.\n");
+            return false;
+        }
+
+        if (dup2(stdoutPipe[PIPE_WRITE], STDOUT_FILENO) == -1) {
+            printf("Couldn't redirect stdin pipe.\n");
+            return false;
+        }
+
+        if (dup2(stdoutPipe[PIPE_WRITE], STDERR_FILENO) == -1) {
+            printf("Couldn't redirect stdin pipe.\n");
+            return false;
+        }
+
+        execl(executable.c_str(),
+            executable.c_str(),
+            GLSLANG_FLAGS,
+            "--quiet",
+            "-V",
+            "--enhanced-msgs",
+            "--stdin",
+            "-S", stage.c_str(),
+            "-o", outputPath.c_str(),
+            NULL
+        );
+
+        close(stdoutPipe[PIPE_WRITE]);
+    } else {
+        write(stdinPipe[PIPE_WRITE], shaderSource, shaderSourceSize);
+        close(stdinPipe[PIPE_WRITE]);
+
+        close(stdoutPipe[PIPE_WRITE]);
+
+        read_pipe(stdoutPipe);
+
+        for (;;) {
+            waitpid(pid, &status, 0);
+            if (WIFEXITED(status)) {
+                return true;
+            }
+        }
+    }
+
+    return true;    
+}
+
 #endif

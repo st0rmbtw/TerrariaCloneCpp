@@ -24,11 +24,9 @@ public:
 
     inline void destroy_hidden_chunks() {
         std::deque<RenderChunk>& chunks = m_chunks_to_destroy;
-        if (!chunks.empty()) {
-            while (!chunks.empty()) {
-                chunks.back().destroy();
-                chunks.pop_back();
-            }
+        while (!chunks.empty()) {
+            chunks.back().destroy();
+            chunks.pop_back();
         }
     }
 

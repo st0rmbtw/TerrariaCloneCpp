@@ -99,7 +99,7 @@ void Background::Update(const Camera &camera) {
     }
 }
 
-void Background::Render(const Camera& camera) {
+void Background::Render() {
     for (const BackgroundLayer& layer : state.layers) {
         Renderer::DrawBackground(layer);
     }
@@ -134,6 +134,7 @@ void setup_cavern_background(const World& world) {
             .set_width(world_width)
             .set_nonscale(false)
             .set_follow_camera(false)
+            .set_world_background()
     );
 
     state.layers.push_back(
@@ -146,5 +147,6 @@ void setup_cavern_background(const World& world) {
             .set_height(world_height - underground_level)
             .set_nonscale(false)
             .set_follow_camera(false)
+            .set_world_background()
     );
 }

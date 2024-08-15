@@ -10,9 +10,10 @@
 #include "types.hpp"
 
 #include "../types/sprite.hpp"
+#include "../types/render_layer.hpp"
 #include "../optional.hpp"
 
-constexpr size_t MAX_QUADS = 5000;
+constexpr size_t MAX_QUADS = 5000 / 2;
 constexpr size_t MAX_VERTICES = MAX_QUADS * 4;
 constexpr size_t MAX_INDICES = MAX_QUADS * 6;
 
@@ -66,22 +67,30 @@ protected:
 
 class RenderBatchSprite : public RenderBatch {
 public:
-    void draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, bool ui, int depth);
+    void draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, RenderLayer layer, bool is_ui, int depth);
     void init() override;
     void render() override;
+    void render_world();
     void begin() override;
     void terminate() override;
-
-    [[nodiscard]] inline bool is_empty() const { return m_sprites.empty(); }
 private:
     void flush();
+    void flush_world();
 private:
     std::vector<SpriteData> m_sprites;
     std::vector<FlushData> m_sprite_flush_queue;
 
+    std::vector<SpriteData> m_world_sprites;
+    std::vector<FlushData> m_world_sprite_flush_queue;
+
+    LLGL::Buffer* m_world_instance_buffer = nullptr;
+    LLGL::BufferArray* m_world_buffer_array = nullptr;
+
     SpriteInstance* m_buffer = nullptr;
     SpriteInstance* m_buffer_ptr = nullptr;
 
+    SpriteInstance* m_world_buffer = nullptr;
+    SpriteInstance* m_world_buffer_ptr = nullptr;
 };
 
 class RenderBatchGlyph : public RenderBatch {

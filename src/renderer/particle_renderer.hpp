@@ -17,6 +17,7 @@ class ParticleRenderer {
 public:
     void init();
     void render();
+    void compute();
     void terminate();
 
     void draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, int depth);

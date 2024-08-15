@@ -101,7 +101,7 @@ void RenderChunk::build_mesh(const WorldData& world) {
 
         this->block_buffer_array = Renderer::Context()->CreateBufferArray(2, buffers);
     } else if (blocks_dirty && !blocks_empty()) {
-        Renderer::Context()->WriteBuffer(*block_instance_buffer, 0, block_instance.data(), block_instance.size() * sizeof(ChunkVertex));
+        Renderer::Context()->WriteBuffer(*block_instance_buffer, 0, block_instance.data(), block_instance.size() * sizeof(ChunkInstance));
     }
 
     if (!wall_instance_buffer) {
@@ -113,7 +113,7 @@ void RenderChunk::build_mesh(const WorldData& world) {
 
         this->wall_buffer_array = Renderer::Context()->CreateBufferArray(2, buffers);
     } else if (walls_dirty && !walls_empty()) {
-        Renderer::Context()->WriteBuffer(*wall_instance_buffer, 0, wall_instance.data(), wall_instance.size() * sizeof(ChunkVertex));
+        Renderer::Context()->WriteBuffer(*wall_instance_buffer, 0, wall_instance.data(), wall_instance.size() * sizeof(ChunkInstance));
     }
 
     this->blocks_dirty = false;

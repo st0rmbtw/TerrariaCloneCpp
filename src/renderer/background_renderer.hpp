@@ -27,18 +27,26 @@ class BackgroundRenderer {
 public:
     void init();
     void render();
+    void render_world();
     void terminate();
 
     void draw_layer(const BackgroundLayer& layer);
+    void draw_world_layer(const BackgroundLayer& layer);
 
 private:
     std::vector<LayerData> m_layers;
+    std::vector<LayerData> m_world_layers;
     
     LLGL::PipelineState* m_pipeline = nullptr;
     LLGL::Buffer* m_vertex_buffer = nullptr;
+    LLGL::Buffer* m_world_vertex_buffer = nullptr;
     LLGL::Buffer* m_index_buffer = nullptr;
+
     BackgroundVertex* m_buffer = nullptr;
     BackgroundVertex* m_buffer_ptr = nullptr;
+
+    BackgroundVertex* m_world_buffer = nullptr;
+    BackgroundVertex* m_world_buffer_ptr = nullptr;
 };
 
 #endif
