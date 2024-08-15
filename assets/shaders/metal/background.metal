@@ -32,6 +32,7 @@ struct VertexOut
     float2 size     [[flat]];
     float2 tex_size [[flat]];
     float2 speed    [[flat]];
+    float2 offset   [[flat]];
     int    nonscale [[flat]];
 };
 
@@ -45,14 +46,17 @@ vertex VertexOut VS(
     constant Constants& constants [[buffer(1)]]
 ) {
     float4x4 mvp = inp.nonscale > 0 ? constants.nonscale_view_projection : constants.view_projection;
+    float4x4 proj_model = constants.nonscale_projection * constants.transform_matrix;
+    float2 offset = (proj_model * float4(constants.camera_position.x, constants.camera_position.y, 0.0, 1.0)).xy;
 
-	VertexOut outp;
-    outp.position = mvp * float4(inp.position.x, inp.position.y, 0.0, 1.0);
+    VertexOut outp;
+    outp.position = view_proj * float4(inp.position.x, inp.position.y, 0.0, 1.0);
     outp.position.z = 0.0;
     outp.uv = inp.uv;
     outp.tex_size = inp.tex_size;
     outp.size = inp.size;
     outp.speed = inp.speed;
+    outp.offset = offset;
     outp.nonscale = inp.nonscale;
 
     return outp;
@@ -89,12 +93,7 @@ fragment float4 PS(
     texture2d<float> texture [[texture(2)]],
     sampler texture_sampler [[sampler(3)]]
 ) {
-    float4x4 mvp = constants.nonscale_projection * constants.transform_matrix;
-
-    float2 offset = (mvp * float4(constants.camera_position.x, constants.camera_position.y, 0.0, 1.0)).xy;
-
-    float2 uv = scroll(inp.speed, inp.uv, offset, inp.tex_size, inp.size, inp.nonscale > 0);
-
+    float2 uv = scroll(inp.speed, inp.uv, inp.offset, inp.tex_size, inp.size, inp.nonscale > 0);
     float4 color = texture.sample(texture_sampler, uv);
 
     if (color.a < 0.05) discard_fragment();
