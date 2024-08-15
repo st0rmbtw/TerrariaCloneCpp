@@ -70,7 +70,7 @@ VSOutput VS(VSInput inp)
     const float4x4 mvp = mul(u_view_projection, transform);
     const float2 position = inp.i_position * 16.0 + inp.position * size;
 
-	VSOutput output;
+    VSOutput output;
     output.uv = start_uv + inp.position * tex_size;
     output.tile_id = inp.i_tile_id;
     output.position = mul(mvp, float4(position, 0.0, 1.0));

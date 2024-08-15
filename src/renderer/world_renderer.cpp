@@ -84,13 +84,14 @@ void WorldRenderer::init() {
 void WorldRenderer::render(const ChunkManager& chunk_manager) {
     auto* const commands = Renderer::CommandBuffer();
 
+    commands->SetPipelineState(*m_pipeline);
+
     for (const glm::uvec2& pos : chunk_manager.visible_chunks()) {
         const RenderChunk& chunk = chunk_manager.render_chunks().at(pos);
 
         if (!chunk.walls_empty()) {
             const Texture& t = Assets::GetTexture(TextureAsset::Walls);
 
-            commands->SetPipelineState(*m_pipeline);
             commands->SetVertexBufferArray(*chunk.wall_buffer_array);
             commands->SetResource(0, *Renderer::GlobalUniformBuffer());
             commands->SetResource(1, *m_depth_buffer);
@@ -103,7 +104,6 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
         if (!chunk.blocks_empty()) {
             const Texture& t = Assets::GetTexture(TextureAsset::Tiles);
 
-            commands->SetPipelineState(*m_pipeline);
             commands->SetVertexBufferArray(*chunk.block_buffer_array);
             commands->SetResource(0, *Renderer::GlobalUniformBuffer());
             commands->SetResource(1, *m_depth_buffer);

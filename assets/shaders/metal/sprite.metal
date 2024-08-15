@@ -30,6 +30,7 @@ struct VertexIn
     int    i_has_texture       [[attribute(9)]];
     int    i_is_ui             [[attribute(10)]];
     int    i_is_nonscale       [[attribute(11)]];
+    int    i_is_world          [[attribute(12)]];
 };
 
 struct VertexOut
@@ -81,10 +82,11 @@ vertex VertexOut VS(
     transform[0] = transform[0] * inp.i_size[0];
     transform[1] = transform[1] * inp.i_size[1];
 
-    float4x4 mvp = inp.i_is_ui ? constants.screen_projection * transform : inp.i_is_nonscale ? constants.nonscale_view_projection * transform : constants.view_projection * transform;
-    float4 uv_offset_scale = inp.i_uv_offset_scale;
-    float2 position = inp.position;
-    float order = inp.i_position.z / constants.max_depth;
+    const float4x4 mvp = is_ui ? constants.screen_projection * transform : is_nonscale ? constants.nonscale_view_projection * transform : constants.view_projection * transform;
+    const float4 uv_offset_scale = inp.i_uv_offset_scale;
+    const float2 position = inp.position;
+    const float max_depth = is_world ? constants.max_world_depth : u_max_depth;
+    const float order = inp.i_position.z / max_depth;
 
     VertexOut outp;
     outp.position = mvp * float4(position, 0.0, 1.0);

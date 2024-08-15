@@ -9,6 +9,7 @@ cbuffer GlobalUniformBuffer : register( b1 )
     float2 u_camera_position;
     float2 u_window_size;
     float u_max_depth;
+    float u_max_world_depth;
 };
 
 struct VSInput
@@ -37,7 +38,7 @@ VSOutput VS(VSInput inp)
     const float2 position = inp.i_position.xy + inp.position * inp.i_size;
     const float2 uv = inp.i_uv + inp.position * inp.i_tex_size;
 
-	VSOutput outp;
+    VSOutput outp;
     outp.color = inp.i_color;
     outp.uv = uv;
     outp.position = mul(mvp, float4(position, 0.0, 1.0));

@@ -97,7 +97,7 @@ VSOutput VS(VSInput inp)
     const float max_depth = is_world ? u_max_world_depth : u_max_depth;
     const float order = inp.i_position.z / max_depth;
 
-	VSOutput outp;
+    VSOutput outp;
     outp.position = mul(mvp, float4(position, 0.0, 1.0));
     outp.position.z = order;
     outp.uv = position * uv_offset_scale.zw + uv_offset_scale.xy;

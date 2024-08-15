@@ -12,6 +12,7 @@ struct Constants
     float2 camera_position;
     float2 window_size;
     float max_depth;
+    float max_world_depth;
 };
 
 struct VertexIn

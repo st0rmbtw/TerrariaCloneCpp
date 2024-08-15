@@ -13,6 +13,7 @@ struct Constants
     float2 camera_position;
     float2 window_size;
     float max_depth;
+    float max_world_depth;
 };
 
 struct Depth {
@@ -64,7 +65,7 @@ vertex VertexOut VS(
         tex_size = inp.wall_tex_size;
     }
 
-    order /= constants.max_depth;
+    order /= constants.max_world_depth;
 
     const float4x4 transform = float4x4(
         float4(1.0, 0.0, 0.0, 0.0),
