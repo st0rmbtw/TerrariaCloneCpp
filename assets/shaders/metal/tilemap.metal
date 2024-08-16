@@ -10,6 +10,7 @@ struct Constants
     float4x4 nonscale_view_projection;
     float4x4 nonscale_projection;
     float4x4 transform_matrix;
+    float4x4 inv_view_proj;
     float2 camera_position;
     float2 window_size;
     float max_depth;
@@ -47,8 +48,8 @@ constant constexpr uint TILE_TYPE_WALL = 1;
 
 vertex VertexOut VS(
     VertexIn inp [[stage_in]],
-    constant Constants& constants [[buffer(1)]],
-    constant Depth& depth [[buffer(2)]]
+    constant Constants& constants [[buffer(2)]],
+    constant Depth& depth [[buffer(3)]]
 ) {
     const float2 world_pos = inp.i_world_pos;
     const uint tile_type = inp.i_tile_type;
@@ -78,18 +79,18 @@ vertex VertexOut VS(
     const float2 position = inp.i_position * 16.0 + inp.position * size;
 
 	VertexOut output;
+    output.position = mvp * float4(position, 0.0, 1.0);
+    output.position.z = order;
     output.uv = start_uv + inp.position * tex_size;
     output.tile_id = inp.i_tile_id;
-    output.position = mvp * float4(position, 0.0, 1.0);
-    output.position.z = 1.0;
 
 	return output;
 }
 
 fragment float4 PS(
     VertexOut inp [[stage_in]],
-    texture2d_array<float> texture [[texture(3)]],
-    sampler texture_sampler [[sampler(4)]]
+    texture2d_array<float> texture [[texture(4)]],
+    sampler texture_sampler [[sampler(5)]]
 ) {
     const float4 color = texture.sample(texture_sampler, inp.uv, inp.tile_id);
 

@@ -9,6 +9,7 @@ struct Constants
     float4x4 nonscale_view_projection;
     float4x4 nonscale_projection;
     float4x4 transform_matrix;
+    float4x4 inv_view_proj;
     float2 camera_position;
     float2 window_size;
     float max_depth;
@@ -43,9 +44,9 @@ float fmodb(float a, float b) {
 
 vertex VertexOut VS(
     VertexIn inp [[stage_in]],
-    constant Constants& constants [[buffer(1)]]
+    constant Constants& constants [[buffer(2)]]
 ) {
-    float4x4 mvp = inp.nonscale > 0 ? constants.nonscale_view_projection : constants.view_projection;
+    float4x4 view_proj = inp.nonscale > 0 ? constants.nonscale_view_projection : constants.view_projection;
     float4x4 proj_model = constants.nonscale_projection * constants.transform_matrix;
     float2 offset = (proj_model * float4(constants.camera_position.x, constants.camera_position.y, 0.0, 1.0)).xy;
 
@@ -89,9 +90,9 @@ float2 scroll(
 
 fragment float4 PS(
     VertexOut inp [[stage_in]],
-    constant Constants& constants [[buffer(1)]],
-    texture2d<float> texture [[texture(2)]],
-    sampler texture_sampler [[sampler(3)]]
+    constant Constants& constants [[buffer(2)]],
+    texture2d<float> texture [[texture(3)]],
+    sampler texture_sampler [[sampler(4)]]
 ) {
     float2 uv = scroll(inp.speed, inp.uv, inp.offset, inp.tex_size, inp.size, inp.nonscale > 0);
     float4 color = texture.sample(texture_sampler, uv);

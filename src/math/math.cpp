@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/ext/scalar_constants.hpp>
 
-#include "../common.h"
+#include "../assert.hpp"
 #include "../utils.hpp"
 
 float move_towards(float current, float target, float max_delta) noexcept {

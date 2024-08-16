@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18)
 
 project(TerrariaClone CXX)
 
@@ -42,11 +42,6 @@ else()
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
-# if(CMAKE_GENERATOR STREQUAL "Xcode")
-# 	if(CMAKE_EXPORT_COMPILE_COMMANDS)
-# 		set(CMAKE_XCODE_ATTRIBUTE_OTHER_CFLAGS  "$(inherited) -gen-cdb-fragment-path ${CMAKE_SOURCE_DIR}/CompilationDatabase")
-# 	endif()
-# endif()
 
 if (WIN32)
     add_compile_definitions(NOMINMAX)
@@ -63,6 +58,7 @@ if (APPLE)
     set(LLGL_BUILD_RENDERER_METAL ON CACHE BOOL "" FORCE)
 else()
     set(LLGL_BUILD_RENDERER_METAL OFF CACHE BOOL "" FORCE)
+    set(LLGL_BUILD_RENDERER_VULKAN ON CACHE BOOL "" FORCE)
 endif()
 
 if (WIN32)
@@ -74,7 +70,6 @@ else()
     set(LLGL_BUILD_RENDERER_DIRECT3D11 OFF CACHE BOOL "" FORCE)
 endif()
 
-set(LLGL_BUILD_RENDERER_VULKAN ON CACHE BOOL "" FORCE)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(thirdparty/LLGL)
@@ -89,6 +84,9 @@ unset(EXECUTABLE_OUTPUT_PATH CACHE)
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR} CACHE STRING "" FORCE)
 
 file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.mm")
+if (APPLE)
+    set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/game.cpp PROPERTIES COMPILE_FLAGS "-x objective-c++")
+endif()
 
 add_executable(${PROJECT_NAME})
 

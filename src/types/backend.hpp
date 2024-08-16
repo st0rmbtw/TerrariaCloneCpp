@@ -4,7 +4,7 @@
 #pragma once
 
 #include <cstdint>
-#include "../common.h"
+#include "../assert.hpp"
 
 class RenderBackend {
 public:

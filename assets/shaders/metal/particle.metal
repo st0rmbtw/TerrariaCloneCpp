@@ -9,6 +9,7 @@ struct Constants
     float4x4 nonscale_view_projection;
     float4x4 nonscale_projection;
     float4x4 transform_matrix;
+    float4x4 inv_view_proj;
     float2 camera_position;
     float2 window_size;
     float max_depth;
@@ -32,9 +33,9 @@ struct VertexOut
 
 vertex VertexOut VS(
     VertexIn inp                       [[stage_in]],
-    constant Constants& constants      [[buffer(1)]],
-    const device float4* transforms    [[buffer(4)]],
-    ushort id                          [[instance_id]]
+    constant Constants& constants      [[buffer(2)]],
+    const device float4* transforms    [[buffer(5)]],
+    uint id                          [[instance_id]]
 ) {
     float2 position = inp.position;
     float4x4 mvp = float4x4(
@@ -57,14 +58,14 @@ vertex VertexOut VS(
 constant constexpr float2 PARTICLE_SIZE = float2(8.0, 8.0);
 
 kernel void CSComputeTransform(
-    constant Constants&  constants  [[buffer(1)]],
-    device float4*       transforms [[buffer(4)]],
-    const device float2* positions  [[buffer(5)]],
-    const device float4* rotations  [[buffer(6)]],
-    const device float*  scales     [[buffer(7)]],
-    uint2                thread_id  [[thread_position_in_grid]]
+    constant Constants&  constants  [[buffer(2)]],
+    device float4*       transforms [[buffer(5)]],
+    const device float2* positions  [[buffer(6)]],
+    const device float4* rotations  [[buffer(7)]],
+    const device float*  scales     [[buffer(8)]],
+    uint3                thread_id  [[thread_position_in_grid]]
 ) {
-    uint id = thread_id.x;
+    uint id = thread_id.y * 512 + thread_id.x;
 
     float2 position = positions[id];
     float4 rotation = rotations[id];
@@ -116,8 +117,8 @@ kernel void CSComputeTransform(
 
 fragment float4 PS(
     VertexOut inp [[stage_in]],
-    texture2d<float> texture [[texture(2)]],
-    sampler texture_sampler [[sampler(3)]]
+    texture2d<float> texture [[texture(3)]],
+    sampler texture_sampler [[sampler(4)]]
 ) {
     float4 color = texture.sample(texture_sampler, inp.uv);
 

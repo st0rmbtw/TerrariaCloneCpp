@@ -4,6 +4,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <utility>
 
 namespace math {
 

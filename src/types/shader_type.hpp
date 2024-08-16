@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <LLGL/ShaderFlags.h>
 
-#include "../common.h"
+#include "../assert.hpp"
 
 #include "backend.hpp"
 

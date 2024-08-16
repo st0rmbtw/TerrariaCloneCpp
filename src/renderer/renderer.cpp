@@ -12,6 +12,7 @@
 
 #include "LLGL/CommandBufferFlags.h"
 #include "LLGL/PipelineStateFlags.h"
+#include "types.hpp"
 #include "utils.hpp"
 #include "batch.hpp"
 #include "world_renderer.hpp"
@@ -153,6 +154,10 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
         render_pass_desc.depthAttachment.format = state.swap_chain->GetDepthStencilFormat();
         render_pass_desc.depthAttachment.loadOp = LLGL::AttachmentLoadOp::Load;
         render_pass_desc.depthAttachment.storeOp = LLGL::AttachmentStoreOp::Store;
+
+        render_pass_desc.stencilAttachment.format = state.swap_chain->GetDepthStencilFormat();
+        render_pass_desc.stencilAttachment.loadOp = LLGL::AttachmentLoadOp::Undefined;
+        render_pass_desc.stencilAttachment.storeOp = LLGL::AttachmentStoreOp::Undefined;
         state.render_pass = context->CreateRenderPass(render_pass_desc);
     }
     {
@@ -164,6 +169,10 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
         render_pass_desc.depthAttachment.format = state.swap_chain->GetDepthStencilFormat();
         render_pass_desc.depthAttachment.loadOp = LLGL::AttachmentLoadOp::Clear;
         render_pass_desc.depthAttachment.storeOp = LLGL::AttachmentStoreOp::Store;
+
+        render_pass_desc.stencilAttachment.format = state.swap_chain->GetDepthStencilFormat();
+        render_pass_desc.stencilAttachment.loadOp = LLGL::AttachmentLoadOp::Undefined;
+        render_pass_desc.stencilAttachment.storeOp = LLGL::AttachmentStoreOp::Undefined;
         state.clear_render_pass = context->CreateRenderPass(render_pass_desc);
     }
 
@@ -198,17 +207,17 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(1)
+            LLGL::BindingSlot(2)
         ),
 
-        LLGL::BindingDescriptor("u_background", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(2)),
-        LLGL::BindingDescriptor("u_background_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 2 : 3),
+        LLGL::BindingDescriptor("u_background", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
+        LLGL::BindingDescriptor("u_background_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 3 : 4),
 
-        LLGL::BindingDescriptor("u_world", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4)),
-        LLGL::BindingDescriptor("u_world_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 4 : 5),
+        LLGL::BindingDescriptor("u_world", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(5)),
+        LLGL::BindingDescriptor("u_world_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 5 : 6),
 
-        LLGL::BindingDescriptor("u_lightmap", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(6)),
-        LLGL::BindingDescriptor("u_lightmap_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 6 : 7),
+        LLGL::BindingDescriptor("u_lightmap", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(7)),
+        LLGL::BindingDescriptor("u_lightmap_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 7 : 8),
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
@@ -238,6 +247,7 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
 void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
     const LLGL::RenderSystemPtr& context = state.context;
+    const auto* swap_chain = state.swap_chain;
 
     if (state.world_render_texture) context->Release(*state.world_render_texture);
     if (state.world_depth_texture) context->Release(*state.world_depth_texture);
@@ -253,12 +263,13 @@ void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
 
     LLGL::TextureDescriptor texture_desc;
     texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
+    texture_desc.format = swap_chain->GetColorFormat();
     texture_desc.miscFlags = 0;
     texture_desc.cpuAccessFlags = 0;
 
     LLGL::TextureDescriptor depth_texture_desc;
     depth_texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
-    depth_texture_desc.format = LLGL::Format::D32Float;
+    depth_texture_desc.format = swap_chain->GetDepthStencilFormat();
     depth_texture_desc.bindFlags = LLGL::BindFlags::DepthStencilAttachment;
     depth_texture_desc.miscFlags = 0;
     depth_texture_desc.cpuAccessFlags = 0;
@@ -276,6 +287,7 @@ void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
     LLGL::RenderTargetDescriptor background_target_desc;
     background_target_desc.resolution = resolution;
     background_target_desc.colorAttachments[0] = state.background_render_texture;
+    background_target_desc.depthStencilAttachment.format = swap_chain->GetDepthStencilFormat();
     state.background_render_target = context->CreateRenderTarget(background_target_desc);
 }
 
@@ -332,7 +344,7 @@ void Renderer::Begin(const Camera& camera) {
     state.ui_frustum = ui_frustum;
 
     commands->Begin();
-    commands->SetViewport(LLGL::Extent2D(camera.viewport().x, camera.viewport().y));
+    commands->SetViewport(swap_chain->GetResolution());
 
     state.sprite_batch.begin();
     state.glyph_batch.begin();
@@ -565,6 +577,7 @@ void Renderer::Terminate() {
 //
 
 void RenderBatchSprite::init() {
+    const RenderBackend backend = Renderer::Backend();
     const auto& context = Renderer::Context();
 
     m_buffer = new SpriteInstance[MAX_QUADS];
@@ -591,8 +604,6 @@ void RenderBatchSprite::init() {
         m_world_buffer_array = context->CreateBufferArray(2, buffers);
     }
 
-    const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
-
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.bindings = {
         LLGL::BindingDescriptor(
@@ -600,10 +611,10 @@ void RenderBatchSprite::init() {
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(1)
+            LLGL::BindingSlot(2)
         ),
-        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(2)),
-        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(samplerBinding)),
+        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
+        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
@@ -876,6 +887,7 @@ void RenderBatchSprite::terminate() {
 
 
 void RenderBatchGlyph::init() {
+    const RenderBackend backend = Renderer::Backend();
     const auto& context = Renderer::Context();
 
     m_buffer = new GlyphInstance[MAX_VERTICES];
@@ -893,8 +905,6 @@ void RenderBatchGlyph::init() {
     LLGL::Buffer* buffers[] = { m_vertex_buffer, m_instance_buffer };
     m_buffer_array = context->CreateBufferArray(2, buffers);
 
-    const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
-
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.bindings = {
         LLGL::BindingDescriptor(
@@ -902,10 +912,10 @@ void RenderBatchGlyph::init() {
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(1)
+            LLGL::BindingSlot(2)
         ),
-        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(2)),
-        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(samplerBinding)),
+        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
+        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);

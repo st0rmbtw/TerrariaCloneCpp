@@ -10,9 +10,11 @@ struct Constants
     float4x4 nonscale_view_projection;
     float4x4 nonscale_projection;
     float4x4 transform_matrix;
+    float4x4 inv_view_proj;
     float2 camera_position;
     float2 window_size;
     float max_depth;
+    float max_world_depth;
 };
 
 struct VertexIn
@@ -45,7 +47,7 @@ struct VertexOut
 
 vertex VertexOut VS(
     VertexIn inp [[stage_in]],
-    constant Constants& constants [[buffer(1)]]
+    constant Constants& constants [[buffer(2)]]
 ) {
     float qxx = inp.i_rotation.x * inp.i_rotation.x;
     float qyy = inp.i_rotation.y * inp.i_rotation.y;
@@ -68,10 +70,10 @@ vertex VertexOut VS(
         float4(1.0, 0.0, 0.0, 0.0),
         float4(0.0, 1.0, 0.0, 0.0),
         float4(0.0, 0.0, 1.0, 0.0),
-        float4(inp.position.x, inp.position.y, 0.0, 1.0)
+        float4(inp.i_position.x, inp.i_position.y, 0.0, 1.0)
     );
 
-    // transform = transform * rotation_matrix;
+    transform = transform * rotation_matrix;
 
     float2 offset = -inp.i_offset * inp.i_size;
 
@@ -82,10 +84,14 @@ vertex VertexOut VS(
     transform[0] = transform[0] * inp.i_size[0];
     transform[1] = transform[1] * inp.i_size[1];
 
+    const bool is_ui = inp.i_is_ui > 0;
+    const bool is_nonscale = inp.i_is_nonscale > 0;
+    const bool is_world = inp.i_is_world > 0;
+
     const float4x4 mvp = is_ui ? constants.screen_projection * transform : is_nonscale ? constants.nonscale_view_projection * transform : constants.view_projection * transform;
     const float4 uv_offset_scale = inp.i_uv_offset_scale;
     const float2 position = inp.position;
-    const float max_depth = is_world ? constants.max_world_depth : u_max_depth;
+    const float max_depth = is_world ? constants.max_world_depth : constants.max_depth;
     const float order = inp.i_position.z / max_depth;
 
     VertexOut outp;
@@ -102,8 +108,8 @@ vertex VertexOut VS(
 
 fragment float4 PS(
     VertexOut inp [[stage_in]],
-    texture2d<float> texture [[texture(2)]],
-    sampler texture_sampler [[sampler(3)]]
+    texture2d<float> texture [[texture(3)]],
+    sampler texture_sampler [[sampler(4)]]
 ) {
     float4 color = inp.color;
 

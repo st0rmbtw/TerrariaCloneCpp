@@ -10,6 +10,8 @@
 struct SpriteVertex {
     float x;
     float y;
+
+    explicit SpriteVertex(float x, float y) : x(x), y(y) {}
 };
 
 struct SpriteInstance {
@@ -30,6 +32,8 @@ struct SpriteInstance {
 struct GlyphVertex {
     float x;
     float y;
+
+    explicit GlyphVertex(float x, float y) : x(x), y(y) {}
 };
 
 struct GlyphInstance {
@@ -46,6 +50,9 @@ struct ParticleVertex {
     float y;
     glm::vec2 inv_tex_size;
     glm::vec2 tex_size;
+
+    explicit ParticleVertex(float x, float y, glm::vec2 inv_tex_size, glm::vec2 tex_size) :
+        x(x), y(y), inv_tex_size(inv_tex_size), tex_size(tex_size) {}
 };
 
 struct ParticleInstance {
@@ -67,6 +74,9 @@ struct ChunkVertex {
     glm::vec2 tile_tex_size;
     glm::vec2 wall_padding;
     glm::vec2 tile_padding;
+
+    explicit ChunkVertex(float x, float y, glm::vec2 wall_tex_size, glm::vec2 tile_tex_size, glm::vec2 wall_padding, glm::vec2 tile_padding) :
+        x(x), y(y), wall_tex_size(wall_tex_size), tile_tex_size(tile_tex_size), wall_padding(wall_padding), tile_padding(tile_padding) {}
 };
 
 #endif
