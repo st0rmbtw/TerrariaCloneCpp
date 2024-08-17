@@ -29,10 +29,7 @@ struct VertexIn
     float4 i_color             [[attribute(6)]];
     float4 i_outline_color     [[attribute(7)]];
     float  i_outline_thickness [[attribute(8)]];
-    int    i_has_texture       [[attribute(9)]];
-    int    i_is_ui             [[attribute(10)]];
-    int    i_is_nonscale       [[attribute(11)]];
-    int    i_is_world          [[attribute(12)]];
+    int    i_flags             [[attribute(9)]];
 };
 
 struct VertexOut
@@ -42,24 +39,29 @@ struct VertexOut
     float4 color             [[flat]];
     float4 outline_color     [[flat]];
     float  outline_thickness [[flat]];
-    int    has_texture       [[flat]];
+    bool   has_texture       [[flat]];
 };
+
+constant constexpr int HAS_TEXTURE_FLAG = 1 << 0;
+constant constexpr int IS_UI_FLAG = 1 << 1;
+constant constexpr int IS_WORLD_FLAG = 1 << 2;
+constant constexpr int IS_NONSCALE_FLAG = 1 << 3;
 
 vertex VertexOut VS(
     VertexIn inp [[stage_in]],
     constant Constants& constants [[buffer(2)]]
 ) {
-    float qxx = inp.i_rotation.x * inp.i_rotation.x;
-    float qyy = inp.i_rotation.y * inp.i_rotation.y;
-    float qzz = inp.i_rotation.z * inp.i_rotation.z;
-    float qxz = inp.i_rotation.x * inp.i_rotation.z;
-    float qxy = inp.i_rotation.x * inp.i_rotation.y;
-    float qyz = inp.i_rotation.y * inp.i_rotation.z;
-    float qwx = inp.i_rotation.w * inp.i_rotation.x;
-    float qwy = inp.i_rotation.w * inp.i_rotation.y;
-    float qwz = inp.i_rotation.w * inp.i_rotation.z;
+    const float qxx = inp.i_rotation.x * inp.i_rotation.x;
+    const float qyy = inp.i_rotation.y * inp.i_rotation.y;
+    const float qzz = inp.i_rotation.z * inp.i_rotation.z;
+    const float qxz = inp.i_rotation.x * inp.i_rotation.z;
+    const float qxy = inp.i_rotation.x * inp.i_rotation.y;
+    const float qyz = inp.i_rotation.y * inp.i_rotation.z;
+    const float qwx = inp.i_rotation.w * inp.i_rotation.x;
+    const float qwy = inp.i_rotation.w * inp.i_rotation.y;
+    const float qwz = inp.i_rotation.w * inp.i_rotation.z;
 
-    float4x4 rotation_matrix = float4x4(
+    const float4x4 rotation_matrix = float4x4(
         float4(1.0 - 2.0 * (qyy + qzz), 2.0 * (qxy + qwz), 2.0 * (qxz - qwy), 0.0),
         float4(2.0 * (qxy - qwz), 1.0 - 2.0 * (qxx +  qzz), 2.0 * (qyz + qwx), 0.0),
         float4(2.0 * (qxz + qwy), 2.0 * (qyz - qwx), 1.0 - 2.0 * (qxx +  qyy), 0.0),
@@ -75,7 +77,7 @@ vertex VertexOut VS(
 
     transform = transform * rotation_matrix;
 
-    float2 offset = -inp.i_offset * inp.i_size;
+    const float2 offset = -inp.i_offset * inp.i_size;
 
     // translate
     transform[3] = transform[0] * offset[0] + transform[1] * offset[1] + transform[2] * 0.0 + transform[3];
@@ -84,9 +86,11 @@ vertex VertexOut VS(
     transform[0] = transform[0] * inp.i_size[0];
     transform[1] = transform[1] * inp.i_size[1];
 
-    const bool is_ui = inp.i_is_ui > 0;
-    const bool is_nonscale = inp.i_is_nonscale > 0;
-    const bool is_world = inp.i_is_world > 0;
+    const int flags = inp.i_flags;
+    const bool is_ui = (flags & IS_UI_FLAG) == IS_UI_FLAG;
+    const bool is_nonscale = (flags & IS_NONSCALE_FLAG) == IS_NONSCALE_FLAG;
+    const bool is_world = (flags & IS_WORLD_FLAG) == IS_WORLD_FLAG;
+    const bool has_texture = (flags & HAS_TEXTURE_FLAG) == HAS_TEXTURE_FLAG;
 
     const float4x4 mvp = is_ui ? constants.screen_projection * transform : is_nonscale ? constants.nonscale_view_projection * transform : constants.view_projection * transform;
     const float4 uv_offset_scale = inp.i_uv_offset_scale;
@@ -101,7 +105,7 @@ vertex VertexOut VS(
     outp.color = inp.i_color;
     outp.outline_color = inp.i_outline_color;
     outp.outline_thickness = inp.i_outline_thickness;
-    outp.has_texture = inp.i_has_texture;
+    outp.has_texture = has_texture;
 
     return outp;
 }

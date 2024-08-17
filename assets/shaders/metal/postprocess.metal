@@ -41,8 +41,8 @@ vertex VertexOut VS(
     VertexIn inp [[stage_in]],
     constant Constants& constants [[buffer(2)]]
 ) {
-    float2 world_pos = screen_to_world(constants.inv_view_proj, inp.position);
-    float2 light_uv = world_pos / inp.world_size;
+    const float2 world_pos = screen_to_world(constants.inv_view_proj, inp.position);
+    const float2 light_uv = world_pos / inp.world_size;
 
     VertexOut outp;
     outp.uv = inp.uv;
@@ -68,10 +68,10 @@ fragment float4 PS(
     texture2d<float> lightmap [[texture(7)]],
     sampler lightmap_sampler [[sampler(8)]]
 ) {
-    float4 light = float4(lightmap.sample(lightmap_sampler, inp.light_uv).rgb, 1.0);
+    const float4 light = float4(lightmap.sample(lightmap_sampler, inp.light_uv).rgb, 1.0);
 
-    float4 background = background_texture.sample(background_texture_sampler, inp.uv);
-    float4 world = world_texture.sample(world_texture_sampler, inp.uv) * light;
+    const float4 background = background_texture.sample(background_texture_sampler, inp.uv);
+    const float4 world = world_texture.sample(world_texture_sampler, inp.uv) * light;
 
     return blend(world, background);
 }

@@ -725,6 +725,11 @@ void RenderBatchSprite::render() {
 
         const float order = static_cast<float>(sprite_data.order);
 
+        int flags = 0;
+        flags |= sprite_data.is_nonscalable << SpriteFlags::Nonscale;
+        flags |= sprite_data.is_ui << SpriteFlags::UI;
+        flags |= (curr_texture_id >= 0) << SpriteFlags::HasTexture;
+
         m_buffer_ptr->position = glm::vec3(sprite_data.position, order);
         m_buffer_ptr->rotation = sprite_data.rotation;
         m_buffer_ptr->size = sprite_data.size;
@@ -733,10 +738,7 @@ void RenderBatchSprite::render() {
         m_buffer_ptr->color = sprite_data.color;
         m_buffer_ptr->outline_color = sprite_data.outline_color;
         m_buffer_ptr->outline_thickness = sprite_data.outline_thickness;
-        m_buffer_ptr->has_texture = curr_texture_id >= 0;
-        m_buffer_ptr->is_ui = sprite_data.is_ui;
-        m_buffer_ptr->is_nonscalable = sprite_data.is_nonscalable;
-        m_buffer_ptr->is_world = false;
+        m_buffer_ptr->flags = flags;
         m_buffer_ptr++;
 
         sprite_count += 1;
@@ -789,6 +791,10 @@ void RenderBatchSprite::render_world() {
         // The first three are reserved for background, walls and tiles
         const float order = static_cast<float>(3 + sprite_data.order);
 
+        int flags = 1 << SpriteFlags::World;
+        flags |= sprite_data.is_nonscalable << SpriteFlags::Nonscale;
+        flags |= (curr_texture_id >= 0) << SpriteFlags::HasTexture;
+
         m_world_buffer_ptr->position = glm::vec3(sprite_data.position, order);
         m_world_buffer_ptr->rotation = sprite_data.rotation;
         m_world_buffer_ptr->size = sprite_data.size;
@@ -797,10 +803,7 @@ void RenderBatchSprite::render_world() {
         m_world_buffer_ptr->color = sprite_data.color;
         m_world_buffer_ptr->outline_color = sprite_data.outline_color;
         m_world_buffer_ptr->outline_thickness = sprite_data.outline_thickness;
-        m_world_buffer_ptr->has_texture = curr_texture_id >= 0;
-        m_world_buffer_ptr->is_ui = sprite_data.is_ui;
-        m_world_buffer_ptr->is_nonscalable = sprite_data.is_nonscalable;
-        m_world_buffer_ptr->is_world = true;
+        m_world_buffer_ptr->flags = flags;
         m_world_buffer_ptr++;
 
         sprite_count += 1;
@@ -890,7 +893,7 @@ void RenderBatchGlyph::init() {
     const RenderBackend backend = Renderer::Backend();
     const auto& context = Renderer::Context();
 
-    m_buffer = new GlyphInstance[MAX_VERTICES];
+    m_buffer = new GlyphInstance[MAX_QUADS];
 
     const GlyphVertex vertices[] = {
         GlyphVertex(0.0f, 0.0f),

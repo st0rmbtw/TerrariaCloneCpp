@@ -65,31 +65,31 @@ kernel void CSComputeTransform(
     const device float*  scales     [[buffer(8)]],
     uint3                thread_id  [[thread_position_in_grid]]
 ) {
-    uint id = thread_id.y * 512 + thread_id.x;
+    const uint id = thread_id.y * 512 + thread_id.x;
 
-    float2 position = positions[id];
-    float4 rotation = rotations[id];
-    float scale = scales[id];
+    const float2 position = positions[id];
+    const float4 rotation = rotations[id];
+    const float scale = scales[id];
 
-    float qxx = rotation.x * rotation.x;
-    float qyy = rotation.y * rotation.y;
-    float qzz = rotation.z * rotation.z;
-    float qxz = rotation.x * rotation.z;
-    float qxy = rotation.x * rotation.y;
-    float qyz = rotation.y * rotation.z;
-    float qwx = rotation.w * rotation.x;
-    float qwy = rotation.w * rotation.y;
-    float qwz = rotation.w * rotation.z;
+    const float qxx = rotation.x * rotation.x;
+    const float qyy = rotation.y * rotation.y;
+    const float qzz = rotation.z * rotation.z;
+    const float qxz = rotation.x * rotation.z;
+    const float qxy = rotation.x * rotation.y;
+    const float qyz = rotation.y * rotation.z;
+    const float qwx = rotation.w * rotation.x;
+    const float qwy = rotation.w * rotation.y;
+    const float qwz = rotation.w * rotation.z;
 
-    float4x4 rotation_matrix = float4x4(
+    const float4x4 rotation_matrix = float4x4(
         float4(1.0 - 2.0 * (qyy + qzz), 2.0 * (qxy + qwz), 2.0 * (qxz - qwy), 0.0),
         float4(2.0 * (qxy - qwz), 1.0 - 2.0 * (qxx +  qzz), 2.0 * (qyz + qwx), 0.0),
         float4(2.0 * (qxz + qwy), 2.0 * (qyz - qwx), 1.0 - 2.0 * (qxx +  qyy), 0.0),
         float4(0.0, 0.0, 0.0, 1.0)
     );
 
-    float2 size = PARTICLE_SIZE * scale;
-    float2 offset = -0.5 * size;
+    const float2 size = PARTICLE_SIZE * scale;
+    const float2 offset = -0.5 * size;
 
     float4x4 transform = float4x4(
         float4(1.0,        0.0,        0.0, 0.0),
@@ -107,7 +107,7 @@ kernel void CSComputeTransform(
     transform[0] = transform[0] * size[0];
     transform[1] = transform[1] * size[1];
 
-    float4x4 mvp = constants.view_projection * transform;
+    const float4x4 mvp = constants.view_projection * transform;
 
     transforms[id * 4 + 0] = mvp[0];
     transforms[id * 4 + 1] = mvp[1];

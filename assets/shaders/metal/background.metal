@@ -46,9 +46,9 @@ vertex VertexOut VS(
     VertexIn inp [[stage_in]],
     constant Constants& constants [[buffer(2)]]
 ) {
-    float4x4 view_proj = inp.nonscale > 0 ? constants.nonscale_view_projection : constants.view_projection;
-    float4x4 proj_model = constants.nonscale_projection * constants.transform_matrix;
-    float2 offset = (proj_model * float4(constants.camera_position.x, constants.camera_position.y, 0.0, 1.0)).xy;
+    const float4x4 view_proj = inp.nonscale > 0 ? constants.nonscale_view_projection : constants.view_projection;
+    const float4x4 proj_model = constants.nonscale_projection * constants.transform_matrix;
+    const float2 offset = (proj_model * float4(constants.camera_position.x, constants.camera_position.y, 0.0, 1.0)).xy;
 
     VertexOut outp;
     outp.position = view_proj * float4(inp.position.x, inp.position.y, 0.0, 1.0);

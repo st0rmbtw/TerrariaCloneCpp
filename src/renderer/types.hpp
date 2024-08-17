@@ -23,10 +23,7 @@ struct SpriteInstance {
     glm::vec4 color;
     glm::vec4 outline_color;
     float outline_thickness;
-    int has_texture;
-    int is_ui;
-    int is_nonscalable;
-    int is_world;
+    int flags;
 };
 
 struct GlyphVertex {
