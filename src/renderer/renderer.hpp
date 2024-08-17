@@ -31,8 +31,6 @@ struct __attribute__((aligned(16))) ProjectionsUniform {
     float max_world_depth;
 };
 
-constexpr float MAX_Z = 1000.0f;
-
 namespace Renderer {
     bool InitEngine(RenderBackend backend);
     bool Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool vsync, bool fullscreen);
@@ -90,8 +88,9 @@ namespace Renderer {
     [[nodiscard]] const std::shared_ptr<CustomSurface>& Surface();
     [[nodiscard]] LLGL::Buffer* GlobalUniformBuffer();
     [[nodiscard]] RenderBackend Backend();
-    [[nodiscard]] uint32_t GetGlobalDepthIndex();
+    [[nodiscard]] uint32_t GetMainDepthIndex();
     [[nodiscard]] uint32_t GetWorldDepthIndex();
+    [[nodiscard]] uint32_t GetUiDepthIndex();
     [[nodiscard]] const LLGL::RenderPass* DefaultRenderPass();
     [[nodiscard]] LLGL::Buffer* ChunkVertexBuffer();
 };

@@ -82,7 +82,7 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
 }
 
 void ParticleManager::Render() {
-    const uint32_t depth = Renderer::GetGlobalDepthIndex();
+    const uint32_t depth = Renderer::GetMainDepthIndex();
 
     for (size_t i = 0; i < state.active_count; ++i) {
         glm::vec2 position;
