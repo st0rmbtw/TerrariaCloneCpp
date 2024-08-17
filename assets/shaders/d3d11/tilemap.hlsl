@@ -1,4 +1,4 @@
-cbuffer GlobalUniformBuffer : register( b1 )
+cbuffer GlobalUniformBuffer : register( b2 )
 {
     float4x4 u_screen_projection;
     float4x4 u_view_projection;
@@ -12,7 +12,7 @@ cbuffer GlobalUniformBuffer : register( b1 )
     float u_max_world_depth;
 };
 
-cbuffer DepthBuffer : register( b2 ) {
+cbuffer DepthBuffer : register( b3 ) {
     float u_tile_depth;
     float u_wall_depth;
 };
@@ -79,8 +79,8 @@ VSOutput VS(VSInput inp)
 	return output;
 }
 
-Texture2DArray TextureArray : register(t3);
-SamplerState Sampler : register(s4);
+Texture2DArray TextureArray : register(t4);
+SamplerState Sampler : register(s5);
 
 float4 PS(VSOutput inp) : SV_Target
 {

@@ -1,4 +1,4 @@
-cbuffer GlobalUniformBuffer : register( b1 )
+cbuffer GlobalUniformBuffer : register( b2 )
 {
     float4x4 u_screen_projection;
     float4x4 u_view_projection;
@@ -113,8 +113,8 @@ VSOutput VS(VSInput inp)
 	return outp;
 }
 
-Texture2D Texture : register(t2);
-SamplerState Sampler : register(s3);
+Texture2D Texture : register(t3);
+SamplerState Sampler : register(s4);
 
 float4 PS(VSOutput inp) : SV_Target
 {

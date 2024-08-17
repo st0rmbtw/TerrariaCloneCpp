@@ -1,19 +1,21 @@
-cbuffer GlobalUniformBuffer : register( b1 )
+cbuffer GlobalUniformBuffer : register( b2 )
 {
     float4x4 u_screen_projection;
     float4x4 u_view_projection;
     float4x4 u_nonscale_view_projection;
     float4x4 u_nonscale_projection;
     float4x4 u_transform_matrix;
+    float4x4 u_inv_view_proj;
     float2 u_camera_position;
     float2 u_window_size;
     float u_max_depth;
+    float u_max_world_depth;
 };
 
-cbuffer OrderBuffer : register( b2 ) {
-    float u_tile_order;
-    float u_wall_order;
-}
+cbuffer DepthBuffer : register( b3 ) {
+    float u_tile_depth;
+    float u_wall_depth;
+};
 
 struct VSInput
 {
@@ -44,19 +46,19 @@ VSOutput VS(VSInput inp)
     const uint tile_id = inp.i_tile_id;
     const uint tile_type = inp.i_tile_type;
 
-    float order = u_tile_order;
+    float order = u_tile_depth;
     float2 size = float2(TILE_SIZE, TILE_SIZE);
     float2 start_uv = inp.i_atlas_pos * (inp.tile_tex_size + inp.tile_padding);
     float2 tex_size = inp.tile_tex_size;
 
     if (tile_type == TILE_TYPE_WALL) {
-        order = u_wall_order;
+        order = u_wall_depth;
         size = float2(WALL_SIZE, WALL_SIZE);
         start_uv = inp.i_atlas_pos * (inp.wall_tex_size + inp.wall_padding);
         tex_size = inp.wall_tex_size;
     }
 
-    order /= u_max_depth;
+    order /= u_max_world_depth;
 
     const float4x4 transform = float4x4(
         float4(1.0, 0.0, 0.0, world_pos.x),
@@ -68,7 +70,7 @@ VSOutput VS(VSInput inp)
     const float4x4 mvp = mul(u_view_projection, transform);
     const float2 position = inp.i_position * 16.0 + inp.position * size;
 
-	VSOutput output;
+    VSOutput output;
     output.uv = start_uv + inp.position * tex_size;
     output.tile_id = inp.i_tile_id;
     output.position = mul(mvp, float4(position, 0.0, 1.0));
@@ -77,8 +79,8 @@ VSOutput VS(VSInput inp)
 	return output;
 }
 
-Texture2DArray TextureArray : register(t3);
-SamplerState Sampler : register(s4);
+Texture2DArray TextureArray : register(t4);
+SamplerState Sampler : register(s5);
 
 float4 PS(VSOutput inp) : SV_Target
 {
@@ -86,6 +88,6 @@ float4 PS(VSOutput inp) : SV_Target
 
     clip(color.a - 0.5);
 
-    return color;
+    return float4(color.rgb, 1.0f);
 };
 
