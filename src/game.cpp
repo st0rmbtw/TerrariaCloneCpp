@@ -16,6 +16,7 @@
 #include "player/player.hpp"
 #include "particles.hpp"
 #include "background.hpp"
+#include "defines.hpp"
 
 static struct GameState {
     Camera camera;
@@ -96,7 +97,7 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
 
     init_tile_rules();
 
-    g.camera.set_viewport({resolution.width, resolution.height});
+    g.camera.set_viewport({window_size.width, window_size.height});
     g.camera.set_zoom(1.0f);
 
     g.world.generate(200, 500, 0);
@@ -145,31 +146,33 @@ void Game::Run() {
     float fixed_timer = 0;
     
     while (Renderer::Surface()->ProcessEvents()) {
-        const double current_tick = glfwGetTime();
-        const double delta_time = (current_tick - prev_tick);
-        prev_tick = current_tick;
+        MACOS_AUTORELEASEPOOL_OPEN
+            const double current_tick = glfwGetTime();
+            const double delta_time = (current_tick - prev_tick);
+            prev_tick = current_tick;
 
-        const delta_time_t dt(delta_time);
-        Time::advance_by(dt);
+            const delta_time_t dt(delta_time);
+            Time::advance_by(dt);
 
-        pre_update();
+            pre_update();
 
-        fixed_timer += delta_time;
-        while (fixed_timer > Constants::FIXED_UPDATE_INTERVAL) {
-            Time::fixed_advance_by(delta_time_t(Constants::FIXED_UPDATE_INTERVAL));
-            fixed_update();
-            fixed_timer -= Constants::FIXED_UPDATE_INTERVAL;
-        }
+            fixed_timer += delta_time;
+            while (fixed_timer > Constants::FIXED_UPDATE_INTERVAL) {
+                Time::fixed_advance_by(delta_time_t(Constants::FIXED_UPDATE_INTERVAL));
+                fixed_update();
+                fixed_timer -= Constants::FIXED_UPDATE_INTERVAL;
+            }
 
-        update();
-        post_update();
-        
-        if (!g.minimized) {
-            render();
-            post_render();
-        }
+            update();
+            post_update();
+            
+            if (!g.minimized) {
+                render();
+                post_render();
+            }
 
-        Input::Clear();
+            Input::Clear();
+        MACOS_AUTORELEASEPOOL_CLOSE
     }
 }
 
@@ -375,7 +378,7 @@ static void handle_window_resize_events(GLFWwindow* window, int width, int heigh
     Renderer::SwapChain()->ResizeBuffers(new_size);
     Renderer::ResizeTextures(new_size);
 
-    g.camera.set_viewport({new_size.width, new_size.height});
+    g.camera.set_viewport({width, height});
     g.camera.update();
 
     render();

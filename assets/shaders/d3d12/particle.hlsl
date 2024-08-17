@@ -1,13 +1,15 @@
-cbuffer GlobalUniformBuffer : register( b1 )
+cbuffer GlobalUniformBuffer : register( b2 )
 {
     float4x4 u_screen_projection;
     float4x4 u_view_projection;
     float4x4 u_nonscale_view_projection;
     float4x4 u_nonscale_projection;
     float4x4 u_transform_matrix;
+    float4x4 u_inv_view_proj;
     float2 u_camera_position;
     float2 u_window_size;
     float u_max_depth;
+    float u_max_world_depth;
 };
 
 struct VSInput
@@ -28,10 +30,10 @@ struct VSOutput
 
 static const float2 PARTICLE_SIZE = float2(8.0, 8.0);
 
-RWBuffer<float4> transforms : register(u4);
-Buffer<float2> positions : register(t5);
-Buffer<float4> rotations : register(t6);
-Buffer<float> scales : register(t7);
+RWBuffer<float4> transforms : register(u5);
+Buffer<float2> positions : register(t6);
+Buffer<float4> rotations : register(t7);
+Buffer<float> scales : register(t8);
 
 VSOutput VS(VSInput inp)
 {
@@ -116,8 +118,8 @@ void CSComputeTransform(uint3 thread_id : SV_DispatchThreadID)
     transforms[id * 4 + 3] = mvp[3];
 }
 
-Texture2D Texture : register(t2);
-SamplerState Sampler : register(s3);
+Texture2D Texture : register(t3);
+SamplerState Sampler : register(s4);
 
 float4 PS(VSOutput inp) : SV_Target
 {

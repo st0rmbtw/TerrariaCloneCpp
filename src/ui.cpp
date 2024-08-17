@@ -159,9 +159,9 @@ void render_inventory(const Inventory& inventory) {
     auto offset = glm::vec2(0.0f, 18.0f);
     auto item_offset = glm::vec2(0);
 
-    const int cell_depth = Renderer::GetGlobalDepthIndex();
-    const int item_depth = Renderer::GetGlobalDepthIndex() + 1;
-    const int text_depth = Renderer::GetGlobalDepthIndex() + 2;
+    const int cell_depth = Renderer::GetUiDepthIndex();
+    const int item_depth = Renderer::GetUiDepthIndex() + 1;
+    const int text_depth = Renderer::GetUiDepthIndex() + 2;
 
     for (size_t x = 0; x < CELLS_IN_ROW; ++x) {
         TextureAsset texture;

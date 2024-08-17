@@ -14,8 +14,15 @@
 #include "../optional.hpp"
 
 constexpr size_t MAX_QUADS = 5000 / 2;
-constexpr size_t MAX_VERTICES = MAX_QUADS * 4;
-constexpr size_t MAX_INDICES = MAX_QUADS * 6;
+
+namespace SpriteFlags {
+    enum : uint8_t {
+        HasTexture = 0,
+        UI,
+        World,
+        Nonscale,
+    };
+};
 
 struct SpriteData {
     glm::vec2 position;

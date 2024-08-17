@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "../math/rect.hpp"
-#include "../common.h"
+#include "../assert.hpp"
 
 #include "texture.hpp"
 

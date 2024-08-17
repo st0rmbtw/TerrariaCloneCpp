@@ -11,6 +11,7 @@ constexpr uint32_t MAX_INDICES = MAX_QUADS * 6;
 constexpr uint32_t MAX_VERTICES = MAX_QUADS * 4;
 
 void BackgroundRenderer::init() {
+    const RenderBackend backend = Renderer::Backend();
     const auto& context = Renderer::Context();
     const auto* swap_chain = Renderer::SwapChain();
 
@@ -36,8 +37,6 @@ void BackgroundRenderer::init() {
     m_world_vertex_buffer = CreateVertexBuffer(MAX_VERTICES * sizeof(BackgroundVertex), Assets::GetVertexFormat(VertexFormatAsset::BackgroundVertex), "BackgroundRenderer VertexBuffer");
     m_index_buffer = CreateIndexBuffer(indices, LLGL::Format::R32UInt, "BackgroundRenderer IndexBuffer");
 
-    const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
-
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.bindings = {
         LLGL::BindingDescriptor(
@@ -45,10 +44,10 @@ void BackgroundRenderer::init() {
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(1)
+            LLGL::BindingSlot(2)
         ),
-        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(2)),
-        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(samplerBinding)),
+        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
+        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);

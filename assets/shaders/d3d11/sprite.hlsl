@@ -1,4 +1,4 @@
-cbuffer GlobalUniformBuffer : register( b1 )
+cbuffer GlobalUniformBuffer : register( b2 )
 {
     float4x4 u_screen_projection;
     float4x4 u_view_projection;
@@ -24,10 +24,7 @@ struct VSInput
     float4 i_color : I_Color;
     float4 i_outline_color : I_OutlineColor;
     float i_outline_thickness : I_OutlineThickness;
-    int i_has_texture : I_HasTexture;
-    int i_is_ui : I_IsUI;
-    int i_is_nonscale : I_IsNonScale;
-    int i_is_world : I_IsWorld;
+    int i_flags : I_Flags;
 };
 
 struct VSOutput
@@ -37,8 +34,13 @@ struct VSOutput
     nointerpolation float4 outline_color : OutlineColor;
     float2 uv : UV;
     nointerpolation float outline_thickness : OutlineThickness;
-    nointerpolation int has_texture : HasTexture;
+    nointerpolation bool has_texture : HasTexture;
 };
+
+static const int HAS_TEXTURE_FLAG = 1 << 0;
+static const int IS_UI_FLAG = 1 << 1;
+static const int IS_WORLD_FLAG = 1 << 2;
+static const int IS_NONSCALE_FLAG = 1 << 3;
 
 VSOutput VS(VSInput inp)
 {
@@ -87,9 +89,11 @@ VSOutput VS(VSInput inp)
     transform[2][1] = transform[2][1] * inp.i_size[1];
     transform[3][1] = transform[3][1] * inp.i_size[1];
 
-    const bool is_ui = inp.i_is_ui > 0;
-    const bool is_nonscale = inp.i_is_nonscale > 0;
-    const bool is_world = inp.i_is_world > 0;
+    const int flags = inp.i_flags;
+    const bool is_ui = (flags & IS_UI_FLAG) == IS_UI_FLAG;
+    const bool is_nonscale = (flags & IS_NONSCALE_FLAG) == IS_NONSCALE_FLAG;
+    const bool is_world = (flags & IS_WORLD_FLAG) == IS_WORLD_FLAG;
+    const bool has_texture = (flags & HAS_TEXTURE_FLAG) == HAS_TEXTURE_FLAG;
 
     const float4x4 mvp = is_ui ? mul(u_screen_projection, transform) : is_nonscale ? mul(u_nonscale_view_projection, transform) : mul(u_view_projection, transform);
     const float4 uv_offset_scale = inp.i_uv_offset_scale;
@@ -104,13 +108,13 @@ VSOutput VS(VSInput inp)
     outp.color = inp.i_color;
     outp.outline_color = inp.i_outline_color;
     outp.outline_thickness = inp.i_outline_thickness;
-    outp.has_texture = inp.i_has_texture;
+    outp.has_texture = has_texture;
 
 	return outp;
 }
 
-Texture2D Texture : register(t2);
-SamplerState Sampler : register(s3);
+Texture2D Texture : register(t3);
+SamplerState Sampler : register(s4);
 
 float4 PS(VSOutput inp) : SV_Target
 {

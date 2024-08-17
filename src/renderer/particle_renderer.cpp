@@ -20,6 +20,7 @@ inline constexpr size_t get_particle_index(Particle::Type type, uint8_t variant)
 }
 
 void ParticleRenderer::init() {
+    const RenderBackend backend = Renderer::Backend();
     const auto& context = Renderer::Context();
     const auto* swap_chain = Renderer::SwapChain();
 
@@ -94,25 +95,23 @@ void ParticleRenderer::init() {
         m_scale_buffer = context->CreateBuffer(bufferDesc);
     }
 
-    const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
-
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.bindings = {
         LLGL::BindingDescriptor(
             "GlobalUniformBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
-            LLGL::StageFlags::ComputeStage,
-            LLGL::BindingSlot(1)
+            LLGL::StageFlags::VertexStage,
+            LLGL::BindingSlot(2)
         ),
-        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(2)),
-        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(samplerBinding)),
+        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
+        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
         LLGL::BindingDescriptor(
             "TransformBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::Storage,
             LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(4)
+            LLGL::BindingSlot(5)
         ),
     };
 
@@ -159,35 +158,35 @@ void ParticleRenderer::init() {
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::ComputeStage,
-            LLGL::BindingSlot(1)
+            LLGL::BindingSlot(2)
         ),
         LLGL::BindingDescriptor(
             "TransformBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::Storage,
             LLGL::StageFlags::ComputeStage,
-            LLGL::BindingSlot(4)
+            LLGL::BindingSlot(5)
         ),
         LLGL::BindingDescriptor(
             "PositionBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::Sampled,
             LLGL::StageFlags::ComputeStage,
-            LLGL::BindingSlot(5)
+            LLGL::BindingSlot(6)
         ),
         LLGL::BindingDescriptor(
             "RotationBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::Sampled,
             LLGL::StageFlags::ComputeStage,
-            LLGL::BindingSlot(6)
+            LLGL::BindingSlot(7)
         ),
         LLGL::BindingDescriptor(
             "ScaleBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::Sampled,
             LLGL::StageFlags::ComputeStage,
-            LLGL::BindingSlot(7)
+            LLGL::BindingSlot(8)
         ),
     };
 
@@ -203,6 +202,8 @@ void ParticleRenderer::init() {
     if (const LLGL::Report* report = m_compute_pipeline->GetReport()) {
         if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
     }
+
+    m_is_metal = backend.IsMetal();
 }
 
 void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, int depth) {
@@ -261,10 +262,14 @@ void ParticleRenderer::compute() {
         commands->SetResource(3, *m_rotation_buffer);
         commands->SetResource(4, *m_scale_buffer);
 
-        // m_particles_count < 1_000_000, 1_000_000 / 64 = 15625 < 65535
-        const uint32_t x = (m_particle_count + 64 - 1) / 64;
-
-        commands->Dispatch(x, 1, 1);
+        if (m_is_metal) {
+            uint32_t y = (m_particle_count + 512 - 1) / 512;
+            commands->Dispatch(512, y, 1);
+        } else {
+            // m_particles_count < 1_000_000, 1_000_000 / 64 = 15625 < 65535
+            const uint32_t x = (m_particle_count + 64 - 1) / 64;
+            commands->Dispatch(x, 1, 1);
+        }
     }
     commands->PopDebugGroup();
 }

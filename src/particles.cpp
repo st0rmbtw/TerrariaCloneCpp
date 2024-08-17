@@ -43,7 +43,7 @@ void ParticleManager::Init() {
     state.rotation = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), sizeof(__m256));
     state.rotation_speed = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), sizeof(__m256));
     state.gravity = new bool[MAX_PARTICLES_COUNT];
-    state.active = new bool[MAX_PARTICLES_COUNT](false); // If it's not initilized with false, particles wouldn't spawn
+    state.active = new bool[MAX_PARTICLES_COUNT](); // If it's not initilized with false, particles wouldn't spawn
     state.type = new Particle::Type[MAX_PARTICLES_COUNT];
     state.variant = new uint8_t[MAX_PARTICLES_COUNT];
 }
@@ -82,7 +82,7 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
 }
 
 void ParticleManager::Render() {
-    const uint32_t depth = Renderer::GetGlobalDepthIndex();
+    const uint32_t depth = Renderer::GetMainDepthIndex();
 
     for (size_t i = 0; i < state.active_count; ++i) {
         glm::vec2 position;

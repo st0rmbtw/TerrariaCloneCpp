@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include "renderer/camera.h"
 #include "player/inventory.hpp"
 
@@ -32,10 +34,10 @@ public:
         Pressed = 1 << 1
     };
 
-    Element(UiElement element_type, int data, const math::Rect& rect) :
+    Element(UiElement element_type, int data, math::Rect rect) :
         m_data(data),
         m_element_type(element_type),
-        m_rect(rect) {}
+        m_rect(std::move(rect)) {}
 
     inline void press() noexcept { m_state = m_state | Pressed; }
     inline void hover() noexcept { m_state = m_state | Hovered; }

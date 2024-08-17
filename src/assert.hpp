@@ -1,5 +1,5 @@
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef TERRARIA_ASSERT_H
+#define TERRARIA_ASSERT_H
 
 #pragma once
 

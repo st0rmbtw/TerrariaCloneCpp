@@ -51,6 +51,7 @@ private:
     TextureAtlas m_atlas;
 
     uint32_t m_particle_count;
+    bool m_is_metal;
 };
 
 #endif

@@ -12,6 +12,7 @@
 
 #include "LLGL/CommandBufferFlags.h"
 #include "LLGL/PipelineStateFlags.h"
+#include "types.hpp"
 #include "utils.hpp"
 #include "batch.hpp"
 #include "world_renderer.hpp"
@@ -52,15 +53,14 @@ static struct RendererState {
     ParticleRenderer particle_renderer;
     RenderBackend backend;
     
-    uint32_t global_depth_index = 0;
+    uint32_t main_depth_index = 0;
     uint32_t world_depth_index = 0;
+    uint32_t ui_depth_index = 0;
 
     math::Rect ui_frustum;
     math::Rect nonscale_camera_frustum;
     math::Rect camera_frustum;
 } state;
-
-static constexpr uint32_t MAX_TEXTURES_COUNT = 32;
 
 const LLGL::RenderSystemPtr& Renderer::Context() { return state.context; }
 LLGL::SwapChain* Renderer::SwapChain() { return state.swap_chain; }
@@ -69,8 +69,9 @@ LLGL::CommandQueue* Renderer::CommandQueue() { return state.command_queue; }
 const std::shared_ptr<CustomSurface>& Renderer::Surface() { return state.surface; }
 LLGL::Buffer* Renderer::GlobalUniformBuffer() { return state.constant_buffer; }
 RenderBackend Renderer::Backend() { return state.backend; }
-uint32_t Renderer::GetGlobalDepthIndex() { return state.global_depth_index; };
+uint32_t Renderer::GetMainDepthIndex() { return state.main_depth_index; };
 uint32_t Renderer::GetWorldDepthIndex() { return state.world_depth_index; };
+uint32_t Renderer::GetUiDepthIndex() { return state.ui_depth_index; };
 const LLGL::RenderPass* Renderer::DefaultRenderPass() { return state.render_pass; };
 LLGL::Buffer* Renderer::ChunkVertexBuffer() { return state.chunk_vertex_buffer; }
 
@@ -153,6 +154,10 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
         render_pass_desc.depthAttachment.format = state.swap_chain->GetDepthStencilFormat();
         render_pass_desc.depthAttachment.loadOp = LLGL::AttachmentLoadOp::Load;
         render_pass_desc.depthAttachment.storeOp = LLGL::AttachmentStoreOp::Store;
+
+        render_pass_desc.stencilAttachment.format = state.swap_chain->GetDepthStencilFormat();
+        render_pass_desc.stencilAttachment.loadOp = LLGL::AttachmentLoadOp::Undefined;
+        render_pass_desc.stencilAttachment.storeOp = LLGL::AttachmentStoreOp::Undefined;
         state.render_pass = context->CreateRenderPass(render_pass_desc);
     }
     {
@@ -164,6 +169,10 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
         render_pass_desc.depthAttachment.format = state.swap_chain->GetDepthStencilFormat();
         render_pass_desc.depthAttachment.loadOp = LLGL::AttachmentLoadOp::Clear;
         render_pass_desc.depthAttachment.storeOp = LLGL::AttachmentStoreOp::Store;
+
+        render_pass_desc.stencilAttachment.format = state.swap_chain->GetDepthStencilFormat();
+        render_pass_desc.stencilAttachment.loadOp = LLGL::AttachmentLoadOp::Undefined;
+        render_pass_desc.stencilAttachment.storeOp = LLGL::AttachmentStoreOp::Undefined;
         state.clear_render_pass = context->CreateRenderPass(render_pass_desc);
     }
 
@@ -198,17 +207,17 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(1)
+            LLGL::BindingSlot(2)
         ),
 
-        LLGL::BindingDescriptor("u_background", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(2)),
-        LLGL::BindingDescriptor("u_background_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 2 : 3),
+        LLGL::BindingDescriptor("u_background", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
+        LLGL::BindingDescriptor("u_background_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 3 : 4),
 
-        LLGL::BindingDescriptor("u_world", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4)),
-        LLGL::BindingDescriptor("u_world_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 4 : 5),
+        LLGL::BindingDescriptor("u_world", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(5)),
+        LLGL::BindingDescriptor("u_world_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 5 : 6),
 
-        LLGL::BindingDescriptor("u_lightmap", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(6)),
-        LLGL::BindingDescriptor("u_lightmap_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 6 : 7),
+        LLGL::BindingDescriptor("u_lightmap", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(7)),
+        LLGL::BindingDescriptor("u_lightmap_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 7 : 8),
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
@@ -223,11 +232,6 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     pipelineDesc.indexFormat = LLGL::Format::Undefined;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.rasterizer.frontCCW = true;
-    pipelineDesc.depth = LLGL::DepthDescriptor {
-        .testEnabled = true,
-        .writeEnabled = true,
-        .compareOp = LLGL::CompareOp::GreaterEqual  
-    };
 
     state.postprocess_pipeline = context->CreatePipelineState(pipelineDesc);
 
@@ -238,6 +242,7 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
 void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
     const LLGL::RenderSystemPtr& context = state.context;
+    const auto* swap_chain = state.swap_chain;
 
     if (state.world_render_texture) context->Release(*state.world_render_texture);
     if (state.world_depth_texture) context->Release(*state.world_depth_texture);
@@ -253,12 +258,13 @@ void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
 
     LLGL::TextureDescriptor texture_desc;
     texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
+    texture_desc.format = swap_chain->GetColorFormat();
     texture_desc.miscFlags = 0;
     texture_desc.cpuAccessFlags = 0;
 
     LLGL::TextureDescriptor depth_texture_desc;
     depth_texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
-    depth_texture_desc.format = LLGL::Format::D32Float;
+    depth_texture_desc.format = swap_chain->GetDepthStencilFormat();
     depth_texture_desc.bindFlags = LLGL::BindFlags::DepthStencilAttachment;
     depth_texture_desc.miscFlags = 0;
     depth_texture_desc.cpuAccessFlags = 0;
@@ -276,6 +282,7 @@ void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
     LLGL::RenderTargetDescriptor background_target_desc;
     background_target_desc.resolution = resolution;
     background_target_desc.colorAttachments[0] = state.background_render_texture;
+    background_target_desc.depthStencilAttachment.format = swap_chain->GetDepthStencilFormat();
     state.background_render_target = context->CreateRenderTarget(background_target_desc);
 }
 
@@ -332,13 +339,14 @@ void Renderer::Begin(const Camera& camera) {
     state.ui_frustum = ui_frustum;
 
     commands->Begin();
-    commands->SetViewport(LLGL::Extent2D(camera.viewport().x, camera.viewport().y));
+    commands->SetViewport(swap_chain->GetResolution());
 
     state.sprite_batch.begin();
     state.glyph_batch.begin();
 
-    state.global_depth_index = 1;
+    state.main_depth_index = 0;
     state.world_depth_index = 0;
+    state.ui_depth_index = 0;
 }
 
 void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
@@ -355,9 +363,9 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
         .inv_view_proj_matrix = camera.get_inv_view_projection_matrix(),
         .camera_position = camera.position(),
         .window_size = camera.viewport(),
-        .max_depth = static_cast<float>(state.global_depth_index),
+        .max_depth = static_cast<float>(state.main_depth_index + state.ui_depth_index),
         // The first three are reserved for background, walls and tiles
-        .max_world_depth = static_cast<float>(3 + state.world_depth_index)
+        .max_world_depth = static_cast<float>(3 + state.world_depth_index),
     };
 
     commands->UpdateBuffer(*state.constant_buffer, 0, &projections_uniform, sizeof(projections_uniform));
@@ -396,9 +404,9 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
         commands->SetResource(6, Assets::GetSampler(TextureSampler::Nearest));
         commands->Draw(3, 0);
 
+        state.particle_renderer.render();
         state.sprite_batch.render();
         state.glyph_batch.render();
-        state.particle_renderer.render();
     commands->EndRenderPass();
 
     commands->End();
@@ -496,10 +504,19 @@ void Renderer::DrawText(const char* text, uint32_t length, float size, const glm
     float scale = size / font.font_size;
 
     uint32_t order = depth;
-    if (order != -1) {
-        state.global_depth_index = glm::max(state.global_depth_index, order + 1);
+    if (depth != -1) {
+        state.main_depth_index = glm::max(state.main_depth_index, order + 1);
     } else {
-        order = state.global_depth_index++;
+        order = state.main_depth_index++;
+    }
+
+    if (is_ui) {
+        order = depth;
+        if (depth != -1) {
+            state.ui_depth_index = glm::max(state.ui_depth_index, order + 1);
+        } else {
+            order = state.ui_depth_index++;
+        }
     }
 
     for (uint32_t i = 0; i < length; ++i) {
@@ -565,6 +582,7 @@ void Renderer::Terminate() {
 //
 
 void RenderBatchSprite::init() {
+    const RenderBackend backend = Renderer::Backend();
     const auto& context = Renderer::Context();
 
     m_buffer = new SpriteInstance[MAX_QUADS];
@@ -591,8 +609,6 @@ void RenderBatchSprite::init() {
         m_world_buffer_array = context->CreateBufferArray(2, buffers);
     }
 
-    const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
-
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.bindings = {
         LLGL::BindingDescriptor(
@@ -600,10 +616,10 @@ void RenderBatchSprite::init() {
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(1)
+            LLGL::BindingSlot(2)
         ),
-        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(2)),
-        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(samplerBinding)),
+        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
+        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
@@ -652,13 +668,22 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
     }
 
     std::vector<SpriteData>& sprites = layer == RenderLayer::World ? m_world_sprites : m_sprites;
-    uint32_t& depth_index = layer == RenderLayer::World ? state.world_depth_index : state.global_depth_index;
+    uint32_t& depth_index = layer == RenderLayer::World ? state.world_depth_index : state.main_depth_index;
 
     uint32_t order = depth;
-    if (order != -1) {
+    if (depth != -1) {
         depth_index = glm::max(depth_index, order + 1);
     } else {
         order = depth_index++;
+    }
+
+    if (is_ui) {
+        order = depth;
+        if (depth != -1) {
+            state.ui_depth_index = glm::max(state.ui_depth_index, order + 1);
+        } else {
+            order = state.ui_depth_index++;
+        }
     }
 
     sprites.push_back(SpriteData {
@@ -712,9 +737,14 @@ void RenderBatchSprite::render() {
             vertex_offset = total_sprite_count;
         }
 
-        const float order = static_cast<float>(sprite_data.order);
+        const uint32_t order = sprite_data.is_ui ? sprite_data.order + state.main_depth_index : sprite_data.order;
 
-        m_buffer_ptr->position = glm::vec3(sprite_data.position, order);
+        int flags = 0;
+        flags |= sprite_data.is_nonscalable << SpriteFlags::Nonscale;
+        flags |= sprite_data.is_ui << SpriteFlags::UI;
+        flags |= (curr_texture_id >= 0) << SpriteFlags::HasTexture;
+
+        m_buffer_ptr->position = glm::vec3(sprite_data.position, static_cast<float>(order));
         m_buffer_ptr->rotation = sprite_data.rotation;
         m_buffer_ptr->size = sprite_data.size;
         m_buffer_ptr->offset = sprite_data.offset;
@@ -722,10 +752,7 @@ void RenderBatchSprite::render() {
         m_buffer_ptr->color = sprite_data.color;
         m_buffer_ptr->outline_color = sprite_data.outline_color;
         m_buffer_ptr->outline_thickness = sprite_data.outline_thickness;
-        m_buffer_ptr->has_texture = curr_texture_id >= 0;
-        m_buffer_ptr->is_ui = sprite_data.is_ui;
-        m_buffer_ptr->is_nonscalable = sprite_data.is_nonscalable;
-        m_buffer_ptr->is_world = false;
+        m_buffer_ptr->flags = flags;
         m_buffer_ptr++;
 
         sprite_count += 1;
@@ -778,6 +805,10 @@ void RenderBatchSprite::render_world() {
         // The first three are reserved for background, walls and tiles
         const float order = static_cast<float>(3 + sprite_data.order);
 
+        int flags = 1 << SpriteFlags::World;
+        flags |= sprite_data.is_nonscalable << SpriteFlags::Nonscale;
+        flags |= (curr_texture_id >= 0) << SpriteFlags::HasTexture;
+
         m_world_buffer_ptr->position = glm::vec3(sprite_data.position, order);
         m_world_buffer_ptr->rotation = sprite_data.rotation;
         m_world_buffer_ptr->size = sprite_data.size;
@@ -786,10 +817,7 @@ void RenderBatchSprite::render_world() {
         m_world_buffer_ptr->color = sprite_data.color;
         m_world_buffer_ptr->outline_color = sprite_data.outline_color;
         m_world_buffer_ptr->outline_thickness = sprite_data.outline_thickness;
-        m_world_buffer_ptr->has_texture = curr_texture_id >= 0;
-        m_world_buffer_ptr->is_ui = sprite_data.is_ui;
-        m_world_buffer_ptr->is_nonscalable = sprite_data.is_nonscalable;
-        m_world_buffer_ptr->is_world = true;
+        m_world_buffer_ptr->flags = flags;
         m_world_buffer_ptr++;
 
         sprite_count += 1;
@@ -876,9 +904,10 @@ void RenderBatchSprite::terminate() {
 
 
 void RenderBatchGlyph::init() {
+    const RenderBackend backend = Renderer::Backend();
     const auto& context = Renderer::Context();
 
-    m_buffer = new GlyphInstance[MAX_VERTICES];
+    m_buffer = new GlyphInstance[MAX_QUADS];
 
     const GlyphVertex vertices[] = {
         GlyphVertex(0.0f, 0.0f),
@@ -893,8 +922,6 @@ void RenderBatchGlyph::init() {
     LLGL::Buffer* buffers[] = { m_vertex_buffer, m_instance_buffer };
     m_buffer_array = context->CreateBufferArray(2, buffers);
 
-    const uint32_t samplerBinding = Renderer::Backend().IsOpenGL() ? 2 : 3;
-
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.bindings = {
         LLGL::BindingDescriptor(
@@ -902,10 +929,10 @@ void RenderBatchGlyph::init() {
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(1)
+            LLGL::BindingSlot(2)
         ),
-        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(2)),
-        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(samplerBinding)),
+        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
+        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
@@ -992,10 +1019,10 @@ void RenderBatchGlyph::render() {
             vertex_offset = total_sprite_count;
         }
 
-        const float order = static_cast<float>(glyph_data.order);
+        const float order = glyph_data.is_ui ? glyph_data.order + state.main_depth_index : glyph_data.order;
 
         m_buffer_ptr->color = glyph_data.color;
-        m_buffer_ptr->pos = glm::vec3(glyph_data.pos, order);
+        m_buffer_ptr->pos = glm::vec3(glyph_data.pos, static_cast<float>(order));
         m_buffer_ptr->size = glyph_data.size;
         m_buffer_ptr->tex_size = glyph_data.tex_size;
         m_buffer_ptr->uv = glyph_data.tex_uv;

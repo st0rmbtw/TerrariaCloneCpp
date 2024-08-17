@@ -395,10 +395,7 @@ void Assets::InitVertexFormats() {
             {"i_color",              LLGL::Format::RGBA32Float, 6,  offsetof(SpriteInstance,color),             sizeof(SpriteInstance), 1, 1 },
             {"i_outline_color",      LLGL::Format::RGBA32Float, 7,  offsetof(SpriteInstance,outline_color),     sizeof(SpriteInstance), 1, 1 },
             {"i_outline_thickness",  LLGL::Format::R32Float,    8,  offsetof(SpriteInstance,outline_thickness), sizeof(SpriteInstance), 1, 1 },
-            {"i_has_texture",        LLGL::Format::R32SInt,     9,  offsetof(SpriteInstance,has_texture),       sizeof(SpriteInstance), 1, 1 },
-            {"i_is_ui",              LLGL::Format::R32SInt,     10, offsetof(SpriteInstance,is_ui),             sizeof(SpriteInstance), 1, 1 },
-            {"i_is_non_scale",       LLGL::Format::R32SInt,     11, offsetof(SpriteInstance,is_nonscalable),    sizeof(SpriteInstance), 1, 1 },
-            {"i_is_world",           LLGL::Format::R32SInt,     12, offsetof(SpriteInstance,is_world),          sizeof(SpriteInstance), 1, 1 }
+            {"i_flags",              LLGL::Format::R32SInt,     9,  offsetof(SpriteInstance,flags),             sizeof(SpriteInstance), 1, 1 },
         };
     } else if (backend.IsHLSL()) {
         sprite_instance_format.attributes = {
@@ -410,10 +407,7 @@ void Assets::InitVertexFormats() {
             {"I_Color",            LLGL::Format::RGBA32Float, 6,  offsetof(SpriteInstance,color),             sizeof(SpriteInstance), 1, 1 },
             {"I_OutlineColor",     LLGL::Format::RGBA32Float, 7,  offsetof(SpriteInstance,outline_color),     sizeof(SpriteInstance), 1, 1 },
             {"I_OutlineThickness", LLGL::Format::R32Float,    8,  offsetof(SpriteInstance,outline_thickness), sizeof(SpriteInstance), 1, 1 },
-            {"I_HasTexture",       LLGL::Format::R32SInt,     9,  offsetof(SpriteInstance,has_texture),       sizeof(SpriteInstance), 1, 1 },
-            {"I_IsUI",             LLGL::Format::R32SInt,     10, offsetof(SpriteInstance,is_ui),             sizeof(SpriteInstance), 1, 1 },
-            {"I_IsNonScale",       LLGL::Format::R32SInt,     11, offsetof(SpriteInstance,is_nonscalable),    sizeof(SpriteInstance), 1, 1 },
-            {"I_IsWorld",          LLGL::Format::R32SInt,     12, offsetof(SpriteInstance,is_world),          sizeof(SpriteInstance), 1, 1 }
+            {"I_Flags",            LLGL::Format::R32SInt,     9,  offsetof(SpriteInstance,flags),             sizeof(SpriteInstance), 1, 1 },
         };
     } else {
         sprite_instance_format.attributes = {
@@ -425,9 +419,7 @@ void Assets::InitVertexFormats() {
             {"i_color",              LLGL::Format::RGBA32Float, 6,  offsetof(SpriteInstance,color),             sizeof(SpriteInstance), 1, 1 },
             {"i_outline_color",      LLGL::Format::RGBA32Float, 7,  offsetof(SpriteInstance,outline_color),     sizeof(SpriteInstance), 1, 1 },
             {"i_outline_thickness",  LLGL::Format::R32Float,    8,  offsetof(SpriteInstance,outline_thickness), sizeof(SpriteInstance), 1, 1 },
-            {"i_has_texture",        LLGL::Format::R32SInt,     9,  offsetof(SpriteInstance,has_texture),       sizeof(SpriteInstance), 1, 1 },
-            {"i_is_ui",              LLGL::Format::R32SInt,     10, offsetof(SpriteInstance,is_ui),             sizeof(SpriteInstance), 1, 1 },
-            {"i_is_non_scale",       LLGL::Format::R32SInt,     11, offsetof(SpriteInstance,is_nonscalable),    sizeof(SpriteInstance), 1, 1 },
+            {"i_flags",              LLGL::Format::R32SInt,     9,  offsetof(SpriteInstance,flags),             sizeof(SpriteInstance), 1, 1 },
         };
     }
 
@@ -451,8 +443,8 @@ void Assets::InitVertexFormats() {
         tilemap_vertex_format.attributes = {
             {"position",      LLGL::Format::RG32Float, 0, 0, sizeof(ChunkVertex), 0, 0 },
             {"wall_tex_size", LLGL::Format::RG32Float, 1, offsetof(ChunkVertex,wall_tex_size), sizeof(ChunkVertex), 0, 0},
-            {"tile_tex_size", LLGL::Format::RG32Float, 3, offsetof(ChunkVertex,tile_tex_size), sizeof(ChunkVertex), 0, 0},
-            {"wall_padding",  LLGL::Format::RG32Float, 2, offsetof(ChunkVertex,wall_padding),  sizeof(ChunkVertex), 0, 0},
+            {"tile_tex_size", LLGL::Format::RG32Float, 2, offsetof(ChunkVertex,tile_tex_size), sizeof(ChunkVertex), 0, 0},
+            {"wall_padding",  LLGL::Format::RG32Float, 3, offsetof(ChunkVertex,wall_padding),  sizeof(ChunkVertex), 0, 0},
             {"tile_padding",  LLGL::Format::RG32Float, 4, offsetof(ChunkVertex,tile_padding),  sizeof(ChunkVertex), 0, 0}
         };
     }
@@ -589,7 +581,9 @@ void Assets::InitVertexFormats() {
         lightmap_vertex_format.AppendAttribute({ "UV",        LLGL::Format::RG32Float });
         lightmap_vertex_format.AppendAttribute({ "WorldSize", LLGL::Format::RG32Float });
     } else {
-        // TODO
+        lightmap_vertex_format.AppendAttribute({ "position",  LLGL::Format::RG32Float });
+        lightmap_vertex_format.AppendAttribute({ "uv",        LLGL::Format::RG32Float });
+        lightmap_vertex_format.AppendAttribute({ "world_size", LLGL::Format::RG32Float });
     }
 
     state.vertex_formats[VertexFormatAsset::SpriteVertex] = sprite_vertex_format;

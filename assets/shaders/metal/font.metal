@@ -9,6 +9,7 @@ struct Constants
     float4x4 nonscale_view_projection;
     float4x4 nonscale_projection;
     float4x4 transform_matrix;
+    float4x4 inv_view_proj;
     float2 camera_position;
     float2 window_size;
     float max_depth;
@@ -36,7 +37,7 @@ struct VertexOut
 
 vertex VertexOut VS(
     VertexIn inp [[stage_in]],
-    constant Constants& constants [[buffer(1)]]
+    constant Constants& constants [[buffer(2)]]
 ) {
     const float4x4 mvp = inp.i_is_ui > 0 ? constants.screen_projection : constants.view_projection;
 
@@ -54,8 +55,8 @@ vertex VertexOut VS(
 
 fragment float4 PS(
     VertexOut inp [[stage_in]],
-    texture2d<float> texture [[texture(2)]],
-    sampler texture_sampler [[sampler(3)]]
+    texture2d<float> texture [[texture(3)]],
+    sampler texture_sampler [[sampler(4)]]
 ) {
     const float4 color = float4(inp.color, texture.sample(texture_sampler, inp.uv).r);
 
