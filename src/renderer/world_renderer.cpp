@@ -87,7 +87,7 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
     commands->SetPipelineState(*m_pipeline);
 
     for (const glm::uvec2& pos : chunk_manager.visible_chunks()) {
-        const RenderChunk& chunk = chunk_manager.render_chunks().at(pos);
+        const RenderChunk& chunk = chunk_manager.render_chunks().find(pos)->second;
 
         if (!chunk.walls_empty()) {
             const Texture& t = Assets::GetTexture(TextureAsset::Walls);
