@@ -20,6 +20,7 @@ int main(int argc, char** argv) {
 
     for (int i = 1; i < argc; i++) {
         if (str_eq(argv[i], "--pause")) {
+            printf("Initialization is paused. Press any key to continue...\n");
             getchar();
         } else if (str_eq(argv[i], "--backend")) {
             if (i >= argc-1) {
