@@ -38,7 +38,6 @@ static struct RendererState {
     LLGL::RenderTarget* world_render_target = nullptr;
     LLGL::Texture* world_render_texture = nullptr;
     LLGL::Texture* world_depth_texture = nullptr;
-    LLGL::Texture* lightmap_texture = nullptr;
 
     LLGL::Texture* background_render_texture = nullptr;
     LLGL::RenderTarget* background_render_target = nullptr;
@@ -292,7 +291,6 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
 
     const auto& context = state.context;
 
-    if (state.lightmap_texture) context->Release(*state.lightmap_texture);
     if (state.fullscreen_triangle_vertex_buffer) context->Release(*state.fullscreen_triangle_vertex_buffer);
 
     const glm::vec2 world_size = glm::vec2(world.area.size()) * TILE_SIZE;
@@ -304,20 +302,7 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
     };
     state.fullscreen_triangle_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::PostProcessVertex));
 
-    LLGL::TextureDescriptor lightmap_texture_desc;
-    lightmap_texture_desc.type      = LLGL::TextureType::Texture2D;
-    lightmap_texture_desc.format    = LLGL::Format::RGBA8UNorm;
-    lightmap_texture_desc.extent    = LLGL::Extent3D(world.area.width() * SUBDIVISION, world.area.height() * SUBDIVISION, 1);
-    lightmap_texture_desc.miscFlags = 0;
-    lightmap_texture_desc.bindFlags = LLGL::BindFlags::Sampled;
-
-    LLGL::ImageView image_view;
-    image_view.format   = LLGL::ImageFormat::RGBA;
-    image_view.dataType = LLGL::DataType::UInt8;
-    image_view.data     = world.colors;
-    image_view.dataSize = world.area.width() * SUBDIVISION * world.area.height() * SUBDIVISION * 4;
-
-    state.lightmap_texture = context->CreateTexture(lightmap_texture_desc, &image_view);
+    state.world_renderer.init_lightmap_texture(world);
 }
 
 void Renderer::Begin(const Camera& camera) {
@@ -349,7 +334,7 @@ void Renderer::Begin(const Camera& camera) {
     state.ui_depth_index = 0;
 }
 
-void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
+void Renderer::Render(const Camera& camera, const World& world) {
     auto* const commands = Renderer::CommandBuffer();
     auto* const queue = state.command_queue;
     auto* const swap_chain = Renderer::SwapChain();
@@ -383,7 +368,7 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
 
     commands->BeginRenderPass(*state.world_render_target, state.clear_render_pass, 2, clear_value);
         state.background_renderer.render_world();
-        state.world_renderer.render(chunk_manager);
+        state.world_renderer.render(world);
         state.sprite_batch.render_world();
     commands->EndRenderPass();
 
@@ -400,7 +385,7 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
         commands->SetResource(3, *state.world_render_texture);
         commands->SetResource(4, Assets::GetSampler(TextureSampler::Nearest));
 
-        commands->SetResource(5, *state.lightmap_texture);
+        commands->SetResource(5, *state.world_renderer.lightmap_texture());
         commands->SetResource(6, Assets::GetSampler(TextureSampler::Nearest));
         commands->Draw(3, 0);
 

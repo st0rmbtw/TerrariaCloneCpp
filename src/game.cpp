@@ -277,7 +277,7 @@ void render() {
 
     UI::Render(g.camera, g.player.inventory());
 
-    Renderer::Render(g.camera, g.world.chunk_manager());
+    Renderer::Render(g.camera, g.world);
 }
 
 void post_render() {
