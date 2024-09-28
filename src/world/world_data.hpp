@@ -28,7 +28,7 @@ struct Color {
 struct WorldData {
     tl::optional<Block>* blocks;
     tl::optional<Wall>* walls;
-    Color* colors;
+    Color* lightmap;
     math::IRect area;
     math::IRect playable_area;
     Layers layers;
@@ -57,13 +57,13 @@ struct WorldData {
     tl::optional<Wall&> get_wall_mut(TilePos pos);
 
     [[nodiscard]]
-    inline glm::vec3 get_color(TilePos pos) const {
-        Color color = colors[pos.y * area.width() * Constants::SUBDIVISION + pos.x];
+    inline glm::vec3 lightmap_get_color(TilePos pos) const {
+        Color color = lightmap[pos.y * area.width() * Constants::SUBDIVISION + pos.x];
         return glm::vec3(static_cast<float>(color.r) / 255.0f, static_cast<float>(color.g) / 255.0f, static_cast<float>(color.b / 255.0f));
     }
 
-    inline void set_color(TilePos pos, glm::vec3 color) {
-        colors[pos.y * area.width() * Constants::SUBDIVISION + pos.x] = Color(color.r * 255.0f, color.g * 255.0f, color.b * 255.0f, 255.0f);
+    inline void lightmap_set_color(TilePos pos, glm::vec3 color) {
+        lightmap[pos.y * area.width() * Constants::SUBDIVISION + pos.x] = Color(color.r * 255.0f, color.g * 255.0f, color.b * 255.0f, 255.0f);
     }
 
     [[nodiscard]]
@@ -98,6 +98,10 @@ struct WorldData {
         if (block.is_none()) return false;
         return block.value() == block_type;
     }
+
+    void lightmap_blur_area(math::IRect area);
+    void lightmap_init_area(math::IRect area);
+    void lightmap_init_tile(TilePos pos);
 };
 
 #endif

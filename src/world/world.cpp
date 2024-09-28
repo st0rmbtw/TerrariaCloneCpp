@@ -17,10 +17,7 @@ void World::set_block(TilePos pos, const Block& block) {
     m_data.blocks[index] = block;
     m_changed = true;
 
-    // if (Renderer::state.tiles_texture != nullptr) {
-    //     const uint8_t pixel[] = {1};
-    //     Renderer::state.tiles_texture->set_pixel(index, pixel);
-    // }
+    m_data.lightmap_init_tile(pos);
 
     m_chunk_manager.set_blocks_changed(pos);
 
@@ -40,8 +37,8 @@ void World::set_block(TilePos pos, BlockType block_type) {
     
     m_changed = true;
 
-    // const uint8_t pixel = 1;
-    // Renderer::state.tiles_texture->set_pixel(index, &pixel);
+    m_data.lightmap_init_tile(pos);
+    m_data.lightmap_blur_area(math::IRect::from_center_half_size(glm::ivec2(pos.x, pos.y), glm::ivec2(16)));
 
     m_chunk_manager.set_blocks_changed(pos);
 }
@@ -60,8 +57,8 @@ void World::remove_block(TilePos pos) {
 
     reset_tiles(pos, *this);
 
-    // uint8_t pixel = m_data.wall_exists(pos) ? 2 : 0;
-    // Renderer::state.tiles_texture->set_pixel(index, &pixel);
+    m_data.lightmap_init_tile(pos);
+    m_data.lightmap_blur_area(math::IRect::from_center_half_size(glm::ivec2(pos.x, pos.y), glm::ivec2(16)));
 
     this->update_neighbors(pos);
 }
@@ -84,8 +81,7 @@ void World::set_wall(TilePos pos, WallType wall_type) {
 
     update_neighbors(pos);
 
-    // const uint8_t pixel = m_data.block_exists(pos) ? 1 : 2;
-    // Renderer::state.tiles_texture->set_pixel(index, &pixel);
+    m_data.lightmap_init_tile(pos);
 
     m_chunk_manager.set_walls_changed(pos);
 }
