@@ -323,21 +323,18 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
     state.nonscale_camera_frustum = nonscale_camera_frustum;
     state.ui_frustum = ui_frustum;
 
-    std::list<LightMapTask>::const_reverse_iterator it = world.lightmap_tasks.rbegin();
-
-    for (; it != world.lightmap_tasks.rend(); ++it) {
+    for (auto it = world.lightmap_tasks.cbegin(); it != world.lightmap_tasks.cend();) {
         const LightMapTask& task = *it;
         LightMapTaskResult result = task.result->load();
 
         if (result.is_complete) {
             state.world_renderer.update_lightmap_texture(world, result);
             delete[] result.data;
-            break;
+            it = world.lightmap_tasks.erase(it);
+            continue;
         }
-    }
 
-    for (; it != world.lightmap_tasks.rend();) {
-        world.lightmap_tasks.erase(std::next(it).base());
+        ++it;
     }
 
     commands->Begin();
