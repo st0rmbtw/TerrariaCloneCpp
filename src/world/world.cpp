@@ -85,7 +85,7 @@ void World::set_wall(TilePos pos, WallType wall_type) {
 }
 
 void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
-    m_data = world_generate(width, height, seed);
+    world_generate(m_data, width, height, seed);
 }
 
 void World::update(const Camera& camera) {

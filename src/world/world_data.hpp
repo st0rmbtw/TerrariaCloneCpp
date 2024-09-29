@@ -3,8 +3,6 @@
 
 #pragma once
 
-#include <list>
-
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
 #include "../types/tile_pos.hpp"
@@ -29,7 +27,7 @@ struct WorldData {
     math::IRect playable_area;
     Layers layers;
     glm::uvec2 spawn_point;
-    std::list<LightMapTask> lightmap_tasks;
+    std::vector<LightMapTask> lightmap_tasks;
 
     [[nodiscard]]
     inline size_t get_tile_index(TilePos pos) const {
@@ -96,6 +94,15 @@ struct WorldData {
         for (LightMapTask& task : lightmap_tasks) {
             if (task.t.joinable()) task.t.join();
         }
+    }
+
+    inline void destroy() {
+        delete[] blocks;
+        delete[] walls;
+    }
+
+    ~WorldData() {
+        destroy();
     }
 };
 

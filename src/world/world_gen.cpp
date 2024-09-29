@@ -561,10 +561,10 @@ static void world_generate_lightmap(WorldData& world) {
     world.lightmap_blur_area_sync(world.area);
 }
 
-WorldData world_generate(uint32_t width, uint32_t height, uint32_t seed) {
-    srand(seed);
+void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t seed) {
+    world.destroy();
 
-    WorldData world = {};
+    srand(seed);
 
     const math::IRect area = math::IRect::from_corners(glm::vec2(0), glm::ivec2(width, height) + glm::ivec2(16));
     const math::IRect playable_area = area.inset(-8);
@@ -613,6 +613,4 @@ WorldData world_generate(uint32_t width, uint32_t height, uint32_t seed) {
     world.spawn_point = world_get_spawn_point(world);
     
     srand(time(NULL));
-
-    return world;
 };

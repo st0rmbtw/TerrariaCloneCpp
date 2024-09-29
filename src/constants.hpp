@@ -29,7 +29,7 @@ namespace Constants {
         if constexpr (SUBDIVISION == 8) {
             return solid ? 0.86 : 0.975;
         } else if constexpr (SUBDIVISION == 4) {
-            return solid ? 0.78 : 0.91;
+            return solid ? 0.78 : 0.942;
         } else {
             return solid ? 0.56 : 0.91;
         }
@@ -39,9 +39,9 @@ namespace Constants {
         if constexpr (SUBDIVISION == 8) {
             return 16;
         } else if constexpr (SUBDIVISION == 4) {
-            return 10;
+            return 12;
         } else {
-            return 5;
+            return 8;
         }
     }
 };
