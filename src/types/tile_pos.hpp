@@ -67,6 +67,10 @@ struct TilePos {
     constexpr inline TilePos operator/(int d) const {
         return TilePos(x / d, y / d);
     }
+
+    constexpr inline TilePos operator+(TilePos rhs) const {
+        return TilePos(x + rhs.x, y + rhs.y);
+    }
 };
 
 #endif

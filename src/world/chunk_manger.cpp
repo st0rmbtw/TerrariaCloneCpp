@@ -1,16 +1,12 @@
 #include "chunk_manager.hpp"
 
+#include "utils.hpp"
+
 using Constants::TILE_SIZE;
+using Constants::RENDER_CHUNK_SIZE;
+using Constants::RENDER_CHUNK_SIZE_U;
 
-inline glm::uvec2 get_chunk_pos(TilePos tile_pos) {
-    return glm::uvec2(tile_pos.x, tile_pos.y) / RENDER_CHUNK_SIZE_U;
-}
-
-inline math::Rect get_camera_fov(const glm::vec2& camera_pos, const math::Rect& projection_area) {
-    return {camera_pos + projection_area.min, camera_pos + projection_area.max};
-}
-
-math::URect get_chunk_range(const math::Rect& camera_fov, const glm::uvec2& world_size, uint32_t expand = 0) {
+static math::URect get_chunk_range(const math::Rect& camera_fov, const glm::uvec2& world_size, uint32_t expand = 0) {
     uint32_t left = 0;
     uint32_t right = 0;
     uint32_t bottom = 0;
@@ -40,7 +36,7 @@ math::URect get_chunk_range(const math::Rect& camera_fov, const glm::uvec2& worl
 }
 
 void ChunkManager::manage_chunks(const WorldData& world, const Camera& camera) {
-    const math::Rect camera_fov = get_camera_fov(camera.position(), camera.get_projection_area());
+    const math::Rect camera_fov = utils::get_camera_fov(camera);
     const math::URect chunk_range = get_chunk_range(camera_fov, world.area.size(), 2);
     const math::URect render_chunk_range = get_chunk_range(camera_fov, world.area.size());
 
@@ -75,14 +71,14 @@ void ChunkManager::manage_chunks(const WorldData& world, const Camera& camera) {
 }
 
 void ChunkManager::set_blocks_changed(TilePos tile_pos) {
-    const glm::uvec2 chunk_pos = get_chunk_pos(tile_pos);
+    const glm::uvec2 chunk_pos = utils::get_chunk_pos(tile_pos);
     if (m_render_chunks.contains(chunk_pos)) {
         m_render_chunks.at(chunk_pos).blocks_dirty = true;
     }
 }
 
 void ChunkManager::set_walls_changed(TilePos tile_pos) {
-    const glm::uvec2 chunk_pos = get_chunk_pos(tile_pos);
+    const glm::uvec2 chunk_pos = utils::get_chunk_pos(tile_pos);
     if (m_render_chunks.contains(chunk_pos)) {
         m_render_chunks.at(chunk_pos).walls_dirty = true;
     }

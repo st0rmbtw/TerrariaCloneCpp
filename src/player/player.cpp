@@ -172,8 +172,8 @@ glm::vec2 Player::check_collisions(const World& world) {
 
     m_collisions = Collisions();
 
-    for (uint32_t y = top; y < bottom; ++y) {
-        for (uint32_t x = left; x < right; ++x) {
+    for (int y = top; y < bottom; ++y) {
+        for (int x = left; x < right; ++x) {
             const glm::vec2 tile_pos = glm::vec2(x * TILE_SIZE, y * TILE_SIZE);
             if (world.block_exists(TilePos(x, y))) {
                 

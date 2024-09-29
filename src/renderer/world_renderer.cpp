@@ -93,39 +93,42 @@ void WorldRenderer::init_lightmap_texture(const WorldData& world) {
     LLGL::TextureDescriptor lightmap_texture_desc;
     lightmap_texture_desc.type      = LLGL::TextureType::Texture2D;
     lightmap_texture_desc.format    = LLGL::Format::RGBA8UNorm;
-    lightmap_texture_desc.extent    = LLGL::Extent3D(world.area.width() * SUBDIVISION, world.area.height() * SUBDIVISION, 1);
+    lightmap_texture_desc.extent    = LLGL::Extent3D(world.lightmap.width, world.lightmap.height, 1);
     lightmap_texture_desc.miscFlags = 0;
     lightmap_texture_desc.bindFlags = LLGL::BindFlags::Sampled;
 
     LLGL::ImageView image_view;
     image_view.format   = LLGL::ImageFormat::RGBA;
     image_view.dataType = LLGL::DataType::UInt8;
-    image_view.data     = world.lightmap;
-    image_view.dataSize = world.area.width() * SUBDIVISION * world.area.height() * SUBDIVISION * 4;
+    image_view.data     = world.lightmap.data;
+    image_view.dataSize = world.lightmap.width * world.lightmap.height * 4;
 
     m_lightmap_texture = context->CreateTexture(lightmap_texture_desc, &image_view);
 }
 
-void WorldRenderer::render(const World& world) {
+void WorldRenderer::update_lightmap_texture(WorldData& world, LightMapTaskResult result) {
+    for (int y = 0; y < result.height; ++y) {
+        LLGL::ImageView image_view;
+        image_view.format   = LLGL::ImageFormat::RGBA;
+        image_view.dataType = LLGL::DataType::UInt8;
+        image_view.data     = &result.data[y * result.width];
+        image_view.dataSize = result.width * 1 * 4;
+
+        for (int x = 0; x < result.width; ++x) {
+            world.lightmap.data[(result.offset_y + y) * world.lightmap.width + (result.offset_x + x)] = result.data[y * result.width + x];
+        }
+
+        Renderer::Context()->WriteTexture(*m_lightmap_texture, LLGL::TextureRegion(LLGL::Offset3D(result.offset_x, result.offset_y + y, 0), LLGL::Extent3D(result.width, 1, 1)), image_view);
+    }
+}
+
+void WorldRenderer::render(const ChunkManager& chunk_manager) {
     auto* const commands = Renderer::CommandBuffer();
-
-    using Constants::SUBDIVISION;
-
-    const int width = world.area().width() * SUBDIVISION;
-    const int height = world.area().height() * SUBDIVISION;
-
-    LLGL::ImageView image_view;
-    image_view.format   = LLGL::ImageFormat::RGBA;
-    image_view.dataType = LLGL::DataType::UInt8;
-    image_view.data     = world.data().lightmap;
-    image_view.dataSize = width * height * 4;
-
-    Renderer::Context()->WriteTexture(*m_lightmap_texture, LLGL::TextureRegion(LLGL::Offset3D(), LLGL::Extent3D(width, height, 1)), image_view);
 
     commands->SetPipelineState(*m_pipeline);
 
-    for (const glm::uvec2& pos : world.chunk_manager().visible_chunks()) {
-        const RenderChunk& chunk = world.chunk_manager().render_chunks().find(pos)->second;
+    for (const glm::uvec2& pos : chunk_manager.visible_chunks()) {
+        const RenderChunk& chunk = chunk_manager.render_chunks().find(pos)->second;
 
         if (!chunk.walls_empty()) {
             const Texture& t = Assets::GetTexture(TextureAsset::Walls);

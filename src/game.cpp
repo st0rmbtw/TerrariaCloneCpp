@@ -180,15 +180,17 @@ void Game::Destroy() {
     if (Renderer::CommandQueue()) {
         Renderer::CommandQueue()->WaitIdle();
     }
+    
     if (Renderer::Context()) {
         g.world.chunk_manager().destroy();
-   
         Renderer::Terminate();
     }
 
     ParticleManager::Terminate();
 
     glfwTerminate();
+
+    g.world.data().lightmap_tasks_wait();
 }
 
 void pre_update() {
@@ -267,7 +269,7 @@ void post_update() {
 }
 
 void render() {
-    Renderer::Begin(g.camera);
+    Renderer::Begin(g.camera, g.world.data());
 
     Background::Render();
 
@@ -277,7 +279,7 @@ void render() {
 
     UI::Render(g.camera, g.player.inventory());
 
-    Renderer::Render(g.camera, g.world);
+    Renderer::Render(g.camera, g.world.chunk_manager());
 }
 
 void post_render() {
@@ -337,7 +339,7 @@ glm::vec2 camera_free() {
 }
 #endif
 
-static void handle_keyboard_events(GLFWwindow* window, int key, int scancode, int action, int mods) {
+static void handle_keyboard_events(GLFWwindow*, int key, int, int action, int) {
     if (action == GLFW_PRESS) {
         Input::Press(static_cast<Key>(key));
     } else if (action == GLFW_RELEASE) {
@@ -345,7 +347,7 @@ static void handle_keyboard_events(GLFWwindow* window, int key, int scancode, in
     }
 }
 
-static void handle_mouse_button_events(GLFWwindow* window, int button, int action, int mods) {
+static void handle_mouse_button_events(GLFWwindow*, int button, int action, int) {
     if (action == GLFW_PRESS) {
         Input::press(static_cast<MouseButton>(button));
     } else if (action == GLFW_RELEASE) {
@@ -353,15 +355,15 @@ static void handle_mouse_button_events(GLFWwindow* window, int button, int actio
     }
 }
 
-static void handle_mouse_scroll_events(GLFWwindow* window, double xoffset, double yoffset) {
+static void handle_mouse_scroll_events(GLFWwindow*, double, double yoffset) {
     Input::PushMouseScrollEvent(yoffset);
 }
 
-static void handle_cursor_pos_events(GLFWwindow* window, double xpos, double ypos) {
+static void handle_cursor_pos_events(GLFWwindow*, double xpos, double ypos) {
     Input::SetMouseScreenPosition(glm::vec2(xpos, ypos));
 }
 
-static void handle_window_resize_events(GLFWwindow* window, int width, int height) {
+static void handle_window_resize_events(GLFWwindow*, int width, int height) {
     if (width <= 0 || height <= 0) {
         g.minimized = true;
         return;
@@ -384,6 +386,6 @@ static void handle_window_resize_events(GLFWwindow* window, int width, int heigh
     render();
 }
 
-static void handle_window_iconify_callback(GLFWwindow* window, int iconified) {
+static void handle_window_iconify_callback(GLFWwindow*, int iconified) {
     g.minimized = iconified;
 }

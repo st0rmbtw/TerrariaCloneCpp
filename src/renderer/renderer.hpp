@@ -13,7 +13,8 @@
 #include "../assets.hpp"
 #include "../particles.hpp"
 
-#include "../world/world.hpp"
+#include "../world/world_data.hpp"
+#include "../world/chunk_manager.hpp"
 
 #include "custom_surface.hpp"
 #include "camera.h"
@@ -37,8 +38,8 @@ namespace Renderer {
     void InitWorldRenderer(const WorldData& world);
     void ResizeTextures(LLGL::Extent2D resolution);
 
-    void Begin(const Camera& camera);
-    void Render(const Camera& camera, const World& world);
+    void Begin(const Camera& camera, WorldData& world);
+    void Render(const Camera& camera, const ChunkManager& chunk_manager);
 
     void DrawSprite(const Sprite& sprite, RenderLayer render_layer = RenderLayer::Main, int depth = -1);
     inline void DrawSprite(const Sprite& sprite, int depth) {
@@ -66,10 +67,10 @@ namespace Renderer {
     }
 
     inline void DrawChar(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, int depth = -1) {
-        DrawText(&ch, 1, size, position, color, font, false);
+        DrawText(&ch, 1, size, position, color, font, false, depth);
     }
     inline void DrawCharUi(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, int depth = -1) {
-        DrawText(&ch, 1, size, position, color, font, true);
+        DrawText(&ch, 1, size, position, color, font, true, depth);
     }
 
     void DrawBackground(const BackgroundLayer& layer);

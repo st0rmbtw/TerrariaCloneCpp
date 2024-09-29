@@ -17,7 +17,7 @@ void World::set_block(TilePos pos, const Block& block) {
     m_data.blocks[index] = block;
     m_changed = true;
 
-    m_data.lightmap_init_tile(pos);
+    m_data.lightmap_update_area_async(math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()}));
 
     m_chunk_manager.set_blocks_changed(pos);
 
@@ -37,8 +37,7 @@ void World::set_block(TilePos pos, BlockType block_type) {
     
     m_changed = true;
 
-    m_data.lightmap_init_tile(pos);
-    m_data.lightmap_blur_area(math::IRect::from_center_half_size(glm::ivec2(pos.x, pos.y), glm::ivec2(16)));
+    m_data.lightmap_update_area_async(math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()}));
 
     m_chunk_manager.set_blocks_changed(pos);
 }
@@ -55,10 +54,9 @@ void World::remove_block(TilePos pos) {
     m_data.blocks[index] = tl::nullopt;
     m_changed = true;
 
-    reset_tiles(pos, *this);
+    m_data.lightmap_update_area_async(math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()}));
 
-    m_data.lightmap_init_tile(pos);
-    m_data.lightmap_blur_area(math::IRect::from_center_half_size(glm::ivec2(pos.x, pos.y), glm::ivec2(16)));
+    reset_tiles(pos, *this);
 
     this->update_neighbors(pos);
 }
@@ -79,9 +77,9 @@ void World::set_wall(TilePos pos, WallType wall_type) {
     m_data.walls[index] = Wall(wall_type);
     m_changed = true;
 
-    update_neighbors(pos);
+    m_data.lightmap_update_area_async(math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()}));
 
-    m_data.lightmap_init_tile(pos);
+    update_neighbors(pos);
 
     m_chunk_manager.set_walls_changed(pos);
 }
@@ -113,7 +111,6 @@ void World::update_tile_sprite_index(TilePos pos) {
 
     if (block.is_some()) {
         const Neighbors<const Block&> neighbors = this->get_block_neighbors(pos);
-        const TextureAtlasPos prev_atlas_pos = block->atlas_pos;
 
         update_block_sprite_index(block.get(), neighbors);
     
@@ -122,7 +119,6 @@ void World::update_tile_sprite_index(TilePos pos) {
 
     if (wall.is_some()) {
         const Neighbors<const Wall&> neighbors = this->get_wall_neighbors(pos);
-        const TextureAtlasPos prev_atlas_pos = wall->atlas_pos;
 
         update_wall_sprite_index(wall.get(), neighbors);
         
