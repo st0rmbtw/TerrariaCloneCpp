@@ -28,8 +28,8 @@ struct AssetTextureAtlas {
     glm::uvec2 offset = glm::uvec2(0);
 
     AssetTextureAtlas(uint32_t columns, uint32_t rows, glm::uvec2 tile_size, glm::uvec2 padding = glm::uvec2(0), glm::uvec2 offset = glm::uvec2(0)) :
-        columns(columns),
         rows(rows),
+        columns(columns),
         tile_size(tile_size),
         padding(padding),
         offset(offset) {}

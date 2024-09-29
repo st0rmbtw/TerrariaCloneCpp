@@ -9,6 +9,10 @@
 #define TILE_TYPE_BLOCK 0
 #define TILE_TYPE_WALL 1
 
+using Constants::SUBDIVISION;
+using Constants::RENDER_CHUNK_SIZE;
+using Constants::RENDER_CHUNK_SIZE_U;
+
 void RenderChunk::destroy() {
     if (block_instance_buffer) Renderer::Context()->Release(*block_instance_buffer);
     if (wall_instance_buffer) Renderer::Context()->Release(*wall_instance_buffer);
@@ -92,28 +96,30 @@ void RenderChunk::build_mesh(const WorldData& world) {
         }
     }
 
+    auto& context = Renderer::Context();
+
     if (!block_buffer_array) {
         const void* data = blocks_dirty && !blocks_empty() ? block_instance.data() : nullptr;
 
-        this->block_instance_buffer = Renderer::Context()->CreateBuffer(GetBufferDescriptor(), data);
+        this->block_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
 
         LLGL::Buffer* buffers[] = { Renderer::ChunkVertexBuffer(), block_instance_buffer };
 
-        this->block_buffer_array = Renderer::Context()->CreateBufferArray(2, buffers);
+        this->block_buffer_array = context->CreateBufferArray(2, buffers);
     } else if (blocks_dirty && !blocks_empty()) {
-        Renderer::Context()->WriteBuffer(*block_instance_buffer, 0, block_instance.data(), block_instance.size() * sizeof(ChunkInstance));
+        context->WriteBuffer(*block_instance_buffer, 0, block_instance.data(), block_instance.size() * sizeof(ChunkInstance));
     }
 
     if (!wall_instance_buffer) {
         const void* data = walls_dirty && !walls_empty() ? wall_instance.data() : nullptr;
 
-        this->wall_instance_buffer = Renderer::Context()->CreateBuffer(GetBufferDescriptor(), data);
+        this->wall_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
 
         LLGL::Buffer* buffers[] = { Renderer::ChunkVertexBuffer(), wall_instance_buffer };
 
-        this->wall_buffer_array = Renderer::Context()->CreateBufferArray(2, buffers);
+        this->wall_buffer_array = context->CreateBufferArray(2, buffers);
     } else if (walls_dirty && !walls_empty()) {
-        Renderer::Context()->WriteBuffer(*wall_instance_buffer, 0, wall_instance.data(), wall_instance.size() * sizeof(ChunkInstance));
+        context->WriteBuffer(*wall_instance_buffer, 0, wall_instance.data(), wall_instance.size() * sizeof(ChunkInstance));
     }
 
     this->blocks_dirty = false;

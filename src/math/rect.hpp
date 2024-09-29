@@ -36,6 +36,12 @@ public:
     rect(vec min, vec max) :
         min(std::move(min)),
         max(std::move(max)) {}
+
+    rect& operator=(const rect<T>& other) {
+        this->min = other.min;
+        this->max = other.max;
+        return *this;
+    }
     
     [[nodiscard]]
     inline constexpr static rect from_corners(vec p1, vec p2) noexcept {
@@ -116,6 +122,11 @@ public:
         );
     }
 
+    [[nodiscard]]
+    inline rect<T> inset(const T l) const noexcept {
+        return from_corners(this->min - l, this->max + l);
+    }
+
     rect<T> operator/(const rect<T> &rhs) const noexcept {
         return from_corners(this->min * rhs.min, this->max * rhs.max);
     }
@@ -162,6 +173,10 @@ public:
 
     rect<T> operator+(const vec& rhs) const noexcept {
         return from_corners(this->min + rhs, this->max + rhs);
+    }
+
+    bool operator==(const rect<T>& rhs) const noexcept {
+        return this->min == rhs.min && this->max == rhs.max; 
     }
 };
 

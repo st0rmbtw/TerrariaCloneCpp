@@ -305,7 +305,7 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
     state.world_renderer.init_lightmap_texture(world);
 }
 
-void Renderer::Begin(const Camera& camera) {
+void Renderer::Begin(const Camera& camera, WorldData& world) {
     auto* const commands = Renderer::CommandBuffer();
     auto* const swap_chain = Renderer::SwapChain();
 
@@ -323,6 +323,23 @@ void Renderer::Begin(const Camera& camera) {
     state.nonscale_camera_frustum = nonscale_camera_frustum;
     state.ui_frustum = ui_frustum;
 
+    std::list<LightMapTask>::const_reverse_iterator it = world.lightmap_tasks.rbegin();
+
+    for (; it != world.lightmap_tasks.rend(); ++it) {
+        const LightMapTask& task = *it;
+        LightMapTaskResult result = task.result->load();
+
+        if (result.is_complete) {
+            state.world_renderer.update_lightmap_texture(world, result);
+            delete[] result.data;
+            break;
+        }
+    }
+
+    for (; it != world.lightmap_tasks.rend();) {
+        world.lightmap_tasks.erase(std::next(it).base());
+    }
+
     commands->Begin();
     commands->SetViewport(swap_chain->GetResolution());
 
@@ -334,7 +351,7 @@ void Renderer::Begin(const Camera& camera) {
     state.ui_depth_index = 0;
 }
 
-void Renderer::Render(const Camera& camera, const World& world) {
+void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
     auto* const commands = Renderer::CommandBuffer();
     auto* const queue = state.command_queue;
     auto* const swap_chain = Renderer::SwapChain();
@@ -368,7 +385,7 @@ void Renderer::Render(const Camera& camera, const World& world) {
 
     commands->BeginRenderPass(*state.world_render_target, state.clear_render_pass, 2, clear_value);
         state.background_renderer.render_world();
-        state.world_renderer.render(world);
+        state.world_renderer.render(chunk_manager);
         state.sprite_batch.render_world();
     commands->EndRenderPass();
 

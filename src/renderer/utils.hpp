@@ -13,7 +13,7 @@ inline std::size_t GetArraySize(const Container& container)
 }
 
 template <typename T, std::size_t N>
-inline std::size_t GetArraySize(const T (&container)[N])
+inline std::size_t GetArraySize(const T (&)[N])
 {
     return (N * sizeof(T));
 }

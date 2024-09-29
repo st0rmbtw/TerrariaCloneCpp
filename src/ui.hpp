@@ -35,8 +35,8 @@ public:
     };
 
     Element(UiElement element_type, int data, math::Rect rect) :
-        m_data(data),
         m_element_type(element_type),
+        m_data(data),
         m_rect(std::move(rect)) {}
 
     inline void press() noexcept { m_state = m_state | Pressed; }

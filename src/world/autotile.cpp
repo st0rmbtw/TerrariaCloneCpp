@@ -16,8 +16,8 @@ static struct {
 
 TileRule::TileRule(const std::string& start, const std::string& end, uint32_t corner_exclusion_mask, uint32_t blend_exclusion_mask, uint32_t blend_inclusion_mask, uint32_t corner_inclusion_mask) :
     corner_exclusion_mask(corner_exclusion_mask),
-    blend_inclusion_mask(blend_inclusion_mask),
     blend_exclusion_mask(blend_exclusion_mask << 16),
+    blend_inclusion_mask(blend_inclusion_mask),
     corner_inclusion_mask(corner_inclusion_mask)
 {
     const int y1 = start[0] - 'A';
@@ -155,7 +155,7 @@ void init_tile_rules() {
 
     for (int i = 0; i < 16; i++) {
         state.grass_rules[i] = std::list<TileRule>(state.blend_rules[i]);
-        for (int j = 0; j < state.base_rules[i].size(); j++) {
+        for (size_t j = 0; j < state.base_rules[i].size(); j++) {
             state.blend_rules[i].push_back(list_at(state.base_rules[i], j));
         }
     }
