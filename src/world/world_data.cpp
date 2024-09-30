@@ -1,6 +1,6 @@
 #include "world_data.hpp"
+
 #include <cstring>
-#include <Windows.h>
 #include <memory>
 #include <thread>
 

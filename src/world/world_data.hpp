@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
 #include "../types/tile_pos.hpp"
