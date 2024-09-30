@@ -39,13 +39,14 @@ struct ShaderDef {
 
 int main(int argc, const char** argv) {
     if (argc == 0) {
-        printf("No input arguments given.\n");
-        return -1;
+        printf("No input arguments are given.\n");
+        return 0;
     }
 
     if (argc < 4) {
         printf("Usage: %s <SOURCE_DIRECTORY> <BUILD_DIRECTORY> <file>\n", argv[0]);
-        return -1;
+        printf("Not enough arguments.\n");
+        return 0;
     }
 
     const fs::path source_dir = argv[1];
@@ -68,14 +69,14 @@ int main(int argc, const char** argv) {
 #endif
 
     if (!fs::exists(executable)) {
-        printf("%s doesn't exist.\n", executable.string().c_str());
-        return -1;
+        printf("ERROR: %s doesn't exist.\n", executable.string().c_str());
+        return 0;
     }
 
     const fs::path dir = source_dir / "assets" / "shaders" / "vulkan";
     if (!fs::exists(dir)) {
-        printf("%s doesn't exist.\n", dir.string().c_str());
-        return -1;
+        printf("ERROR: %s doesn't exist.\n", dir.string().c_str());
+        return 0;
     }
 
     std::ifstream shader(file);

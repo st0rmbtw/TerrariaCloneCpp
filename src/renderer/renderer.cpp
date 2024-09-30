@@ -314,7 +314,7 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
     LLGL::ImageView image_view;
     image_view.format   = LLGL::ImageFormat::RGBA;
     image_view.dataType = LLGL::DataType::UInt8;
-    image_view.data     = world.colors;
+    image_view.data     = world.lightmap;
     image_view.dataSize = world.area.width() * SUBDIVISION * world.area.height() * SUBDIVISION * 4;
 
     state.lightmap_texture = context->CreateTexture(lightmap_texture_desc, &image_view);
