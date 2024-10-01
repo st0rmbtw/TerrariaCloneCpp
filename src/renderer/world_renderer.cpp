@@ -114,9 +114,7 @@ void WorldRenderer::update_lightmap_texture(WorldData& world, LightMapTaskResult
         image_view.data     = &result.data[y * result.width];
         image_view.dataSize = result.width * 1 * 4;
 
-        for (int x = 0; x < result.width; ++x) {
-            world.lightmap.data[(result.offset_y + y) * world.lightmap.width + (result.offset_x + x)] = result.data[y * result.width + x];
-        }
+        memcpy(&world.lightmap.data[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.data[y * result.width], result.width * sizeof(Color));
 
         Renderer::Context()->WriteTexture(*m_lightmap_texture, LLGL::TextureRegion(LLGL::Offset3D(result.offset_x, result.offset_y + y, 0), LLGL::Extent3D(result.width, 1, 1)), image_view);
     }
