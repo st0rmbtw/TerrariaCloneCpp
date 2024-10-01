@@ -4,6 +4,8 @@
 #include <memory>
 #include <thread>
 
+#include "../defines.hpp"
+
 using Constants::SUBDIVISION;
 
 tl::optional<const Block&> WorldData::get_block(TilePos pos) const {
@@ -114,16 +116,18 @@ static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, ma
     const int min_x = area.min.x * SUBDIVISION;
     const int max_x = area.max.x * SUBDIVISION;
 
+    #pragma omp parallel for collapse(2)
     for (int y = min_y; y < max_y; ++y) {
         for (int x = min_x; x < max_x; ++x) {
             const auto color_pos = TilePos(x, y);
+            const auto tile_pos = color_pos / SUBDIVISION;
 
             if (tile_offset.y * SUBDIVISION + y >= world.layers.underground * SUBDIVISION) {
                 lightmap.set_color(color_pos, glm::vec3(0.0f));
                 continue;
             }
 
-            if (world.block_exists(TilePos(tile_offset) + color_pos / SUBDIVISION) || world.wall_exists(TilePos(tile_offset) + color_pos / SUBDIVISION)) {
+            if (world.block_exists(tile_offset + tile_pos) || world.wall_exists(tile_offset + tile_pos)) {
                 lightmap.set_color(color_pos, glm::vec3(0.0f));
             } else {
                 lightmap.set_color(color_pos, glm::vec3(1.0f));
@@ -132,7 +136,7 @@ static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, ma
     }
 }
 
-static inline float get_decay(const WorldData& world, TilePos pos) {
+static FORCE_INLINE float get_decay(const WorldData& world, TilePos pos) {
     return Constants::LightDecay(world.block_exists(pos));
 }
 
@@ -160,7 +164,7 @@ static void blur(WorldData& world, LightMap& lightmap, TilePos pos, glm::vec3& p
     lightmap.set_color(pos, this_light);
     
     prev_light = prev_light * prev_decay;
-    prev_decay = get_decay(world, TilePos(tile_offset) + pos / SUBDIVISION);
+    prev_decay = get_decay(world, tile_offset + pos / SUBDIVISION);
 }
 
 static void internal_lightmap_blur_area(WorldData& world, LightMap& lightmap, math::IRect area, glm::ivec2 tile_offset = {0, 0}) {
@@ -253,19 +257,4 @@ void WorldData::lightmap_update_area_async(math::IRect area) {
 
 void WorldData::lightmap_init_area(math::IRect area) {
     internal_lightmap_init_area(*this, this->lightmap, area);
-}
-
-void WorldData::lightmap_init_tile(TilePos pos) {
-    const auto color_pos = TilePos(pos.x * SUBDIVISION, pos.y * SUBDIVISION);
-
-    if (pos.y >= layers.underground) {
-        lightmap.set_color(color_pos, glm::vec3(0.0f));
-        return;
-    }
-
-    if (block_exists(pos) || wall_exists(pos)) {
-        lightmap.set_color(color_pos, glm::vec3(0.0f));
-    } else {
-        lightmap.set_color(color_pos, glm::vec3(1.0f));
-    }
 }

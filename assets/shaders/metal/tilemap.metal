@@ -33,8 +33,7 @@ struct VertexIn
     float2 i_position    [[attribute(5)]];
     float2 i_atlas_pos   [[attribute(6)]];
     float2 i_world_pos   [[attribute(7)]];
-    uint   i_tile_id     [[attribute(8)]];
-    uint   i_tile_type   [[attribute(9)]];
+    uint   i_tile_data   [[attribute(8)]];
 };
 
 struct VertexOut
@@ -52,7 +51,12 @@ vertex VertexOut VS(
     constant Depth& depth [[buffer(3)]]
 ) {
     const float2 world_pos = inp.i_world_pos;
-    const uint tile_type = inp.i_tile_type;
+    const uint tile_data = inp.i_tile_data;
+
+    // Extract last 6 bits
+    const uint tile_type = tile_data & 0x3f;
+    // Extract other 10 bits
+    const uint tile_id = (tile_data >> 6) & 0x3ff;
 
     float order = depth.tile_depth;
     float2 size = float2(TILE_SIZE, TILE_SIZE);
@@ -82,7 +86,7 @@ vertex VertexOut VS(
     output.position = mvp * float4(position, 0.0, 1.0);
     output.position.z = order;
     output.uv = start_uv + inp.position * tex_size;
-    output.tile_id = inp.i_tile_id;
+    output.tile_id = tile_id;
 
 	return output;
 }

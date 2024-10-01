@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <glm/glm.hpp>
 #include "../constants.hpp"
+#include "../defines.hpp"
 
 enum class TileOffset: uint8_t {
     Top,
@@ -72,5 +73,13 @@ struct TilePos {
         return TilePos(x + rhs.x, y + rhs.y);
     }
 };
+
+constexpr FORCE_INLINE TilePos operator+(const TilePos& lhs, const glm::ivec2& rhs) {
+    return TilePos(lhs.x + rhs.x, lhs.y + rhs.y);
+}
+
+constexpr FORCE_INLINE TilePos operator+(const glm::ivec2& lhs, const TilePos& rhs) {
+    return TilePos(lhs.x + rhs.x, lhs.y + rhs.y);
+}
 
 #endif

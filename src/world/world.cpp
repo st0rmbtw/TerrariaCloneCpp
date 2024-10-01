@@ -17,7 +17,9 @@ void World::set_block(TilePos pos, const Block& block) {
     m_data.blocks[index] = block;
     m_changed = true;
 
-    m_data.lightmap_update_area_async(math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()}));
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+        .clamp(m_data.area.min, m_data.area.max);
+    m_data.lightmap_update_area_async(light_area);
 
     m_chunk_manager.set_blocks_changed(pos);
 
@@ -37,7 +39,9 @@ void World::set_block(TilePos pos, BlockType block_type) {
     
     m_changed = true;
 
-    m_data.lightmap_update_area_async(math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()}));
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+        .clamp(m_data.area.min, m_data.area.max);
+    m_data.lightmap_update_area_async(light_area);
 
     m_chunk_manager.set_blocks_changed(pos);
 }
@@ -54,7 +58,9 @@ void World::remove_block(TilePos pos) {
     m_data.blocks[index] = tl::nullopt;
     m_changed = true;
 
-    m_data.lightmap_update_area_async(math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()}));
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+        .clamp(m_data.area.min, m_data.area.max);
+    m_data.lightmap_update_area_async(light_area);
 
     reset_tiles(pos, *this);
 
@@ -77,7 +83,9 @@ void World::set_wall(TilePos pos, WallType wall_type) {
     m_data.walls[index] = Wall(wall_type);
     m_changed = true;
 
-    m_data.lightmap_update_area_async(math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()}));
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+        .clamp(m_data.area.min, m_data.area.max);
+    m_data.lightmap_update_area_async(light_area);
 
     update_neighbors(pos);
 

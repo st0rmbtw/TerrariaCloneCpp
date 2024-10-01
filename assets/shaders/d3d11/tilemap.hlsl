@@ -28,8 +28,7 @@ struct VSInput
     float2 i_position: I_Position;
     float2 i_atlas_pos : I_AtlasPos;
     float2 i_world_pos: I_WorldPos;
-    nointerpolation uint i_tile_id: I_TileId;
-    nointerpolation uint i_tile_type: I_TileType;
+    nointerpolation uint i_tile_data: I_TileData;
 };
 
 struct VSOutput {
@@ -43,8 +42,12 @@ static const uint TILE_TYPE_WALL = 1u;
 VSOutput VS(VSInput inp)
 {
     const float2 world_pos = inp.i_world_pos;
-    const uint tile_id = inp.i_tile_id;
-    const uint tile_type = inp.i_tile_type;
+    const uint tile_data = inp.i_tile_data;
+
+    // Extract last 6 bits
+    const uint tile_type = tile_data & 0x3f;
+    // Extract other 10 bits
+    const uint tile_id = (tile_data >> 6) & 0x3ff;
 
     float order = u_tile_depth;
     float2 size = float2(TILE_SIZE, TILE_SIZE);
@@ -72,7 +75,7 @@ VSOutput VS(VSInput inp)
 
     VSOutput output;
     output.uv = start_uv + inp.position * tex_size;
-    output.tile_id = inp.i_tile_id;
+    output.tile_id = tile_id;
     output.position = mul(mvp, float4(position, 0.0, 1.0));
     output.position.z = order;
 

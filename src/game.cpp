@@ -360,6 +360,11 @@ static void handle_mouse_scroll_events(GLFWwindow*, double, double yoffset) {
 }
 
 static void handle_cursor_pos_events(GLFWwindow*, double xpos, double ypos) {
+    const glm::uvec2 window_size = g.camera.viewport();
+
+    xpos = std::min(std::max(xpos, 0.0), static_cast<double>(window_size.x));
+    ypos = std::min(std::max(ypos, 0.0), static_cast<double>(window_size.y));
+
     Input::SetMouseScreenPosition(glm::vec2(xpos, ypos));
 }
 

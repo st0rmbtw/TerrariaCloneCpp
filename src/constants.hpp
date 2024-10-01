@@ -23,7 +23,7 @@ namespace Constants {
 
     constexpr float RENDER_CHUNK_SIZE = 50.0f;
     constexpr uint32_t RENDER_CHUNK_SIZE_U = 50u;
-    constexpr int SUBDIVISION = 4;
+    constexpr int SUBDIVISION = 8;
     
     constexpr float LightDecay(bool solid) {
         if constexpr (SUBDIVISION == 8) {

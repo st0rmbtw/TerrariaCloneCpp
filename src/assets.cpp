@@ -183,14 +183,14 @@ static struct AssetsState {
     uint32_t texture_index = 0;
 } state;
 
-Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data, bool generate_mip_maps = false);
-Texture create_texture_array(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler, const uint8_t* data, size_t data_size, bool generate_mip_maps = false);
-LLGL::Shader* load_shader(ShaderType shader_type, const std::string& name, const std::vector<ShaderDef>& shader_defs, const std::vector<LLGL::VertexAttribute>& vertex_attributes = {});
-LLGL::Shader* load_compute_shader(const std::string& name, const std::string& func_name, const std::vector<ShaderDef>& shader_defs);
-bool load_font(FT_Library ft, const std::string& path, Font& font);
+static Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data, bool generate_mip_maps = false);
+static Texture create_texture_array(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler, const uint8_t* data, size_t data_size, bool generate_mip_maps = false);
+static LLGL::Shader* load_shader(ShaderType shader_type, const std::string& name, const std::vector<ShaderDef>& shader_defs, const std::vector<LLGL::VertexAttribute>& vertex_attributes = {});
+static LLGL::Shader* load_compute_shader(const std::string& name, const std::string& func_name, const std::vector<ShaderDef>& shader_defs);
+static bool load_font(FT_Library ft, const std::string& path, Font& font);
 
 template <size_t T>
-Texture load_texture_array(const std::array<std::pair<uint16_t, std::string>, T>& assets, int sampler, bool generate_mip_maps = false);
+static Texture load_texture_array(const std::array<std::pair<uint16_t, std::string>, T>& assets, int sampler, bool generate_mip_maps = false);
 
 bool Assets::Load() {
     const uint8_t data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
@@ -454,24 +454,21 @@ void Assets::InitVertexFormats() {
             {"i_position",  LLGL::Format::RG32Float,   5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
             {"i_atlas_pos", LLGL::Format::RG32Float,   6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
             {"i_world_pos", LLGL::Format::RG32Float,   7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
-            {"i_tile_id",   LLGL::Format::R32UInt,     8, offsetof(ChunkInstance,tile_id),   sizeof(ChunkInstance), 1, 1},
-            {"i_tile_type", LLGL::Format::R32UInt,     9, offsetof(ChunkInstance,tile_type), sizeof(ChunkInstance), 1, 1}
+            {"i_tile_data",   LLGL::Format::R32UInt,   8, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
         };
     } else if (backend.IsHLSL()) {
         tilemap_instance_format.attributes = {
             {"I_Position",  LLGL::Format::RG32Float,   5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
             {"I_AtlasPos",  LLGL::Format::RG32Float,   6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
             {"I_WorldPos",  LLGL::Format::RG32Float,   7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
-            {"I_TileId",    LLGL::Format::R32UInt,     8, offsetof(ChunkInstance,tile_id),   sizeof(ChunkInstance), 1, 1},
-            {"I_TileType",  LLGL::Format::R32UInt,     9, offsetof(ChunkInstance,tile_type), sizeof(ChunkInstance), 1, 1}
+            {"I_TileData",  LLGL::Format::R32UInt,     8, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
         };
     } else {
         tilemap_instance_format.attributes = {
             {"i_position",   LLGL::Format::RG32Float,   5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
             {"i_atlas_pos",  LLGL::Format::RG32Float,   6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
             {"i_world_pos",  LLGL::Format::RG32Float,   7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
-            {"i_tile_id",    LLGL::Format::R32UInt,     8, offsetof(ChunkInstance,tile_id),   sizeof(ChunkInstance), 1, 1},
-            {"i_tile_type",  LLGL::Format::R32UInt,     9, offsetof(ChunkInstance,tile_type), sizeof(ChunkInstance), 1, 1}
+            {"i_tile_data",  LLGL::Format::R32UInt,     8, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
         };
     }
 
