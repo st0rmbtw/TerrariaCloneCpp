@@ -49,6 +49,7 @@ static void handle_window_iconify_callback(GLFWwindow* window, int iconified);
 GLFWwindow* create_window(LLGL::Extent2D size, bool fullscreen) {
     glfwWindowHint(GLFW_FOCUSED, 1);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
     GLFWmonitor* primary_monitor = fullscreen ? glfwGetPrimaryMonitor() : nullptr;
 
@@ -97,18 +98,7 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
 
     init_tile_rules();
 
-    g.camera.set_viewport({window_size.width, window_size.height});
-    g.camera.set_zoom(1.0f);
-
-    g.world.generate(200, 500, 0);
-
     const std::vector<ShaderDef> shader_defs = {
-        // ShaderDef("DEF_SUBDIVISION", std::to_string(config::SUBDIVISION)),
-        ShaderDef("WORLD_WIDTH", std::to_string(g.world.area().width())),
-        ShaderDef("WORLD_HEIGHT", std::to_string(g.world.area().height())),
-        ShaderDef("CHUNK_WIDTH", std::to_string(Constants::RENDER_CHUNK_SIZE_U)),
-        ShaderDef("CHUNK_HEIGHT", std::to_string(Constants::RENDER_CHUNK_SIZE_U)),
-
         ShaderDef("TILE_SIZE", std::to_string(Constants::TILE_SIZE)),
         ShaderDef("WALL_SIZE", std::to_string(Constants::WALL_SIZE)),
     };
@@ -122,11 +112,16 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     
     if (!Renderer::Init(window, resolution, config.vsync, config.fullscreen)) return false;
 
+    g.world.generate(200, 500, 0);
+
     Renderer::InitWorldRenderer(g.world.data());
 
     ParticleManager::Init();
     UI::Init();
     Background::SetupWorldBackground(g.world);
+
+    g.camera.set_viewport({window_size.width, window_size.height});
+    g.camera.set_zoom(1.0f);
 
     g.player.init();
     g.player.inventory().set_item(0, ITEM_COPPER_AXE);
@@ -136,6 +131,8 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     g.player.inventory().set_item(4, ITEM_STONE_BLOCK.with_max_stack());
     g.player.inventory().set_item(5, ITEM_WOOD_BLOCK.with_max_stack());
     g.player.set_position(g.world, glm::vec2(g.world.spawn_point()) * Constants::TILE_SIZE);
+
+    glfwShowWindow(window);
 
     return true;
 }

@@ -25,7 +25,6 @@ static struct RendererState {
     LLGL::CommandBuffer* command_buffer = nullptr;
     LLGL::CommandQueue* command_queue = nullptr;
     std::shared_ptr<CustomSurface> surface = nullptr;
-    LLGL::RenderingLimits limits;
 #if DEBUG
     LLGL::RenderingDebugger* debugger = nullptr;
 #endif
@@ -107,6 +106,18 @@ bool Renderer::InitEngine(RenderBackend backend) {
         return false;
     }
 
+    const auto& info = state.context->GetRendererInfo();
+
+    LOG_INFO("Renderer:             %s", info.rendererName.c_str());
+    LOG_INFO("Device:               %s", info.deviceName.c_str());
+    LOG_INFO("Vendor:               %s", info.vendorName.c_str());
+    LOG_INFO("Shading Language:     %s", info.shadingLanguageName.c_str());
+
+    LOG_INFO("Extensions:");
+    for (const std::string& extension : info.extensionNames) {
+        LOG_INFO("  %s", extension.c_str());
+    }
+
     return true;
 }
 
@@ -122,22 +133,6 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
     state.swap_chain = context->CreateSwapChain(swapChainDesc, state.surface);
     state.swap_chain->SetVsyncInterval(vsync);
-
-    const auto& info = context->GetRendererInfo();
-
-    LOG_INFO("Renderer:             %s", info.rendererName.c_str());
-    LOG_INFO("Device:               %s", info.deviceName.c_str());
-    LOG_INFO("Vendor:               %s", info.vendorName.c_str());
-    LOG_INFO("Shading Language:     %s", info.shadingLanguageName.c_str());
-    LOG_INFO("Swap Chain Format:    %s", LLGL::ToString(state.swap_chain->GetColorFormat()));
-    LOG_INFO("Depth/Stencil Format: %s", LLGL::ToString(state.swap_chain->GetDepthStencilFormat()));
-
-    LOG_INFO("Extensions:");
-    for (const std::string& extension : info.extensionNames) {
-        LOG_INFO("  %s", extension.c_str());
-    }
-
-    state.limits = context->GetRenderingCaps().limits;
 
     state.command_buffer = context->CreateCommandBuffer();
     state.command_queue = context->GetCommandQueue();
