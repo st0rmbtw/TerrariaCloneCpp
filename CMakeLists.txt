@@ -93,7 +93,7 @@ add_executable(${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME} PRIVATE ${SRC})
 
-target_compile_options(${PROJECT_NAME} PRIVATE "-Wall" "-Wextra" "-pedantic" "-Wno-gnu-zero-variadic-macro-arguments")
+target_compile_options(${PROJECT_NAME} PRIVATE "-Wall" "-Wextra" "-Wno-gnu-zero-variadic-macro-arguments")
 
 if(RELEASE_BUILD)
     target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG=0)
