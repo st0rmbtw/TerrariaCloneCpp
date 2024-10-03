@@ -5,6 +5,7 @@
 #include <thread>
 
 #include "../defines.hpp"
+#include "lightmap.hpp"
 
 using Constants::SUBDIVISION;
 
@@ -109,7 +110,7 @@ Neighbors<Wall&> WorldData::get_wall_neighbors_mut(TilePos pos) {
     };
 }
 
-static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, math::IRect area, glm::ivec2 tile_offset = {0, 0}) {
+static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, const math::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
     const int min_y = area.min.y * SUBDIVISION;
     const int max_y = area.max.y * SUBDIVISION;
 
@@ -119,8 +120,10 @@ static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, ma
     #pragma omp parallel for collapse(2)
     for (int y = min_y; y < max_y; ++y) {
         for (int x = min_x; x < max_x; ++x) {
-            const auto color_pos = TilePos(x, y);
-            const auto tile_pos = color_pos / SUBDIVISION;
+            const TilePos color_pos = TilePos(x, y);
+            const TilePos tile_pos = color_pos / SUBDIVISION;
+
+            lightmap.set_mask(color_pos, world.block_exists(tile_offset + tile_pos));
 
             if (tile_offset.y * SUBDIVISION + y >= world.layers.underground * SUBDIVISION) {
                 lightmap.set_color(color_pos, glm::vec3(0.0f));
@@ -136,38 +139,42 @@ static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, ma
     }
 }
 
-static FORCE_INLINE float get_decay(const WorldData& world, TilePos pos) {
-    return Constants::LightDecay(world.block_exists(pos));
+static void blur_line(LightMap& lightmap, int start, int end, int stride, glm::vec3& prev_light, float& prev_decay) {
+    using Constants::LIGHT_EPSILON;
+
+    for (int index = start; index != end + stride; index += stride) {
+        glm::vec3 this_light = lightmap.get_color(index);
+
+        prev_light.x = prev_light.x < LIGHT_EPSILON ? 0.0f : prev_light.x;
+        prev_light.y = prev_light.y < LIGHT_EPSILON ? 0.0f : prev_light.x;
+        prev_light.z = prev_light.z < LIGHT_EPSILON ? 0.0f : prev_light.x;
+
+        if (prev_light.x < this_light.x) {
+            prev_light.x = this_light.x;
+        } else {
+            this_light.x = prev_light.x;
+        }
+        
+        if (prev_light.y < this_light.y) {
+            prev_light.y = this_light.y;
+        } else {
+            this_light.y = prev_light.y;
+        }
+        
+        if (prev_light.z < this_light.z) {
+            prev_light.z = this_light.z;
+        } else {
+            this_light.z = prev_light.z;
+        }
+
+        lightmap.set_color(index, this_light);
+
+        prev_light = prev_light * prev_decay;
+        prev_decay = Constants::LightDecay(lightmap.get_mask(index));
+    }
 }
 
-static void blur(WorldData& world, LightMap& lightmap, TilePos pos, glm::vec3& prev_light, float& prev_decay, glm::ivec2 tile_offset) {
-    glm::vec3 this_light = lightmap.get_color(pos);
-
-    if (prev_light.x < this_light.x) {
-        prev_light.x = this_light.x;
-    } else {
-        this_light.x = prev_light.x;
-    }
-    
-    if (prev_light.y < this_light.y) {
-        prev_light.y = this_light.y;
-    } else {
-        this_light.y = prev_light.y;
-    }
-    
-    if (prev_light.z < this_light.z) {
-        prev_light.z = this_light.z;
-    } else {
-        this_light.z = prev_light.z;
-    }
-    
-    lightmap.set_color(pos, this_light);
-    
-    prev_light = prev_light * prev_decay;
-    prev_decay = get_decay(world, tile_offset + pos / SUBDIVISION);
-}
-
-static void internal_lightmap_blur_area(WorldData& world, LightMap& lightmap, math::IRect area, glm::ivec2 tile_offset = {0, 0}) {
+static void internal_lightmap_blur_area(WorldData& world, LightMap& lightmap, const math::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
     const math::IRect lightmap_area = area * SUBDIVISION;
 
     const int min_x = lightmap_area.min.x;
@@ -182,60 +189,51 @@ static void internal_lightmap_blur_area(WorldData& world, LightMap& lightmap, ma
         #pragma omp parallel for
         for (int y = min_y; y < max_y; ++y) {
             glm::vec3 prev_light = world.lightmap.get_color({offset.x + min_x, offset.y + y});
-            float prev_decay = get_decay(world, {(offset.x + min_x) / SUBDIVISION - 1, (offset.y + y) / SUBDIVISION});
+            float prev_decay = Constants::LightDecay(world.lightmap.get_mask({(offset.x + min_x) - 1, (offset.y + y)}));
 
-            for (int x = min_x; x < max_x; ++x) {
-                blur(world, lightmap, TilePos(x, y), prev_light, prev_decay, tile_offset);
-            }
+            blur_line(lightmap, y * lightmap.width + min_x, y * lightmap.width + (max_x - 1), 1, prev_light, prev_decay);
         }
 
         // Top to bottom
         #pragma omp parallel for
         for (int x = min_x; x < max_x; ++x) {
             glm::vec3 prev_light = world.lightmap.get_color({offset.x + x, offset.y + min_y});
-            float prev_decay = get_decay(world, {(offset.x + x) / SUBDIVISION, (offset.y + min_y) / SUBDIVISION - 1});
+            float prev_decay = Constants::LightDecay(world.lightmap.get_mask({(offset.x + x), (offset.y + min_y) - 1}));
 
-            for (int y = min_y; y < max_y; ++y) {
-                blur(world, lightmap, TilePos(x, y), prev_light, prev_decay, tile_offset);
-            }
+            blur_line(lightmap, min_y * lightmap.width + x, (max_y - 1) * lightmap.width + x, lightmap.width, prev_light, prev_decay);
         }
 
         // Right to left
         #pragma omp parallel for
         for (int y = min_y; y < max_y; ++y) {
             glm::vec3 prev_light = world.lightmap.get_color({offset.x + max_x - 1, offset.y + y});
-            float prev_decay = get_decay(world, {(offset.x + max_x) / SUBDIVISION, (offset.y + y) / SUBDIVISION});
+            float prev_decay = Constants::LightDecay(world.lightmap.get_mask({(offset.x + max_x), (offset.y + y)}));
 
-            for (int x = max_x - 1; x >= min_x; --x) {
-                blur(world, lightmap, TilePos(x, y), prev_light, prev_decay, tile_offset);
-            }
+            blur_line(lightmap, y * lightmap.width + (max_x - 1), y * lightmap.width + min_x, -1, prev_light, prev_decay);
         }
 
         // Bottom to top
         #pragma omp parallel for
         for (int x = min_x; x < max_x; ++x) {
             glm::vec3 prev_light = world.lightmap.get_color({offset.x + x, offset.y + max_y - 1});
-            float prev_decay = get_decay(world, {(offset.x + x) / SUBDIVISION, (offset.y + max_y) / SUBDIVISION});
+            float prev_decay = Constants::LightDecay(world.lightmap.get_mask({(offset.x + x), (offset.y + max_y)}));
 
-            for (int y = max_y - 1; y >= min_y; --y) {
-                blur(world, lightmap, TilePos(x, y), prev_light, prev_decay, tile_offset);
-            }
+            blur_line(lightmap, (max_y - 1) * lightmap.width + x, min_y * lightmap.width + x, -lightmap.width, prev_light, prev_decay);
         }
     }
 }
 
 static void internal_lightmap_update_area_async(std::shared_ptr<std::atomic<LightMapTaskResult>> result, WorldData* world, math::IRect area) {
-    LightMap lightmap = LightMap(area.width(), area.height());
+    LightMap lightmap(area.width(), area.height());
 
     const math::IRect a = math::IRect::from_top_left(glm::ivec2(0), area.size());
 
-    WorldData& w = *world;
-
-    internal_lightmap_init_area(w, lightmap, a, area.min);
-    internal_lightmap_blur_area(w, lightmap, a, area.min);
+    internal_lightmap_init_area(*world, lightmap, a, area.min);
+    internal_lightmap_blur_area(*world, lightmap, a, area.min);
 
     *result = LightMapTaskResult {
-        .data = lightmap.data,
+        .data = lightmap.colors,
+        .mask = lightmap.masks,
         .width = lightmap.width,
         .height = lightmap.height,
         .offset_x = area.min.x * SUBDIVISION,
@@ -243,7 +241,8 @@ static void internal_lightmap_update_area_async(std::shared_ptr<std::atomic<Ligh
         .is_complete = true
     };
 
-    lightmap.data = nullptr;
+    lightmap.colors = nullptr;
+    lightmap.masks = nullptr;
 }
 
 void WorldData::lightmap_blur_area_sync(math::IRect area) {

@@ -6,6 +6,7 @@
 
 #include "../types/tile_pos.hpp"
 #include "../constants.hpp"
+#include "../defines.hpp"
 
 struct Color {
     uint8_t r, g, b, a;
@@ -15,8 +16,11 @@ struct Color {
     explicit Color(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b), a(0xFF) {}
 };
 
+using LightMask = bool;
+
 struct LightMap {
-    Color* data = nullptr;
+    Color* colors = nullptr;
+    LightMask* masks = nullptr;
     int width = 0;
     int height = 0;
 
@@ -26,7 +30,8 @@ struct LightMap {
         using Constants::SUBDIVISION;
         width = tiles_width * SUBDIVISION;
         height = tiles_height * SUBDIVISION;
-        data = new Color[width * height];
+        colors = new Color[width * height];
+        masks = new LightMask[width * height];
     }
 
     LightMap(LightMap& other) {
@@ -44,35 +49,70 @@ struct LightMap {
     }
 
     ~LightMap() {
-        if (data) delete[] data;
+        if (colors) delete[] colors;
+        if (masks) delete[] masks;
+    }
+
+    [[nodiscard]]
+    inline glm::vec3 get_color(int index) const {
+        if (!(index >= 0 && index < width * height)) {
+            return glm::vec3(0.0f);
+        }
+        
+        Color color = colors[index];
+        return glm::vec3(static_cast<float>(color.r) / 255.0f, static_cast<float>(color.g) / 255.0f, static_cast<float>(color.b / 255.0f));
     }
 
     [[nodiscard]]
     inline glm::vec3 get_color(TilePos pos) const {
-        if (!(pos.x >= 0 && pos.y >= 0 && pos.x < width && pos.y < height)) {
-            return glm::vec3(0.0f);
-        }
-        
-        Color color = data[pos.y * width + pos.x];
-        return glm::vec3(static_cast<float>(color.r) / 255.0f, static_cast<float>(color.g) / 255.0f, static_cast<float>(color.b / 255.0f));
+        return get_color(pos.y * width + pos.x);
     }
 
-    inline void set_color(TilePos pos, glm::vec3 color) {
-        data[pos.y * width + pos.x] = Color(color.r * 255.0f, color.g * 255.0f, color.b * 255.0f);
+    inline void set_color(size_t index, const glm::vec3& color) {
+        colors[index] = Color(color.r * 255.0f, color.g * 255.0f, color.b * 255.0f);
+    }
+
+    inline void set_color(TilePos pos, const glm::vec3& color) {
+        set_color(pos.y * width + pos.x, color);
+    }
+
+    [[nodiscard]]
+    inline LightMask get_mask(int index) const {
+        if (!(index >= 0 && index < width * height)) {
+            return false;
+        }
+
+        return masks[index];
+    }
+
+    [[nodiscard]]
+    inline LightMask get_mask(TilePos pos) const {
+        return get_mask(pos.y * width + pos.x);
+    }
+
+    inline void set_mask(size_t index, LightMask mask) {
+        masks[index] = mask;
+    }
+
+    inline void set_mask(TilePos pos, LightMask mask) {
+        set_mask(pos.y * width + pos.x, mask);
     }
 
 private:
     inline void copy(LightMap& from) {
-        this->data = from.data;
+        this->colors = from.colors;
+        this->masks = from.masks;
         this->width = from.width;
         this->height = from.height;
 
-        from.data = nullptr;
+        from.colors = nullptr;
+        from.masks = nullptr;
     }
 };
 
 struct LightMapTaskResult {
     Color* data;
+    LightMask* mask;
     int width;
     int height;
     int offset_x = 0;

@@ -100,7 +100,7 @@ void WorldRenderer::init_lightmap_texture(const WorldData& world) {
     LLGL::ImageView image_view;
     image_view.format   = LLGL::ImageFormat::RGBA;
     image_view.dataType = LLGL::DataType::UInt8;
-    image_view.data     = world.lightmap.data;
+    image_view.data     = world.lightmap.colors;
     image_view.dataSize = world.lightmap.width * world.lightmap.height * 4;
 
     m_lightmap_texture = context->CreateTexture(lightmap_texture_desc, &image_view);
@@ -114,7 +114,8 @@ void WorldRenderer::update_lightmap_texture(WorldData& world, LightMapTaskResult
         image_view.data     = &result.data[y * result.width];
         image_view.dataSize = result.width * 1 * 4;
 
-        memcpy(&world.lightmap.data[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.data[y * result.width], result.width * sizeof(Color));
+        memcpy(&world.lightmap.colors[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.data[y * result.width], result.width * sizeof(Color));
+        memcpy(&world.lightmap.masks[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.mask[y * result.width], result.width * sizeof(LightMask));
 
         Renderer::Context()->WriteTexture(*m_lightmap_texture, LLGL::TextureRegion(LLGL::Offset3D(result.offset_x, result.offset_y + y, 0), LLGL::Extent3D(result.width, 1, 1)), image_view);
     }

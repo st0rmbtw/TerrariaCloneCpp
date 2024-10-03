@@ -325,6 +325,7 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
         if (result.is_complete) {
             state.world_renderer.update_lightmap_texture(world, result);
             delete[] result.data;
+            delete[] result.mask;
             it = world.lightmap_tasks.erase(it);
             continue;
         }

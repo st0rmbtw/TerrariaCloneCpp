@@ -69,7 +69,7 @@ static int get_surface_block(const WorldData &world, int x) {
     int y = world.playable_area.min.y;
 
     while (y < height) {
-        if (world.block_exists({x, y})) { break; }
+        if (world.block_exists({x, y})) break;
         ++y;
     }
 
@@ -82,7 +82,7 @@ static int get_surface_wall(const WorldData &world, int x) {
     int y = world.playable_area.min.y;
 
     while (y < height) {
-        if (world.wall_exists({x, y})) { break; }
+        if (world.wall_exists({x, y})) break;
         ++y;
     }
 
@@ -121,12 +121,12 @@ static bool remove_walls_is_valid(WorldData& world, TilePos pos) {
     if (pos.x >= world.area.width()) return false;
     if (pos.y >= world.area.height()) return false;
 
-    if (!world.wall_exists(pos)) { return false; }
+    if (!world.wall_exists(pos)) return false;
 
     const Neighbors<const Block&> neighbors = world.get_block_neighbors(pos);
-    if (neighbors.any_not_exists()) { return true; }
+    if (neighbors.any_not_exists()) return true;
 
-    if (world.block_exists(pos)) { return false; }
+    if (world.block_exists(pos)) return false;
 
     return true;
 }
