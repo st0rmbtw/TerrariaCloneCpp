@@ -56,7 +56,7 @@ public:
 
     [[nodiscard]]
     inline constexpr static Self from_center_size(vec origin, vec size) noexcept {
-        const vec half_size = size * static_cast<T>(2);
+        const vec half_size = size / static_cast<T>(2);
         return Self::from_center_half_size(origin, half_size);
     }
 

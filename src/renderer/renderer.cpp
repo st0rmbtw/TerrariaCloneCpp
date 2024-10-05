@@ -179,17 +179,14 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Tiles).size);
     const glm::vec2 wall_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Walls).size);
 
-    const glm::vec2 tile_size = glm::vec2(Constants::TILE_SIZE) / tile_tex_size;
-    const glm::vec2 wall_size = glm::vec2(Constants::WALL_SIZE) / wall_tex_size;
-
     const glm::vec2 tile_padding = glm::vec2(Constants::TILE_TEXTURE_PADDING) / tile_tex_size;
     const glm::vec2 wall_padding = glm::vec2(Constants::WALL_TEXTURE_PADDING) / wall_tex_size;
 
     const ChunkVertex vertices[] = {
-        ChunkVertex(0.0, 0.0, wall_size, tile_size, wall_padding, tile_padding),
-        ChunkVertex(0.0, 1.0, wall_size, tile_size, wall_padding, tile_padding),
-        ChunkVertex(1.0, 0.0, wall_size, tile_size, wall_padding, tile_padding),
-        ChunkVertex(1.0, 1.0, wall_size, tile_size, wall_padding, tile_padding),
+        ChunkVertex(0.0, 0.0, wall_tex_size, tile_tex_size, wall_padding, tile_padding),
+        ChunkVertex(0.0, 1.0, wall_tex_size, tile_tex_size, wall_padding, tile_padding),
+        ChunkVertex(1.0, 0.0, wall_tex_size, tile_tex_size, wall_padding, tile_padding),
+        ChunkVertex(1.0, 1.0, wall_tex_size, tile_tex_size, wall_padding, tile_padding),
     };
 
     state.chunk_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex), "WorldRenderer VertexBuffer");

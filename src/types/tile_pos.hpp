@@ -62,7 +62,7 @@ struct TilePos {
 
     [[nodiscard]]
     inline glm::vec2 to_world_pos_center() const {
-        return glm::vec2(x, y) * Constants::TILE_SIZE + glm::vec2(8.0f);
+        return (glm::vec2(x, y) + glm::vec2(0.5f)) * Constants::TILE_SIZE;
     }
 
     constexpr inline TilePos operator/(int d) const {

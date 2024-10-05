@@ -60,14 +60,16 @@ vertex VertexOut VS(
 
     float order = depth.tile_depth;
     float2 size = float2(TILE_SIZE, TILE_SIZE);
-    float2 start_uv = inp.i_atlas_pos * (inp.tile_tex_size + inp.tile_padding);
-    float2 tex_size = inp.tile_tex_size;
+    float2 tex_size = size / inp.tile_tex_size;
+    float2 start_uv = inp.i_atlas_pos * (tex_size + inp.tile_padding);
+    float2 tex_dims = inp.tile_tex_size;
 
     if (tile_type == TILE_TYPE_WALL) {
         order = depth.wall_depth;
         size = float2(WALL_SIZE, WALL_SIZE);
-        start_uv = inp.i_atlas_pos * (inp.wall_tex_size + inp.wall_padding);
-        tex_size = inp.wall_tex_size;
+        tex_size = size / inp.wall_tex_size;
+        start_uv = inp.i_atlas_pos * (tex_size + inp.wall_padding);
+        tex_dims = inp.wall_tex_size;
     }
 
     order /= constants.max_world_depth;
@@ -81,11 +83,14 @@ vertex VertexOut VS(
 
     const float4x4 mvp = constants.view_projection * transform;
     const float2 position = inp.i_position * 16.0 + inp.position * size;
+    const float2 uv = start_uv + inp.position * tex_size;
+
+    const float2 pixel_offset = float2(0.1 / tex_dims.x, 0.1 / tex_dims.y);
 
 	VertexOut output;
     output.position = mvp * float4(position, 0.0, 1.0);
     output.position.z = order;
-    output.uv = start_uv + inp.position * tex_size;
+    output.uv = uv + pixel_offset * (float2(1.0, 1.0) - inp.position * 2.0);
     output.tile_id = tile_id;
 
 	return output;

@@ -79,6 +79,20 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
         return false;
     }
 
+    LLGL::Log::RegisterCallbackStd();
+
+    if (!Renderer::InitEngine(backend)) return false;
+    if (!Assets::Load()) return false;
+    if (!Assets::LoadFonts()) return false;
+    if (!Assets::InitSamplers()) return false;
+
+    const std::vector<ShaderDef> shader_defs = {
+        ShaderDef("TILE_SIZE", std::to_string(Constants::TILE_SIZE)),
+        ShaderDef("WALL_SIZE", std::to_string(Constants::WALL_SIZE)),
+    };
+
+    if (!Assets::LoadShaders(shader_defs)) return false;
+
     auto window_size = LLGL::Extent2D(1280, 720);
     if (config.fullscreen) {
         const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
@@ -89,28 +103,14 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     const std::uint32_t resScale = (display != nullptr ? static_cast<std::uint32_t>(display->GetScale()) : 1u);
     const auto resolution = LLGL::Extent2D(window_size.width * resScale, window_size.height * resScale);
 
-    LLGL::Log::RegisterCallbackStd();
-
-    if (!Renderer::InitEngine(backend)) return false;
-    if (!Assets::Load()) return false;
-    if (!Assets::LoadFonts()) return false;
-    if (!Assets::InitSamplers()) return false;
-
-    init_tile_rules();
-
-    const std::vector<ShaderDef> shader_defs = {
-        ShaderDef("TILE_SIZE", std::to_string(Constants::TILE_SIZE)),
-        ShaderDef("WALL_SIZE", std::to_string(Constants::WALL_SIZE)),
-    };
-
-    if (!Assets::LoadShaders(shader_defs)) return false;
-
     GLFWwindow *window = create_window(window_size, config.fullscreen);
     if (window == nullptr) return false;
 
     g.window = window;
     
     if (!Renderer::Init(window, resolution, config.vsync, config.fullscreen)) return false;
+
+    init_tile_rules();
 
     g.world.generate(200, 500, 0);
 
@@ -206,7 +206,7 @@ void fixed_update() {
 #if DEBUG
     const bool handle_input = !g.free_camera;
 #else
-    const bool handle_input = true;
+    constexpr bool handle_input = true;
 #endif
 
     g.player.fixed_update(g.world, handle_input);

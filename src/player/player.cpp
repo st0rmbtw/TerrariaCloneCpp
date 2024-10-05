@@ -325,12 +325,12 @@ void Player::pre_update() {
 }
 
 void Player::spawn_particles_on_walk() const {
-    if (m_stand_on_block.is_none()) return;
-    const BlockType block = m_stand_on_block.value();
-
-    if (!block_dusty(block)) return;
     if (m_movement_state != MovementState::Walking) return;
+    if (m_stand_on_block.is_none()) return;
     if (glm::abs(m_velocity.x) < 1.0f) return;
+
+    const BlockType block = m_stand_on_block.value();
+    if (!block_dusty(block)) return;
 
     const float direction = m_direction == Direction::Right ? -1.0f : 1.0f;
 
@@ -428,32 +428,34 @@ float Player::get_fall_distance() const {
 }
 
 void Player::update_sprites() {
+    const bool flip_x = m_direction == Direction::Left;
+
     m_hair.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_head.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_body.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_legs.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_left_hand.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_left_shoulder.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_right_arm.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_left_eye.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_right_eye.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
 }
 
@@ -494,6 +496,7 @@ void Player::use_item(const Camera& camera, World& world) {
     m_swing_anim = true;
 
     if (m_use_cooldown > 0) return;
+    m_use_cooldown = item->use_cooldown;
 
     const glm::vec2& screen_pos = Input::MouseScreenPosition();
     const glm::vec2 world_pos = camera.screen_to_world(screen_pos);
@@ -509,17 +512,21 @@ void Player::use_item(const Camera& camera, World& world) {
 
         const glm::vec2 position = tile_pos.to_world_pos_center();
         spawn_particles_on_dig(position, block->type);
+        
+        if (block->hp <= 0) {
+            world.remove_block(tile_pos);
+            return;
+        }
 
         if (block->type == BlockType::Grass) {
             world.update_block_type(tile_pos, BlockType::Dirt);
         }
-        
-        if (block->hp <= 0) {
-            world.remove_block(tile_pos);
-        }
     } else if (item->places_block.is_some() && !world.block_exists(tile_pos)) {
+        const math::Rect player_rect = math::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
+        const math::Rect tile_rect = math::Rect::from_center_size(tile_pos.to_world_pos_center(), glm::vec2(TILE_SIZE));
+
+        if (player_rect.intersects(tile_rect)) return;
+
         world.set_block(tile_pos, item->places_block.value());
     }
-
-    m_use_cooldown = item->use_cooldown;
 }
