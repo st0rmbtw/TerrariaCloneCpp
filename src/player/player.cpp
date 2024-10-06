@@ -1,5 +1,6 @@
 #include "player.hpp"
 
+#include <cfloat>
 #include <glm/gtc/random.hpp>
 
 #include "../assets.hpp"
@@ -180,34 +181,44 @@ glm::vec2 Player::check_collisions(const World& world) {
                 if (next_pos.x + PLAYER_WIDTH_HALF > tile_pos.x && next_pos.x - PLAYER_WIDTH_HALF < tile_pos.x + TILE_SIZE &&
                     next_pos.y + PLAYER_HEIGHT_HALF > tile_pos.y && next_pos.y - PLAYER_HEIGHT_HALF < tile_pos.y + TILE_SIZE)
                 {
-                    const bool collide_horizontal = pos.x + PLAYER_WIDTH_HALF - 0.1f > tile_pos.x && pos.x - PLAYER_WIDTH_HALF + 0.1f < tile_pos.x + TILE_SIZE;
-                    const bool collide_vertical = pos.y + PLAYER_HEIGHT_HALF > tile_pos.y && pos.y - PLAYER_HEIGHT_HALF < tile_pos.y + TILE_SIZE;
+                    const bool collide_horizontal = pos.x + PLAYER_WIDTH_HALF > tile_pos.x && pos.x - PLAYER_WIDTH_HALF < tile_pos.x + TILE_SIZE;
 
-                    if (pos.y + PLAYER_HEIGHT_HALF <= tile_pos.y && collide_horizontal) {
-                        m_collisions.down = true;
-                        m_jumping = false;
-                        m_stand_on_block = world.get_block_type(TilePos(x, y));
+                    if (pos.y + PLAYER_HEIGHT_HALF <= tile_pos.y) {
+                        if (collide_horizontal) {
+                            m_collisions.down = true;
+                            m_jumping = false;
+                            m_stand_on_block = world.get_block_type(TilePos(x, y));
+                        }
                         num7 = x;
                         num8 = y;
                         if (num7 != num5) {
                             result.y = tile_pos.y - (pos.y + PLAYER_HEIGHT_HALF);
                         }
-                    } else if (pos.x + PLAYER_WIDTH_HALF <= tile_pos.x && collide_vertical) {
+                    } else if (pos.x + PLAYER_WIDTH_HALF <= tile_pos.x) {
                         m_collisions.right = true;
                         num5 = x;
                         num6 = y;
                         if (num6 != num8) {
                             result.x = tile_pos.x - (pos.x + PLAYER_WIDTH_HALF);
                         }
-                    } else if (pos.x + PLAYER_WIDTH_HALF >= tile_pos.x + TILE_SIZE && collide_vertical) {
+                        if (num7 == num5) {
+                            result.y = m_velocity.y;
+                        }
+                    } else if (pos.x - PLAYER_WIDTH_HALF >= tile_pos.x + TILE_SIZE) {
                         m_collisions.left = true;
                         num5 = x;
                         num6 = y;
                         if (num6 != num8) {
                             result.x = tile_pos.x + TILE_SIZE - (pos.x - PLAYER_WIDTH_HALF);
                         }
-                    } else if (pos.y - PLAYER_HEIGHT_HALF >= tile_pos.y + TILE_SIZE && collide_horizontal) {
-                        m_collisions.up = true;
+                        if (num7 == num5) {
+                            result.y = m_velocity.y;
+                        }
+                    } else if (pos.y - PLAYER_HEIGHT_HALF >= tile_pos.y + TILE_SIZE) {
+                        if (collide_horizontal) {
+                            m_collisions.up = true;
+                        }
+
                         num7 = x;
                         num8 = y;
                         result.y = tile_pos.y + TILE_SIZE - (pos.y - PLAYER_HEIGHT_HALF);
@@ -309,7 +320,9 @@ void Player::update_sprites_index() {
 }
 
 void Player::update_movement_state() {
-    if (m_velocity.y != 0 || m_jumping) {
+    constexpr float threshold = TILE_SIZE / 2.0f * GRAVITY;
+
+    if (abs(m_velocity.y) > threshold + FLT_EPSILON || m_jumping) {
         m_movement_state = MovementState::Flying;
     } else if (m_velocity.x != 0) {
         m_movement_state = MovementState::Walking;
