@@ -33,15 +33,24 @@ static struct ParticlesState {
 } state;
 
 void ParticleManager::Init() {
+#if defined(__AVX__)
     state.position = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 2 * sizeof(float), sizeof(__m256));
     state.velocity = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 2 * sizeof(float), sizeof(__m256));
+#else
+    state.position = (float*) malloc(MAX_PARTICLES_COUNT * 2 * sizeof(float));
+    state.velocity = (float*) malloc(MAX_PARTICLES_COUNT * 2 * sizeof(float));
+#endif
     state.spawn_time = new float[MAX_PARTICLES_COUNT];
     state.lifetime = new float[MAX_PARTICLES_COUNT];
-    state.rotation_speed = new float[MAX_PARTICLES_COUNT];
     state.custom_scale = new float[MAX_PARTICLES_COUNT];
     state.scale = new float[MAX_PARTICLES_COUNT];
+#if defined(__AVX__)
     state.rotation = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), sizeof(__m256));
     state.rotation_speed = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), sizeof(__m256));
+#else
+    state.rotation = (float*) malloc(MAX_PARTICLES_COUNT * 4 * sizeof(float));
+    state.rotation_speed = (float*) malloc(MAX_PARTICLES_COUNT * 4 * sizeof(float));
+#endif
     state.gravity = new bool[MAX_PARTICLES_COUNT];
     state.active = new bool[MAX_PARTICLES_COUNT](); // If it's not initilized with false, particles wouldn't spawn
     state.type = new Particle::Type[MAX_PARTICLES_COUNT];
@@ -89,13 +98,18 @@ void ParticleManager::Render() {
         position.x = state.position[i * 2 + 0];
         position.y = state.position[i * 2 + 1];
 
-        const __m128 rotation = _mm_load_ps(&state.rotation[i * 4]);
+    #if defined(__AVX__)
+        const __m128 data = _mm_load_ps(&state.rotation[i * 4]);
+        const glm::quat& rotation = *reinterpret_cast<const glm::quat*>(&data);
+    #else
+        const glm::quat& rotation = *reinterpret_cast<const glm::quat*>(&state.rotation[i * 4]);
+    #endif
 
-        const float scale = state.scale[i];
+        const float scale = state.scale[i]; 
         const Particle::Type type = state.type[i];
         const uint8_t variant = state.variant[i];
 
-        Renderer::DrawParticle(position, *reinterpret_cast<const glm::quat*>(&rotation), scale, type, variant, depth);
+        Renderer::DrawParticle(position, rotation, scale, type, variant, depth);
     }
 }
 
@@ -109,6 +123,7 @@ void ParticleManager::Update() {
         }
     }
     
+#if defined(__AVX__)
     // The size of a vec2 type is 64 bit, so it can be packed as 4 into 256 bit vector.
     for (size_t i = 0; i < state.active_count * 2; i += 8) {
         const __m256 positionVector = _mm256_load_ps(&state.position[i]);
@@ -149,6 +164,18 @@ void ParticleManager::Update() {
         /* now we only need to shuffle the components in place and return the result      */
 		_mm256_store_ps(&state.rotation[i], _mm256_shuffle_ps(XZWY, XZWY, _MM_SHUFFLE(2,1,3,0)));
     }
+#else
+    for (size_t i = 0; i < state.active_count * 2; i += 2) {
+        state.position[i + 0] += state.velocity[i + 0];
+        state.position[i + 1] += state.velocity[i + 1];
+    }
+
+    for (size_t i = 0; i < state.active_count * 4; i += 4) {
+        glm::quat& rotation = *reinterpret_cast<glm::quat*>(&state.rotation[i]);
+        const glm::quat& rotation_speed = *reinterpret_cast<const glm::quat*>(&state.rotation_speed[i]);
+        rotation *= rotation_speed;
+    }
+#endif
 }
 
 void ParticleManager::DeleteExpired() {
@@ -213,8 +240,24 @@ void ParticleManager::DeleteExpired() {
 }
 
 void ParticleManager::Terminate() {
+#if defined(__AVX__)
     ALIGNED_FREE(state.position);
     ALIGNED_FREE(state.velocity);
     ALIGNED_FREE(state.rotation);
     ALIGNED_FREE(state.rotation_speed);
+#else
+    free(state.position);
+    free(state.velocity);
+    free(state.rotation);
+    free(state.rotation_speed);
+#endif
+
+    delete[] state.spawn_time;
+    delete[] state.lifetime;
+    delete[] state.custom_scale;
+    delete[] state.scale;
+    delete[] state.gravity;
+    delete[] state.active;
+    delete[] state.type;
+    delete[] state.variant;
 }
