@@ -94,16 +94,9 @@ void ParticleManager::Render() {
     const uint32_t depth = Renderer::GetMainDepthIndex();
 
     for (size_t i = 0; i < state.active_count; ++i) {
-        glm::vec2 position;
-        position.x = state.position[i * 2 + 0];
-        position.y = state.position[i * 2 + 1];
+        glm::vec2 position(state.position[i * 2 + 0], state.position[i * 2 + 1]);
 
-    #if defined(__AVX__)
-        const __m128 data = _mm_load_ps(&state.rotation[i * 4]);
-        const glm::quat& rotation = *reinterpret_cast<const glm::quat*>(&data);
-    #else
         const glm::quat& rotation = *reinterpret_cast<const glm::quat*>(&state.rotation[i * 4]);
-    #endif
 
         const float scale = state.scale[i]; 
         const Particle::Type type = state.type[i];
