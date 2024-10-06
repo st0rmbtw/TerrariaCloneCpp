@@ -228,7 +228,12 @@ bool Assets::Load() {
         stbi_image_free(data);
     }
 
-    state.textures[TextureAsset::Tiles] = load_texture_array(BLOCK_ASSETS, TextureSampler::NearestMips, true);
+    // There is some glitches in mipmaps on Metal
+    if (Renderer::Backend().IsMetal()) {
+        state.textures[TextureAsset::Tiles] = load_texture_array(BLOCK_ASSETS, TextureSampler::Nearest);
+    } else {
+        state.textures[TextureAsset::Tiles] = load_texture_array(BLOCK_ASSETS, TextureSampler::NearestMips, true);
+    }
     state.textures[TextureAsset::Walls] = load_texture_array(WALL_ASSETS, TextureSampler::Nearest);
 
     return true;
@@ -451,24 +456,24 @@ void Assets::InitVertexFormats() {
 
     if (backend.IsGLSL()) {
         tilemap_instance_format.attributes = {
-            {"i_position",  LLGL::Format::RG32Float,   7, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
-            {"i_atlas_pos", LLGL::Format::RG32Float,   8, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
-            {"i_world_pos", LLGL::Format::RG32Float,   9, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
-            {"i_tile_data", LLGL::Format::R32UInt,     10,offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
+            {"i_position",  LLGL::Format::RG32Float,  5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
+            {"i_atlas_pos", LLGL::Format::RG32Float,  6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
+            {"i_world_pos", LLGL::Format::RG32Float,  7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
+            {"i_tile_data", LLGL::Format::R32UInt,    8, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
         };
     } else if (backend.IsHLSL()) {
         tilemap_instance_format.attributes = {
-            {"I_Position",  LLGL::Format::RG32Float,   5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
-            {"I_AtlasPos",  LLGL::Format::RG32Float,   6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
-            {"I_WorldPos",  LLGL::Format::RG32Float,   7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
-            {"I_TileData",  LLGL::Format::R32UInt,     8, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
+            {"I_Position",  LLGL::Format::RG32Float,  5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
+            {"I_AtlasPos",  LLGL::Format::RG32Float,  6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
+            {"I_WorldPos",  LLGL::Format::RG32Float,  7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
+            {"I_TileData",  LLGL::Format::R32UInt,    8, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
         };
     } else {
         tilemap_instance_format.attributes = {
-            {"i_position",   LLGL::Format::RG32Float,   7, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
-            {"i_atlas_pos",  LLGL::Format::RG32Float,   8, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
-            {"i_world_pos",  LLGL::Format::RG32Float,   9, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
-            {"i_tile_data",  LLGL::Format::R32UInt,     10,offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
+            {"i_position",  LLGL::Format::RG32Float,  5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
+            {"i_atlas_pos", LLGL::Format::RG32Float,  6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
+            {"i_world_pos", LLGL::Format::RG32Float,  7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
+            {"i_tile_data", LLGL::Format::R32UInt,    8, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
         };
     }
 
