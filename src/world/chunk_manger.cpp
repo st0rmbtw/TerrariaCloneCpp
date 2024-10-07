@@ -12,19 +12,19 @@ static math::URect get_chunk_range(const math::Rect& camera_fov, const glm::uvec
     uint32_t bottom = 0;
     uint32_t top = 0;
 
-    if (camera_fov.min.x > 0.0f) {
-        left = glm::floor(camera_fov.min.x / (TILE_SIZE * RENDER_CHUNK_SIZE));
+    if (camera_fov.min.x > TILE_SIZE) {
+        left = glm::floor((camera_fov.min.x - TILE_SIZE) / (TILE_SIZE * RENDER_CHUNK_SIZE));
         if (left >= expand) left -= expand;
     }
     if (camera_fov.max.x > 0.0f) {
-        right = glm::ceil(camera_fov.max.x / (TILE_SIZE * RENDER_CHUNK_SIZE)) + expand;
+        right = glm::ceil((camera_fov.max.x + TILE_SIZE) / (TILE_SIZE * RENDER_CHUNK_SIZE)) + expand;
     }
-    if (camera_fov.min.y > 0.0f) {
-        top = glm::floor(camera_fov.min.y / (TILE_SIZE * RENDER_CHUNK_SIZE));
+    if (camera_fov.min.y > TILE_SIZE) {
+        top = glm::floor((camera_fov.min.y - TILE_SIZE) / (TILE_SIZE * RENDER_CHUNK_SIZE));
         if (top >= expand) top -= expand;
     }
     if (camera_fov.max.y > 0.0f) { 
-        bottom = glm::ceil(camera_fov.max.y / (TILE_SIZE * RENDER_CHUNK_SIZE)) + expand;
+        bottom = glm::ceil((camera_fov.max.y + TILE_SIZE) / (TILE_SIZE * RENDER_CHUNK_SIZE)) + expand;
     }
 
     const glm::uvec2 chunk_max_pos = (world_size + RENDER_CHUNK_SIZE_U - 1u) / RENDER_CHUNK_SIZE_U;

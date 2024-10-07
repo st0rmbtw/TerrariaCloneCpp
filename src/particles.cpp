@@ -94,7 +94,7 @@ void ParticleManager::Render() {
     const uint32_t depth = Renderer::GetMainDepthIndex();
 
     for (size_t i = 0; i < state.active_count; ++i) {
-        glm::vec2 position(state.position[i * 2 + 0], state.position[i * 2 + 1]);
+        const glm::vec2 position(state.position[i * 2 + 0], state.position[i * 2 + 1]);
 
         const glm::quat& rotation = *reinterpret_cast<const glm::quat*>(&state.rotation[i * 4]);
 

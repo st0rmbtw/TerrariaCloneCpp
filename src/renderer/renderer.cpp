@@ -493,7 +493,7 @@ void Renderer::DrawText(const char* text, uint32_t length, float size, const glm
     float x = position.x;
     float y = position.y;
 
-    float scale = size / font.font_size;
+    const float scale = size / font.font_size;
 
     uint32_t order = depth;
     if (depth != -1) {
@@ -526,10 +526,10 @@ void Renderer::DrawText(const char* text, uint32_t length, float size, const glm
             continue;
         }
 
-        float xpos = x + ch.bearing.x * scale;
-        float ypos = y - ch.bearing.y * scale;
-        glm::vec2 pos = glm::vec2(xpos, ypos);
-        glm::vec2 size = glm::vec2(ch.size) * scale;
+        const float xpos = x + ch.bearing.x * scale;
+        const float ypos = y - ch.bearing.y * scale;
+        const glm::vec2 pos = glm::vec2(xpos, ypos);
+        const glm::vec2 size = glm::vec2(ch.size) * scale;
 
         state.glyph_batch.draw_glyph(pos, size, color, font.texture, ch.texture_coords, ch.tex_size, is_ui, order);
 
