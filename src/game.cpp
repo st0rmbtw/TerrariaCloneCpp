@@ -213,14 +213,6 @@ void fixed_update() {
 }
 
 void update() {
-#if DEBUG
-    const glm::vec2 position = g.free_camera ? camera_free() : camera_follow_player();
-#else
-    const glm::vec2 position = camera_follow_player();
-#endif
-
-    g.camera.set_position(position);
-
     float scale_speed = 2.f;
 
     if (Input::Pressed(Key::LeftShift)) {
@@ -238,6 +230,14 @@ void update() {
     if (Input::Pressed(Key::Equals)) {
         g.camera.set_zoom(g.camera.zoom() - scale_speed * Time::delta_seconds());
     }
+
+#if DEBUG
+    const glm::vec2 position = g.free_camera ? camera_free() : camera_follow_player();
+#else
+    const glm::vec2 position = camera_follow_player();
+#endif
+
+    g.camera.set_position(position);
 
     g.camera.update();
     g.world.update(g.camera);
