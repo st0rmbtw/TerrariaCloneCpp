@@ -17,7 +17,9 @@ void World::set_block(TilePos pos, const Block& block) {
     m_data.blocks[index] = block;
     m_changed = true;
 
-    m_data.lightmap_init_tile(pos);
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+        .clamp(m_data.area.min, m_data.area.max);
+    m_data.lightmap_update_area_async(light_area);
 
     m_chunk_manager.set_blocks_changed(pos);
 
@@ -37,8 +39,9 @@ void World::set_block(TilePos pos, BlockType block_type) {
     
     m_changed = true;
 
-    m_data.lightmap_init_tile(pos);
-    m_data.lightmap_blur_area(math::IRect::from_center_half_size(glm::ivec2(pos.x, pos.y), glm::ivec2(16)));
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+        .clamp(m_data.area.min, m_data.area.max);
+    m_data.lightmap_update_area_async(light_area);
 
     m_chunk_manager.set_blocks_changed(pos);
 }
@@ -55,10 +58,11 @@ void World::remove_block(TilePos pos) {
     m_data.blocks[index] = tl::nullopt;
     m_changed = true;
 
-    reset_tiles(pos, *this);
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+        .clamp(m_data.area.min, m_data.area.max);
+    m_data.lightmap_update_area_async(light_area);
 
-    m_data.lightmap_init_tile(pos);
-    m_data.lightmap_blur_area(math::IRect::from_center_half_size(glm::ivec2(pos.x, pos.y), glm::ivec2(16)));
+    reset_tiles(pos, *this);
 
     this->update_neighbors(pos);
 }
@@ -79,15 +83,17 @@ void World::set_wall(TilePos pos, WallType wall_type) {
     m_data.walls[index] = Wall(wall_type);
     m_changed = true;
 
-    update_neighbors(pos);
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+        .clamp(m_data.area.min, m_data.area.max);
+    m_data.lightmap_update_area_async(light_area);
 
-    m_data.lightmap_init_tile(pos);
+    update_neighbors(pos);
 
     m_chunk_manager.set_walls_changed(pos);
 }
 
 void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
-    m_data = world_generate(width, height, seed);
+    world_generate(m_data, width, height, seed);
 }
 
 void World::update(const Camera& camera) {
@@ -113,7 +119,6 @@ void World::update_tile_sprite_index(TilePos pos) {
 
     if (block.is_some()) {
         const Neighbors<const Block&> neighbors = this->get_block_neighbors(pos);
-        const TextureAtlasPos prev_atlas_pos = block->atlas_pos;
 
         update_block_sprite_index(block.get(), neighbors);
     
@@ -122,7 +127,6 @@ void World::update_tile_sprite_index(TilePos pos) {
 
     if (wall.is_some()) {
         const Neighbors<const Wall&> neighbors = this->get_wall_neighbors(pos);
-        const TextureAtlasPos prev_atlas_pos = wall->atlas_pos;
 
         update_wall_sprite_index(wall.get(), neighbors);
         

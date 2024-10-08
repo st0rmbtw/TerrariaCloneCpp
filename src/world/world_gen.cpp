@@ -51,14 +51,6 @@ static void update_tile_sprite_index(WorldData& world, const TilePos& pos) {
     }
 }
 
-static void fill(WorldData& world, BlockType block, int from_x, int to_x, int from_y, int to_y) {
-    for (int y = from_y; y < to_y; ++y) {
-        for (int x = from_x; x < to_x; ++x) {
-            set_block(world, {x, y}, block);
-        }
-    }
-}
-
 static void fill_line_vertical(WorldData& world, BlockType block, int from_y, int to_y, int x) {
     if (from_y < to_y) {
         for (int y = from_y; y < to_y; ++y) {
@@ -77,7 +69,7 @@ static int get_surface_block(const WorldData &world, int x) {
     int y = world.playable_area.min.y;
 
     while (y < height) {
-        if (world.block_exists({x, y})) { break; }
+        if (world.block_exists({x, y})) break;
         ++y;
     }
 
@@ -90,7 +82,7 @@ static int get_surface_wall(const WorldData &world, int x) {
     int y = world.playable_area.min.y;
 
     while (y < height) {
-        if (world.wall_exists({x, y})) { break; }
+        if (world.wall_exists({x, y})) break;
         ++y;
     }
 
@@ -129,12 +121,12 @@ static bool remove_walls_is_valid(WorldData& world, TilePos pos) {
     if (pos.x >= world.area.width()) return false;
     if (pos.y >= world.area.height()) return false;
 
-    if (!world.wall_exists(pos)) { return false; }
+    if (!world.wall_exists(pos)) return false;
 
     const Neighbors<const Block&> neighbors = world.get_block_neighbors(pos);
-    if (neighbors.any_not_exists()) { return true; }
+    if (neighbors.any_not_exists()) return true;
 
-    if (world.block_exists(pos)) { return false; }
+    if (world.block_exists(pos)) return false;
 
     return true;
 }
@@ -566,16 +558,16 @@ static void world_grassify(WorldData& world) {
 
 static void world_generate_lightmap(WorldData& world) {
     world.lightmap_init_area(world.area);
-    world.lightmap_blur_area(world.area);
+    world.lightmap_blur_area_sync(world.area);
 }
 
-WorldData world_generate(uint32_t width, uint32_t height, uint32_t seed) {
+void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t seed) {
+    world.destroy();
+
     srand(seed);
 
-    WorldData world = {};
-
     const math::IRect area = math::IRect::from_corners(glm::vec2(0), glm::ivec2(width, height) + glm::ivec2(16));
-    const math::IRect playable_area = math::IRect::from_corners(area.min + glm::ivec2(8), area.max - glm::ivec2(8));
+    const math::IRect playable_area = area.inset(-8);
 
     const int surface_level = (playable_area.min.y + playable_area.height() / 10);
     const int underground_level = (playable_area.min.y + playable_area.height() / 3);
@@ -590,7 +582,7 @@ WorldData world_generate(uint32_t width, uint32_t height, uint32_t seed) {
 
     world.blocks = new tl::optional<Block>[area.width() * area.height()];
     world.walls = new tl::optional<Wall>[area.width() * area.height()];
-    world.lightmap = new Color[area.width() * SUBDIVISION * area.height() * SUBDIVISION];
+    world.lightmap = LightMap(area.width(), area.height());
     world.playable_area = playable_area;
     world.area = area;
     world.layers = layers;
@@ -621,6 +613,4 @@ WorldData world_generate(uint32_t width, uint32_t height, uint32_t seed) {
     world.spawn_point = world_get_spawn_point(world);
     
     srand(time(NULL));
-
-    return world;
 };

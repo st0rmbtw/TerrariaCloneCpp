@@ -3,6 +3,7 @@
 #include <string>
 #include <filesystem>
 #include <fstream>
+#include <vector>
 
 #include "../src/constants.hpp"
 

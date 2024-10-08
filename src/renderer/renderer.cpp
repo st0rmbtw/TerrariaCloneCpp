@@ -25,7 +25,6 @@ static struct RendererState {
     LLGL::CommandBuffer* command_buffer = nullptr;
     LLGL::CommandQueue* command_queue = nullptr;
     std::shared_ptr<CustomSurface> surface = nullptr;
-    LLGL::RenderingLimits limits;
 #if DEBUG
     LLGL::RenderingDebugger* debugger = nullptr;
 #endif
@@ -38,7 +37,6 @@ static struct RendererState {
     LLGL::RenderTarget* world_render_target = nullptr;
     LLGL::Texture* world_render_texture = nullptr;
     LLGL::Texture* world_depth_texture = nullptr;
-    LLGL::Texture* lightmap_texture = nullptr;
 
     LLGL::Texture* background_render_texture = nullptr;
     LLGL::RenderTarget* background_render_target = nullptr;
@@ -108,6 +106,18 @@ bool Renderer::InitEngine(RenderBackend backend) {
         return false;
     }
 
+    const auto& info = state.context->GetRendererInfo();
+
+    LOG_INFO("Renderer:             %s", info.rendererName.c_str());
+    LOG_INFO("Device:               %s", info.deviceName.c_str());
+    LOG_INFO("Vendor:               %s", info.vendorName.c_str());
+    LOG_INFO("Shading Language:     %s", info.shadingLanguageName.c_str());
+
+    LOG_INFO("Extensions:");
+    for (const std::string& extension : info.extensionNames) {
+        LOG_INFO("  %s", extension.c_str());
+    }
+
     return true;
 }
 
@@ -123,22 +133,6 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
     state.swap_chain = context->CreateSwapChain(swapChainDesc, state.surface);
     state.swap_chain->SetVsyncInterval(vsync);
-
-    const auto& info = context->GetRendererInfo();
-
-    LOG_INFO("Renderer:             %s", info.rendererName.c_str());
-    LOG_INFO("Device:               %s", info.deviceName.c_str());
-    LOG_INFO("Vendor:               %s", info.vendorName.c_str());
-    LOG_INFO("Shading Language:     %s", info.shadingLanguageName.c_str());
-    LOG_INFO("Swap Chain Format:    %s", LLGL::ToString(state.swap_chain->GetColorFormat()));
-    LOG_INFO("Depth/Stencil Format: %s", LLGL::ToString(state.swap_chain->GetDepthStencilFormat()));
-
-    LOG_INFO("Extensions:");
-    for (const std::string& extension : info.extensionNames) {
-        LOG_INFO("  %s", extension.c_str());
-    }
-
-    state.limits = context->GetRenderingCaps().limits;
 
     state.command_buffer = context->CreateCommandBuffer();
     state.command_queue = context->GetCommandQueue();
@@ -185,17 +179,14 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Tiles).size);
     const glm::vec2 wall_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Walls).size);
 
-    const glm::vec2 tile_size = glm::vec2(Constants::TILE_SIZE) / tile_tex_size;
-    const glm::vec2 wall_size = glm::vec2(Constants::WALL_SIZE) / wall_tex_size;
-
     const glm::vec2 tile_padding = glm::vec2(Constants::TILE_TEXTURE_PADDING) / tile_tex_size;
     const glm::vec2 wall_padding = glm::vec2(Constants::WALL_TEXTURE_PADDING) / wall_tex_size;
 
     const ChunkVertex vertices[] = {
-        ChunkVertex(0.0, 0.0, wall_size, tile_size, wall_padding, tile_padding),
-        ChunkVertex(0.0, 1.0, wall_size, tile_size, wall_padding, tile_padding),
-        ChunkVertex(1.0, 0.0, wall_size, tile_size, wall_padding, tile_padding),
-        ChunkVertex(1.0, 1.0, wall_size, tile_size, wall_padding, tile_padding),
+        ChunkVertex(0.0, 0.0, wall_tex_size, tile_tex_size, wall_padding, tile_padding),
+        ChunkVertex(0.0, 1.0, wall_tex_size, tile_tex_size, wall_padding, tile_padding),
+        ChunkVertex(1.0, 0.0, wall_tex_size, tile_tex_size, wall_padding, tile_padding),
+        ChunkVertex(1.0, 1.0, wall_tex_size, tile_tex_size, wall_padding, tile_padding),
     };
 
     state.chunk_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex), "WorldRenderer VertexBuffer");
@@ -292,7 +283,6 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
 
     const auto& context = state.context;
 
-    if (state.lightmap_texture) context->Release(*state.lightmap_texture);
     if (state.fullscreen_triangle_vertex_buffer) context->Release(*state.fullscreen_triangle_vertex_buffer);
 
     const glm::vec2 world_size = glm::vec2(world.area.size()) * TILE_SIZE;
@@ -304,23 +294,10 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
     };
     state.fullscreen_triangle_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::PostProcessVertex));
 
-    LLGL::TextureDescriptor lightmap_texture_desc;
-    lightmap_texture_desc.type      = LLGL::TextureType::Texture2D;
-    lightmap_texture_desc.format    = LLGL::Format::RGBA8UNorm;
-    lightmap_texture_desc.extent    = LLGL::Extent3D(world.area.width() * SUBDIVISION, world.area.height() * SUBDIVISION, 1);
-    lightmap_texture_desc.miscFlags = 0;
-    lightmap_texture_desc.bindFlags = LLGL::BindFlags::Sampled;
-
-    LLGL::ImageView image_view;
-    image_view.format   = LLGL::ImageFormat::RGBA;
-    image_view.dataType = LLGL::DataType::UInt8;
-    image_view.data     = world.lightmap;
-    image_view.dataSize = world.area.width() * SUBDIVISION * world.area.height() * SUBDIVISION * 4;
-
-    state.lightmap_texture = context->CreateTexture(lightmap_texture_desc, &image_view);
+    state.world_renderer.init_lightmap_texture(world);
 }
 
-void Renderer::Begin(const Camera& camera) {
+void Renderer::Begin(const Camera& camera, WorldData& world) {
     auto* const commands = Renderer::CommandBuffer();
     auto* const swap_chain = Renderer::SwapChain();
 
@@ -337,6 +314,21 @@ void Renderer::Begin(const Camera& camera) {
     state.camera_frustum = camera_frustum;
     state.nonscale_camera_frustum = nonscale_camera_frustum;
     state.ui_frustum = ui_frustum;
+
+    for (auto it = world.lightmap_tasks.cbegin(); it != world.lightmap_tasks.cend();) {
+        const LightMapTask& task = *it;
+        LightMapTaskResult result = task.result->load();
+
+        if (result.is_complete) {
+            state.world_renderer.update_lightmap_texture(world, result);
+            delete[] result.data;
+            delete[] result.mask;
+            it = world.lightmap_tasks.erase(it);
+            continue;
+        }
+
+        ++it;
+    }
 
     commands->Begin();
     commands->SetViewport(swap_chain->GetResolution());
@@ -400,7 +392,7 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
         commands->SetResource(3, *state.world_render_texture);
         commands->SetResource(4, Assets::GetSampler(TextureSampler::Nearest));
 
-        commands->SetResource(5, *state.lightmap_texture);
+        commands->SetResource(5, *state.world_renderer.lightmap_texture());
         commands->SetResource(6, Assets::GetSampler(TextureSampler::Nearest));
         commands->Draw(3, 0);
 
@@ -501,7 +493,7 @@ void Renderer::DrawText(const char* text, uint32_t length, float size, const glm
     float x = position.x;
     float y = position.y;
 
-    float scale = size / font.font_size;
+    const float scale = size / font.font_size;
 
     uint32_t order = depth;
     if (depth != -1) {
@@ -534,10 +526,10 @@ void Renderer::DrawText(const char* text, uint32_t length, float size, const glm
             continue;
         }
 
-        float xpos = x + ch.bearing.x * scale;
-        float ypos = y - ch.bearing.y * scale;
-        glm::vec2 pos = glm::vec2(xpos, ypos);
-        glm::vec2 size = glm::vec2(ch.size) * scale;
+        const float xpos = x + ch.bearing.x * scale;
+        const float ypos = y - ch.bearing.y * scale;
+        const glm::vec2 pos = glm::vec2(xpos, ypos);
+        const glm::vec2 size = glm::vec2(ch.size) * scale;
 
         state.glyph_batch.draw_glyph(pos, size, color, font.texture, ch.texture_coords, ch.tex_size, is_ui, order);
 

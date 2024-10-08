@@ -8,13 +8,11 @@
 #include <glm/gtx/hash.hpp>
 #include <LLGL/Buffer.h>
 #include <LLGL/BufferArray.h>
+#include <LLGL/Texture.h>
 
 #include "../constants.hpp"
 
 #include "world_data.hpp"
-
-using Constants::RENDER_CHUNK_SIZE;
-using Constants::RENDER_CHUNK_SIZE_U;
 
 struct RenderChunk {
     glm::vec2 world_pos;
@@ -32,7 +30,7 @@ struct RenderChunk {
         glm::uvec2 index,
         const glm::vec2& world_pos,
         const WorldData& world
-    ) : world_pos(world_pos.x * RENDER_CHUNK_SIZE, world_pos.y * RENDER_CHUNK_SIZE),
+    ) : world_pos(world_pos.x * Constants::RENDER_CHUNK_SIZE, world_pos.y * Constants::RENDER_CHUNK_SIZE),
         index(std::move(index))
     {
         build_mesh(world);

@@ -7,6 +7,6 @@
 
 constexpr int DIRT_HILL_HEIGHT = 75;
 
-WorldData world_generate(uint32_t width, uint32_t height, uint32_t seed);
+void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t seed);
 
 #endif

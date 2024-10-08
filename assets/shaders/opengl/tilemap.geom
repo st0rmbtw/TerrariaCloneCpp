@@ -13,8 +13,7 @@ layout(std140) uniform OrderBuffer {
 in VS_OUT {
     vec4 uv_size;
     vec2 world_pos;
-    flat uint tile_type;
-    flat uint tile_id;
+    flat uint tile_data;
 } gs_in[];  
 
 out vec2 g_uv;
@@ -29,8 +28,12 @@ void main() {
     vec2 start_uv = gs_in[0].uv_size.xy;
     vec2 tex_size = gs_in[0].uv_size.zw;
     vec2 world_pos = gs_in[0].world_pos;
-    uint tile_id = gs_in[0].tile_id;
-    uint tile_type = gs_in[0].tile_type;
+    uint tile_data = gs_in[0].tile_data;
+
+    // Extract last 6 bits
+    uint tile_type = tile_data & 0x3f;
+    // Extract other 10 bits
+    uint tile_id = (tile_data >> 6) & 0x3ff;
 
     float order = ubo2.tile_order;
     vec2 size = vec2(TILE_SIZE);

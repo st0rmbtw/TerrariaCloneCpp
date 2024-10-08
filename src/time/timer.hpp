@@ -58,8 +58,7 @@ public:
 
     template <class Rep, class Period>
     inline void set_duration(const std::chrono::duration<Rep, Period>& duration) {
-        const auto d = std::chrono::duration_cast<Duration>(duration);
-        m_duration = duration;
+        m_duration = std::chrono::duration_cast<Duration>(duration);
     }
 
     template <class Rep, class Period>

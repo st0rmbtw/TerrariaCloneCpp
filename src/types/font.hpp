@@ -3,14 +3,14 @@
 #ifndef TERRARIA_TYPES_FONT
 #define TERRARIA_TYPES_FONT
 
-#include <map>
+#include <unordered_map>
 #include "texture.hpp"
 #include "glyph.hpp"
 
 struct Font {
-    Texture texture;
     float font_size;
-    std::map<char, Glyph> glyphs;
+    Texture texture;
+    std::unordered_map<char, Glyph> glyphs;
 };
 
 #endif

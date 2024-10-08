@@ -50,9 +50,10 @@ public:
 
     [[nodiscard]]
     inline constexpr const char* Profile(RenderBackend backend) const {
-        if (backend.IsOpenGL() || backend.IsVulkan()) return nullptr;
-
         switch (backend) {
+        case RenderBackend::OpenGL:
+        case RenderBackend::Vulkan: return nullptr;
+
         case RenderBackend::D3D11: switch (m_value) {
             case Value::Vertex: return "vs_5_0"; break;
             case Value::Fragment: return "ps_5_0"; break;
@@ -72,8 +73,6 @@ public:
         break;
 
         case RenderBackend::Metal: return "1.1"; break;
-        
-        default: UNREACHABLE()
         }
     }
 
