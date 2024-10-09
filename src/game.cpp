@@ -154,7 +154,7 @@ void Game::Run() {
             pre_update();
 
             fixed_timer += delta_time;
-            while (fixed_timer > Constants::FIXED_UPDATE_INTERVAL) {
+            while (fixed_timer >= Constants::FIXED_UPDATE_INTERVAL) {
                 Time::fixed_advance_by(delta_time_t(Constants::FIXED_UPDATE_INTERVAL));
                 fixed_update();
                 fixed_timer -= Constants::FIXED_UPDATE_INTERVAL;
