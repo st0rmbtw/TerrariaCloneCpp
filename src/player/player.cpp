@@ -472,7 +472,7 @@ void Player::update_sprites() {
         .set_position(m_position);
 }
 
-void Player::render() const {
+void Player::draw() const {
     Renderer::DrawAtlasSprite(m_head.sprite, RenderLayer::World);
 
     Renderer::DrawAtlasSprite(m_right_arm.sprite, RenderLayer::World);

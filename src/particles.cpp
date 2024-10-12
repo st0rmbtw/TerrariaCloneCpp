@@ -90,7 +90,7 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
     state.active_count = ++state.active_count % MAX_PARTICLES_COUNT;
 }
 
-void ParticleManager::Render() {
+void ParticleManager::Draw() {
     const uint32_t depth = Renderer::GetMainDepthIndex();
 
     for (size_t i = 0; i < state.active_count; ++i) {

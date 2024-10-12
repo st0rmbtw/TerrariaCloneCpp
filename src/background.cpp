@@ -99,7 +99,7 @@ void Background::Update(const Camera &camera) {
     }
 }
 
-void Background::Render() {
+void Background::Draw() {
     for (const BackgroundLayer& layer : state.layers) {
         Renderer::DrawBackground(layer);
     }

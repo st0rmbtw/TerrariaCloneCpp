@@ -61,7 +61,7 @@ namespace UI {
     void PreUpdate(Inventory& inventory);
     void Update(Inventory& inventory);
     void PostUpdate();
-    void Render(const Camera& camera, const Inventory& inventory);
+    void Draw(const Camera& camera, const Inventory& inventory);
 };
 
 #endif

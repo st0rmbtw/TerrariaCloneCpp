@@ -56,7 +56,6 @@ GLFWwindow* create_window(LLGL::Extent2D size, bool fullscreen) {
     GLFWwindow *window = glfwCreateWindow(size.width, size.height, "AAA", primary_monitor, nullptr);
     if (window == nullptr) {
         LOG_ERROR("Couldn't create a window: %s", glfwGetErrorString());
-        glfwTerminate();
         return nullptr;
     }
 
@@ -138,9 +137,11 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
 }
 
 void Game::Run() {
+    using Constants::FIXED_UPDATE_INTERVAL;
+
     double prev_tick = glfwGetTime();
 
-    float fixed_timer = 0;
+    double fixed_timer = 0;
     
     while (Renderer::Surface()->ProcessEvents()) {
         MACOS_AUTORELEASEPOOL_OPEN
@@ -154,10 +155,10 @@ void Game::Run() {
             pre_update();
 
             fixed_timer += delta_time;
-            while (fixed_timer >= Constants::FIXED_UPDATE_INTERVAL) {
-                Time::fixed_advance_by(delta_time_t(Constants::FIXED_UPDATE_INTERVAL));
+            while (fixed_timer >= FIXED_UPDATE_INTERVAL) {
+                Time::fixed_advance_by(delta_time_t(FIXED_UPDATE_INTERVAL));
                 fixed_update();
-                fixed_timer -= Constants::FIXED_UPDATE_INTERVAL;
+                fixed_timer -= FIXED_UPDATE_INTERVAL;
             }
 
             update();
@@ -249,7 +250,7 @@ void update() {
     g.player.update(g.camera, g.world);
 
     if (Input::Pressed(Key::K)) {
-        for (int i = 0; i < 500; i++) {
+        for (int i = 0; i < 500; ++i) {
             const glm::vec2 position = g.camera.screen_to_world(Input::MouseScreenPosition());
             const glm::vec2 velocity = glm::diskRand(1.0f) * 1.5f;
 
@@ -268,13 +269,13 @@ void post_update() {
 void render() {
     Renderer::Begin(g.camera, g.world.data());
 
-    Background::Render();
+    Background::Draw();
 
-    g.player.render();
+    g.player.draw();
 
-    ParticleManager::Render();
+    ParticleManager::Draw();
 
-    UI::Render(g.camera, g.player.inventory());
+    UI::Draw(g.camera, g.player.inventory());
 
     Renderer::Render(g.camera, g.world.chunk_manager());
 }

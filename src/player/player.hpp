@@ -115,7 +115,7 @@ public:
     void pre_update();
     void fixed_update(const World& world, bool handle_input);
     void update(const Camera& camera, World& world);
-    void render() const;
+    void draw() const;
 
     void set_position(const World& world, const glm::vec2& position);
 

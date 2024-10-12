@@ -90,7 +90,7 @@ void UI::PostUpdate() {
     state.elements.clear();
 }
 
-void UI::Render(const Camera&, const Inventory& inventory) {
+void UI::Draw(const Camera&, const Inventory& inventory) {
     render_inventory(inventory);
 
     Renderer::DrawSpriteUI(state.cursor_background);
