@@ -277,6 +277,8 @@ void render() {
 
     UI::Draw(g.camera, g.player.inventory());
 
+    g.world.draw();
+
     Renderer::Render(g.camera, g.world.chunk_manager());
 }
 
@@ -294,6 +296,8 @@ void post_render() {
 }
 
 glm::vec2 camera_follow_player() {
+    static constexpr float PIXEL_OFFSET = 2.0f;
+
     glm::vec2 position = g.player.position();
 
     const math::Rect area = g.world.playable_area() * Constants::TILE_SIZE;
@@ -305,8 +309,8 @@ glm::vec2 camera_follow_player() {
     const float top = camera_area.min.y;
     const float bottom = camera_area.max.y;
 
-    if (position.x + left < area.min.x) position.x = area.min.x - left;
-    if (position.x + right > area.max.x) position.x = area.max.x - right;
+    if (position.x + left < area.min.x + PIXEL_OFFSET) position.x = area.min.x - left + PIXEL_OFFSET;
+    if (position.x + right > area.max.x - PIXEL_OFFSET) position.x = area.max.x - right - PIXEL_OFFSET;
 
     if (position.y + top < area.min.y) position.y = area.min.y - top;
     if (position.y + bottom > area.max.y) position.y = area.max.y - bottom;

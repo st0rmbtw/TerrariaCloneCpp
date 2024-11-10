@@ -8,6 +8,8 @@
 #include "../world/world_gen.h"
 #include "../world/autotile.hpp"
 #include "../optional.hpp"
+#include "../time/time.hpp"
+#include "../renderer/renderer.hpp"
 
 void World::set_block(TilePos pos, const Block& block) {
     if (!m_data.is_tilepos_valid(pos)) return;
@@ -99,6 +101,38 @@ void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
 void World::update(const Camera& camera) {
     m_changed = false;
     m_chunk_manager.manage_chunks(m_data, camera);
+
+    for (auto it = m_block_dig_animations.begin(); it != m_block_dig_animations.end();) {
+        BlockDigAnimation& anim = *it;
+
+        if (anim.progress >= 1.0f) {
+            it = m_block_dig_animations.erase(it);
+            continue;
+        }
+
+        float step = 8.0f * Time::delta_seconds();
+
+        anim.progress += step;
+
+        if (anim.progress >= 0.5f) {
+            anim.scale = 1.0f - anim.progress;
+        } else {
+            anim.scale = anim.progress;
+        }
+
+        it++;
+    }
+}
+
+void World::draw() const {
+    for (const BlockDigAnimation& anim : m_block_dig_animations) {
+        TextureAtlasSprite sprite(Assets::GetTextureAtlas(block_texture_asset(anim.block_type)));
+        sprite.set_position(anim.tile_pos.to_world_pos_center());
+        sprite.set_scale(1.0f + anim.scale * 0.5f);
+        sprite.set_index(anim.atlas_pos.x, anim.atlas_pos.y);
+
+        Renderer::DrawAtlasSprite(sprite, RenderLayer::World);
+    }
 }
 
 void World::update_neighbors(TilePos initial_pos) {

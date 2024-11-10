@@ -517,23 +517,25 @@ void Player::use_item(const Camera& camera, World& world) {
     const TilePos tile_pos = TilePos::from_world_pos(world_pos);
 
     if (item->is_pickaxe && world.block_exists(tile_pos)) {
-        tl::optional<Block&> block = world.get_block_mut(tile_pos);
+        Block& block = world.get_block_mut(tile_pos).value();
 
-        if (block->hp > 0) {
-            block->hp -= item->power;
+        if (block.hp > 0) {
+            block.hp -= item->power;
         }
 
         const glm::vec2 position = tile_pos.to_world_pos_center();
-        spawn_particles_on_dig(position, block->type);
+        spawn_particles_on_dig(position, block.type);
         
-        if (block->hp <= 0) {
+        if (block.hp <= 0) {
             world.remove_block(tile_pos);
             return;
         }
 
-        if (block->type == BlockType::Grass) {
+        if (block.type == BlockType::Grass) {
             world.update_block_type(tile_pos, BlockType::Dirt);
         }
+
+        world.create_dig_block_animation(block, tile_pos);
     } else if (item->places_block.is_some() && !world.block_exists(tile_pos)) {
         const math::Rect player_rect = math::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
         const math::Rect tile_rect = math::Rect::from_center_size(tile_pos.to_world_pos_center(), glm::vec2(TILE_SIZE));
