@@ -20,7 +20,7 @@ void World::set_block(TilePos pos, const Block& block) {
     m_changed = true;
 
     const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
-        .clamp(m_data.area.min, m_data.area.max);
+        .clamp(m_data.playable_area);
     m_data.lightmap_update_area_async(light_area);
 
     m_chunk_manager.set_blocks_changed(pos);
@@ -42,7 +42,7 @@ void World::set_block(TilePos pos, BlockType block_type) {
     m_changed = true;
 
     const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
-        .clamp(m_data.area.min, m_data.area.max);
+        .clamp(m_data.playable_area);
     m_data.lightmap_update_area_async(light_area);
 
     m_chunk_manager.set_blocks_changed(pos);
@@ -61,7 +61,7 @@ void World::remove_block(TilePos pos) {
     m_changed = true;
 
     const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
-        .clamp(m_data.area.min, m_data.area.max);
+        .clamp(m_data.playable_area);
     m_data.lightmap_update_area_async(light_area);
 
     reset_tiles(pos, *this);
@@ -69,9 +69,10 @@ void World::remove_block(TilePos pos) {
     this->update_neighbors(pos);
 }
 
-void World::update_block_type(TilePos pos, BlockType new_type) {
+void World::update_block(TilePos pos, BlockType new_type, uint8_t new_variant) {
     const size_t index = m_data.get_tile_index(pos);
     m_data.blocks[index]->type = new_type;
+    m_data.blocks[index]->variant = new_variant;
     m_changed = true;
     reset_tiles(pos, *this);
     update_neighbors(pos);
@@ -86,7 +87,7 @@ void World::set_wall(TilePos pos, WallType wall_type) {
     m_changed = true;
 
     const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
-        .clamp(m_data.area.min, m_data.area.max);
+        .clamp(m_data.playable_area);
     m_data.lightmap_update_area_async(light_area);
 
     update_neighbors(pos);

@@ -33,7 +33,7 @@ public:
     void set_block(TilePos pos, BlockType block_type);
     void remove_block(TilePos pos);
 
-    void update_block_type(TilePos pos, BlockType new_type);
+    void update_block(TilePos pos, BlockType new_type, uint8_t new_variant);
 
     void set_wall(TilePos pos, WallType wall_type);
 

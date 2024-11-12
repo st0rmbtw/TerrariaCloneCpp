@@ -104,6 +104,11 @@ public:
     }
 
     [[nodiscard]]
+    inline constexpr rect<T> clamp(const rect<T>& rect) const {
+        return rect::from_corners(glm::max(this->min, rect.min), glm::min(this->max, rect.max));
+    }
+
+    [[nodiscard]]
     inline constexpr bool contains(const vec& point) const noexcept {
         return (
             point.x >= this->min.x &&

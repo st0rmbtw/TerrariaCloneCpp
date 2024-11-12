@@ -121,16 +121,16 @@ static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, co
     for (int y = min_y; y < max_y; ++y) {
         for (int x = min_x; x < max_x; ++x) {
             const TilePos color_pos = TilePos(x, y);
-            const TilePos tile_pos = color_pos / SUBDIVISION;
+            const TilePos tile_pos = tile_offset + color_pos / SUBDIVISION;
 
-            lightmap.set_mask(color_pos, world.block_exists(tile_offset + tile_pos));
+            lightmap.set_mask(color_pos, world.block_exists(tile_pos));
 
             if (tile_offset.y * SUBDIVISION + y >= world.layers.underground * SUBDIVISION) {
                 lightmap.set_color(color_pos, glm::vec3(0.0f));
                 continue;
             }
 
-            if (world.block_exists(tile_offset + tile_pos) || world.wall_exists(tile_offset + tile_pos)) {
+            if (tile_pos.x <= world.playable_area.min.x || tile_pos.x >= world.playable_area.max.x - 1 || world.block_exists(tile_pos) || world.wall_exists(tile_pos)) {
                 lightmap.set_color(color_pos, glm::vec3(0.0f));
             } else {
                 lightmap.set_color(color_pos, glm::vec3(1.0f));
