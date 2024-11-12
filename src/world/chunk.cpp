@@ -6,8 +6,14 @@
 #include "../renderer/renderer.hpp"
 #include "../renderer/types.hpp"
 
+#include "../defines.hpp"
+
 #define TILE_TYPE_BLOCK 0
 #define TILE_TYPE_WALL 1
+
+using Constants::SUBDIVISION;
+using Constants::RENDER_CHUNK_SIZE;
+using Constants::RENDER_CHUNK_SIZE_U;
 
 void RenderChunk::destroy() {
     if (block_instance_buffer) Renderer::Context()->Release(*block_instance_buffer);
@@ -17,13 +23,18 @@ void RenderChunk::destroy() {
     wall_instance_buffer = nullptr;
 }
 
-inline LLGL::BufferDescriptor GetBufferDescriptor() {
+static inline LLGL::BufferDescriptor GetBufferDescriptor() {
     LLGL::BufferDescriptor buffer_desc;
     buffer_desc.bindFlags = LLGL::BindFlags::VertexBuffer;
     buffer_desc.size = sizeof(ChunkInstance) * RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U;
     buffer_desc.stride = sizeof(ChunkInstance);
     buffer_desc.vertexAttribs = Assets::GetVertexFormat(VertexFormatAsset::TilemapInstance).attributes;
     return buffer_desc;
+}
+
+static FORCE_INLINE uint16_t pack_tile_data(uint16_t tile_id, uint8_t tile_type) {
+    // 6 bits for tile_type and 10 bits for tile_id
+    return tile_type | (tile_id << 6);
 }
 
 void RenderChunk::build_mesh(const WorldData& world) {
@@ -54,13 +65,9 @@ void RenderChunk::build_mesh(const WorldData& world) {
 
                     const glm::vec2 atlas_pos = glm::vec2(block->atlas_pos.x, block->atlas_pos.y);
 
-                    block_instance.push_back(ChunkInstance {
-                        .position = glm::vec2(x, y),
-                        .atlas_pos = atlas_pos,
-                        .world_pos = world_pos,
-                        .tile_id = static_cast<uint32_t>(block->type),
-                        .tile_type = TILE_TYPE_BLOCK
-                    });
+                    block_instance.emplace_back(
+                        glm::vec2(x, y), atlas_pos, world_pos, pack_tile_data(static_cast<uint32_t>(block->type), TILE_TYPE_BLOCK)
+                    );
                 }
             }
         }
@@ -80,40 +87,38 @@ void RenderChunk::build_mesh(const WorldData& world) {
 
                     const glm::vec2 atlas_pos = glm::vec2(wall->atlas_pos.x, wall->atlas_pos.y);
 
-                    wall_instance.push_back(ChunkInstance {
-                        .position = glm::vec2(x, y),
-                        .atlas_pos = atlas_pos,
-                        .world_pos = world_pos,
-                        .tile_id = static_cast<uint32_t>(wall->type),
-                        .tile_type = TILE_TYPE_WALL
-                    });
+                    wall_instance.emplace_back(
+                        glm::vec2(x, y), atlas_pos, world_pos, pack_tile_data(static_cast<uint32_t>(wall->type), TILE_TYPE_WALL)
+                    );
                 }
             }
         }
     }
 
+    auto& context = Renderer::Context();
+
     if (!block_buffer_array) {
         const void* data = blocks_dirty && !blocks_empty() ? block_instance.data() : nullptr;
 
-        this->block_instance_buffer = Renderer::Context()->CreateBuffer(GetBufferDescriptor(), data);
+        this->block_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
 
         LLGL::Buffer* buffers[] = { Renderer::ChunkVertexBuffer(), block_instance_buffer };
 
-        this->block_buffer_array = Renderer::Context()->CreateBufferArray(2, buffers);
+        this->block_buffer_array = context->CreateBufferArray(2, buffers);
     } else if (blocks_dirty && !blocks_empty()) {
-        Renderer::Context()->WriteBuffer(*block_instance_buffer, 0, block_instance.data(), block_instance.size() * sizeof(ChunkInstance));
+        context->WriteBuffer(*block_instance_buffer, 0, block_instance.data(), block_instance.size() * sizeof(ChunkInstance));
     }
 
     if (!wall_instance_buffer) {
         const void* data = walls_dirty && !walls_empty() ? wall_instance.data() : nullptr;
 
-        this->wall_instance_buffer = Renderer::Context()->CreateBuffer(GetBufferDescriptor(), data);
+        this->wall_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
 
         LLGL::Buffer* buffers[] = { Renderer::ChunkVertexBuffer(), wall_instance_buffer };
 
-        this->wall_buffer_array = Renderer::Context()->CreateBufferArray(2, buffers);
+        this->wall_buffer_array = context->CreateBufferArray(2, buffers);
     } else if (walls_dirty && !walls_empty()) {
-        Renderer::Context()->WriteBuffer(*wall_instance_buffer, 0, wall_instance.data(), wall_instance.size() * sizeof(ChunkInstance));
+        context->WriteBuffer(*wall_instance_buffer, 0, wall_instance.data(), wall_instance.size() * sizeof(ChunkInstance));
     }
 
     this->blocks_dirty = false;

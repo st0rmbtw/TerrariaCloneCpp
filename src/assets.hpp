@@ -46,6 +46,11 @@ enum class TextureAsset : uint8_t {
     Background93,
     Background112,
     Background114,
+
+    Tiles0,
+    Tiles1,
+    Tiles2,
+    Tiles30
 };
 
 enum class ShaderAsset : uint8_t {

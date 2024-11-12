@@ -102,7 +102,7 @@ private:
 namespace ParticleManager {
     void Init();
 
-    void Render();
+    void Draw();
     void Update();
     void DeleteExpired();
 

@@ -7,6 +7,8 @@
 #include "../world/chunk.hpp"
 
 #include "LLGL/PipelineStateFlags.h"
+#include "LLGL/TextureFlags.h"
+#include "LLGL/Types.h"
 #include "renderer.hpp"
 
 struct __attribute__((aligned(16))) DepthUniformData {
@@ -81,6 +83,44 @@ void WorldRenderer::init() {
     m_pipeline = context->CreatePipelineState(pipelineDesc);
 }
 
+void WorldRenderer::init_lightmap_texture(const WorldData& world) {
+    using Constants::SUBDIVISION;
+
+    auto& context = Renderer::Context();
+
+    if (m_lightmap_texture) context->Release(*m_lightmap_texture);
+
+    LLGL::TextureDescriptor lightmap_texture_desc;
+    lightmap_texture_desc.type      = LLGL::TextureType::Texture2D;
+    lightmap_texture_desc.format    = LLGL::Format::RGBA8UNorm;
+    lightmap_texture_desc.extent    = LLGL::Extent3D(world.lightmap.width, world.lightmap.height, 1);
+    lightmap_texture_desc.miscFlags = 0;
+    lightmap_texture_desc.bindFlags = LLGL::BindFlags::Sampled;
+
+    LLGL::ImageView image_view;
+    image_view.format   = LLGL::ImageFormat::RGBA;
+    image_view.dataType = LLGL::DataType::UInt8;
+    image_view.data     = world.lightmap.colors;
+    image_view.dataSize = world.lightmap.width * world.lightmap.height * 4;
+
+    m_lightmap_texture = context->CreateTexture(lightmap_texture_desc, &image_view);
+}
+
+void WorldRenderer::update_lightmap_texture(WorldData& world, LightMapTaskResult result) {
+    for (int y = 0; y < result.height; ++y) {
+        LLGL::ImageView image_view;
+        image_view.format   = LLGL::ImageFormat::RGBA;
+        image_view.dataType = LLGL::DataType::UInt8;
+        image_view.data     = &result.data[y * result.width];
+        image_view.dataSize = result.width * 1 * 4;
+
+        memcpy(&world.lightmap.colors[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.data[y * result.width], result.width * sizeof(Color));
+        memcpy(&world.lightmap.masks[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.mask[y * result.width], result.width * sizeof(LightMask));
+
+        Renderer::Context()->WriteTexture(*m_lightmap_texture, LLGL::TextureRegion(LLGL::Offset3D(result.offset_x, result.offset_y + y, 0), LLGL::Extent3D(result.width, 1, 1)), image_view);
+    }
+}
+
 void WorldRenderer::render(const ChunkManager& chunk_manager) {
     auto* const commands = Renderer::CommandBuffer();
 
@@ -118,4 +158,5 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
 void WorldRenderer::terminate() {
     if (m_pipeline) Renderer::Context()->Release(*m_pipeline);
     if (m_depth_buffer) Renderer::Context()->Release(*m_depth_buffer);
+    if (m_lightmap_texture) Renderer::Context()->Release(*m_lightmap_texture);
 }

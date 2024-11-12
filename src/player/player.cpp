@@ -1,5 +1,6 @@
 #include "player.hpp"
 
+#include <cfloat>
 #include <glm/gtc/random.hpp>
 
 #include "../assets.hpp"
@@ -172,18 +173,22 @@ glm::vec2 Player::check_collisions(const World& world) {
 
     m_collisions = Collisions();
 
-    for (uint32_t y = top; y < bottom; ++y) {
-        for (uint32_t x = left; x < right; ++x) {
+    for (int y = top; y < bottom; ++y) {
+        for (int x = left; x < right; ++x) {
             const glm::vec2 tile_pos = glm::vec2(x * TILE_SIZE, y * TILE_SIZE);
             if (world.block_exists(TilePos(x, y))) {
                 
                 if (next_pos.x + PLAYER_WIDTH_HALF > tile_pos.x && next_pos.x - PLAYER_WIDTH_HALF < tile_pos.x + TILE_SIZE &&
                     next_pos.y + PLAYER_HEIGHT_HALF > tile_pos.y && next_pos.y - PLAYER_HEIGHT_HALF < tile_pos.y + TILE_SIZE)
                 {
+                    const bool collide_horizontal = pos.x + PLAYER_WIDTH_HALF > tile_pos.x && pos.x - PLAYER_WIDTH_HALF < tile_pos.x + TILE_SIZE;
+
                     if (pos.y + PLAYER_HEIGHT_HALF <= tile_pos.y) {
-                        m_collisions.down = true;
-                        m_jumping = false;
-                        m_stand_on_block = world.get_block_type(TilePos(x, y));
+                        if (collide_horizontal) {
+                            m_collisions.down = true;
+                            m_jumping = false;
+                            m_stand_on_block = world.get_block_type(TilePos(x, y));
+                        }
                         num7 = x;
                         num8 = y;
                         if (num7 != num5) {
@@ -196,15 +201,24 @@ glm::vec2 Player::check_collisions(const World& world) {
                         if (num6 != num8) {
                             result.x = tile_pos.x - (pos.x + PLAYER_WIDTH_HALF);
                         }
-                    } else if (pos.x + PLAYER_WIDTH_HALF >= tile_pos.x + TILE_SIZE) {
+                        if (num7 == num5) {
+                            result.y = m_velocity.y;
+                        }
+                    } else if (pos.x - PLAYER_WIDTH_HALF >= tile_pos.x + TILE_SIZE) {
                         m_collisions.left = true;
                         num5 = x;
                         num6 = y;
                         if (num6 != num8) {
                             result.x = tile_pos.x + TILE_SIZE - (pos.x - PLAYER_WIDTH_HALF);
                         }
+                        if (num7 == num5) {
+                            result.y = m_velocity.y;
+                        }
                     } else if (pos.y - PLAYER_HEIGHT_HALF >= tile_pos.y + TILE_SIZE) {
-                        m_collisions.up = true;
+                        if (collide_horizontal) {
+                            m_collisions.up = true;
+                        }
+
                         num7 = x;
                         num8 = y;
                         result.y = tile_pos.y + TILE_SIZE - (pos.y - PLAYER_HEIGHT_HALF);
@@ -306,7 +320,9 @@ void Player::update_sprites_index() {
 }
 
 void Player::update_movement_state() {
-    if (m_velocity.y != 0) {
+    constexpr float threshold = TILE_SIZE / 2.0f * GRAVITY;
+
+    if (abs(m_velocity.y) > threshold + FLT_EPSILON || m_jumping) {
         m_movement_state = MovementState::Flying;
     } else if (m_velocity.x != 0) {
         m_movement_state = MovementState::Walking;
@@ -322,12 +338,12 @@ void Player::pre_update() {
 }
 
 void Player::spawn_particles_on_walk() const {
-    if (m_stand_on_block.is_none()) return;
-    const BlockType block = m_stand_on_block.value();
-
-    if (!block_dusty(block)) return;
     if (m_movement_state != MovementState::Walking) return;
+    if (m_stand_on_block.is_none()) return;
     if (glm::abs(m_velocity.x) < 1.0f) return;
+
+    const BlockType block = m_stand_on_block.value();
+    if (!block_dusty(block)) return;
 
     const float direction = m_direction == Direction::Right ? -1.0f : 1.0f;
 
@@ -425,36 +441,38 @@ float Player::get_fall_distance() const {
 }
 
 void Player::update_sprites() {
+    const bool flip_x = m_direction == Direction::Left;
+
     m_hair.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_head.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_body.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_legs.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_left_hand.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_left_shoulder.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_right_arm.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_left_eye.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
     m_right_eye.sprite
-        .set_flip_x(m_direction == Direction::Left)
+        .set_flip_x(flip_x)
         .set_position(m_position);
 }
 
-void Player::render() const {
+void Player::draw() const {
     Renderer::DrawAtlasSprite(m_head.sprite, RenderLayer::World);
 
     Renderer::DrawAtlasSprite(m_right_arm.sprite, RenderLayer::World);
@@ -491,6 +509,7 @@ void Player::use_item(const Camera& camera, World& world) {
     m_swing_anim = true;
 
     if (m_use_cooldown > 0) return;
+    m_use_cooldown = item->use_cooldown;
 
     const glm::vec2& screen_pos = Input::MouseScreenPosition();
     const glm::vec2 world_pos = camera.screen_to_world(screen_pos);
@@ -498,25 +517,36 @@ void Player::use_item(const Camera& camera, World& world) {
     const TilePos tile_pos = TilePos::from_world_pos(world_pos);
 
     if (item->is_pickaxe && world.block_exists(tile_pos)) {
-        tl::optional<Block&> block = world.get_block_mut(tile_pos);
+        Block& block = world.get_block_mut(tile_pos).value();
 
-        if (block->hp > 0) {
-            block->hp -= item->power;
+        if (block.hp > 0) {
+            block.hp -= item->power;
         }
 
         const glm::vec2 position = tile_pos.to_world_pos_center();
-        spawn_particles_on_dig(position, block->type);
-
-        if (block->type == BlockType::Grass) {
-            world.update_block_type(tile_pos, BlockType::Dirt);
-        }
+        spawn_particles_on_dig(position, block.type);
         
-        if (block->hp <= 0) {
+        if (block.hp <= 0) {
             world.remove_block(tile_pos);
+            return;
         }
+
+        uint8_t new_variant = rand() % 3;
+        BlockType new_block_type;
+        switch (block.type) {
+            case BlockType::Grass: new_block_type = BlockType::Dirt; break;
+            default: new_block_type = block.type;
+        }
+
+        world.update_block(tile_pos, new_block_type, new_variant);
+
+        world.create_dig_block_animation(block, tile_pos);
     } else if (item->places_block.is_some() && !world.block_exists(tile_pos)) {
+        const math::Rect player_rect = math::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
+        const math::Rect tile_rect = math::Rect::from_center_size(tile_pos.to_world_pos_center(), glm::vec2(TILE_SIZE));
+
+        if (player_rect.intersects(tile_rect)) return;
+
         world.set_block(tile_pos, item->places_block.value());
     }
-
-    m_use_cooldown = item->use_cooldown;
 }

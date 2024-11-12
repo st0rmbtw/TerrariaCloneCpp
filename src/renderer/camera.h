@@ -12,22 +12,22 @@
 class Camera {
 public:
     Camera() :
-        m_position(0.0f),
-        m_viewport(0),
         m_projection_matrix(),
         m_screen_projection_matrix(),
         m_nonscale_projection_matrix(),
         m_view_matrix(),
-        m_transform_matrix() {}
+        m_transform_matrix(),
+        m_viewport(0),
+        m_position(0.0f) {}
 
     explicit Camera(glm::uvec2 viewport) :
-        m_position(0.0f),
-        m_viewport(std::move(viewport)),
         m_projection_matrix(),
         m_screen_projection_matrix(),
         m_nonscale_projection_matrix(),
         m_view_matrix(),
-        m_transform_matrix()
+        m_transform_matrix(),
+        m_viewport(std::move(viewport)),
+        m_position(0.0f)
     {
         update_projection_area();
         compute_projection_and_view_matrix();

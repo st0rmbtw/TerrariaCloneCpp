@@ -13,9 +13,9 @@
 #include "../world/world.hpp"
 #include "../time/timer.hpp"
 
-constexpr float PLAYER_WIDTH = 22.0f;
-constexpr float PLAYER_WIDTH_HALF = PLAYER_WIDTH / 2.0f;
+constexpr float PLAYER_WIDTH = 20.0f;
 constexpr float PLAYER_HEIGHT = 42.0f;
+constexpr float PLAYER_WIDTH_HALF = PLAYER_WIDTH / 2.0f;
 constexpr float PLAYER_HEIGHT_HALF = PLAYER_HEIGHT / 2.0f;
 
 constexpr float GRAVITY = 0.4f;
@@ -31,7 +31,7 @@ constexpr float MAX_FALL_SPEED = 10.0;
 constexpr size_t WALK_ANIMATION_LENGTH = 13;
 
 const glm::vec2 ITEM_ANIMATION_POINTS[] = {
-    glm::vec2(-7.5, -11.0), glm::vec2(6.0, -7.5), glm::vec2(7.0, 4.0)
+    glm::vec2(-7.5f, -11.0f), glm::vec2(6.0f, -7.5f), glm::vec2(7.0f, 4.0f)
 };
 
 constexpr float ITEM_ROTATION = 1.7;
@@ -115,7 +115,7 @@ public:
     void pre_update();
     void fixed_update(const World& world, bool handle_input);
     void update(const Camera& camera, World& world);
-    void render() const;
+    void draw() const;
 
     void set_position(const World& world, const glm::vec2& position);
 

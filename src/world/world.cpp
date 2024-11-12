@@ -8,6 +8,8 @@
 #include "../world/world_gen.h"
 #include "../world/autotile.hpp"
 #include "../optional.hpp"
+#include "../time/time.hpp"
+#include "../renderer/renderer.hpp"
 
 void World::set_block(TilePos pos, const Block& block) {
     if (!m_data.is_tilepos_valid(pos)) return;
@@ -17,7 +19,9 @@ void World::set_block(TilePos pos, const Block& block) {
     m_data.blocks[index] = block;
     m_changed = true;
 
-    m_data.lightmap_init_tile(pos);
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+        .clamp(m_data.playable_area);
+    m_data.lightmap_update_area_async(light_area);
 
     m_chunk_manager.set_blocks_changed(pos);
 
@@ -37,8 +41,9 @@ void World::set_block(TilePos pos, BlockType block_type) {
     
     m_changed = true;
 
-    m_data.lightmap_init_tile(pos);
-    m_data.lightmap_blur_area(math::IRect::from_center_half_size(glm::ivec2(pos.x, pos.y), glm::ivec2(16)));
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+        .clamp(m_data.playable_area);
+    m_data.lightmap_update_area_async(light_area);
 
     m_chunk_manager.set_blocks_changed(pos);
 }
@@ -55,17 +60,19 @@ void World::remove_block(TilePos pos) {
     m_data.blocks[index] = tl::nullopt;
     m_changed = true;
 
-    reset_tiles(pos, *this);
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+        .clamp(m_data.playable_area);
+    m_data.lightmap_update_area_async(light_area);
 
-    m_data.lightmap_init_tile(pos);
-    m_data.lightmap_blur_area(math::IRect::from_center_half_size(glm::ivec2(pos.x, pos.y), glm::ivec2(16)));
+    reset_tiles(pos, *this);
 
     this->update_neighbors(pos);
 }
 
-void World::update_block_type(TilePos pos, BlockType new_type) {
+void World::update_block(TilePos pos, BlockType new_type, uint8_t new_variant) {
     const size_t index = m_data.get_tile_index(pos);
     m_data.blocks[index]->type = new_type;
+    m_data.blocks[index]->variant = new_variant;
     m_changed = true;
     reset_tiles(pos, *this);
     update_neighbors(pos);
@@ -79,20 +86,54 @@ void World::set_wall(TilePos pos, WallType wall_type) {
     m_data.walls[index] = Wall(wall_type);
     m_changed = true;
 
-    update_neighbors(pos);
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+        .clamp(m_data.playable_area);
+    m_data.lightmap_update_area_async(light_area);
 
-    m_data.lightmap_init_tile(pos);
+    update_neighbors(pos);
 
     m_chunk_manager.set_walls_changed(pos);
 }
 
 void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
-    m_data = world_generate(width, height, seed);
+    world_generate(m_data, width, height, seed);
 }
 
 void World::update(const Camera& camera) {
     m_changed = false;
     m_chunk_manager.manage_chunks(m_data, camera);
+
+    for (auto it = m_block_dig_animations.begin(); it != m_block_dig_animations.end();) {
+        BlockDigAnimation& anim = *it;
+
+        if (anim.progress >= 1.0f) {
+            it = m_block_dig_animations.erase(it);
+            continue;
+        }
+
+        float step = 8.0f * Time::delta_seconds();
+
+        anim.progress += step;
+
+        if (anim.progress >= 0.5f) {
+            anim.scale = 1.0f - anim.progress;
+        } else {
+            anim.scale = anim.progress;
+        }
+
+        it++;
+    }
+}
+
+void World::draw() const {
+    for (const BlockDigAnimation& anim : m_block_dig_animations) {
+        TextureAtlasSprite sprite(Assets::GetTextureAtlas(block_texture_asset(anim.block_type)));
+        sprite.set_position(anim.tile_pos.to_world_pos_center());
+        sprite.set_scale(1.0f + anim.scale * 0.6f);
+        sprite.set_index(anim.atlas_pos.x, anim.atlas_pos.y);
+
+        Renderer::DrawAtlasSprite(sprite, RenderLayer::World);
+    }
 }
 
 void World::update_neighbors(TilePos initial_pos) {
@@ -113,7 +154,6 @@ void World::update_tile_sprite_index(TilePos pos) {
 
     if (block.is_some()) {
         const Neighbors<const Block&> neighbors = this->get_block_neighbors(pos);
-        const TextureAtlasPos prev_atlas_pos = block->atlas_pos;
 
         update_block_sprite_index(block.get(), neighbors);
     
@@ -122,7 +162,6 @@ void World::update_tile_sprite_index(TilePos pos) {
 
     if (wall.is_some()) {
         const Neighbors<const Wall&> neighbors = this->get_wall_neighbors(pos);
-        const TextureAtlasPos prev_atlas_pos = wall->atlas_pos;
 
         update_wall_sprite_index(wall.get(), neighbors);
         

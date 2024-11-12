@@ -11,7 +11,7 @@ namespace Background {
     void SetupMenuBackground();
     
     void Update(const Camera& camera);
-    void Render();
+    void Draw();
 };
 
 #endif

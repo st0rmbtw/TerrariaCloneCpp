@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.18)
 
 project(TerrariaClone CXX)
 
+find_package(OpenMP)
+
 set(CMAKE_CXX_STANDARD 20)
 
 if(APPLE)
@@ -25,7 +27,9 @@ if (RELEASE_BUILD)
         STRING(REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
         STRING(REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
     else()
-        add_compile_options("-g0" "-O3" "-fomit-frame-pointer" "-ffast-math" "${BITCODE}")
+        add_compile_options("-g0" "-O3")
+        add_compile_options("-fomit-frame-pointer")
+        add_compile_options("-fno-math-errno" "-ffinite-math-only" "-fno-signed-zeros" "-fno-trapping-math" "-fassociative-math")
     endif()
     set(DISABLE_FORCE_DEBUG_POSTFIX ON)
     # set(LLGL_BUILD_STATIC_LIB ON CACHE BOOL "")
@@ -47,8 +51,7 @@ if (WIN32)
     add_compile_definitions(NOMINMAX)
 endif()
 
-add_compile_options("-Wno-ignored-attributes")
-add_compile_options("-march=native")
+add_compile_options("-Wno-ignored-attributes" "-march=native")
 
 add_compile_definitions(GLM_FORCE_INTRINSICS)
 
@@ -92,12 +95,16 @@ add_executable(${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME} PRIVATE ${SRC})
 
+target_compile_options(${PROJECT_NAME} PRIVATE "-Wall" "-Wextra" "-Wno-gnu-zero-variadic-macro-arguments")
+
 if(RELEASE_BUILD)
     target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG=0)
-    target_compile_options(${PROJECT_NAME} PUBLIC "-O3" "-g0")
 else()
     target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG=1)
-    target_compile_options(${PROJECT_NAME} PUBLIC "-O0" "-ggdb")
+endif()
+
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
 target_link_libraries(${PROJECT_NAME} glm STB glfw LLGL FastNoiseLite freetype)
@@ -109,7 +116,7 @@ foreach(asset ${ASSETS})
     file(RELATIVE_PATH out_file ${CMAKE_CURRENT_SOURCE_DIR}/assets/ ${asset})
     get_filename_component(out_dir ${out_file} DIRECTORY)
     get_filename_component(out_name ${out_file} NAME)
-
+ 
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/assets/${out_dir})
 
     if (NOT ${out_dir} STREQUAL "shaders/vulkan")

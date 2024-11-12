@@ -7,6 +7,7 @@
 
 #include "../optional.hpp"
 #include "texture_atlas_pos.hpp"
+#include "../assets.hpp"
 
 enum class BlockType : uint8_t {
     Dirt = 0,
@@ -64,6 +65,15 @@ inline constexpr static bool block_dusty(BlockType block_type) {
     case BlockType::Grass: return false;
     case BlockType::Stone: return false;
     case BlockType::Wood:  return false;
+    }
+}
+
+inline constexpr static TextureAsset block_texture_asset(BlockType block_type) {
+    switch (block_type) {
+    case BlockType::Dirt: return TextureAsset::Tiles0;
+    case BlockType::Stone: return TextureAsset::Tiles1;
+    case BlockType::Grass: return TextureAsset::Tiles2;
+    case BlockType::Wood: return TextureAsset::Tiles30;
     }
 }
 

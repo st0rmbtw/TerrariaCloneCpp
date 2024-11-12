@@ -51,14 +51,6 @@ static void update_tile_sprite_index(WorldData& world, const TilePos& pos) {
     }
 }
 
-static void fill(WorldData& world, BlockType block, int from_x, int to_x, int from_y, int to_y) {
-    for (int y = from_y; y < to_y; ++y) {
-        for (int x = from_x; x < to_x; ++x) {
-            set_block(world, {x, y}, block);
-        }
-    }
-}
-
 static void fill_line_vertical(WorldData& world, BlockType block, int from_y, int to_y, int x) {
     if (from_y < to_y) {
         for (int y = from_y; y < to_y; ++y) {
@@ -77,7 +69,7 @@ static int get_surface_block(const WorldData &world, int x) {
     int y = world.playable_area.min.y;
 
     while (y < height) {
-        if (world.block_exists({x, y})) { break; }
+        if (world.block_exists({x, y})) break;
         ++y;
     }
 
@@ -85,12 +77,12 @@ static int get_surface_block(const WorldData &world, int x) {
 }
 
 static int get_surface_wall(const WorldData &world, int x) {
-    const int height = world.playable_area.height();
+    const int max_y = world.playable_area.max.y;
 
     int y = world.playable_area.min.y;
 
-    while (y < height) {
-        if (world.wall_exists({x, y})) { break; }
+    while (y < max_y) {
+        if (world.wall_exists({x, y})) break;
         ++y;
     }
 
@@ -119,22 +111,27 @@ static void world_generate_walls(WorldData& world) {
     const int underground_level = world.layers.underground;
 
     for (int y = dirt_level; y < underground_level; ++y) {
-        for (int x = world.playable_area.min.x; x < world.playable_area.max.x; ++x) {
+        for (int x = world.playable_area.min.x; x < world.playable_area.max.x - 1; ++x) {
             set_wall(world, {x, y}, Wall(WallType::DirtWall));
         }
     }
 }
 
-static bool remove_walls_is_valid(WorldData& world, TilePos pos) {
-    if (pos.x >= world.area.width()) return false;
-    if (pos.y >= world.area.height()) return false;
+static bool tile_pos_in_bounds(WorldData& world, TilePos pos) {
+    if (pos.x <= world.playable_area.min.x || pos.x >= world.playable_area.max.x - 1) return false;
+    if (pos.x <= world.playable_area.min.y || pos.y >= world.playable_area.max.y - 1) return false;
+    return true;
+}
 
-    if (!world.wall_exists(pos)) { return false; }
+static bool remove_walls_is_valid(WorldData& world, TilePos pos) {
+    if (!tile_pos_in_bounds(world, pos)) return false;
+
+    if (!world.wall_exists(pos)) return false;
 
     const Neighbors<const Block&> neighbors = world.get_block_neighbors(pos);
-    if (neighbors.any_not_exists()) { return true; }
+    if (neighbors.any_not_exists()) return true;
 
-    if (world.block_exists(pos)) { return false; }
+    if (world.block_exists(pos)) return false;
 
     return true;
 }
@@ -152,38 +149,47 @@ static void remove_walls_flood_fill(WorldData& world, TilePos start) {
 
         queue.pop_back();
 
-        if (glm::abs(depth.x) >= depth.y / 2 + 5) continue;
-
         {
             const TilePos new_pos = pos.offset(TileOffset::Right);
             const glm::ivec2 new_depth = depth + glm::ivec2(1, 0);
             if (remove_walls_is_valid(world, new_pos)) {
-                remove_wall(world, new_pos);
                 queue.emplace_back(new_pos, new_depth);
+            }
+            if (tile_pos_in_bounds(world, new_pos)) {
+                remove_wall(world, new_pos);
             }
         }
         {
             const TilePos new_pos = pos.offset(TileOffset::Left);
             const glm::ivec2 new_depth = depth + glm::ivec2(-1, 0);
             if (remove_walls_is_valid(world, new_pos)) {
-                remove_wall(world, new_pos);
                 queue.emplace_back(new_pos, new_depth);
             }
+            if (tile_pos_in_bounds(world, new_pos)) {
+                remove_wall(world, new_pos);
+            }
         }
+
+        if (glm::abs(depth.x) >= depth.y / 2 + 5) continue;
+
         {
             const TilePos new_pos = pos.offset(TileOffset::Top);
             const glm::ivec2 new_depth = depth + glm::ivec2(0, -1);
             if (remove_walls_is_valid(world, new_pos)) {
-                remove_wall(world, new_pos);
                 queue.emplace_back(new_pos, new_depth);
+            }
+            if (tile_pos_in_bounds(world, new_pos)) {
+                remove_wall(world, new_pos);
             }
         }
         {
             const TilePos new_pos = pos.offset(TileOffset::Bottom);
             const glm::ivec2 new_depth = depth + glm::ivec2(0, 1);
             if (remove_walls_is_valid(world, new_pos)) {
-                remove_wall(world, new_pos);
                 queue.emplace_back(new_pos, new_depth);
+            }
+            if (tile_pos_in_bounds(world, new_pos)) {
+                remove_wall(world, new_pos);
             }
         }
         {
@@ -225,7 +231,7 @@ static void world_remove_walls_from_surface(WorldData& world) {
     const int min_x = world.playable_area.min.x;
     const int max_x = world.playable_area.max.x;
 
-    for (int x = min_x; x < max_x; ++x) {
+    for (int x = min_x; x <= max_x; ++x) {
         const int y = get_surface_wall(world, x);
 
         const TilePos pos = TilePos(x, y);
@@ -233,6 +239,15 @@ static void world_remove_walls_from_surface(WorldData& world) {
         if (world.block_exists(pos)) continue;
 
         remove_walls_flood_fill(world, pos);
+    }
+
+    for (int x = 0; x <= max_x; ++x) {
+        int y = world.playable_area.min.y;
+        while (y < world.playable_area.max.y) {
+            remove_wall(world, TilePos(x, y));
+            if (world.block_exists(TilePos(x, y))) break;
+            y++;
+        }
     }
 }
 
@@ -565,17 +580,17 @@ static void world_grassify(WorldData& world) {
 }
 
 static void world_generate_lightmap(WorldData& world) {
-    world.lightmap_init_area(world.area);
-    world.lightmap_blur_area(world.area);
+    world.lightmap_init_area(world.playable_area);
+    world.lightmap_blur_area_sync(world.playable_area);
 }
 
-WorldData world_generate(uint32_t width, uint32_t height, uint32_t seed) {
+void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t seed) {
+    world.destroy();
+
     srand(seed);
 
-    WorldData world = {};
-
     const math::IRect area = math::IRect::from_corners(glm::vec2(0), glm::ivec2(width, height) + glm::ivec2(16));
-    const math::IRect playable_area = math::IRect::from_corners(area.min + glm::ivec2(8), area.max - glm::ivec2(8));
+    const math::IRect playable_area = area.inset(-8);
 
     const int surface_level = (playable_area.min.y + playable_area.height() / 10);
     const int underground_level = (playable_area.min.y + playable_area.height() / 3);
@@ -590,7 +605,7 @@ WorldData world_generate(uint32_t width, uint32_t height, uint32_t seed) {
 
     world.blocks = new tl::optional<Block>[area.width() * area.height()];
     world.walls = new tl::optional<Wall>[area.width() * area.height()];
-    world.lightmap = new Color[area.width() * SUBDIVISION * area.height() * SUBDIVISION];
+    world.lightmap = LightMap(area.width(), area.height());
     world.playable_area = playable_area;
     world.area = area;
     world.layers = layers;
@@ -621,6 +636,4 @@ WorldData world_generate(uint32_t width, uint32_t height, uint32_t seed) {
     world.spawn_point = world_get_spawn_point(world);
     
     srand(time(NULL));
-
-    return world;
 };

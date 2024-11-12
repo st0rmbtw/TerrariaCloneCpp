@@ -23,5 +23,5 @@ TextureAtlas TextureAtlas::from_grid(const Texture& texture, const glm::uvec2 &t
         }
     }
 
-    return TextureAtlas(texture, tile_size, sprites);
+    return TextureAtlas(texture, sprites, tile_size, columns, rows);
 }

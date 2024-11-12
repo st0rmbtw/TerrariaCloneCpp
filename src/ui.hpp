@@ -35,8 +35,8 @@ public:
     };
 
     Element(UiElement element_type, int data, math::Rect rect) :
-        m_data(data),
         m_element_type(element_type),
+        m_data(data),
         m_rect(std::move(rect)) {}
 
     inline void press() noexcept { m_state = m_state | Pressed; }
@@ -61,7 +61,7 @@ namespace UI {
     void PreUpdate(Inventory& inventory);
     void Update(Inventory& inventory);
     void PostUpdate();
-    void Render(const Camera& camera, const Inventory& inventory);
+    void Draw(const Camera& camera, const Inventory& inventory);
 };
 
 #endif

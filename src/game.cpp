@@ -49,13 +49,13 @@ static void handle_window_iconify_callback(GLFWwindow* window, int iconified);
 GLFWwindow* create_window(LLGL::Extent2D size, bool fullscreen) {
     glfwWindowHint(GLFW_FOCUSED, 1);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
     GLFWmonitor* primary_monitor = fullscreen ? glfwGetPrimaryMonitor() : nullptr;
 
     GLFWwindow *window = glfwCreateWindow(size.width, size.height, "AAA", primary_monitor, nullptr);
     if (window == nullptr) {
         LOG_ERROR("Couldn't create a window: %s", glfwGetErrorString());
-        glfwTerminate();
         return nullptr;
     }
 
@@ -78,6 +78,20 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
         return false;
     }
 
+    LLGL::Log::RegisterCallbackStd();
+
+    if (!Renderer::InitEngine(backend)) return false;
+    if (!Assets::Load()) return false;
+    if (!Assets::LoadFonts()) return false;
+    if (!Assets::InitSamplers()) return false;
+
+    const std::vector<ShaderDef> shader_defs = {
+        ShaderDef("TILE_SIZE", std::to_string(Constants::TILE_SIZE)),
+        ShaderDef("WALL_SIZE", std::to_string(Constants::WALL_SIZE)),
+    };
+
+    if (!Assets::LoadShaders(shader_defs)) return false;
+
     auto window_size = LLGL::Extent2D(1280, 720);
     if (config.fullscreen) {
         const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
@@ -88,33 +102,6 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     const std::uint32_t resScale = (display != nullptr ? static_cast<std::uint32_t>(display->GetScale()) : 1u);
     const auto resolution = LLGL::Extent2D(window_size.width * resScale, window_size.height * resScale);
 
-    LLGL::Log::RegisterCallbackStd();
-
-    if (!Renderer::InitEngine(backend)) return false;
-    if (!Assets::Load()) return false;
-    if (!Assets::LoadFonts()) return false;
-    if (!Assets::InitSamplers()) return false;
-
-    init_tile_rules();
-
-    g.camera.set_viewport({window_size.width, window_size.height});
-    g.camera.set_zoom(1.0f);
-
-    g.world.generate(200, 500, 0);
-
-    const std::vector<ShaderDef> shader_defs = {
-        // ShaderDef("DEF_SUBDIVISION", std::to_string(config::SUBDIVISION)),
-        ShaderDef("WORLD_WIDTH", std::to_string(g.world.area().width())),
-        ShaderDef("WORLD_HEIGHT", std::to_string(g.world.area().height())),
-        ShaderDef("CHUNK_WIDTH", std::to_string(Constants::RENDER_CHUNK_SIZE_U)),
-        ShaderDef("CHUNK_HEIGHT", std::to_string(Constants::RENDER_CHUNK_SIZE_U)),
-
-        ShaderDef("TILE_SIZE", std::to_string(Constants::TILE_SIZE)),
-        ShaderDef("WALL_SIZE", std::to_string(Constants::WALL_SIZE)),
-    };
-
-    if (!Assets::LoadShaders(shader_defs)) return false;
-
     GLFWwindow *window = create_window(window_size, config.fullscreen);
     if (window == nullptr) return false;
 
@@ -122,11 +109,18 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     
     if (!Renderer::Init(window, resolution, config.vsync, config.fullscreen)) return false;
 
+    init_tile_rules();
+
+    g.world.generate(200, 500, 0);
+
     Renderer::InitWorldRenderer(g.world.data());
 
     ParticleManager::Init();
     UI::Init();
     Background::SetupWorldBackground(g.world);
+
+    g.camera.set_viewport({window_size.width, window_size.height});
+    g.camera.set_zoom(1.0f);
 
     g.player.init();
     g.player.inventory().set_item(0, ITEM_COPPER_AXE);
@@ -137,13 +131,17 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     g.player.inventory().set_item(5, ITEM_WOOD_BLOCK.with_max_stack());
     g.player.set_position(g.world, glm::vec2(g.world.spawn_point()) * Constants::TILE_SIZE);
 
+    glfwShowWindow(window);
+
     return true;
 }
 
 void Game::Run() {
+    using Constants::FIXED_UPDATE_INTERVAL;
+
     double prev_tick = glfwGetTime();
 
-    float fixed_timer = 0;
+    double fixed_timer = 0;
     
     while (Renderer::Surface()->ProcessEvents()) {
         MACOS_AUTORELEASEPOOL_OPEN
@@ -157,10 +155,10 @@ void Game::Run() {
             pre_update();
 
             fixed_timer += delta_time;
-            while (fixed_timer > Constants::FIXED_UPDATE_INTERVAL) {
-                Time::fixed_advance_by(delta_time_t(Constants::FIXED_UPDATE_INTERVAL));
+            while (fixed_timer >= FIXED_UPDATE_INTERVAL) {
+                Time::fixed_advance_by(delta_time_t(FIXED_UPDATE_INTERVAL));
                 fixed_update();
-                fixed_timer -= Constants::FIXED_UPDATE_INTERVAL;
+                fixed_timer -= FIXED_UPDATE_INTERVAL;
             }
 
             update();
@@ -180,15 +178,17 @@ void Game::Destroy() {
     if (Renderer::CommandQueue()) {
         Renderer::CommandQueue()->WaitIdle();
     }
+    
     if (Renderer::Context()) {
         g.world.chunk_manager().destroy();
-   
         Renderer::Terminate();
     }
 
     ParticleManager::Terminate();
 
     glfwTerminate();
+
+    g.world.data().lightmap_tasks_wait();
 }
 
 void pre_update() {
@@ -207,21 +207,13 @@ void fixed_update() {
 #if DEBUG
     const bool handle_input = !g.free_camera;
 #else
-    const bool handle_input = true;
+    constexpr bool handle_input = true;
 #endif
 
     g.player.fixed_update(g.world, handle_input);
 }
 
 void update() {
-#if DEBUG
-    const glm::vec2 position = g.free_camera ? camera_free() : camera_follow_player();
-#else
-    const glm::vec2 position = camera_follow_player();
-#endif
-
-    g.camera.set_position(position);
-
     float scale_speed = 2.f;
 
     if (Input::Pressed(Key::LeftShift)) {
@@ -240,6 +232,14 @@ void update() {
         g.camera.set_zoom(g.camera.zoom() - scale_speed * Time::delta_seconds());
     }
 
+#if DEBUG
+    const glm::vec2 position = g.free_camera ? camera_free() : camera_follow_player();
+#else
+    const glm::vec2 position = camera_follow_player();
+#endif
+
+    g.camera.set_position(position);
+
     g.camera.update();
     g.world.update(g.camera);
 
@@ -250,7 +250,7 @@ void update() {
     g.player.update(g.camera, g.world);
 
     if (Input::Pressed(Key::K)) {
-        for (int i = 0; i < 500; i++) {
+        for (int i = 0; i < 500; ++i) {
             const glm::vec2 position = g.camera.screen_to_world(Input::MouseScreenPosition());
             const glm::vec2 velocity = glm::diskRand(1.0f) * 1.5f;
 
@@ -267,15 +267,17 @@ void post_update() {
 }
 
 void render() {
-    Renderer::Begin(g.camera);
+    Renderer::Begin(g.camera, g.world.data());
 
-    Background::Render();
+    Background::Draw();
 
-    g.player.render();
+    g.player.draw();
 
-    ParticleManager::Render();
+    ParticleManager::Draw();
 
-    UI::Render(g.camera, g.player.inventory());
+    UI::Draw(g.camera, g.player.inventory());
+
+    g.world.draw();
 
     Renderer::Render(g.camera, g.world.chunk_manager());
 }
@@ -294,6 +296,8 @@ void post_render() {
 }
 
 glm::vec2 camera_follow_player() {
+    static constexpr float PIXEL_OFFSET = 2.0f;
+
     glm::vec2 position = g.player.position();
 
     const math::Rect area = g.world.playable_area() * Constants::TILE_SIZE;
@@ -305,8 +309,8 @@ glm::vec2 camera_follow_player() {
     const float top = camera_area.min.y;
     const float bottom = camera_area.max.y;
 
-    if (position.x + left < area.min.x) position.x = area.min.x - left;
-    if (position.x + right > area.max.x) position.x = area.max.x - right;
+    if (position.x + left < area.min.x + PIXEL_OFFSET) position.x = area.min.x - left + PIXEL_OFFSET;
+    if (position.x + right > area.max.x - PIXEL_OFFSET) position.x = area.max.x - right - PIXEL_OFFSET;
 
     if (position.y + top < area.min.y) position.y = area.min.y - top;
     if (position.y + bottom > area.max.y) position.y = area.max.y - bottom;
@@ -337,7 +341,7 @@ glm::vec2 camera_free() {
 }
 #endif
 
-static void handle_keyboard_events(GLFWwindow* window, int key, int scancode, int action, int mods) {
+static void handle_keyboard_events(GLFWwindow*, int key, int, int action, int) {
     if (action == GLFW_PRESS) {
         Input::Press(static_cast<Key>(key));
     } else if (action == GLFW_RELEASE) {
@@ -345,7 +349,7 @@ static void handle_keyboard_events(GLFWwindow* window, int key, int scancode, in
     }
 }
 
-static void handle_mouse_button_events(GLFWwindow* window, int button, int action, int mods) {
+static void handle_mouse_button_events(GLFWwindow*, int button, int action, int) {
     if (action == GLFW_PRESS) {
         Input::press(static_cast<MouseButton>(button));
     } else if (action == GLFW_RELEASE) {
@@ -353,15 +357,20 @@ static void handle_mouse_button_events(GLFWwindow* window, int button, int actio
     }
 }
 
-static void handle_mouse_scroll_events(GLFWwindow* window, double xoffset, double yoffset) {
+static void handle_mouse_scroll_events(GLFWwindow*, double, double yoffset) {
     Input::PushMouseScrollEvent(yoffset);
 }
 
-static void handle_cursor_pos_events(GLFWwindow* window, double xpos, double ypos) {
+static void handle_cursor_pos_events(GLFWwindow*, double xpos, double ypos) {
+    const glm::uvec2 window_size = g.camera.viewport();
+
+    xpos = std::min(std::max(xpos, 0.0), static_cast<double>(window_size.x));
+    ypos = std::min(std::max(ypos, 0.0), static_cast<double>(window_size.y));
+
     Input::SetMouseScreenPosition(glm::vec2(xpos, ypos));
 }
 
-static void handle_window_resize_events(GLFWwindow* window, int width, int height) {
+static void handle_window_resize_events(GLFWwindow*, int width, int height) {
     if (width <= 0 || height <= 0) {
         g.minimized = true;
         return;
@@ -384,6 +393,6 @@ static void handle_window_resize_events(GLFWwindow* window, int width, int heigh
     render();
 }
 
-static void handle_window_iconify_callback(GLFWwindow* window, int iconified) {
+static void handle_window_iconify_callback(GLFWwindow*, int iconified) {
     g.minimized = iconified;
 }

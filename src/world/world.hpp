@@ -15,6 +15,14 @@
 
 #include "chunk_manager.hpp"
 
+struct BlockDigAnimation {
+    TilePos tile_pos;
+    TextureAtlasPos atlas_pos;
+    float progress;
+    float scale;
+    BlockType block_type;
+};
+
 class World {
 public:
     World() = default;
@@ -25,13 +33,15 @@ public:
     void set_block(TilePos pos, BlockType block_type);
     void remove_block(TilePos pos);
 
-    void update_block_type(TilePos pos, BlockType new_type);
+    void update_block(TilePos pos, BlockType new_type, uint8_t new_variant);
 
     void set_wall(TilePos pos, WallType wall_type);
 
     void update_tile_sprite_index(TilePos pos);
 
     void update(const Camera& camera);
+    
+    void draw() const;
 
     [[nodiscard]] inline tl::optional<const Block&> get_block(TilePos pos) const { return m_data.get_block(pos); }
     [[nodiscard]] inline tl::optional<Block&> get_block_mut(TilePos pos) { return m_data.get_block_mut(pos); }
@@ -64,12 +74,23 @@ public:
 
     [[nodiscard]] inline const WorldData& data() const { return m_data; }
     [[nodiscard]] inline WorldData& data() { return m_data; }
+
+    [[nodiscard]] inline void create_dig_block_animation(const Block& block, TilePos pos) {
+        m_block_dig_animations.push_back(BlockDigAnimation {
+            .tile_pos = pos,
+            .atlas_pos = block.atlas_pos,
+            .progress = 0.0f,
+            .scale = 0.0f,
+            .block_type = block.type
+        });
+    }
 private:
     void update_neighbors(TilePos pos);
 
 private:
     WorldData m_data;
     ChunkManager m_chunk_manager;
+    std::vector<BlockDigAnimation> m_block_dig_animations;
     bool m_changed = false;
 };
 

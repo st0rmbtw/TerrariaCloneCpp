@@ -61,8 +61,13 @@ struct ChunkInstance {
     glm::vec2 position;
     glm::vec2 atlas_pos;
     glm::vec2 world_pos;
-    uint32_t tile_id;
-    uint32_t tile_type;
+    uint16_t tile_data;
+
+    ChunkInstance(glm::vec2 position, glm::vec2 atlas_pos, glm::vec2 world_pos, uint16_t tile_data) :
+        position(std::move(position)),
+        atlas_pos(std::move(atlas_pos)),
+        world_pos(std::move(world_pos)),
+        tile_data(tile_data) {}
 };
 
 struct ChunkVertex {
@@ -73,7 +78,9 @@ struct ChunkVertex {
     glm::vec2 tile_padding;
 
     explicit ChunkVertex(float x, float y, glm::vec2 wall_tex_size, glm::vec2 tile_tex_size, glm::vec2 wall_padding, glm::vec2 tile_padding) :
-        x(x), y(y), wall_tex_size(wall_tex_size), tile_tex_size(tile_tex_size), wall_padding(wall_padding), tile_padding(tile_padding) {}
+        x(x), y(y),
+        wall_tex_size(wall_tex_size), tile_tex_size(tile_tex_size), 
+        wall_padding(wall_padding), tile_padding(tile_padding) {}
 };
 
 #endif
