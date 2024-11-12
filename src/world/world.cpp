@@ -129,7 +129,7 @@ void World::draw() const {
     for (const BlockDigAnimation& anim : m_block_dig_animations) {
         TextureAtlasSprite sprite(Assets::GetTextureAtlas(block_texture_asset(anim.block_type)));
         sprite.set_position(anim.tile_pos.to_world_pos_center());
-        sprite.set_scale(1.0f + anim.scale * 0.5f);
+        sprite.set_scale(1.0f + anim.scale * 0.6f);
         sprite.set_index(anim.atlas_pos.x, anim.atlas_pos.y);
 
         Renderer::DrawAtlasSprite(sprite, RenderLayer::World);
