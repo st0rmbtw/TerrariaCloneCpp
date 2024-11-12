@@ -531,9 +531,14 @@ void Player::use_item(const Camera& camera, World& world) {
             return;
         }
 
-        if (block.type == BlockType::Grass) {
-            world.update_block_type(tile_pos, BlockType::Dirt);
+        uint8_t new_variant = rand() % 3;
+        BlockType new_block_type;
+        switch (block.type) {
+            case BlockType::Grass: new_block_type = BlockType::Dirt; break;
+            default: new_block_type = block.type;
         }
+
+        world.update_block(tile_pos, new_block_type, new_variant);
 
         world.create_dig_block_animation(block, tile_pos);
     } else if (item->places_block.is_some() && !world.block_exists(tile_pos)) {
