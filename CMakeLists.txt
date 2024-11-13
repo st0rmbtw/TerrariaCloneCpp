@@ -4,7 +4,7 @@ project(TerrariaClone CXX)
 
 find_package(OpenMP)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
 if(APPLE)
     enable_language(OBJCXX)

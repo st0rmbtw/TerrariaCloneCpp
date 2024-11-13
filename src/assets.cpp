@@ -133,17 +133,17 @@ static const std::pair<TextureAsset, AssetTextureAtlas> TEXTURE_ATLAS_ASSETS[] =
     { TextureAsset::TileCracks,         AssetTextureAtlas(6, 4, glm::uvec2(16)) }
 };
 
-static const std::array BLOCK_ASSETS = std::to_array<std::tuple<uint16_t, TextureAsset, std::string>>({
-    { static_cast<uint16_t>(BlockType::Dirt), TextureAsset::Tiles0, "assets/sprites/tiles/Tiles_0.png" },
-    { static_cast<uint16_t>(BlockType::Stone), TextureAsset::Tiles1, "assets/sprites/tiles/Tiles_1.png" },
-    { static_cast<uint16_t>(BlockType::Grass), TextureAsset::Tiles2, "assets/sprites/tiles/Tiles_2.png" },
-    { static_cast<uint16_t>(BlockType::Wood), TextureAsset::Tiles30, "assets/sprites/tiles/Tiles_30.png" },
-});
+static const std::array BLOCK_ASSETS = {
+    std::make_tuple(static_cast<uint16_t>(BlockType::Dirt), TextureAsset::Tiles0, "assets/sprites/tiles/Tiles_0.png"),
+    std::make_tuple(static_cast<uint16_t>(BlockType::Stone), TextureAsset::Tiles1, "assets/sprites/tiles/Tiles_1.png"),
+    std::make_tuple(static_cast<uint16_t>(BlockType::Grass), TextureAsset::Tiles2, "assets/sprites/tiles/Tiles_2.png"),
+    std::make_tuple(static_cast<uint16_t>(BlockType::Wood), TextureAsset::Tiles30, "assets/sprites/tiles/Tiles_30.png"),
+};
 
-static const std::array WALL_ASSETS = std::to_array<std::tuple<uint16_t, TextureAsset, std::string>>({
-    { static_cast<uint16_t>(WallType::DirtWall), TextureAsset::Stub, "assets/sprites/walls/Wall_2.png" },
-    { static_cast<uint16_t>(WallType::StoneWall), TextureAsset::Stub, "assets/sprites/walls/Wall_1.png" },
-});
+static const std::array WALL_ASSETS = {
+    std::make_tuple(static_cast<uint16_t>(WallType::DirtWall), TextureAsset::Stub, "assets/sprites/walls/Wall_2.png"),
+    std::make_tuple(static_cast<uint16_t>(WallType::StoneWall), TextureAsset::Stub, "assets/sprites/walls/Wall_1.png"),
+};
 
 static const std::pair<uint16_t, std::string> ITEM_ASSETS[] = {
     { 2, "assets/sprites/items/Item_2.png" },
@@ -157,10 +157,10 @@ static const std::pair<uint16_t, std::string> ITEM_ASSETS[] = {
     { 3509, "assets/sprites/items/Item_3509.png" },
 };
 
-static const std::array FONT_ASSETS = std::to_array<std::pair<FontAsset, std::string>>({
-    { FontAsset::AndyBold, "assets/fonts/andy_bold.ttf" },
-    { FontAsset::AndyRegular, "assets/fonts/andy_regular.otf" },
-});
+static const std::array FONT_ASSETS = {
+    std::make_pair(FontAsset::AndyBold, "assets/fonts/andy_bold.ttf"),
+    std::make_pair(FontAsset::AndyRegular, "assets/fonts/andy_regular.otf"),
+};
 
 const std::pair<ShaderAsset, AssetShader> SHADER_ASSETS[] = {
     { ShaderAsset::BackgroundShader, AssetShader("background", ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::BackgroundVertex) },
@@ -195,7 +195,7 @@ static bool load_font(FT_Library ft, const std::string& path, Font& font);
 static bool load_texture(const char* path, int sampler, Texture* texture);
 
 template <size_t T>
-static Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, std::string>, T>& assets, int sampler, bool generate_mip_maps = false);
+static Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*>, T>& assets, int sampler, bool generate_mip_maps = false);
 
 bool Assets::Load() {
     const uint8_t data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
@@ -211,7 +211,7 @@ bool Assets::Load() {
 
     for (const auto& [block_type, asset_key, path] : BLOCK_ASSETS) {
         Texture texture;
-        if (!load_texture(path.c_str(), TextureSampler::Nearest, &texture)) {
+        if (!load_texture(path, TextureSampler::Nearest, &texture)) {
             return false;
         }
         state.textures[asset_key] = texture;
@@ -288,8 +288,8 @@ bool Assets::LoadFonts() {
     }
 
     for (const auto& [key, path] : FONT_ASSETS) {
-        if (!FileExists(path.c_str())) {
-            LOG_ERROR("Failed to find font '%s'",  path.c_str());
+        if (!FileExists(path)) {
+            LOG_ERROR("Failed to find font '%s'",  path);
             return false;
         }
 
@@ -621,43 +621,50 @@ void Assets::DestroyShaders() {
 }
 
 const Texture& Assets::GetTexture(TextureAsset key) {
-    ASSERT(state.textures.contains(key), "Key not found");
-    return state.textures.find(key)->second;
+    const auto entry = std::as_const(state.textures).find(key);
+    ASSERT(entry != state.textures.cend(), "Texture not found: %u", static_cast<uint32_t>(key));
+    return entry->second;
 }
 
 const TextureAtlas& Assets::GetTextureAtlas(TextureAsset key) {
-    ASSERT(state.textures_atlases.contains(key), "Key not found");
-    return state.textures_atlases.find(key)->second;
+    const auto entry = std::as_const(state.textures_atlases).find(key);
+    ASSERT(entry != state.textures_atlases.cend(), "TextureAtlas not found: %u", static_cast<uint32_t>(key));
+    return entry->second;
 }
 
 const Font& Assets::GetFont(FontAsset key) {
-    ASSERT(state.fonts.contains(key), "Key not found");
-    return state.fonts.find(key)->second;
+    const auto entry = std::as_const(state.fonts).find(key);
+    ASSERT(entry != state.fonts.cend(), "Font not found: %u", static_cast<uint32_t>(key));
+    return entry->second;
 }
 
 const Texture& Assets::GetItemTexture(size_t index) {
-    ASSERT(state.items.contains(index), "Key not found");
-    return state.items[index];
+    const auto entry = std::as_const(state.items).find(index);
+    ASSERT(entry != state.items.cend(), "Item not found: %zu", index);
+    return entry->second;
 }
 
 const ShaderPipeline& Assets::GetShader(ShaderAsset key) {
-    ASSERT(state.shaders.contains(key), "Key not found");
-    return state.shaders.find(key)->second;
+    const auto entry = std::as_const(state.shaders).find(key);
+    ASSERT(entry != state.shaders.cend(), "Shader not found: %u", static_cast<uint32_t>(key));
+    return entry->second;
 }
 
 LLGL::Shader* Assets::GetComputeShader(ComputeShaderAsset key) {
-    ASSERT(state.compute_shaders.contains(key), "Key not found");
-    return state.compute_shaders.find(key)->second;
+    const auto entry = std::as_const(state.compute_shaders).find(key);
+    ASSERT(entry != state.compute_shaders.cend(), "ComputeShader not found: %u", static_cast<uint32_t>(key));
+    return entry->second;
 }
 
 LLGL::Sampler& Assets::GetSampler(size_t index) {
-    ASSERT(index < state.samplers.size(), "Index is out of bounds");
+    ASSERT(index < state.samplers.size(), "Index is out of bounds: %zu", index);
     return *state.samplers[index];
 }
 
 const LLGL::VertexFormat& Assets::GetVertexFormat(VertexFormatAsset key) {
-    ASSERT(state.vertex_formats.contains(key), "Key not found");
-    return state.vertex_formats.find(key)->second;
+    const auto entry = std::as_const(state.vertex_formats).find(key);
+    ASSERT(entry != state.vertex_formats.cend(), "VertexFormat not found: %u", static_cast<uint32_t>(key));
+    return entry->second;
 }
 
 static bool load_texture(const char* path, int sampler, Texture* texture) {
@@ -731,7 +738,7 @@ Texture create_texture_array(uint32_t width, uint32_t height, uint32_t layers, u
 }
 
 template <size_t T>
-Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, std::string>, T>& assets, int sampler, bool generate_mip_maps) {
+Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*>, T>& assets, int sampler, bool generate_mip_maps) {
     uint32_t width = 0;
     uint32_t height = 0;
     uint32_t layers_count = 0;
@@ -748,9 +755,9 @@ Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, s
         layers_count = glm::max(layers_count, static_cast<uint32_t>(block_type));
 
         int w, h;
-        uint8_t* layer_data = stbi_load(path.c_str(), &w, &h, nullptr, 4);
+        uint8_t* layer_data = stbi_load(path, &w, &h, nullptr, 4);
         if (layer_data == nullptr) {
-            LOG_ERROR("Couldn't load asset: %s", path.c_str());
+            LOG_ERROR("Couldn't load asset: %s", path);
             continue;
         }
 

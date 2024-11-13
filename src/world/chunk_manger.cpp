@@ -72,14 +72,18 @@ void ChunkManager::manage_chunks(const WorldData& world, const Camera& camera) {
 
 void ChunkManager::set_blocks_changed(TilePos tile_pos) {
     const glm::uvec2 chunk_pos = utils::get_chunk_pos(tile_pos);
-    if (m_render_chunks.contains(chunk_pos)) {
-        m_render_chunks.at(chunk_pos).blocks_dirty = true;
+
+    const auto chunk = m_render_chunks.find(chunk_pos);
+    if (chunk != m_render_chunks.end()) {
+        chunk->second.blocks_dirty = true;
     }
 }
 
 void ChunkManager::set_walls_changed(TilePos tile_pos) {
     const glm::uvec2 chunk_pos = utils::get_chunk_pos(tile_pos);
-    if (m_render_chunks.contains(chunk_pos)) {
-        m_render_chunks.at(chunk_pos).walls_dirty = true;
+
+    const auto chunk = m_render_chunks.find(chunk_pos);
+    if (chunk != m_render_chunks.end()) {
+        chunk->second.walls_dirty = true;
     }
 }

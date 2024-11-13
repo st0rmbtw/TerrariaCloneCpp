@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <thread>
+#include <atomic>
 
 #include "../types/tile_pos.hpp"
 #include "../constants.hpp"
