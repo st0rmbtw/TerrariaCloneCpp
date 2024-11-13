@@ -82,4 +82,17 @@ constexpr FORCE_INLINE TilePos operator+(const glm::ivec2& lhs, const TilePos& r
     return TilePos(lhs.x + rhs.x, lhs.y + rhs.y);
 }
 
+constexpr FORCE_INLINE bool operator==(const TilePos a, const TilePos b) {
+    return a.x == b.x && a.y == b.y;
+}
+
+namespace std {
+    template<>
+    struct hash<TilePos> {
+        inline size_t operator()(const TilePos& pos) const noexcept {
+            return pos.x + pos.y;
+        }
+    };
+}
+
 #endif

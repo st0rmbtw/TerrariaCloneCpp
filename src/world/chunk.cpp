@@ -34,7 +34,7 @@ static inline LLGL::BufferDescriptor GetBufferDescriptor() {
 
 static FORCE_INLINE uint16_t pack_tile_data(uint16_t tile_id, uint8_t tile_type) {
     // 6 bits for tile_type and 10 bits for tile_id
-    return tile_type | (tile_id << 6);
+    return (tile_type & 0x3f) | (tile_id << 6);
 }
 
 void RenderChunk::build_mesh(const WorldData& world) {
@@ -64,9 +64,10 @@ void RenderChunk::build_mesh(const WorldData& world) {
                     blocks_count += 1;
 
                     const glm::vec2 atlas_pos = glm::vec2(block->atlas_pos.x, block->atlas_pos.y);
+                    const uint16_t tile_data = pack_tile_data(static_cast<uint32_t>(block->type), TILE_TYPE_BLOCK);
 
                     block_instance.emplace_back(
-                        glm::vec2(x, y), atlas_pos, world_pos, pack_tile_data(static_cast<uint32_t>(block->type), TILE_TYPE_BLOCK)
+                        glm::vec2(x, y), atlas_pos, world_pos, tile_data
                     );
                 }
             }
@@ -86,9 +87,10 @@ void RenderChunk::build_mesh(const WorldData& world) {
                     walls_count += 1;
 
                     const glm::vec2 atlas_pos = glm::vec2(wall->atlas_pos.x, wall->atlas_pos.y);
+                    const uint16_t tile_data = pack_tile_data(static_cast<uint32_t>(wall->type), TILE_TYPE_WALL);
 
                     wall_instance.emplace_back(
-                        glm::vec2(x, y), atlas_pos, world_pos, pack_tile_data(static_cast<uint32_t>(wall->type), TILE_TYPE_WALL)
+                        glm::vec2(x, y), atlas_pos, world_pos, tile_data
                     );
                 }
             }

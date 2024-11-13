@@ -126,13 +126,30 @@ void World::update(const Camera& camera) {
 }
 
 void World::draw() const {
+    for (const auto& [pos, cracks] : m_tile_cracks) {
+        TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));
+        sprite.set_position(pos.to_world_pos_center());
+        sprite.set_index(cracks.cracks_index);
+
+        Renderer::DrawAtlasSprite(sprite, RenderLayer::World);
+    }
+
     for (const BlockDigAnimation& anim : m_block_dig_animations) {
-        TextureAtlasSprite sprite(Assets::GetTextureAtlas(block_texture_asset(anim.block_type)));
-        sprite.set_position(anim.tile_pos.to_world_pos_center());
-        sprite.set_scale(1.0f + anim.scale * 0.6f);
+        const glm::vec2 scale = glm::vec2(1.0f + anim.scale * 0.6f);
+        const glm::vec2 position = anim.tile_pos.to_world_pos_center();
+
+        TextureAtlasSprite sprite(Assets::GetTextureAtlas(block_texture_asset(anim.block_type)), position, scale);
         sprite.set_index(anim.atlas_pos.x, anim.atlas_pos.y);
 
         Renderer::DrawAtlasSprite(sprite, RenderLayer::World);
+
+        const auto cracks = m_tile_cracks.find(anim.tile_pos);
+        if (cracks != m_tile_cracks.end()) {
+            TextureAtlasSprite cracks_sprites(Assets::GetTextureAtlas(TextureAsset::TileCracks), position, scale);
+            cracks_sprites.set_index(cracks->second.cracks_index);
+
+            Renderer::DrawAtlasSprite(cracks_sprites, RenderLayer::World);
+        }
     }
 }
 

@@ -233,6 +233,9 @@ void update() {
     }
 
 #if DEBUG
+    if (g.free_camera && Input::Pressed(MouseButton::Right)) {
+        g.player.set_position(g.world, g.camera.screen_to_world(Input::MouseScreenPosition()));
+    }
     const glm::vec2 position = g.free_camera ? camera_free() : camera_follow_player();
 #else
     const glm::vec2 position = camera_follow_player();
@@ -271,13 +274,13 @@ void render() {
 
     Background::Draw();
 
+    g.world.draw();
+
     g.player.draw();
 
     ParticleManager::Draw();
 
     UI::Draw(g.camera, g.player.inventory());
-
-    g.world.draw();
 
     Renderer::Render(g.camera, g.world.chunk_manager());
 }

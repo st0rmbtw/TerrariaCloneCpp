@@ -47,6 +47,7 @@ enum class TextureAsset : uint8_t {
     Background112,
     Background114,
 
+    TileCracks,
     Tiles0,
     Tiles1,
     Tiles2,

@@ -126,29 +126,28 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
 
     commands->SetPipelineState(*m_pipeline);
 
+    const Texture& walls_texture = Assets::GetTexture(TextureAsset::Walls);
+    const Texture& tiles_texture = Assets::GetTexture(TextureAsset::Tiles);
+
     for (const glm::uvec2& pos : chunk_manager.visible_chunks()) {
         const RenderChunk& chunk = chunk_manager.render_chunks().find(pos)->second;
 
         if (!chunk.walls_empty()) {
-            const Texture& t = Assets::GetTexture(TextureAsset::Walls);
-
             commands->SetVertexBufferArray(*chunk.wall_buffer_array);
             commands->SetResource(0, *Renderer::GlobalUniformBuffer());
             commands->SetResource(1, *m_depth_buffer);
-            commands->SetResource(2, *t.texture);
-            commands->SetResource(3, Assets::GetSampler(t.sampler));
+            commands->SetResource(2, *walls_texture.texture);
+            commands->SetResource(3, Assets::GetSampler(walls_texture.sampler));
 
             commands->DrawInstanced(4, 0, chunk.walls_count);
         }
 
         if (!chunk.blocks_empty()) {
-            const Texture& t = Assets::GetTexture(TextureAsset::Tiles);
-
             commands->SetVertexBufferArray(*chunk.block_buffer_array);
             commands->SetResource(0, *Renderer::GlobalUniformBuffer());
             commands->SetResource(1, *m_depth_buffer);
-            commands->SetResource(2, *t.texture);
-            commands->SetResource(3, Assets::GetSampler(t.sampler));
+            commands->SetResource(2, *tiles_texture.texture);
+            commands->SetResource(3, Assets::GetSampler(tiles_texture.sampler));
 
             commands->DrawInstanced(4, 0, chunk.blocks_count);
         }

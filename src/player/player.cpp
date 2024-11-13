@@ -528,6 +528,7 @@ void Player::use_item(const Camera& camera, World& world) {
         
         if (block.hp <= 0) {
             world.remove_block(tile_pos);
+            world.remove_tile_cracks(tile_pos);
             return;
         }
 
@@ -541,6 +542,7 @@ void Player::use_item(const Camera& camera, World& world) {
         world.update_block(tile_pos, new_block_type, new_variant);
 
         world.create_dig_block_animation(block, tile_pos);
+        world.create_tile_cracks(tile_pos, map_range(block_hp(block.type), 0, 0, 3, block.hp) * 6 + (rand() % 6));
     } else if (item->places_block.is_some() && !world.block_exists(tile_pos)) {
         const math::Rect player_rect = math::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
         const math::Rect tile_rect = math::Rect::from_center_size(tile_pos.to_world_pos_center(), glm::vec2(TILE_SIZE));

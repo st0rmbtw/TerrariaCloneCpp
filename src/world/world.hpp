@@ -23,6 +23,11 @@ struct BlockDigAnimation {
     BlockType block_type;
 };
 
+struct TileCracks {
+    TilePos tile_pos;
+    uint8_t cracks_index;
+};
+
 class World {
 public:
     World() = default;
@@ -84,6 +89,17 @@ public:
             .block_type = block.type
         });
     }
+
+    [[nodiscard]] inline void create_tile_cracks(TilePos pos, uint8_t cracks_index) {
+        m_tile_cracks[pos] = TileCracks {
+            .tile_pos = pos,
+            .cracks_index = cracks_index
+        };
+    }
+
+    [[nodiscard]] inline void remove_tile_cracks(TilePos pos) {
+        m_tile_cracks.erase(pos);
+    }
 private:
     void update_neighbors(TilePos pos);
 
@@ -91,6 +107,7 @@ private:
     WorldData m_data;
     ChunkManager m_chunk_manager;
     std::vector<BlockDigAnimation> m_block_dig_animations;
+    std::unordered_map<TilePos, TileCracks> m_tile_cracks;
     bool m_changed = false;
 };
 

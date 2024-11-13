@@ -113,6 +113,8 @@ static const std::pair<TextureAsset, AssetTexture> TEXTURE_ASSETS[] = {
     { TextureAsset::Background112, AssetTexture("assets/sprites/backgrounds/Background_112.png", TextureSampler::Nearest) },
     { TextureAsset::Background114, AssetTexture("assets/sprites/backgrounds/Background_114.png", TextureSampler::Nearest) },
 
+    { TextureAsset::TileCracks, AssetTexture("assets/sprites/tiles/TileCracks.png", TextureSampler::Nearest) },
+
     { TextureAsset::Particles, AssetTexture("assets/sprites/Particles.png") }
 };
 
@@ -126,7 +128,9 @@ static const std::pair<TextureAsset, AssetTextureAtlas> TEXTURE_ATLAS_ASSETS[] =
     { TextureAsset::PlayerRightArm,     AssetTextureAtlas(18, 1, glm::uvec2(32, 80)) },
     { TextureAsset::PlayerLeftEye,      AssetTextureAtlas(1, 20, glm::uvec2(40, 64)) },
     { TextureAsset::PlayerRightEye,     AssetTextureAtlas(1, 20, glm::uvec2(40, 64)) },
-    { TextureAsset::Particles,          AssetTextureAtlas(PARTICLES_ATLAS_COLUMNS, 12, glm::uvec2(8), glm::uvec2(2)) }
+    { TextureAsset::Particles,          AssetTextureAtlas(PARTICLES_ATLAS_COLUMNS, 12, glm::uvec2(8), glm::uvec2(2)) },
+
+    { TextureAsset::TileCracks,         AssetTextureAtlas(6, 4, glm::uvec2(16)) }
 };
 
 static const std::array BLOCK_ASSETS = std::to_array<std::tuple<uint16_t, TextureAsset, std::string>>({
@@ -464,7 +468,7 @@ void Assets::InitVertexFormats() {
             {"I_Position",  LLGL::Format::RG32Float,  5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
             {"I_AtlasPos",  LLGL::Format::RG32Float,  6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
             {"I_WorldPos",  LLGL::Format::RG32Float,  7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
-            {"I_TileData",  LLGL::Format::R32UInt,    8, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
+            {"I_TileData",  LLGL::Format::R16UInt,    8, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
         };
     } else {
         tilemap_instance_format.attributes = {
