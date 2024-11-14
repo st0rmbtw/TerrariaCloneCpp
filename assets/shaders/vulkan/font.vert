@@ -1,23 +1,37 @@
 #version 450 core
 
-layout(location = 0) in vec3 a_color;
-layout(location = 1) in vec3 a_position;
-layout(location = 2) in vec2 a_uv;
-layout(location = 3) in int a_ui;
+layout(location = 0) in vec2 a_position;
+layout(location = 1) in vec3 i_color;
+layout(location = 2) in vec3 i_position;
+layout(location = 3) in vec2 i_size;
+layout(location = 4) in vec2 i_tex_size;
+layout(location = 5) in vec2 i_uv;
+layout(location = 6) in int i_ui;
 
-layout(binding = 1) uniform GlobalUniformBuffer {
+layout(binding = 2) uniform GlobalUniformBuffer {
     mat4 screen_projection;
     mat4 view_projection;
-} ubo;
+    mat4 nonscale_view_projection;
+    mat4 nonscale_projection;
+    mat4 transform_matrix;
+    mat4 inv_view_proj;
+    vec2 camera_position;
+    vec2 window_size;
+    float max_depth;
+    float max_world_depth;
+} global_ubo;
 
 layout(location = 0) out vec2 v_uv;
 layout(location = 1) flat out vec3 v_color;
 
 void main() {
-    mat4 mvp = a_ui > 0 ? ubo.screen_projection : ubo.view_projection;
+    mat4 mvp = i_ui > 0 ? global_ubo.screen_projection : global_ubo.view_projection;
 
-    gl_Position = mvp * vec4(a_position.x, a_position.y, 0.0, 1.0);
-    gl_Position.z = a_position.z;
-    v_uv = a_uv;
-    v_color = a_color;
+    vec2 position = i_position.xy + a_position * i_size;
+    vec2 uv = i_uv + a_position * i_tex_size;
+
+    v_uv = uv;
+    v_color = i_color;
+    gl_Position = mvp * vec4(position, 0.0, 1.0);
+    gl_Position.z = i_position.z / global_ubo.max_depth;
 }

@@ -66,7 +66,7 @@ void WorldRenderer::init() {
     pipelineDesc.depth = LLGL::DepthDescriptor {
         .testEnabled = true,
         .writeEnabled = true,
-        .compareOp = LLGL::CompareOp::GreaterEqual  
+        .compareOp = LLGL::CompareOp::GreaterEqual
     };
     pipelineDesc.blend = LLGL::BlendDescriptor {
         .targets = {
