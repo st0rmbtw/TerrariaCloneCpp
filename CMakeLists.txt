@@ -51,7 +51,11 @@ if (WIN32)
     add_compile_definitions(NOMINMAX)
 endif()
 
-add_compile_options("-Wno-ignored-attributes" "-march=native")
+if (MSVC)
+    add_compile_options(/wd5240)
+else()
+    add_compile_options(-Wno-ignored-attributes -march=native)
+endif()
 
 add_compile_definitions(GLM_FORCE_INTRINSICS)
 
@@ -107,7 +111,7 @@ if(OpenMP_CXX_FOUND)
     target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
-target_link_libraries(${PROJECT_NAME} glm STB glfw LLGL FastNoiseLite freetype)
+target_link_libraries(${PROJECT_NAME} PRIVATE glm STB glfw LLGL FastNoiseLite freetype)
 
 file(GLOB_RECURSE ASSETS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/**/*.*)
 
