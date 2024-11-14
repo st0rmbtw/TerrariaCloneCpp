@@ -4,8 +4,9 @@
 
 #include "math/math.hpp"
 #include "renderer/renderer.hpp"
+#include "defines.hpp"
 
-#ifdef _WIN32
+#ifdef PLATFORM_WINDOWS
 #include <corecrt_malloc.h>
 #define ALIGNED_ALLOC(size, alignment) _aligned_malloc((size), (alignment))
 #define ALIGNED_FREE(ptr) _aligned_free((ptr))

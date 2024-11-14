@@ -3,9 +3,11 @@
 
 #pragma once
 
-#if defined(_WIN32)
+#include "../defines.hpp"
+
+#if defined(PLATFORM_WINDOWS)
     #define GLFW_EXPOSE_NATIVE_WIN32
-#elif defined(__MACH__)
+#elif defined(PLATFORM_MACOS)
     #define GLFW_EXPOSE_NATIVE_COCOA
 #else
     #if defined(WAYLAND)

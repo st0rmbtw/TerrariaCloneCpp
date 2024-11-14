@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include "utils.hpp"
 #include "assets.hpp"
+#include "defines.hpp"
 
 bool FileExists(const char *path) {
-#ifdef _WIN32
+#ifdef PLATFORM_WINDOWS
     FILE *file = NULL;
     fopen_s(&file, path, "r");
 #else

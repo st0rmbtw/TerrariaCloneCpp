@@ -20,9 +20,9 @@ CustomSurface::~CustomSurface() {
 
 bool CustomSurface::GetNativeHandle(void* nativeHandle, std::size_t nativeHandleSize) {
     auto* handle = reinterpret_cast<LLGL::NativeHandle*>(nativeHandle);
-#if defined(_WIN32)
+#if defined(PLATFORM_WINDOWS)
     handle->window = glfwGetWin32Window(m_wnd);
-#elif defined(__MACH__)
+#elif defined(PLATFORM_MACOS)
     handle->responder = glfwGetCocoaWindow(m_wnd);
 #elif defined(WAYLAND)
     // TODO

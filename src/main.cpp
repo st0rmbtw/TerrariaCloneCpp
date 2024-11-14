@@ -1,21 +1,28 @@
 #include <cstring>
 #include <cstdio>
 #include "game.hpp"
+#include "defines.hpp"
 
 inline void print_render_backends() {
-    #if defined(_WIN32)
-        printf("Available render backends: vulkan, d3d12, d3d11, opengl.\n");
-    #elif defined(__APPLE__)
-        printf("Available render backends: vulkan, metal, opengl.\n");
-    #else
-        printf("Available render backends: vulkan, opengl.\n");
+    #if defined(PLATFORM_WINDOWS)
+        printf("Available render backends: d3d11, d3d12, opengl, vulkan.\n");
+    #elif defined(PLATFORM_MACOS)
+        printf("Available render backends: metal, opengl, vulkan.\n");
+    #elif defined(PLATFORM_LINUX)
+        printf("Available render backends: opengl, vulkan.\n");
     #endif
 }
 
 #define str_eq(a, b) strcmp(a, b) == 0
 
 int main(int argc, char** argv) {
+#if defined(PLATFORM_WINDOWS)
+    RenderBackend backend = RenderBackend::D3D11;
+#elif defined(PLATFORM_MACOS)
+    RenderBackend backend = RenderBackend::Metal;
+#else
     RenderBackend backend = RenderBackend::OpenGL;
+#endif
     GameConfig config;
 
     for (int i = 1; i < argc; i++) {
@@ -35,7 +42,7 @@ int main(int argc, char** argv) {
                 backend = RenderBackend::Vulkan;
             } else
 
-            #ifdef _WIN32
+            #ifdef PLATFORM_WINDOWS
             if (str_eq(arg, "d3d12")) {
                 backend = RenderBackend::D3D12;
             } else
@@ -45,7 +52,7 @@ int main(int argc, char** argv) {
             } else
             #endif
 
-            #ifdef __APPLE__
+            #ifdef PLATFORM_MACOS
             if (str_eq(arg, "metal")) {
                 backend = RenderBackend::Metal;
             } else
