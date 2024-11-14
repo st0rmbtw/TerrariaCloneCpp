@@ -2,6 +2,9 @@
 
 #include <memory>
 #include <LLGL/Utils/TypeNames.h>
+#include <LLGL/CommandBufferFlags.h>
+#include <LLGL/PipelineStateFlags.h>
+#include <LLGL/RendererConfiguration.h>
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -10,8 +13,6 @@
 #include "../assets.hpp"
 #include "../log.hpp"
 
-#include "LLGL/CommandBufferFlags.h"
-#include "LLGL/PipelineStateFlags.h"
 #include "types.hpp"
 #include "utils.hpp"
 #include "batch.hpp"
@@ -79,13 +80,14 @@ bool Renderer::InitEngine(RenderBackend backend) {
     void* configPtr = nullptr;
     size_t configSize = 0;
 
-#ifdef BACKEND_OPENGL
-    LLGL::RendererConfigurationOpenGL config;
-    config.majorVersion = 4;
-    config.minorVersion = 3;
-    configPtr = &config;
-    configSize = sizeof(config);
-#endif
+    if (backend.IsOpenGL()) {
+        LLGL::RendererConfigurationOpenGL config;
+        config.majorVersion = 4;
+        config.minorVersion = 3;
+        config.contextProfile = LLGL::OpenGLContextProfile::CoreProfile;
+        configPtr = &config;
+        configSize = sizeof(config);
+    }
 
     LLGL::RenderSystemDescriptor rendererDesc;
     rendererDesc.moduleName = backend.ToString();
@@ -201,14 +203,14 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
             LLGL::BindingSlot(2)
         ),
 
-        LLGL::BindingDescriptor("u_background", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
+        LLGL::BindingDescriptor("u_background_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
         LLGL::BindingDescriptor("u_background_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 3 : 4),
 
-        LLGL::BindingDescriptor("u_world", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(5)),
+        LLGL::BindingDescriptor("u_world_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(5)),
         LLGL::BindingDescriptor("u_world_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 5 : 6),
 
-        LLGL::BindingDescriptor("u_lightmap", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(7)),
-        LLGL::BindingDescriptor("u_lightmap_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 7 : 8),
+        LLGL::BindingDescriptor("u_light_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(7)),
+        LLGL::BindingDescriptor("u_light_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 7 : 8),
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);

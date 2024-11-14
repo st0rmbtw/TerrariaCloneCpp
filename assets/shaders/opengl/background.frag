@@ -6,19 +6,10 @@ in vec2 v_uv;
 flat in vec2 v_size;
 flat in vec2 v_tex_size;
 flat in vec2 v_speed;
+flat in vec2 v_offset;
 flat in int v_nonscale;
 
 uniform sampler2D u_texture;
-
-uniform GlobalUniformBuffer {
-    mat4 screen_projection;
-    mat4 view_projection;
-    mat4 nonscale_view_projection;
-    mat4 nonscale_projection;
-    mat4 transform_matrix;
-    vec2 camera_position;
-    vec2 window_size;
-} ubo;
 
 // Bidirectional mod
 float fmodb(float a, float b) {
@@ -52,14 +43,9 @@ vec4 scroll(
 }
 
 void main() {
-    mat4 mvp = ubo.nonscale_projection * ubo.transform_matrix;
+    vec4 color = scroll(v_speed, v_uv, v_offset, v_tex_size, v_size, v_nonscale > 0);
 
-    vec4 clip = mvp * vec4(ubo.camera_position, 0.0, 1.0);
-    vec2 offset = clip.xy;
-
-    vec4 color = scroll(v_speed, v_uv, offset, v_tex_size, v_size, v_nonscale > 0);
-
-    if (color.a == 0.0) discard;
+    if (color.a <= 0.05) discard;
 
     frag_color = color;
 }

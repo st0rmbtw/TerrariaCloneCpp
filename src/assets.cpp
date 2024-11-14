@@ -822,6 +822,12 @@ LLGL::Shader* load_shader(
         shader_desc.vertex.inputAttribs = vertex_attributes;
     }
 
+    if (backend.IsOpenGL() && shader_type.IsFragment()) {
+        shader_desc.fragment.outputAttribs = {
+            { "frag_color", LLGL::Format::RGBA8UNorm, 0, LLGL::SystemValue::Color }
+        };
+    }
+
     if (backend.IsVulkan()) {
         shader_desc.source = path.c_str();
         shader_desc.sourceType = LLGL::ShaderSourceType::BinaryFile;
