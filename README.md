@@ -8,7 +8,7 @@ Requirements:
 
 * cmake 3.18+
 * ninja
-* [_Optionally_] glslang executable in the root folder of the project to compile vulkan shaders.
+* [_Optional_] glslang executable in the root folder of the project to compile vulkan shaders.
 
 ### Debug build
 
@@ -30,7 +30,7 @@ cmake --build ./build_release/
 
 ### Options
 
-`--backend [d3d11|d3d12|vulkan|opengl|metal]` Set a rendering backend (D3D11, D3D12 work only on Windows; Metal works only on macOS)
+`--backend <d3d11|d3d12|vulkan|opengl|metal>` Set a rendering backend (D3D11, D3D12 work only on Windows; Metal works only on macOS)
 
 `--vsync` Enable vertical synchronization
 
