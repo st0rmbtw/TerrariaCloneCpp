@@ -30,7 +30,7 @@ static struct GameState {
 void pre_update();
 void fixed_update();
 void update();
-void post_update();
+void post_update(float accumulator);
 void render();
 void post_render();
 
@@ -150,24 +150,25 @@ void Game::Run() {
             prev_tick = current_tick;
 
             const delta_time_t dt(delta_time);
-            Time::advance_by(dt);
 
             pre_update();
 
             fixed_timer += delta_time;
             while (fixed_timer >= FIXED_UPDATE_INTERVAL) {
-                Time::fixed_advance_by(delta_time_t(FIXED_UPDATE_INTERVAL));
                 fixed_update();
                 fixed_timer -= FIXED_UPDATE_INTERVAL;
+                Time::fixed_advance_by(delta_time_t(FIXED_UPDATE_INTERVAL));
             }
 
             update();
-            post_update();
+            post_update(fixed_timer);
             
             if (!g.minimized) {
                 render();
                 post_render();
             }
+
+            Time::advance_by(dt);
 
             Input::Clear();
         MACOS_AUTORELEASEPOOL_CLOSE
@@ -265,7 +266,8 @@ void update() {
     }
 }
 
-void post_update() {
+void post_update(float accumulator) {
+    g.player.post_update(accumulator);
     UI::PostUpdate();
 }
 
@@ -301,7 +303,7 @@ void post_render() {
 glm::vec2 camera_follow_player() {
     static constexpr float PIXEL_OFFSET = 2.0f;
 
-    glm::vec2 position = g.player.position();
+    glm::vec2 position = g.player.draw_position();
 
     const math::Rect area = g.world.playable_area() * Constants::TILE_SIZE;
     const math::Rect& camera_area = g.camera.get_projection_area();

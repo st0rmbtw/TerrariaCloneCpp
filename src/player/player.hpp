@@ -115,11 +115,13 @@ public:
     void pre_update();
     void fixed_update(const World& world, bool handle_input);
     void update(const Camera& camera, World& world);
+    void post_update(float accumulator);
     void draw() const;
 
     void set_position(const World& world, const glm::vec2& position);
 
     [[nodiscard]] const glm::vec2& position() const { return m_position; }
+    [[nodiscard]] const glm::vec2& draw_position() const { return m_draw_position; }
     [[nodiscard]] Direction direction() const { return m_direction; }
 
     [[nodiscard]] const Inventory& inventory() const { return m_inventory; }
@@ -131,7 +133,7 @@ private:
     void gravity();
     glm::vec2 check_collisions(const World& world);
     void keep_in_world_bounds(const World& world);
-    void update_sprites();
+    void update_sprites(float accumulator);
     void update_walk_anim_timer();
     void update_sprites_index();
     void update_movement_state();
@@ -145,6 +147,7 @@ private:
 
 private:
     glm::vec2 m_position;
+    glm::vec2 m_draw_position;
     glm::vec2 m_velocity;
     Direction m_direction = Direction::Right;
     size_t m_walk_animation_index = 0;

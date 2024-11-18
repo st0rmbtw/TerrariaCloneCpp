@@ -422,8 +422,10 @@ void Player::update(const Camera& camera, World& world) {
     if (Input::Pressed(MouseButton::Left) && !Input::IsMouseOverUi()) {
         use_item(camera, world);
     }
+}
 
-    update_sprites();
+void Player::post_update(float accumulator) {
+    update_sprites(accumulator);
 }
 
 void Player::keep_in_world_bounds(const World& world) {
@@ -440,36 +442,40 @@ float Player::get_fall_distance() const {
     return m_position.y + PLAYER_HEIGHT_HALF - m_fall_start;
 }
 
-void Player::update_sprites() {
+void Player::update_sprites(float accumulator) {
     const bool flip_x = m_direction == Direction::Left;
+
+    const float alpha = accumulator / Constants::FIXED_UPDATE_INTERVAL;
+    const glm::vec2 position = m_position * alpha + m_draw_position * (1.0f - alpha);
+    m_draw_position = position;
 
     m_hair.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_head.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_body.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_legs.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_left_hand.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_left_shoulder.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_right_arm.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_left_eye.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_right_eye.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
 }
 
 void Player::draw() const {

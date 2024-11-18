@@ -10,9 +10,10 @@ static struct TimeState {
 } state;
 
 const delta_time_t& Time::delta(void) { return state.delta; }
-const delta_time_t Time::fixed_delta(void) { return delta_time_t(Constants::FIXED_UPDATE_INTERVAL); }
 float Time::delta_seconds(void) { return state.delta.count(); }
 float Time::elapsed_seconds(void) { return state.elapsed_seconds; }
+const delta_time_t Time::fixed_delta(void) { return delta_time_t(Constants::FIXED_UPDATE_INTERVAL); }
+float Time::fixed_delta_seconds() { return state.fixed_delta.count(); }
 float Time::fixed_elapsed_seconds(void) { return state.fixed_elapsed_seconds; }
 
 void Time::advance_by(const delta_time_t& delta) {

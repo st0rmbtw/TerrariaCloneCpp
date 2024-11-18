@@ -11,6 +11,7 @@ namespace Time {
     const delta_time_t& delta();
     const delta_time_t fixed_delta();
     float delta_seconds();
+    float fixed_delta_seconds();
     float elapsed_seconds();
     float fixed_elapsed_seconds();
 
