@@ -122,14 +122,16 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     g.camera.set_viewport({window_size.width, window_size.height});
     g.camera.set_zoom(1.0f);
 
+    const glm::vec2 position = glm::vec2(g.world.spawn_point()) * Constants::TILE_SIZE;
     g.player.init();
+    g.player.set_position(g.world, position);
+    g.player.set_draw_position(position);
     g.player.inventory().set_item(0, ITEM_COPPER_AXE);
     g.player.inventory().set_item(1, ITEM_COPPER_PICKAXE);
     g.player.inventory().set_item(2, ITEM_COPPER_HAMMER);
     g.player.inventory().set_item(3, ITEM_DIRT_BLOCK.with_max_stack());
     g.player.inventory().set_item(4, ITEM_STONE_BLOCK.with_max_stack());
     g.player.inventory().set_item(5, ITEM_WOOD_BLOCK.with_max_stack());
-    g.player.set_position(g.world, glm::vec2(g.world.spawn_point()) * Constants::TILE_SIZE);
 
     glfwShowWindow(window);
 
@@ -150,6 +152,8 @@ void Game::Run() {
             prev_tick = current_tick;
 
             const delta_time_t dt(delta_time);
+            Time::update_delta_time(dt);
+            Time::advance_by(dt);
 
             pre_update();
 
@@ -160,15 +164,15 @@ void Game::Run() {
                 Time::fixed_advance_by(delta_time_t(FIXED_UPDATE_INTERVAL));
             }
 
+            const float alpha = fixed_timer / FIXED_UPDATE_INTERVAL;
+
             update();
-            post_update(fixed_timer);
-            
+            post_update(alpha);
+
             if (!g.minimized) {
                 render();
                 post_render();
             }
-
-            Time::advance_by(dt);
 
             Input::Clear();
         MACOS_AUTORELEASEPOOL_CLOSE

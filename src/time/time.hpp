@@ -16,6 +16,7 @@ namespace Time {
     float fixed_elapsed_seconds();
 
     void advance_by(const delta_time_t& delta);
+    void update_delta_time(const delta_time_t& delta);
     void fixed_advance_by(const delta_time_t& fixed_delta);
 };
 

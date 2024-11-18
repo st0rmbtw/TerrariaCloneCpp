@@ -94,6 +94,11 @@ void Player::set_position(const World& world, const glm::vec2& position) {
     keep_in_world_bounds(world);
 }
 
+void Player::set_draw_position(const glm::vec2& position) {
+    m_draw_position.x = position.x;
+    m_draw_position.y = position.y - PLAYER_HEIGHT_HALF;
+}
+
 void Player::horizontal_movement(bool handle_input) {
     int8_t dir = 0;
 
@@ -424,8 +429,8 @@ void Player::update(const Camera& camera, World& world) {
     }
 }
 
-void Player::post_update(float accumulator) {
-    update_sprites(accumulator);
+void Player::post_update(float interpolation_factor) {
+    update_sprites(interpolation_factor);
 }
 
 void Player::keep_in_world_bounds(const World& world) {
@@ -442,10 +447,9 @@ float Player::get_fall_distance() const {
     return m_position.y + PLAYER_HEIGHT_HALF - m_fall_start;
 }
 
-void Player::update_sprites(float accumulator) {
+void Player::update_sprites(float alpha) {
     const bool flip_x = m_direction == Direction::Left;
 
-    const float alpha = accumulator / Constants::FIXED_UPDATE_INTERVAL;
     const glm::vec2 position = m_position * alpha + m_draw_position * (1.0f - alpha);
     m_draw_position = position;
 
