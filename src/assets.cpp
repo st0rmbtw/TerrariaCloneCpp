@@ -685,7 +685,9 @@ static bool load_texture(const char* path, int sampler, Texture* texture) {
 
 Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data, bool generate_mip_maps) {
     LLGL::TextureDescriptor texture_desc;
-    texture_desc.extent = LLGL::Extent3D(width, height, 1);
+    texture_desc.extent.width = width;
+    texture_desc.extent.height = height;
+    texture_desc.extent.depth = 1;
     texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
     texture_desc.cpuAccessFlags = 0;
     texture_desc.miscFlags = LLGL::MiscFlags::GenerateMips * generate_mip_maps;
@@ -716,7 +718,9 @@ Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int
 Texture create_texture_array(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler, const uint8_t* data, size_t data_size, bool generate_mip_maps) {
     LLGL::TextureDescriptor texture_desc;
     texture_desc.type = LLGL::TextureType::Texture2DArray;
-    texture_desc.extent = LLGL::Extent3D(width, height, 1);
+    texture_desc.extent.width = width;
+    texture_desc.extent.height = height;
+    texture_desc.extent.depth = 1;
     texture_desc.arrayLayers = layers;
     texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
     texture_desc.cpuAccessFlags = 0;

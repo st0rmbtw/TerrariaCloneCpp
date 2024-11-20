@@ -8,7 +8,7 @@
     #include <stdlib.h>
     #define ASSERT(expression, message, ...) \
         if (!(expression)) { \
-            fprintf(stderr, "[%s:%d] " message "\n", __FILE__, __LINE__, __VA_ARGS__); \
+            fprintf(stderr, "[%s:%d] " message "\n", __FILE__, __LINE__, ##__VA_ARGS__); \
             exit(1); \
         }
 

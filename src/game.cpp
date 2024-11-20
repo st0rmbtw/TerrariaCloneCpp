@@ -227,6 +227,8 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
 
     if (!Engine::Init(backend, config.vsync, settings)) return false;
 
+    Time::set_fixed_timestep_seconds(Constants::FIXED_UPDATE_INTERVAL);
+
     Engine::HideCursor();
 
     init_tile_rules();
