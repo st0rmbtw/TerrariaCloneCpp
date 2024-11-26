@@ -1,13 +1,12 @@
 #include "assets.hpp"
 
-#include <sstream>
-#include <fstream>
 #include <array>
 
 #include <LLGL/Utils/VertexFormat.h>
 #include <LLGL/Shader.h>
 #include <LLGL/ShaderFlags.h>
 #include <LLGL/VertexAttribute.h>
+#include <LLGL/TextureFlags.h>
 #include <STB/stb_image.h>
 #include <ft2build.h>
 #include <freetype/freetype.h>
@@ -184,13 +183,8 @@ static struct AssetsState {
     std::unordered_map<FontAsset, Font> fonts;
     std::unordered_map<VertexFormatAsset, LLGL::VertexFormat> vertex_formats;
     std::vector<LLGL::Sampler*> samplers;
-    uint32_t texture_index = 0;
 } state;
 
-static Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data, bool generate_mip_maps = false);
-static Texture create_texture_array(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler, const uint8_t* data, size_t data_size, bool generate_mip_maps = false);
-static LLGL::Shader* load_shader(ShaderType shader_type, const std::string& name, const std::vector<ShaderDef>& shader_defs, const std::vector<LLGL::VertexAttribute>& vertex_attributes = {});
-static LLGL::Shader* load_compute_shader(const std::string& name, const std::string& func_name, const std::vector<ShaderDef>& shader_defs);
 static bool load_font(FT_Library ft, const std::string& path, Font& font);
 static bool load_texture(const char* path, int sampler, Texture* texture);
 
@@ -199,7 +193,7 @@ static Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureA
 
 bool Assets::Load() {
     const uint8_t data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
-    state.textures[TextureAsset::Stub] = create_texture(1, 1, 4, TextureSampler::Nearest, data);
+    state.textures[TextureAsset::Stub] = Renderer::CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, 1, 1, 1, TextureSampler::Nearest, data);
 
     for (const auto& [key, asset] : TEXTURE_ASSETS) {
         Texture texture;
@@ -231,11 +225,9 @@ bool Assets::Load() {
     }
 
     // There is some glitches in mipmaps on Metal
-    if (Renderer::Backend().IsMetal()) {
-        state.textures[TextureAsset::Tiles] = load_texture_array(BLOCK_ASSETS, TextureSampler::Nearest);
-    } else {
-        state.textures[TextureAsset::Tiles] = load_texture_array(BLOCK_ASSETS, TextureSampler::NearestMips, true);
-    }
+    bool mip_maps = !Renderer::Backend().IsMetal();
+
+    state.textures[TextureAsset::Tiles] = load_texture_array(BLOCK_ASSETS, mip_maps ? TextureSampler::NearestMips : TextureSampler::Nearest, mip_maps);
     state.textures[TextureAsset::Walls] = load_texture_array(WALL_ASSETS, TextureSampler::Nearest);
 
     return true;
@@ -255,17 +247,17 @@ bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
         }
 
         if ((asset.stages & ShaderStages::Vertex) == ShaderStages::Vertex) {
-            if (!(shader_pipeline.vs = load_shader(ShaderType::Vertex, asset.file_name, shader_defs, attributes)))
+            if (!(shader_pipeline.vs = Renderer::LoadShader(ShaderPath(ShaderType::Vertex, asset.file_name), shader_defs, attributes)))
                 return false;
         }
         
         if ((asset.stages & ShaderStages::Fragment) == ShaderStages::Fragment) {
-            if (!(shader_pipeline.ps = load_shader(ShaderType::Fragment, asset.file_name, shader_defs)))
+            if (!(shader_pipeline.ps = Renderer::LoadShader(ShaderPath(ShaderType::Fragment, asset.file_name), shader_defs)))
                 return false;
         }
 
         if ((asset.stages & ShaderStages::Geometry) == ShaderStages::Geometry) {
-            if (!(shader_pipeline.gs = load_shader(ShaderType::Geometry, asset.file_name, shader_defs)))
+            if (!(shader_pipeline.gs = Renderer::LoadShader(ShaderPath(ShaderType::Geometry, asset.file_name), shader_defs)))
                 return false;
         }
 
@@ -273,7 +265,7 @@ bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
     }
 
     for (const auto& [key, asset] : COMPUTE_SHADER_ASSETS) {
-        if (!(state.compute_shaders[key] = load_compute_shader(asset.file_name, asset.func_name, shader_defs)))
+        if (!(state.compute_shaders[key] = Renderer::LoadShader(ShaderPath(ShaderType::Compute, asset.file_name, asset.func_name), shader_defs)))
             return false;
     }
 
@@ -668,77 +660,19 @@ const LLGL::VertexFormat& Assets::GetVertexFormat(VertexFormatAsset key) {
 }
 
 static bool load_texture(const char* path, int sampler, Texture* texture) {
-    int width, height, components;
+    int width, height;
 
-    uint8_t* data = stbi_load(path, &width, &height, &components, 4);
+    uint8_t* data = stbi_load(path, &width, &height, nullptr, 4);
     if (data == nullptr) {
         LOG_ERROR("Couldn't load asset: %s", path);
         return false;
     }
 
-    *texture = create_texture(width, height, components, sampler, data);
+    *texture = Renderer::CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, width, height, 1, sampler, data);
 
     stbi_image_free(data);
 
     return true;
-}
-
-Texture create_texture(uint32_t width, uint32_t height, uint32_t components, int sampler, const uint8_t* data, bool generate_mip_maps) {
-    LLGL::TextureDescriptor texture_desc;
-    texture_desc.extent.width = width;
-    texture_desc.extent.height = height;
-    texture_desc.extent.depth = 1;
-    texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
-    texture_desc.cpuAccessFlags = 0;
-    texture_desc.miscFlags = LLGL::MiscFlags::GenerateMips * generate_mip_maps;
-
-    LLGL::ImageView image_view;
-    if (components == 4) {
-        image_view.format = LLGL::ImageFormat::RGBA;
-    } else if (components == 3) {
-        image_view.format = LLGL::ImageFormat::RGB;
-    } else if (components == 2) {
-        image_view.format = LLGL::ImageFormat::RG;
-    } else if (components == 1) {
-        image_view.format = LLGL::ImageFormat::R;
-    }
-    image_view.dataType = LLGL::DataType::UInt8;
-    image_view.data = data;
-    image_view.dataSize = width * height * components;
-
-    Texture texture;
-    texture.id = state.texture_index++;
-    texture.texture = Renderer::Context()->CreateTexture(texture_desc, &image_view);
-    texture.sampler = sampler;
-    texture.size = glm::uvec2(width, height);
-
-    return texture;
-}
-
-Texture create_texture_array(uint32_t width, uint32_t height, uint32_t layers, uint32_t components, int sampler, const uint8_t* data, size_t data_size, bool generate_mip_maps) {
-    LLGL::TextureDescriptor texture_desc;
-    texture_desc.type = LLGL::TextureType::Texture2DArray;
-    texture_desc.extent.width = width;
-    texture_desc.extent.height = height;
-    texture_desc.extent.depth = 1;
-    texture_desc.arrayLayers = layers;
-    texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
-    texture_desc.cpuAccessFlags = 0;
-    texture_desc.miscFlags = LLGL::MiscFlags::GenerateMips * generate_mip_maps;
-
-    LLGL::ImageView image_view;
-    image_view.format = (components == 4 ? LLGL::ImageFormat::RGBA : LLGL::ImageFormat::RGB);
-    image_view.dataType = LLGL::DataType::UInt8;
-    image_view.data = data;
-    image_view.dataSize = data_size;
-
-    Texture texture;
-    texture.id = state.texture_index++;
-    texture.texture = Renderer::Context()->CreateTexture(texture_desc, &image_view);
-    texture.sampler = sampler;
-    texture.size = glm::uvec2(width, height);
-
-    return texture;
 }
 
 template <size_t T>
@@ -783,150 +717,7 @@ Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, c
         stbi_image_free(layer_data.data);
     }
     
-    return create_texture_array(width, height, layers_count, 4, sampler, image_data, data_size, generate_mip_maps);
-}
-
-LLGL::Shader* load_shader(
-    ShaderType shader_type,
-    const std::string& name,
-    const std::vector<ShaderDef>& shader_defs,
-    const std::vector<LLGL::VertexAttribute>& vertex_attributes
-) {
-    const RenderBackend backend = Renderer::Backend();
-
-    const std::string path = backend.AssetFolder() + name + shader_type.FileExtension(backend);
-
-    if (!FileExists(path.c_str())) {
-        LOG_ERROR("Failed to find shader '%s'", path.c_str());
-        return nullptr;
-    }
-
-    std::ifstream shader_file;
-    shader_file.open(path);
-
-    std::stringstream shader_source_str;
-    shader_source_str << shader_file.rdbuf();
-
-    std::string shader_source = shader_source_str.str();
-
-    for (const ShaderDef& shader_def : shader_defs) {
-        size_t pos;
-        while ((pos = shader_source.find(shader_def.name)) != std::string::npos) {
-            shader_source.replace(pos, shader_def.name.length(), shader_def.value);
-        }
-    }
-
-    shader_file.close();
-
-    LLGL::ShaderDescriptor shader_desc;
-    shader_desc.type = shader_type.ToLLGLType();
-    shader_desc.sourceType = LLGL::ShaderSourceType::CodeString;
-
-    if (shader_type.IsVertex()) {
-        shader_desc.vertex.inputAttribs = vertex_attributes;
-    }
-
-    if (backend.IsOpenGL() && shader_type.IsFragment()) {
-        shader_desc.fragment.outputAttribs = {
-            { "frag_color", LLGL::Format::RGBA8UNorm, 0, LLGL::SystemValue::Color }
-        };
-    }
-
-    if (backend.IsVulkan()) {
-        shader_desc.source = path.c_str();
-        shader_desc.sourceType = LLGL::ShaderSourceType::BinaryFile;
-    } else {
-        shader_desc.entryPoint = shader_type.EntryPoint(backend);
-        shader_desc.source = shader_source.c_str();
-        shader_desc.sourceSize = shader_source.length();
-        shader_desc.profile = shader_type.Profile(backend);
-    }
-
-#if DEBUG
-    shader_desc.flags |= LLGL::ShaderCompileFlags::NoOptimization;
-#else
-    shader_desc.flags |= LLGL::ShaderCompileFlags::OptimizationLevel3;
-#endif
-
-    LLGL::Shader* shader = Renderer::Context()->CreateShader(shader_desc);
-    if (const LLGL::Report* report = shader->GetReport()) {
-        if (*report->GetText() != '\0') {
-            if (report->HasErrors()) {
-                LOG_ERROR("Failed to create a shader. File: %s\nError: %s", path.c_str(), report->GetText());
-                return nullptr;
-            }
-            
-            LOG_INFO("%s", report->GetText());
-        }
-    }
-
-    return shader;
-}
-
-LLGL::Shader* load_compute_shader(const std::string& name, const std::string& func_name, const std::vector<ShaderDef>& shader_defs) {
-    const RenderBackend backend = Renderer::Backend();
-    const ShaderType shader_type = ShaderType::Compute;
-
-    const std::string path = backend.AssetFolder() + name + shader_type.FileExtension(backend);
-
-    if (!FileExists(path.c_str())) {
-        LOG_ERROR("Failed to find shader '%s'", path.c_str());
-        return nullptr;
-    }
-
-    std::ifstream shader_file;
-    shader_file.open(path);
-
-    std::stringstream shader_source_str;
-    shader_source_str << shader_file.rdbuf();
-
-    std::string shader_source = shader_source_str.str();
-
-    for (const ShaderDef& shader_def : shader_defs) {
-        size_t pos;
-        while ((pos = shader_source.find(shader_def.name)) != std::string::npos) {
-            shader_source.replace(pos, shader_def.name.length(), shader_def.value);
-        }
-    }
-
-    shader_file.close();
-
-    LLGL::ShaderDescriptor shader_desc;
-    shader_desc.type = shader_type.ToLLGLType();
-    shader_desc.sourceType = LLGL::ShaderSourceType::CodeString;
-
-    if (backend.IsVulkan()) {
-        shader_desc.source = path.c_str();
-        shader_desc.sourceType = LLGL::ShaderSourceType::BinaryFile;
-    } else {
-        if (!backend.IsOpenGL()) {
-            shader_desc.entryPoint = func_name.c_str();
-        }
-        
-        shader_desc.source = shader_source.c_str();
-        shader_desc.sourceSize = shader_source.length();
-        shader_desc.profile = shader_type.Profile(backend);
-    }
-
-#if DEBUG
-    shader_desc.flags |= LLGL::ShaderCompileFlags::NoOptimization;
-#else
-    shader_desc.flags |= LLGL::ShaderCompileFlags::OptimizationLevel3;
-#endif
-
-    LLGL::Shader* shader = Renderer::Context()->CreateShader(shader_desc);
-    if (const LLGL::Report* report = shader->GetReport()) {
-        if (*report->GetText() != '\0') {
-            if (report->HasErrors()) {
-                LOG_ERROR("Failed to create a shader. File: %s\nError: %s", path.c_str(), report->GetText());
-                return nullptr;
-            }
-            
-            LOG_INFO("%s", report->GetText());
-        }
-    }
-
-    return shader;
+    return Renderer::CreateTexture(LLGL::TextureType::Texture2DArray, LLGL::ImageFormat::RGBA, width, height, layers_count, sampler, image_data, generate_mip_maps);
 }
 
 bool load_font(FT_Library ft, const std::string& path, Font& font) {
@@ -984,7 +775,7 @@ bool load_font(FT_Library ft, const std::string& path, Font& font) {
         col += face->glyph->bitmap.width + PADDING;
     }
 
-    font.texture = create_texture(texture_width, texture_height, 1, TextureSampler::Linear, texture_data);
+    font.texture = Renderer::CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::R, texture_width, texture_height, 1, TextureSampler::Linear, texture_data);
     font.font_size = FONT_SIZE;
 
     FT_Done_Face(face);

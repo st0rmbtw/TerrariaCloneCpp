@@ -10,6 +10,7 @@
 #include "../types/backend.hpp"
 #include "../types/background_layer.hpp"
 #include "../types/render_layer.hpp"
+#include "../types/shader_path.hpp"
 #include "../assets.hpp"
 #include "../particles.hpp"
 
@@ -79,6 +80,9 @@ namespace Renderer {
 #if DEBUG
     void PrintDebugInfo();
 #endif
+
+    Texture CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, uint32_t width, uint32_t height, uint32_t layers, int sampler, const uint8_t* data, bool generate_mip_maps = false);
+    LLGL::Shader* LoadShader(ShaderPath shader_path, const std::vector<ShaderDef>& shader_defs = {}, const std::vector<LLGL::VertexAttribute>& vertex_attributes = {});
 
     void Terminate();
 

@@ -1,6 +1,9 @@
 #include "renderer.hpp"
 
 #include <memory>
+#include <sstream>
+#include <fstream>
+
 #include <LLGL/Utils/TypeNames.h>
 #include <LLGL/CommandBufferFlags.h>
 #include <LLGL/PipelineStateFlags.h>
@@ -12,6 +15,8 @@
 
 #include "../assets.hpp"
 #include "../log.hpp"
+#include "../types/shader_type.hpp"
+#include "../utils.hpp"
 
 #include "types.hpp"
 #include "utils.hpp"
@@ -55,6 +60,8 @@ static struct RendererState {
     uint32_t main_depth_index = 0;
     uint32_t world_depth_index = 0;
     uint32_t ui_depth_index = 0;
+
+    uint32_t texture_index = 0;
 
     math::Rect ui_frustum;
     math::Rect nonscale_camera_frustum;
@@ -301,7 +308,6 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
 
 void Renderer::Begin(const Camera& camera, WorldData& world) {
     auto* const commands = Renderer::CommandBuffer();
-    auto* const swap_chain = Renderer::SwapChain();
 
     const math::Rect camera_frustum = math::Rect::from_corners(
         camera.position() + camera.get_projection_area().min,
@@ -333,7 +339,7 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
     }
 
     commands->Begin();
-    commands->SetViewport(swap_chain->GetResolution());
+    commands->SetViewport(state.swap_chain->GetResolution());
 
     state.sprite_batch.begin();
     state.glyph_batch.begin();
@@ -346,7 +352,6 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
 void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
     auto* const commands = Renderer::CommandBuffer();
     auto* const queue = state.command_queue;
-    auto* const swap_chain = Renderer::SwapChain();
 
     auto projections_uniform = ProjectionsUniform {
         .screen_projection_matrix = camera.get_screen_projection_matrix(),
@@ -381,7 +386,7 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
         state.sprite_batch.render_world();
     commands->EndRenderPass();
 
-    commands->BeginRenderPass(*Renderer::SwapChain(), Renderer::DefaultRenderPass());
+    commands->BeginRenderPass(*state.swap_chain, Renderer::DefaultRenderPass());
         commands->Clear(LLGL::ClearFlags::ColorDepth, LLGL::ClearValue(1.0f, 0.0f, 0.0f, 1.0f, 0.0f));
 
         commands->SetVertexBuffer(*state.fullscreen_triangle_vertex_buffer);
@@ -406,7 +411,7 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
     commands->End();
     queue->Submit(*commands);
 
-    swap_chain->Present();
+    state.swap_chain->Present();
 }
 
 #if DEBUG
@@ -550,6 +555,114 @@ void Renderer::DrawBackground(const BackgroundLayer& layer) {
 
 void Renderer::DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, int depth) {
     state.particle_renderer.draw_particle(position, rotation, scale, type, variant, depth);
+}
+
+Texture Renderer::CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, uint32_t width, uint32_t height, uint32_t layers, int sampler, const uint8_t* data, bool generate_mip_maps) {
+    LLGL::TextureDescriptor texture_desc;
+    texture_desc.type = type;
+    texture_desc.extent = LLGL::Extent3D(width, height, 1);
+    texture_desc.arrayLayers = layers;
+    texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
+    texture_desc.cpuAccessFlags = 0;
+    texture_desc.miscFlags = LLGL::MiscFlags::GenerateMips * generate_mip_maps;
+
+    LLGL::ImageView image_view;
+    uint32_t components;
+
+    if (image_format == LLGL::ImageFormat::RGBA || 
+        image_format == LLGL::ImageFormat::BGRA ||
+        image_format == LLGL::ImageFormat::ARGB ||
+        image_format == LLGL::ImageFormat::ABGR
+    ) components = 4;
+    else if (image_format == LLGL::ImageFormat::RGB) components = 3;
+    else if (image_format == LLGL::ImageFormat::RG || image_format == LLGL::ImageFormat::DepthStencil) components = 2;
+    else components = 1;
+
+    image_view.format = image_format;
+    image_view.dataType = LLGL::DataType::UInt8;
+    image_view.data = data;
+    image_view.dataSize = width * height * layers * components;
+
+    Texture texture;
+    texture.id = state.texture_index++;
+    texture.texture = Renderer::Context()->CreateTexture(texture_desc, &image_view);
+    texture.sampler = sampler;
+    texture.size = glm::uvec2(width, height);
+
+    return texture;
+}
+
+LLGL::Shader* Renderer::LoadShader(ShaderPath shader_path, const std::vector<ShaderDef>& shader_defs, const std::vector<LLGL::VertexAttribute>& vertex_attributes) {
+    const RenderBackend backend = Renderer::Backend();
+    const ShaderType shader_type = shader_path.shader_type;
+
+    const std::string path = backend.AssetFolder() + shader_path.name + shader_type.FileExtension(backend);
+
+    if (!FileExists(path.c_str())) {
+        LOG_ERROR("Failed to find shader '%s'", path.c_str());
+        return nullptr;
+    }
+
+    std::ifstream shader_file;
+    shader_file.open(path);
+
+    std::stringstream shader_source_str;
+    shader_source_str << shader_file.rdbuf();
+
+    std::string shader_source = shader_source_str.str();
+
+    for (const ShaderDef& shader_def : shader_defs) {
+        size_t pos;
+        while ((pos = shader_source.find(shader_def.name)) != std::string::npos) {
+            shader_source.replace(pos, shader_def.name.length(), shader_def.value);
+        }
+    }
+
+    shader_file.close();
+
+    LLGL::ShaderDescriptor shader_desc;
+    shader_desc.type = shader_type.ToLLGLType();
+    shader_desc.sourceType = LLGL::ShaderSourceType::CodeString;
+
+    if (shader_type.IsVertex()) {
+        shader_desc.vertex.inputAttribs = vertex_attributes;
+    }
+
+    if (backend.IsOpenGL() && shader_type.IsFragment()) {
+        shader_desc.fragment.outputAttribs = {
+            { "frag_color", LLGL::Format::RGBA8UNorm, 0, LLGL::SystemValue::Color }
+        };
+    }
+
+    if (backend.IsVulkan()) {
+        shader_desc.source = path.c_str();
+        shader_desc.sourceType = LLGL::ShaderSourceType::BinaryFile;
+    } else {
+        shader_desc.entryPoint = shader_type.IsCompute() ? shader_path.func_name.c_str() : shader_type.EntryPoint(backend);
+        shader_desc.source = shader_source.c_str();
+        shader_desc.sourceSize = shader_source.length();
+        shader_desc.profile = shader_type.Profile(backend);
+    }
+
+#if DEBUG
+    shader_desc.flags |= LLGL::ShaderCompileFlags::NoOptimization;
+#else
+    shader_desc.flags |= LLGL::ShaderCompileFlags::OptimizationLevel3;
+#endif
+
+    LLGL::Shader* shader = Renderer::Context()->CreateShader(shader_desc);
+    if (const LLGL::Report* report = shader->GetReport()) {
+        if (*report->GetText() != '\0') {
+            if (report->HasErrors()) {
+                LOG_ERROR("Failed to create a shader. File: %s\nError: %s", path.c_str(), report->GetText());
+                return nullptr;
+            }
+            
+            LOG_INFO("%s", report->GetText());
+        }
+    }
+
+    return shader;
 }
 
 void Renderer::Terminate() {
