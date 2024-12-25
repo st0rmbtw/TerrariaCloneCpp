@@ -25,6 +25,7 @@ private:
     LLGL::Buffer* m_depth_buffer = nullptr;
     LLGL::PipelineState* m_pipeline = nullptr;
     LLGL::Texture* m_lightmap_texture = nullptr;
+    LLGL::ResourceHeap* m_resource_heap = nullptr;
 };
 
 #endif

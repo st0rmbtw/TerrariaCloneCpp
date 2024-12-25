@@ -12,7 +12,7 @@ void Camera::update_projection_area() {
 
 void Camera::compute_projection_and_view_matrix() {
     const math::Rect& projection_area = get_projection_area();
-    const math::Rect& nonscale_projection_area = get_nonscale_projection_area();
+    const math::Rect& nozoom_projection_area = get_nozoom_projection_area();
 
     if (Renderer::Backend().IsOpenGL()) {
         m_projection_matrix = glm::orthoRH_NO(
@@ -20,9 +20,9 @@ void Camera::compute_projection_and_view_matrix() {
             projection_area.max.y, projection_area.min.y,
             0.0f, 100.0f
         );
-        m_nonscale_projection_matrix = glm::orthoRH_NO(
-            nonscale_projection_area.min.x, nonscale_projection_area.max.x,
-            nonscale_projection_area.max.y, nonscale_projection_area.min.y,
+        m_nozoom_projection_matrix = glm::orthoRH_NO(
+            nozoom_projection_area.min.x, nozoom_projection_area.max.x,
+            nozoom_projection_area.max.y, nozoom_projection_area.min.y,
             0.0f, 100.0f
         );
         m_view_matrix = glm::lookAtRH(
@@ -36,9 +36,9 @@ void Camera::compute_projection_and_view_matrix() {
             projection_area.max.y, projection_area.min.y,
             0.0f, 100.0f
         );
-        m_nonscale_projection_matrix = glm::orthoLH_ZO(
-            nonscale_projection_area.min.x, nonscale_projection_area.max.x,
-            nonscale_projection_area.max.y, nonscale_projection_area.min.y,
+        m_nozoom_projection_matrix = glm::orthoLH_ZO(
+            nozoom_projection_area.min.x, nozoom_projection_area.max.x,
+            nozoom_projection_area.max.y, nozoom_projection_area.min.y,
             0.0f, 100.0f
         );
         m_view_matrix = glm::lookAtLH(
@@ -49,7 +49,7 @@ void Camera::compute_projection_and_view_matrix() {
     }
 
     m_view_proj_matrix = m_projection_matrix * m_view_matrix;
-    m_nonscale_view_proj_matrix = m_nonscale_projection_matrix * m_view_matrix;
+    m_nozoom_view_proj_matrix = m_nozoom_projection_matrix * m_view_matrix;
     m_inv_view_proj_matrix = glm::inverse(m_projection_matrix * m_view_matrix);
 }
 

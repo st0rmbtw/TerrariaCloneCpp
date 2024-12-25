@@ -7,6 +7,7 @@
 #include "../world/chunk.hpp"
 
 #include "LLGL/PipelineStateFlags.h"
+#include "LLGL/ResourceHeapFlags.h"
 #include "LLGL/TextureFlags.h"
 #include "LLGL/Types.h"
 #include "renderer.hpp"
@@ -30,7 +31,7 @@ void WorldRenderer::init() {
     const RenderBackend backend = Renderer::Backend();
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
-    pipelineLayoutDesc.bindings = {
+    pipelineLayoutDesc.heapBindings = {
         LLGL::BindingDescriptor(
             "GlobalUniformBuffer",
             LLGL::ResourceType::Buffer,
@@ -45,11 +46,21 @@ void WorldRenderer::init() {
             LLGL::StageFlags::VertexStage,
             LLGL::BindingSlot(3)
         ),
+    };
+    pipelineLayoutDesc.staticSamplers = {
+        LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 4 : 5, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
+    };
+    pipelineLayoutDesc.bindings = {
         LLGL::BindingDescriptor("u_texture_array", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4)),
-        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 4 : 5),
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
+
+    const LLGL::ResourceViewDescriptor resource_views[] = {
+        Renderer::GlobalUniformBuffer(), m_depth_buffer
+    };
+
+    m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
 
     const ShaderPipeline& tilemap_shader = Assets::GetShader(ShaderAsset::TilemapShader);
 
@@ -59,7 +70,7 @@ void WorldRenderer::init() {
     pipelineDesc.fragmentShader = tilemap_shader.ps;
     pipelineDesc.geometryShader = tilemap_shader.gs;
     pipelineDesc.pipelineLayout = pipelineLayout;
-    pipelineDesc.indexFormat = LLGL::Format::Undefined;
+    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = render_pass;
     pipelineDesc.rasterizer.frontCCW = true;
@@ -134,20 +145,16 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
 
         if (!chunk.walls_empty()) {
             commands->SetVertexBufferArray(*chunk.wall_buffer_array);
-            commands->SetResource(0, *Renderer::GlobalUniformBuffer());
-            commands->SetResource(1, *m_depth_buffer);
-            commands->SetResource(2, *walls_texture.texture);
-            commands->SetResource(3, Assets::GetSampler(walls_texture.sampler));
+            commands->SetResource(0, *walls_texture.texture);
+            commands->SetResourceHeap(*m_resource_heap);
 
             commands->DrawInstanced(4, 0, chunk.walls_count);
         }
 
         if (!chunk.blocks_empty()) {
             commands->SetVertexBufferArray(*chunk.block_buffer_array);
-            commands->SetResource(0, *Renderer::GlobalUniformBuffer());
-            commands->SetResource(1, *m_depth_buffer);
-            commands->SetResource(2, *tiles_texture.texture);
-            commands->SetResource(3, Assets::GetSampler(tiles_texture.sampler));
+            commands->SetResource(0, *tiles_texture.texture);
+            commands->SetResourceHeap(*m_resource_heap);
 
             commands->DrawInstanced(4, 0, chunk.blocks_count);
         }

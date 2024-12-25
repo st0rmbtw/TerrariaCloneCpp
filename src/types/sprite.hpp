@@ -25,7 +25,7 @@
     virtual inline _class& set_anchor(Anchor anchor) _override { m_anchor = anchor; return *this; } \
     virtual inline _class& set_flip_x(bool flip_x) _override { m_flip_x = flip_x; return *this; } \
     virtual inline _class& set_flip_y(bool flip_y) _override { m_flip_y = flip_y; return *this; } \
-    virtual inline _class& set_nonscalable(bool nonscalable) _override { m_nonscalable = nonscalable; return *this; } \
+    virtual inline _class& set_ignore_camera_zoom(bool ignore) _override { m_ignore_camera_zoom = ignore; return *this; } \
 
 
 class BaseSprite {
@@ -57,7 +57,7 @@ public:
     [[nodiscard]] inline Anchor anchor() const { return m_anchor; }
     [[nodiscard]] inline bool flip_x() const { return m_flip_x; }
     [[nodiscard]] inline bool flip_y() const { return m_flip_y; }
-    [[nodiscard]] inline bool nonscalable() const { return m_nonscalable; }
+    [[nodiscard]] inline bool ignore_camera_zoom() const { return m_ignore_camera_zoom; }
 
     [[nodiscard]] virtual glm::vec2 size() const = 0;
 
@@ -77,8 +77,7 @@ protected:
     Anchor m_anchor = Anchor::Center;
     bool m_flip_x = false;
     bool m_flip_y = false;
-    /// Don't respect the zoom of the camera
-    bool m_nonscalable = false;
+    bool m_ignore_camera_zoom = false;
 };
 
 class Sprite : public BaseSprite {

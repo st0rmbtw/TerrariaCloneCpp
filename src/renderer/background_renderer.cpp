@@ -59,7 +59,7 @@ void BackgroundRenderer::init() {
     pipelineDesc.vertexShader = background_shader.vs;
     pipelineDesc.fragmentShader = background_shader.ps;
     pipelineDesc.pipelineLayout = pipelineLayout;
-    pipelineDesc.indexFormat = LLGL::Format::R32UInt;
+    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleList;
     pipelineDesc.renderPass = swap_chain->GetRenderPass();
     pipelineDesc.rasterizer.frontCCW = true;

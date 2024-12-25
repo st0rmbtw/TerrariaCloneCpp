@@ -182,7 +182,7 @@ static struct AssetsState {
     std::unordered_map<ComputeShaderAsset, LLGL::Shader*> compute_shaders;
     std::unordered_map<FontAsset, Font> fonts;
     std::unordered_map<VertexFormatAsset, LLGL::VertexFormat> vertex_formats;
-    std::vector<LLGL::Sampler*> samplers;
+    std::vector<Sampler> samplers;
 } state;
 
 static bool load_font(FT_Library ft, const std::string& path, Font& font);
@@ -311,7 +311,7 @@ bool Assets::InitSamplers() {
         sampler_desc.mipMapEnabled = false;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[TextureSampler::Linear] = Renderer::Context()->CreateSampler(sampler_desc);
+        state.samplers[TextureSampler::Linear] = Sampler(Renderer::Context()->CreateSampler(sampler_desc), sampler_desc);
     }
     {
         LLGL::SamplerDescriptor sampler_desc;
@@ -326,7 +326,7 @@ bool Assets::InitSamplers() {
         sampler_desc.mipMapEnabled = true;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[TextureSampler::LinearMips] = Renderer::Context()->CreateSampler(sampler_desc);
+        state.samplers[TextureSampler::LinearMips] = Sampler(Renderer::Context()->CreateSampler(sampler_desc), sampler_desc);
     }
     {
         LLGL::SamplerDescriptor sampler_desc;
@@ -341,7 +341,7 @@ bool Assets::InitSamplers() {
         sampler_desc.mipMapEnabled = false;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[TextureSampler::Nearest] = Renderer::Context()->CreateSampler(sampler_desc);
+        state.samplers[TextureSampler::Nearest] = Sampler(Renderer::Context()->CreateSampler(sampler_desc), sampler_desc);
     }
     {
         LLGL::SamplerDescriptor sampler_desc;
@@ -356,7 +356,7 @@ bool Assets::InitSamplers() {
         sampler_desc.mipMapEnabled = true;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[TextureSampler::NearestMips] = Renderer::Context()->CreateSampler(sampler_desc);
+        state.samplers[TextureSampler::NearestMips] = Sampler(Renderer::Context()->CreateSampler(sampler_desc), sampler_desc);
     }
 
     return true;
@@ -602,7 +602,7 @@ void Assets::DestroyTextures() {
 
 void Assets::DestroySamplers() {
     for (auto& sampler : state.samplers) {
-        Renderer::Context()->Release(*sampler);
+        Renderer::Context()->Release(sampler);
     }
 }
 
@@ -648,9 +648,9 @@ LLGL::Shader* Assets::GetComputeShader(ComputeShaderAsset key) {
     return entry->second;
 }
 
-LLGL::Sampler& Assets::GetSampler(size_t index) {
+Sampler& Assets::GetSampler(size_t index) {
     ASSERT(index < state.samplers.size(), "Index is out of bounds: %zu", index);
-    return *state.samplers[index];
+    return state.samplers[index];
 }
 
 const LLGL::VertexFormat& Assets::GetVertexFormat(VertexFormatAsset key) {

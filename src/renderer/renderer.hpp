@@ -1,6 +1,7 @@
 #ifndef TERRARIA_RENDERER_HPP
 #define TERRARIA_RENDERER_HPP
 
+#include "LLGL/RenderingDebugger.h"
 #pragma once
 
 #include <LLGL/SwapChain.h>
@@ -81,6 +82,9 @@ namespace Renderer {
     void PrintDebugInfo();
 #endif
 
+    void BeginDepth(int depth = -1);
+    void EndDepth();
+
     Texture CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, uint32_t width, uint32_t height, uint32_t layers, int sampler, const uint8_t* data, bool generate_mip_maps = false);
     LLGL::Shader* LoadShader(ShaderPath shader_path, const std::vector<ShaderDef>& shader_defs = {}, const std::vector<LLGL::VertexAttribute>& vertex_attributes = {});
 
@@ -98,6 +102,10 @@ namespace Renderer {
     [[nodiscard]] uint32_t GetUiDepthIndex();
     [[nodiscard]] const LLGL::RenderPass* DefaultRenderPass();
     [[nodiscard]] LLGL::Buffer* ChunkVertexBuffer();
+
+#if DEBUG
+    [[nodiscard]] LLGL::RenderingDebugger* Debugger();
+#endif
 };
 
 #endif

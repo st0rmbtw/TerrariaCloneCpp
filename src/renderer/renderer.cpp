@@ -1,5 +1,6 @@
 #include "renderer.hpp"
 
+#include <cstddef>
 #include <memory>
 #include <sstream>
 #include <fstream>
@@ -61,11 +62,17 @@ static struct RendererState {
     uint32_t world_depth_index = 0;
     uint32_t ui_depth_index = 0;
 
+    uint32_t max_main_depth = 0;
+    uint32_t max_world_depth = 0;
+
     uint32_t texture_index = 0;
 
     math::Rect ui_frustum;
-    math::Rect nonscale_camera_frustum;
+    math::Rect nozoom_camera_frustum;
     math::Rect camera_frustum;
+
+    bool custom_depth_mode = false;
+    int depth = -1;
 } state;
 
 const LLGL::RenderSystemPtr& Renderer::Context() { return state.context; }
@@ -80,6 +87,10 @@ uint32_t Renderer::GetWorldDepthIndex() { return state.world_depth_index; };
 uint32_t Renderer::GetUiDepthIndex() { return state.ui_depth_index; };
 const LLGL::RenderPass* Renderer::DefaultRenderPass() { return state.render_pass; };
 LLGL::Buffer* Renderer::ChunkVertexBuffer() { return state.chunk_vertex_buffer; }
+
+#if DEBUG
+LLGL::RenderingDebugger* Renderer::Debugger() { return state.debugger; }
+#endif
 
 bool Renderer::InitEngine(RenderBackend backend) {
     LLGL::Report report;
@@ -143,7 +154,10 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     state.swap_chain = context->CreateSwapChain(swapChainDesc, state.surface);
     state.swap_chain->SetVsyncInterval(vsync);
 
-    state.command_buffer = context->CreateCommandBuffer();
+    LLGL::CommandBufferDescriptor command_buffer_desc;
+    command_buffer_desc.numNativeBuffers = 3;
+
+    state.command_buffer = context->CreateCommandBuffer(command_buffer_desc);
     state.command_queue = context->GetCommandQueue();
 
     state.constant_buffer = CreateConstantBuffer(sizeof(ProjectionsUniform));
@@ -201,6 +215,12 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     state.chunk_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex), "WorldRenderer VertexBuffer");
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
+    pipelineLayoutDesc.staticSamplers = {
+        LLGL::StaticSamplerDescriptor("u_background_sampler", LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 3 : 4, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("u_world_sampler", LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 5 : 6, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("u_light_sampler", LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 7 : 8, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
+    };
+
     pipelineLayoutDesc.bindings = {
         LLGL::BindingDescriptor(
             "GlobalUniformBuffer",
@@ -211,13 +231,8 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
         ),
 
         LLGL::BindingDescriptor("u_background_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
-        LLGL::BindingDescriptor("u_background_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 3 : 4),
-
         LLGL::BindingDescriptor("u_world_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(5)),
-        LLGL::BindingDescriptor("u_world_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 5 : 6),
-
         LLGL::BindingDescriptor("u_light_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(7)),
-        LLGL::BindingDescriptor("u_light_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 7 : 8),
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
@@ -229,7 +244,7 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     pipelineDesc.vertexShader = postprocess_shader.vs;
     pipelineDesc.fragmentShader = postprocess_shader.ps;
     pipelineDesc.pipelineLayout = pipelineLayout;
-    pipelineDesc.indexFormat = LLGL::Format::Undefined;
+    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.rasterizer.frontCCW = true;
 
@@ -313,14 +328,14 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
         camera.position() + camera.get_projection_area().min,
         camera.position() + camera.get_projection_area().max
     );
-    const math::Rect nonscale_camera_frustum = math::Rect::from_corners(
-        camera.position() + camera.get_nonscale_projection_area().min,
-        camera.position() + camera.get_nonscale_projection_area().max
+    const math::Rect nozoom_camera_frustum = math::Rect::from_corners(
+        camera.position() + camera.get_nozoom_projection_area().min,
+        camera.position() + camera.get_nozoom_projection_area().max
     );
     const math::Rect ui_frustum = math::Rect::from_corners(glm::vec2(0.0), camera.viewport());
 
     state.camera_frustum = camera_frustum;
-    state.nonscale_camera_frustum = nonscale_camera_frustum;
+    state.nozoom_camera_frustum = nozoom_camera_frustum;
     state.ui_frustum = ui_frustum;
 
     for (auto it = world.lightmap_tasks.cbegin(); it != world.lightmap_tasks.cend();) {
@@ -345,8 +360,11 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
     state.glyph_batch.begin();
 
     state.main_depth_index = 0;
-    state.world_depth_index = 0;
     state.ui_depth_index = 0;
+    // The first three are reserved for background, walls and tiles
+    state.world_depth_index = 3;
+    state.max_world_depth = 3;
+    state.max_main_depth = 0;
 }
 
 void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
@@ -362,9 +380,8 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
         .inv_view_proj_matrix = camera.get_inv_view_projection_matrix(),
         .camera_position = camera.position(),
         .window_size = camera.viewport(),
-        .max_depth = static_cast<float>(state.main_depth_index + state.ui_depth_index),
-        // The first three are reserved for background, walls and tiles
-        .max_world_depth = static_cast<float>(3 + state.world_depth_index),
+        .max_depth = static_cast<float>(state.max_main_depth),
+        .max_world_depth = static_cast<float>(state.max_world_depth),
     };
 
     commands->UpdateBuffer(*state.constant_buffer, 0, &projections_uniform, sizeof(projections_uniform));
@@ -391,16 +408,12 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
 
         commands->SetVertexBuffer(*state.fullscreen_triangle_vertex_buffer);
         commands->SetPipelineState(*state.postprocess_pipeline);
+
         commands->SetResource(0, *state.constant_buffer);
-
         commands->SetResource(1, *state.background_render_texture);
-        commands->SetResource(2, Assets::GetSampler(TextureSampler::Nearest));
+        commands->SetResource(2, *state.world_render_texture);
+        commands->SetResource(3, *state.world_renderer.lightmap_texture());
 
-        commands->SetResource(3, *state.world_render_texture);
-        commands->SetResource(4, Assets::GetSampler(TextureSampler::Nearest));
-
-        commands->SetResource(5, *state.world_renderer.lightmap_texture());
-        commands->SetResource(6, Assets::GetSampler(TextureSampler::Nearest));
         commands->Draw(3, 0);
 
         state.particle_renderer.render();
@@ -422,6 +435,16 @@ void Renderer::PrintDebugInfo() {
     LOG_DEBUG("Draw commands count: %u", profile.commandBufferRecord.drawCommands);
 }
 #endif
+
+void Renderer::BeginDepth(int depth) {
+    state.depth = depth;
+    state.custom_depth_mode = true;
+}
+
+void Renderer::EndDepth() {
+    state.depth = -1;
+    state.custom_depth_mode = false;
+}
 
 inline void add_sprite_to_batch(const Sprite& sprite, RenderLayer layer, bool is_ui, int depth) {
     glm::vec4 uv_offset_scale = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
@@ -465,8 +488,8 @@ inline void add_atlas_sprite_to_batch(const TextureAtlasSprite& sprite, RenderLa
 void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer, int depth) {
     const math::Rect aabb = sprite.calculate_aabb();
 
-    if (sprite.nonscalable() && !state.nonscale_camera_frustum.intersects(aabb)) return;
-    if (!sprite.nonscalable() && !state.camera_frustum.intersects(aabb)) return;
+    if (sprite.ignore_camera_zoom() && !state.nozoom_camera_frustum.intersects(aabb)) return;
+    if (!sprite.ignore_camera_zoom() && !state.camera_frustum.intersects(aabb)) return;
 
     add_sprite_to_batch(sprite, render_layer, false, depth);
 }
@@ -481,8 +504,8 @@ void Renderer::DrawSpriteUI(const Sprite& sprite, int depth) {
 void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer, int depth) {
     const math::Rect aabb = sprite.calculate_aabb();
 
-    if (sprite.nonscalable() && !state.nonscale_camera_frustum.intersects(aabb)) return;
-    if (!sprite.nonscalable() && !state.camera_frustum.intersects(aabb)) return;
+    if (sprite.ignore_camera_zoom() && !state.nozoom_camera_frustum.intersects(aabb)) return;
+    if (!sprite.ignore_camera_zoom() && !state.camera_frustum.intersects(aabb)) return;
 
     add_atlas_sprite_to_batch(sprite, render_layer, false, depth);
 }
@@ -502,21 +525,11 @@ void Renderer::DrawText(const char* text, uint32_t length, float size, const glm
 
     const float scale = size / font.font_size;
 
-    uint32_t order = depth;
-    if (depth != -1) {
-        state.main_depth_index = glm::max(state.main_depth_index, order + 1);
-    } else {
-        order = state.main_depth_index++;
-    }
+    uint32_t& depth_index = is_ui ? state.ui_depth_index : state.main_depth_index;
 
-    if (is_ui) {
-        order = depth;
-        if (depth != -1) {
-            state.ui_depth_index = glm::max(state.ui_depth_index, order + 1);
-        } else {
-            order = state.ui_depth_index++;
-        }
-    }
+    int order = state.custom_depth_mode ? state.depth > 0 ? state.depth : depth_index : depth;
+    if (order < 0) order = depth_index++;
+    if (static_cast<uint32_t>(order) > state.max_main_depth) state.max_main_depth = order;
 
     for (uint32_t i = 0; i < length; ++i) {
         const char c = text[i];
@@ -547,7 +560,7 @@ void Renderer::DrawText(const char* text, uint32_t length, float size, const glm
 void Renderer::DrawBackground(const BackgroundLayer& layer) {
     const math::Rect aabb = math::Rect::from_top_left(layer.position() - layer.anchor().to_vec2() * layer.size(), layer.size());
 
-    if (layer.nonscale() && !state.nonscale_camera_frustum.intersects(aabb)) return;
+    if (layer.nonscale() && !state.nozoom_camera_frustum.intersects(aabb)) return;
     if (!layer.nonscale() && !state.camera_frustum.intersects(aabb)) return;
 
     layer.is_world() ? state.background_renderer.draw_world_layer(layer) : state.background_renderer.draw_layer(layer);
@@ -739,7 +752,7 @@ void RenderBatchSprite::init() {
     pipelineDesc.fragmentShader = sprite_shader.ps;
     pipelineDesc.geometryShader = sprite_shader.gs;
     pipelineDesc.pipelineLayout = pipelineLayout;
-    pipelineDesc.indexFormat = LLGL::Format::Undefined;
+    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = state.swap_chain->GetRenderPass();
     pipelineDesc.rasterizer.frontCCW = true;
@@ -774,26 +787,21 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
         begin();
     }
 
-    std::vector<SpriteData>& sprites = layer == RenderLayer::World ? m_world_sprites : m_sprites;
-    uint32_t& depth_index = layer == RenderLayer::World ? state.world_depth_index : state.main_depth_index;
+    std::vector<SpriteData>* sprites = &m_sprites;
+    uint32_t* depth_index = is_ui ? &state.ui_depth_index : &state.main_depth_index;
+    uint32_t* max_depth = &state.max_main_depth;
 
-    uint32_t order = depth;
-    if (depth != -1) {
-        depth_index = glm::max(depth_index, order + 1);
-    } else {
-        order = depth_index++;
+    if (layer == RenderLayer::World) {
+        sprites = &m_world_sprites;
+        depth_index = &state.world_depth_index;
+        max_depth = &state.max_world_depth;
     }
 
-    if (is_ui) {
-        order = depth;
-        if (depth != -1) {
-            state.ui_depth_index = glm::max(state.ui_depth_index, order + 1);
-        } else {
-            order = state.ui_depth_index++;
-        }
-    }
+    int order = state.custom_depth_mode ? state.depth > 0 ? state.depth : *depth_index : depth;
+    if (order < 0) order = (*depth_index)++;
+    if (static_cast<uint32_t>(order) > *max_depth) *max_depth = order;
 
-    sprites.push_back(SpriteData {
+    sprites->push_back(SpriteData {
         .position = sprite.position(),
         .rotation = sprite.rotation(),
         .size = sprite.size(),
@@ -803,9 +811,9 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
         .outline_color = sprite.outline_color(),
         .outline_thickness = sprite.outline_thickness(),
         .texture = sprite_texture.is_some() ? sprite_texture.get() : Texture(),
-        .order = order,
+        .order = static_cast<uint32_t>(order),
         .is_ui = is_ui,
-        .is_nonscalable = sprite.nonscalable()
+        .ignore_camera_zoom = sprite.ignore_camera_zoom()
     });
 }
 
@@ -847,7 +855,7 @@ void RenderBatchSprite::render() {
         const uint32_t order = sprite_data.is_ui ? sprite_data.order + state.main_depth_index : sprite_data.order;
 
         int flags = 0;
-        flags |= sprite_data.is_nonscalable << SpriteFlags::Nonscale;
+        flags |= sprite_data.ignore_camera_zoom << SpriteFlags::IgnoreCameraZoom;
         flags |= sprite_data.is_ui << SpriteFlags::UI;
         flags |= (curr_texture_id >= 0) << SpriteFlags::HasTexture;
 
@@ -909,11 +917,10 @@ void RenderBatchSprite::render_world() {
             vertex_offset = total_sprite_count;
         }
 
-        // The first three are reserved for background, walls and tiles
-        const float order = static_cast<float>(3 + sprite_data.order);
+        const float order = static_cast<float>(sprite_data.order);
 
         int flags = 1 << SpriteFlags::World;
-        flags |= sprite_data.is_nonscalable << SpriteFlags::Nonscale;
+        flags |= sprite_data.ignore_camera_zoom << SpriteFlags::IgnoreCameraZoom;
         flags |= (curr_texture_id >= 0) << SpriteFlags::HasTexture;
 
         m_world_buffer_ptr->position = glm::vec3(sprite_data.position, order);
@@ -945,12 +952,35 @@ void RenderBatchSprite::render_world() {
 void RenderBatchSprite::flush() {
     auto* const commands = Renderer::CommandBuffer();
 
+    // ptrdiff_t remaining = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
+    // size_t offset = 0;
+    // while (remaining > 0) {
+    //     const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
+    //     commands->UpdateBuffer(*m_instance_buffer, offset, m_buffer, size);
+    //     remaining -= size;
+    //     offset += size;
+    // }
+
     const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
     if (size <= (1 << 16)) {
         commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, size);
     } else {
         Renderer::Context()->WriteBuffer(*m_instance_buffer, 0, m_buffer, size);
     }
+
+    // ptrdiff_t remaining = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
+    // if (remaining <= (1 << 16) - 1) {
+    //     commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, remaining);
+    // } else {
+    //     // Renderer::Context()->WriteBuffer(*m_instance_buffer, 0, m_buffer, remaining);
+    //     size_t offset = 0;
+    //     while (remaining > 0) {
+    //         const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
+    //         commands->UpdateBuffer(*m_instance_buffer, offset, m_buffer, size);
+    //         remaining -= size;
+    //         offset += size;
+    //     }
+    // }
     
     commands->SetVertexBufferArray(*m_buffer_array);
 
@@ -969,12 +999,36 @@ void RenderBatchSprite::flush() {
 void RenderBatchSprite::flush_world() {
     auto* const commands = Renderer::CommandBuffer();
 
+    // ptrdiff_t remaining = (uint8_t*) m_world_buffer_ptr - (uint8_t*) m_world_buffer;
+    // size_t offset = 0;
+    // while (remaining > 0) {
+    //     const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
+    //     commands->UpdateBuffer(*m_world_instance_buffer, offset, m_world_buffer, size);
+    //     remaining -= size;
+    //     offset += size;
+    // }
+
     const ptrdiff_t size = (uint8_t*) m_world_buffer_ptr - (uint8_t*) m_world_buffer;
     if (size <= (1 << 16)) {
         commands->UpdateBuffer(*m_world_instance_buffer, 0, m_world_buffer, size);
     } else {
         Renderer::Context()->WriteBuffer(*m_world_instance_buffer, 0, m_world_buffer, size);
     }
+
+    // ptrdiff_t remaining = (uint8_t*) m_world_buffer_ptr - (uint8_t*) m_world_buffer;
+    // if (remaining <= (1 << 16) - 1) {
+    //     commands->UpdateBuffer(*m_world_instance_buffer, 0, m_world_buffer, remaining);
+    // } else {
+    //     Renderer::Context()->WriteBuffer(*m_world_instance_buffer, 0, m_world_buffer, remaining);
+
+    //     size_t offset = 0;
+    //     while (remaining > 0) {
+    //         const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
+    //         commands->UpdateBuffer(*m_world_instance_buffer, offset, m_world_buffer, size);
+    //         remaining -= size;
+    //         offset += size;
+    //     }
+    // }
     
     commands->SetVertexBufferArray(*m_world_buffer_array);
 
@@ -1052,7 +1106,7 @@ void RenderBatchGlyph::init() {
     pipelineDesc.fragmentShader = font_shader.ps;
     pipelineDesc.geometryShader = font_shader.gs;
     pipelineDesc.pipelineLayout = pipelineLayout;
-    pipelineDesc.indexFormat = LLGL::Format::R32UInt;
+    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = state.swap_chain->GetRenderPass();
     pipelineDesc.rasterizer.frontCCW = true;
@@ -1154,12 +1208,36 @@ void RenderBatchGlyph::render() {
 void RenderBatchGlyph::flush() {
     auto* const commands = Renderer::CommandBuffer();
 
+    // ptrdiff_t remaining = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
+    // size_t offset = 0;
+    // while (remaining > 0) {
+    //     const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
+    //     commands->UpdateBuffer(*m_instance_buffer, offset, m_buffer, size);
+    //     remaining -= size;
+    //     offset += size;
+    // }
+
     const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
     if (size <= (1 << 16)) {
         commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, size);
     } else {
         Renderer::Context()->WriteBuffer(*m_instance_buffer, 0, m_buffer, size);
     }
+
+    // ptrdiff_t remaining = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
+    // if (remaining <= (1 << 16) - 1) {
+    //     commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, remaining);
+    // } else {
+    //     Renderer::Context()->WriteBuffer(*m_instance_buffer, 0, m_buffer, remaining);
+
+    //     size_t offset = 0;
+    //     while (remaining > 0) {
+    //         const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
+    //         commands->UpdateBuffer(*m_instance_buffer, offset, m_buffer, size);
+    //         remaining -= size;
+    //         offset += size;
+    //     }
+    // }
     
     commands->SetVertexBufferArray(*m_buffer_array);
 

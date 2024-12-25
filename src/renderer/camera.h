@@ -14,7 +14,7 @@ public:
     Camera() :
         m_projection_matrix(),
         m_screen_projection_matrix(),
-        m_nonscale_projection_matrix(),
+        m_nozoom_projection_matrix(),
         m_view_matrix(),
         m_transform_matrix(),
         m_viewport(0),
@@ -23,7 +23,7 @@ public:
     explicit Camera(glm::uvec2 viewport) :
         m_projection_matrix(),
         m_screen_projection_matrix(),
-        m_nonscale_projection_matrix(),
+        m_nozoom_projection_matrix(),
         m_view_matrix(),
         m_transform_matrix(),
         m_viewport(std::move(viewport)),
@@ -48,7 +48,7 @@ public:
     inline void set_viewport(const glm::uvec2& viewport) {
         m_viewport = viewport;
         m_screen_projection_matrix = glm::ortho(0.0f, static_cast<float>(viewport.x), static_cast<float>(viewport.y), 0.0f);
-        m_area_nonscale = math::Rect::from_corners(
+        m_area_nozoom = math::Rect::from_corners(
             -glm::vec2(m_viewport) / 2.0f,
             glm::vec2(m_viewport) / 2.0f
         );
@@ -77,10 +77,10 @@ public:
     inline auto get_screen_projection_matrix() const -> const glm::mat4x4& { return m_screen_projection_matrix; }
 
     [[nodiscard]]
-    inline auto get_nonscale_projection_matrix() const -> const glm::mat4x4& { return m_nonscale_projection_matrix; }
+    inline auto get_nonscale_projection_matrix() const -> const glm::mat4x4& { return m_nozoom_projection_matrix; }
 
     [[nodiscard]]
-    inline auto get_nonscale_view_projection_matrix() const -> const glm::mat4x4& { return m_nonscale_view_proj_matrix; }
+    inline auto get_nonscale_view_projection_matrix() const -> const glm::mat4x4& { return m_nozoom_view_proj_matrix; }
 
     [[nodiscard]]
     inline auto get_view_matrix() const -> const glm::mat4x4& { return m_view_matrix; }
@@ -92,7 +92,7 @@ public:
     inline auto get_projection_area() const -> const math::Rect& { return m_area; }
 
     [[nodiscard]]
-    inline auto get_nonscale_projection_area() const -> const math::Rect& { return m_area_nonscale; }
+    inline auto get_nozoom_projection_area() const -> const math::Rect& { return m_area_nozoom; }
 
     [[nodiscard]]
     inline float zoom() const { return m_zoom; }
@@ -105,15 +105,15 @@ private:
 private:
     glm::mat4x4 m_projection_matrix;
     glm::mat4x4 m_screen_projection_matrix;
-    glm::mat4x4 m_nonscale_projection_matrix;
+    glm::mat4x4 m_nozoom_projection_matrix;
     glm::mat4x4 m_view_matrix;
     glm::mat4x4 m_transform_matrix;
     glm::mat4x4 m_inv_view_proj_matrix;
     glm::mat4x4 m_view_proj_matrix;
-    glm::mat4x4 m_nonscale_view_proj_matrix;
+    glm::mat4x4 m_nozoom_view_proj_matrix;
 
     math::Rect m_area;
-    math::Rect m_area_nonscale;
+    math::Rect m_area_nozoom;
 
     glm::uvec2 m_viewport;
     glm::vec2 m_position;

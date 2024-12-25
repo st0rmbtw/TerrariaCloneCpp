@@ -7,8 +7,8 @@ struct Constants
 {
     float4x4 screen_projection;
     float4x4 view_projection;
-    float4x4 nonscale_view_projection;
-    float4x4 nonscale_projection;
+    float4x4 nozoom_view_projection;
+    float4x4 nozoom_projection;
     float4x4 transform_matrix;
     float4x4 inv_view_proj;
     float2 camera_position;
@@ -45,7 +45,7 @@ struct VertexOut
 constant constexpr int HAS_TEXTURE_FLAG = 1 << 0;
 constant constexpr int IS_UI_FLAG = 1 << 1;
 constant constexpr int IS_WORLD_FLAG = 1 << 2;
-constant constexpr int IS_NONSCALE_FLAG = 1 << 3;
+constant constexpr int IS_IGNORE_CAMERA_ZOOM_FLAG = 1 << 3;
 
 vertex VertexOut VS(
     VertexIn inp [[stage_in]],
@@ -88,11 +88,11 @@ vertex VertexOut VS(
 
     const int flags = inp.i_flags;
     const bool is_ui = (flags & IS_UI_FLAG) == IS_UI_FLAG;
-    const bool is_nonscale = (flags & IS_NONSCALE_FLAG) == IS_NONSCALE_FLAG;
+    const bool is_nozoom = (flags & IGNORE_CAMERA_ZOOM_FLAG) == IGNORE_CAMERA_ZOOM_FLAG;
     const bool is_world = (flags & IS_WORLD_FLAG) == IS_WORLD_FLAG;
     const bool has_texture = (flags & HAS_TEXTURE_FLAG) == HAS_TEXTURE_FLAG;
 
-    const float4x4 mvp = is_ui ? constants.screen_projection * transform : is_nonscale ? constants.nonscale_view_projection * transform : constants.view_projection * transform;
+    const float4x4 mvp = (is_ui ? constants.screen_projection : is_nozoom ? constants.nozoom_view_projection : constants.view_projection) * transform;
     const float4 uv_offset_scale = inp.i_uv_offset_scale;
     const float2 position = inp.position;
     const float max_depth = is_world ? constants.max_world_depth : constants.max_depth;

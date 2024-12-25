@@ -481,19 +481,19 @@ void Player::draw() const {
     Renderer::DrawAtlasSprite(m_body.sprite, RenderLayer::World);
     Renderer::DrawAtlasSprite(m_legs.sprite, RenderLayer::World);
 
-    int depth = Renderer::GetWorldDepthIndex();
-
-    Renderer::DrawAtlasSprite(m_left_eye.sprite, RenderLayer::World, depth);
-    Renderer::DrawAtlasSprite(m_right_eye.sprite, RenderLayer::World, depth);
+    Renderer::BeginDepth();
+        Renderer::DrawAtlasSprite(m_left_eye.sprite, RenderLayer::World);
+        Renderer::DrawAtlasSprite(m_right_eye.sprite, RenderLayer::World);
+    Renderer::EndDepth();
 
     if (m_using_item_visible) {
         Renderer::DrawSprite(m_using_item, RenderLayer::World);
     }
 
-    depth = Renderer::GetWorldDepthIndex();
-
-    Renderer::DrawAtlasSprite(m_left_hand.sprite, RenderLayer::World, depth);
-    Renderer::DrawAtlasSprite(m_left_shoulder.sprite, RenderLayer::World, depth);
+    Renderer::BeginDepth();
+        Renderer::DrawAtlasSprite(m_left_hand.sprite, RenderLayer::World);
+        Renderer::DrawAtlasSprite(m_left_shoulder.sprite, RenderLayer::World);
+    Renderer::EndDepth();
 }
 
 void Player::use_item(const Camera& camera, World& world) {

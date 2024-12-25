@@ -20,7 +20,7 @@ namespace SpriteFlags {
         HasTexture = 0,
         UI,
         World,
-        Nonscale,
+        IgnoreCameraZoom,
     };
 };
 
@@ -36,7 +36,7 @@ struct SpriteData {
     Texture texture;
     uint32_t order;
     bool is_ui;
-    bool is_nonscalable;
+    bool ignore_camera_zoom;
 };
 
 struct FlushData {

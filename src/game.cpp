@@ -2,9 +2,12 @@
 
 #include <GLFW/glfw3.h>
 
+#include "LLGL/RenderingDebuggerFlags.h"
+#include "LLGL/Timer.h"
 #include "constants.hpp"
 #include "engine.hpp"
 #include "glm/gtc/random.hpp"
+#include "log.hpp"
 #include "renderer/camera.h"
 #include "renderer/renderer.hpp"
 #include "time/time.hpp"
@@ -150,19 +153,50 @@ void post_update() {
 }
 
 void render() {
-    Renderer::Begin(g.camera, g.world.data());
+    // Renderer::Debugger()->SetTimeRecording(true);
+        Renderer::Begin(g.camera, g.world.data());
 
-    Background::Draw();
+        Background::Draw();
 
-    g.world.draw();
+        g.world.draw();
 
-    g.player.draw();
+        g.player.draw();
 
-    ParticleManager::Draw();
+        ParticleManager::Draw();
 
-    UI::Draw(g.camera, g.player.inventory());
+        UI::Draw(g.camera, g.player.inventory());
 
-    Renderer::Render(g.camera, g.world.chunk_manager());
+        Renderer::Render(g.camera, g.world.chunk_manager());
+    // Renderer::Debugger()->SetTimeRecording(false);
+
+    // LLGL::FrameProfile frame_profile;
+
+    // Renderer::Debugger()->FlushProfile(&frame_profile);
+
+    // double ticksToMilliseconds = 1000.0 / (double)LLGL::Timer::Frequency();
+    // std::pair<double, const char*> top5[5] = {
+    //     {0.0, NULL},
+    //     {0.0, NULL},
+    //     {0.0, NULL},
+    //     {0.0, NULL},
+    //     {0.0, NULL}
+    // };
+
+    // for (const auto& record : frame_profile.timeRecords) {
+    //     double cpu_time = (double)(record.cpuTicksEnd - record.cpuTicksStart) * ticksToMilliseconds;
+    //     double gpu_time = (double)record.elapsedTime * ticksToMilliseconds;
+    //     for (auto& i : top5) {
+    //         if (gpu_time > i.first && strcmp(record.annotation, "CommandBuffer") != 0 && strcmp(record.annotation, "BeginRenderPass") != 0) {
+    //             i.first = gpu_time;
+    //             i.second = record.annotation;
+    //             break;
+    //         }
+    //     }
+    // }
+
+    // for (const auto& i : top5) {
+    //     LOG_DEBUG("%s : %lf ms", i.second, i.first);
+    // }
 }
 
 void post_render() {

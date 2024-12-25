@@ -11,6 +11,7 @@
 #include "types/texture.hpp"
 #include "types/shader_pipeline.hpp"
 #include "types/font.hpp"
+#include "types/sampler.hpp"
 
 enum class TextureAsset : uint8_t {
     Stub = 0,
@@ -115,7 +116,7 @@ namespace Assets {
     const Texture& GetItemTexture(size_t index);
     const ShaderPipeline& GetShader(ShaderAsset key);
     LLGL::Shader* GetComputeShader(ComputeShaderAsset key);
-    LLGL::Sampler& GetSampler(size_t index);
+    Sampler& GetSampler(size_t index);
     const LLGL::VertexFormat& GetVertexFormat(VertexFormatAsset key);
 };
 

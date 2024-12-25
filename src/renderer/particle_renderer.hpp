@@ -25,6 +25,8 @@ public:
 private:
     LLGL::PipelineState* m_pipeline = nullptr;
     LLGL::PipelineState* m_compute_pipeline = nullptr;
+    LLGL::ResourceHeap* m_resource_heap = nullptr;
+    LLGL::ResourceHeap* m_compute_resource_heap = nullptr;
 
     LLGL::BufferArray* m_buffer_array = nullptr;
     LLGL::Buffer* m_instance_buffer = nullptr;

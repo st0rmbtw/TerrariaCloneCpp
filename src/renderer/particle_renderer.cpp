@@ -1,6 +1,7 @@
 #include "particle_renderer.hpp"
 
 #include "LLGL/Format.h"
+#include "LLGL/PipelineLayoutFlags.h"
 #include "LLGL/ShaderFlags.h"
 #include "../assets.hpp"
 #include "renderer.hpp"
@@ -96,7 +97,7 @@ void ParticleRenderer::init() {
     }
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
-    pipelineLayoutDesc.bindings = {
+    pipelineLayoutDesc.heapBindings = {
         LLGL::BindingDescriptor(
             "GlobalUniformBuffer",
             LLGL::ResourceType::Buffer,
@@ -104,8 +105,6 @@ void ParticleRenderer::init() {
             LLGL::StageFlags::VertexStage,
             LLGL::BindingSlot(2)
         ),
-        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
-        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
         LLGL::BindingDescriptor(
             "TransformBuffer",
             LLGL::ResourceType::Buffer,
@@ -114,8 +113,21 @@ void ParticleRenderer::init() {
             LLGL::BindingSlot(5)
         ),
     };
+    pipelineLayoutDesc.staticSamplers = {
+        LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4), Assets::GetSampler(m_atlas.texture().sampler).descriptor())
+    };
+    pipelineLayoutDesc.bindings = {
+        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
+    };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
+    {
+        const LLGL::ResourceViewDescriptor resource_views[] = {
+            Renderer::GlobalUniformBuffer(), m_transform_buffer
+        };
+
+        m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
+    }
 
     const ShaderPipeline& particle_shader = Assets::GetShader(ShaderAsset::ParticleShader);
 
@@ -125,7 +137,7 @@ void ParticleRenderer::init() {
     pipelineDesc.geometryShader = particle_shader.gs;
     pipelineDesc.fragmentShader = particle_shader.ps;
     pipelineDesc.pipelineLayout = pipelineLayout;
-    pipelineDesc.indexFormat = LLGL::Format::Undefined;
+    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = swap_chain->GetRenderPass();
     pipelineDesc.rasterizer.frontCCW = true;
@@ -152,7 +164,7 @@ void ParticleRenderer::init() {
     }
 
     LLGL::PipelineLayoutDescriptor compute_pipeline_layout_desc;
-    compute_pipeline_layout_desc.bindings = {
+    compute_pipeline_layout_desc.heapBindings = {
         LLGL::BindingDescriptor(
             "GlobalUniformBuffer",
             LLGL::ResourceType::Buffer,
@@ -191,6 +203,12 @@ void ParticleRenderer::init() {
     };
 
     LLGL::PipelineLayout* compute_pipeline_layout = context->CreatePipelineLayout(compute_pipeline_layout_desc);
+
+    const LLGL::ResourceViewDescriptor resource_views[] = {
+        Renderer::GlobalUniformBuffer(), m_transform_buffer, m_position_buffer, m_rotation_buffer, m_scale_buffer
+    };
+
+    m_compute_resource_heap = context->CreateResourceHeap(compute_pipeline_layout, resource_views);
 
     LLGL::Shader* computeShader = Assets::GetComputeShader(ComputeShaderAsset::ParticleComputeTransformShader);
 
@@ -255,12 +273,7 @@ void ParticleRenderer::compute() {
     commands->PushDebugGroup("CS ComputeTransform");
     {
         commands->SetPipelineState(*m_compute_pipeline);
-
-        commands->SetResource(0, *Renderer::GlobalUniformBuffer());
-        commands->SetResource(1, *m_transform_buffer);
-        commands->SetResource(2, *m_position_buffer);
-        commands->SetResource(3, *m_rotation_buffer);
-        commands->SetResource(4, *m_scale_buffer);
+        commands->SetResourceHeap(*m_compute_resource_heap);
 
         if (m_is_metal) {
             uint32_t y = (m_particle_count + 512 - 1) / 512;
@@ -292,10 +305,8 @@ void ParticleRenderer::render() {
 
     const Texture& t = m_atlas.texture();
 
-    commands->SetResource(0, *Renderer::GlobalUniformBuffer());
-    commands->SetResource(1, *t.texture);
-    commands->SetResource(2, Assets::GetSampler(t.sampler));
-    commands->SetResource(3, *m_transform_buffer);
+    commands->SetResource(0, *t.texture);
+    commands->SetResourceHeap(*m_resource_heap);
 
     commands->DrawInstanced(4, 0, m_particle_count, 0);
 
