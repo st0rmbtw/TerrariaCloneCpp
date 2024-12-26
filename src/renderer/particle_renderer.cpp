@@ -40,10 +40,10 @@ void ParticleRenderer::init() {
     m_scale_buffer_data_ptr = m_scale_buffer_data;
 
     const ParticleVertex vertices[] = {
-        ParticleVertex(0.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)),
-        ParticleVertex(0.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)),
-        ParticleVertex(1.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)),
-        ParticleVertex(1.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size), glm::vec2(m_atlas.texture().size)),
+        ParticleVertex(0.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size()), glm::vec2(m_atlas.texture().size())),
+        ParticleVertex(0.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size()), glm::vec2(m_atlas.texture().size())),
+        ParticleVertex(1.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size()), glm::vec2(m_atlas.texture().size())),
+        ParticleVertex(1.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size()), glm::vec2(m_atlas.texture().size())),
     };
 
     m_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::ParticleVertex), "ParticleRenderer VertexBuffer");
@@ -112,18 +112,16 @@ void ParticleRenderer::init() {
             LLGL::StageFlags::VertexStage,
             LLGL::BindingSlot(5)
         ),
+        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
     };
     pipelineLayoutDesc.staticSamplers = {
-        LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4), Assets::GetSampler(m_atlas.texture().sampler).descriptor())
-    };
-    pipelineLayoutDesc.bindings = {
-        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
+        LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4), Assets::GetSampler(m_atlas.texture()).descriptor())
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
     {
         const LLGL::ResourceViewDescriptor resource_views[] = {
-            Renderer::GlobalUniformBuffer(), m_transform_buffer
+            Renderer::GlobalUniformBuffer(), m_transform_buffer, m_atlas.texture()
         };
 
         m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
@@ -303,9 +301,6 @@ void ParticleRenderer::render() {
     commands->SetVertexBufferArray(*m_buffer_array);
     commands->SetPipelineState(*m_pipeline);
 
-    const Texture& t = m_atlas.texture();
-
-    commands->SetResource(0, *t.texture);
     commands->SetResourceHeap(*m_resource_heap);
 
     commands->DrawInstanced(4, 0, m_particle_count, 0);

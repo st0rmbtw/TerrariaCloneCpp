@@ -116,8 +116,12 @@ namespace Assets {
     const Texture& GetItemTexture(size_t index);
     const ShaderPipeline& GetShader(ShaderAsset key);
     LLGL::Shader* GetComputeShader(ComputeShaderAsset key);
-    Sampler& GetSampler(size_t index);
+    const Sampler& GetSampler(size_t index);
     const LLGL::VertexFormat& GetVertexFormat(VertexFormatAsset key);
+
+    inline const Sampler& GetSampler(const Texture& texture) {
+        return GetSampler(texture.sampler());
+    }
 };
 
 #endif

@@ -12,10 +12,10 @@ public:
         m_internal(internal),
         m_descriptor(std::move(descriptor)) {}
 
-    const LLGL::SamplerDescriptor& descriptor() { return m_descriptor; }
-    LLGL::Sampler* internal() { return m_internal; }
+    [[nodiscard]] inline const LLGL::SamplerDescriptor& descriptor() const { return m_descriptor; }
+    [[nodiscard]] inline LLGL::Sampler* internal() const { return m_internal; }
 
-    operator LLGL::Sampler&() { return *m_internal; }
+    inline operator LLGL::Sampler&() const { return *m_internal; }
 
 private:
     LLGL::Sampler* m_internal = nullptr;

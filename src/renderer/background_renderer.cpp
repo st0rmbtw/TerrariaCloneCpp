@@ -75,7 +75,7 @@ void BackgroundRenderer::draw_layer(const BackgroundLayer& layer) {
     const glm::vec2 offset = layer.anchor().to_vec2();
     const glm::vec2 pos = layer.position() - layer.size() * offset;
 
-    const glm::vec2 tex_size = glm::vec2(layer.texture().size);
+    const glm::vec2 tex_size = layer.texture().size();
     m_buffer_ptr->position = pos;
     m_buffer_ptr->uv = glm::vec2(0.0f);
     m_buffer_ptr->size = layer.size();
@@ -118,7 +118,7 @@ void BackgroundRenderer::draw_world_layer(const BackgroundLayer& layer) {
     const glm::vec2 offset = layer.anchor().to_vec2();
     const glm::vec2 pos = layer.position() - layer.size() * offset;
 
-    const glm::vec2 tex_size = glm::vec2(layer.texture().size);
+    const glm::vec2 tex_size = layer.texture().size();
     m_world_buffer_ptr->position = pos;
     m_world_buffer_ptr->uv = glm::vec2(0.0f);
     m_world_buffer_ptr->size = layer.size();
@@ -172,10 +172,8 @@ void BackgroundRenderer::render() {
     commands->SetResource(0, *Renderer::GlobalUniformBuffer());
 
     for (const LayerData& layer : m_layers) {
-        const Texture& t = layer.texture;
-
-        commands->SetResource(1, *t.texture);
-        commands->SetResource(2, Assets::GetSampler(t.sampler));
+        commands->SetResource(1, layer.texture);
+        commands->SetResource(2, Assets::GetSampler(layer.texture));
         commands->DrawIndexed(6, 0, layer.offset);
     }
 
@@ -198,10 +196,8 @@ void BackgroundRenderer::render_world() {
     commands->SetResource(0, *Renderer::GlobalUniformBuffer());
 
     for (const LayerData& layer : m_world_layers) {
-        const Texture& t = layer.texture;
-
-        commands->SetResource(1, *t.texture);
-        commands->SetResource(2, Assets::GetSampler(t.sampler));
+        commands->SetResource(1, layer.texture);
+        commands->SetResource(2, Assets::GetSampler(layer.texture));
         commands->DrawIndexed(6, 0, layer.offset);
     }
 

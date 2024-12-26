@@ -209,7 +209,7 @@ bool Assets::Load() {
             return false;
         }
         state.textures[asset_key] = texture;
-        state.textures_atlases[asset_key] = TextureAtlas::from_grid(texture, glm::uvec2(16, 16), (texture.size.x - (texture.size.x / 16) * 2) / 16 + 1, (texture.size.y - (texture.size.y / 16) * 2) / 16 + 1, glm::uvec2(2));
+        state.textures_atlases[asset_key] = TextureAtlas::from_grid(texture, glm::uvec2(16, 16), (texture.width() - (texture.width() / 16) * 2) / 16 + 1, (texture.height() - (texture.height() / 16) * 2) / 16 + 1, glm::uvec2(2));
     }
 
     for (const auto& [key, asset] : TEXTURE_ATLAS_ASSETS) {
@@ -596,7 +596,7 @@ void Assets::InitVertexFormats() {
 
 void Assets::DestroyTextures() {
     for (auto& entry : state.textures) {
-        Renderer::Context()->Release(*entry.second.texture);
+        Renderer::Context()->Release(entry.second);
     }
 }
 
@@ -648,7 +648,7 @@ LLGL::Shader* Assets::GetComputeShader(ComputeShaderAsset key) {
     return entry->second;
 }
 
-Sampler& Assets::GetSampler(size_t index) {
+const Sampler& Assets::GetSampler(size_t index) {
     ASSERT(index < state.samplers.size(), "Index is out of bounds: %zu", index);
     return state.samplers[index];
 }

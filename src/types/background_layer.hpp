@@ -15,7 +15,7 @@ public:
 
         m_texture = texture;
         m_scale = scale;
-        m_size = glm::vec2(texture.size) * m_scale;
+        m_size = glm::vec2(texture.size()) * m_scale;
     }
 
     inline BackgroundLayer& set_width(float width) { m_size.x = width; return *this; }
@@ -39,7 +39,7 @@ public:
     [[nodiscard]] inline float x() const { return m_x; }
     [[nodiscard]] inline float y() const { return m_y; }
     [[nodiscard]] inline Anchor anchor() const { return m_anchor; }
-    [[nodiscard]] inline uint32_t texture_id() const { return m_texture.id; }
+    [[nodiscard]] inline uint32_t texture_id() const { return m_texture.id(); }
     [[nodiscard]] inline bool nonscale() const { return m_nonscale; }
     [[nodiscard]] inline bool follow_camera() const { return m_follow_camera; }
     [[nodiscard]] inline bool fill_screen_height() const { return m_fill_screen_height; }

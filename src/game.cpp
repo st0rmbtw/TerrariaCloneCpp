@@ -29,7 +29,7 @@ static struct GameState {
 } g;
 
 glm::vec2 camera_follow_player() {
-    static constexpr float PIXEL_OFFSET = 2.0f;
+    static constexpr float OFFSET = 2.0f;
 
     glm::vec2 position = g.player.position();
 
@@ -42,8 +42,8 @@ glm::vec2 camera_follow_player() {
     const float top = camera_area.min.y;
     const float bottom = camera_area.max.y;
 
-    if (position.x + left < area.min.x + PIXEL_OFFSET) position.x = area.min.x - left + PIXEL_OFFSET;
-    if (position.x + right > area.max.x - PIXEL_OFFSET) position.x = area.max.x - right - PIXEL_OFFSET;
+    if (position.x + left < area.min.x + OFFSET) position.x = area.min.x - left + OFFSET;
+    if (position.x + right > area.max.x - OFFSET) position.x = area.max.x - right - OFFSET;
 
     if (position.y + top < area.min.y) position.y = area.min.y - top;
     if (position.y + bottom > area.max.y) position.y = area.max.y - bottom;
@@ -279,6 +279,8 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     g.camera.set_zoom(1.0f);
 
     g.player.init();
+    g.player.set_position(g.world, glm::vec2(g.world.spawn_point()) * Constants::TILE_SIZE);
+
     Inventory& inventory = g.player.inventory();
     inventory.set_item(0, ITEM_COPPER_AXE);
     inventory.set_item(1, ITEM_COPPER_PICKAXE);
@@ -286,7 +288,6 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     inventory.set_item(3, ITEM_DIRT_BLOCK.with_max_stack());
     inventory.set_item(4, ITEM_STONE_BLOCK.with_max_stack());
     inventory.set_item(5, ITEM_WOOD_BLOCK.with_max_stack());
-    g.player.set_position(g.world, glm::vec2(g.world.spawn_point()) * Constants::TILE_SIZE);
 
     Engine::ShowWindow();
 

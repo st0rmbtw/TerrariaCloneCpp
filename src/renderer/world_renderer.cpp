@@ -145,7 +145,7 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
 
         if (!chunk.walls_empty()) {
             commands->SetVertexBufferArray(*chunk.wall_buffer_array);
-            commands->SetResource(0, *walls_texture.texture);
+            commands->SetResource(0, walls_texture);
             commands->SetResourceHeap(*m_resource_heap);
 
             commands->DrawInstanced(4, 0, chunk.walls_count);
@@ -153,7 +153,7 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
 
         if (!chunk.blocks_empty()) {
             commands->SetVertexBufferArray(*chunk.block_buffer_array);
-            commands->SetResource(0, *tiles_texture.texture);
+            commands->SetResource(0, tiles_texture);
             commands->SetResourceHeap(*m_resource_heap);
 
             commands->DrawInstanced(4, 0, chunk.blocks_count);

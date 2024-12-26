@@ -44,7 +44,7 @@ public:
             case Value::Vertex: return "VS"; break;
             case Value::Fragment: return "PS"; break;
             case Value::Geometry: return "GS"; break;
-            default: UNREACHABLE()
+            default: return nullptr;
         };
     }
 
@@ -59,7 +59,7 @@ public:
             case Value::Fragment: return "ps_5_0"; break;
             case Value::Geometry: return "gs_5_0"; break;
             case Value::Compute: return "cs_5_0"; break;
-            default: UNREACHABLE()
+            default: return nullptr;
         };
         break;
 
@@ -68,7 +68,7 @@ public:
             case Value::Fragment: return "ps_5_0"; break;
             case Value::Geometry: return "gs_5_0"; break;
             case Value::Compute: return "cs_5_0"; break;
-            default: UNREACHABLE()
+            default: return nullptr;
         };
         break;
 
@@ -87,16 +87,16 @@ public:
                 case Value::Fragment: return ".frag"; break;
                 case Value::Geometry: return ".geom"; break;
                 case Value::Compute: return ".comp"; break;
-                default: UNREACHABLE()
+                default: return nullptr;
             };
             case RenderBackend::Vulkan: switch (m_value) {
                 case Value::Vertex:   return ".vert.spv"; break;
                 case Value::Fragment: return ".frag.spv"; break;
                 case Value::Geometry: return ".geom.spv"; break;
                 case Value::Compute: return ".comp.spv"; break;
-                default: UNREACHABLE()
+                default: return nullptr;
             };
-            default: UNREACHABLE()
+            default: return nullptr;
         }
     }
 

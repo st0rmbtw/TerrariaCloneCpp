@@ -174,7 +174,7 @@ void render_inventory(const Inventory& inventory) {
         const bool item_selected = inventory.selected_slot() == x;
 
         if (item.is_some()) {
-            item_size = Assets::GetItemTexture(item->id).size;
+            item_size = Assets::GetItemTexture(item->id).size();
             item_size = glm::min(item_size, glm::vec2(32.0f)); // The maximum size of an item image is 32px
         }
 
