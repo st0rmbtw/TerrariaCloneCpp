@@ -617,22 +617,26 @@ LLGL::Shader* Renderer::LoadShader(ShaderPath shader_path, const std::vector<Sha
         return nullptr;
     }
 
-    std::ifstream shader_file;
-    shader_file.open(path);
+    std::string shader_source;
 
-    std::stringstream shader_source_str;
-    shader_source_str << shader_file.rdbuf();
+    if (!backend.IsVulkan()) {
+        std::ifstream shader_file;
+        shader_file.open(path);
 
-    std::string shader_source = shader_source_str.str();
+        std::stringstream shader_source_str;
+        shader_source_str << shader_file.rdbuf();
 
-    for (const ShaderDef& shader_def : shader_defs) {
-        size_t pos;
-        while ((pos = shader_source.find(shader_def.name)) != std::string::npos) {
-            shader_source.replace(pos, shader_def.name.length(), shader_def.value);
+        shader_source = shader_source_str.str();
+
+        for (const ShaderDef& shader_def : shader_defs) {
+            size_t pos;
+            while ((pos = shader_source.find(shader_def.name)) != std::string::npos) {
+                shader_source.replace(pos, shader_def.name.length(), shader_def.value);
+            }
         }
-    }
 
-    shader_file.close();
+        shader_file.close();
+    }
 
     LLGL::ShaderDescriptor shader_desc;
     shader_desc.type = shader_type.ToLLGLType();

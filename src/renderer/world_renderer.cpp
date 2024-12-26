@@ -28,7 +28,6 @@ void WorldRenderer::init() {
     m_depth_buffer = context->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(DepthUniformData)), &depth_uniform);
 
     const auto* render_pass = Renderer::DefaultRenderPass();
-    const RenderBackend backend = Renderer::Backend();
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.heapBindings = {
@@ -48,7 +47,7 @@ void WorldRenderer::init() {
         ),
     };
     pipelineLayoutDesc.staticSamplers = {
-        LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, backend.IsOpenGL() ? 4 : 5, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, 5, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
     };
     pipelineLayoutDesc.bindings = {
         LLGL::BindingDescriptor("u_texture_array", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4)),
