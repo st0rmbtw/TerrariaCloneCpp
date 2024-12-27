@@ -9,3 +9,4 @@ build_release/
 glslang.exe
 glslang
 *.bat
+*.sh
