@@ -218,6 +218,8 @@ void window_resized(uint32_t width, uint32_t height, uint32_t scaled_width, uint
     g.camera.set_viewport(glm::uvec2(width, height));
     g.camera.update();
 
+    g.world.chunk_manager().manage_chunks(g.world.data(), g.camera);
+
     Background::Update(g.camera);
 }
 
