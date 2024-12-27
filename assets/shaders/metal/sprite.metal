@@ -88,7 +88,7 @@ vertex VertexOut VS(
 
     const int flags = inp.i_flags;
     const bool is_ui = (flags & IS_UI_FLAG) == IS_UI_FLAG;
-    const bool is_nozoom = (flags & IGNORE_CAMERA_ZOOM_FLAG) == IGNORE_CAMERA_ZOOM_FLAG;
+    const bool is_nozoom = (flags & IS_IGNORE_CAMERA_ZOOM_FLAG) == IS_IGNORE_CAMERA_ZOOM_FLAG;
     const bool is_world = (flags & IS_WORLD_FLAG) == IS_WORLD_FLAG;
     const bool has_texture = (flags & HAS_TEXTURE_FLAG) == HAS_TEXTURE_FLAG;
 
