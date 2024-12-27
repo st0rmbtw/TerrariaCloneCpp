@@ -19,7 +19,6 @@
 #include "../types/shader_type.hpp"
 #include "../utils.hpp"
 
-#include "LLGL/ResourceFlags.h"
 #include "types.hpp"
 #include "utils.hpp"
 #include "batch.hpp"
@@ -38,8 +37,7 @@ static struct RendererState {
 #endif
 
     LLGL::Buffer* constant_buffer = nullptr;
-    LLGL::RenderPass* render_pass = nullptr;
-    LLGL::RenderPass* clear_render_pass = nullptr;
+    LLGL::ResourceHeap* resource_heap = nullptr;
 
     LLGL::Buffer* chunk_vertex_buffer = nullptr;
     LLGL::RenderTarget* world_render_target = nullptr;
@@ -86,7 +84,6 @@ RenderBackend Renderer::Backend() { return state.backend; }
 uint32_t Renderer::GetMainDepthIndex() { return state.main_depth_index; };
 uint32_t Renderer::GetWorldDepthIndex() { return state.world_depth_index; };
 uint32_t Renderer::GetUiDepthIndex() { return state.ui_depth_index; };
-const LLGL::RenderPass* Renderer::DefaultRenderPass() { return state.render_pass; };
 LLGL::Buffer* Renderer::ChunkVertexBuffer() { return state.chunk_vertex_buffer; }
 
 #if DEBUG
@@ -162,36 +159,13 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
     state.constant_buffer = CreateConstantBuffer(sizeof(ProjectionsUniform), "ConstantBuffer");
 
-    {
-        LLGL::RenderPassDescriptor render_pass_desc;
-        render_pass_desc.colorAttachments[0].format = state.swap_chain->GetColorFormat();
-        render_pass_desc.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Load;
-        render_pass_desc.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
+    ResizeTextures(resolution);
 
-        render_pass_desc.depthAttachment.format = state.swap_chain->GetDepthStencilFormat();
-        render_pass_desc.depthAttachment.loadOp = LLGL::AttachmentLoadOp::Load;
-        render_pass_desc.depthAttachment.storeOp = LLGL::AttachmentStoreOp::Store;
-
-        render_pass_desc.stencilAttachment.format = state.swap_chain->GetDepthStencilFormat();
-        render_pass_desc.stencilAttachment.loadOp = LLGL::AttachmentLoadOp::Undefined;
-        render_pass_desc.stencilAttachment.storeOp = LLGL::AttachmentStoreOp::Undefined;
-        state.render_pass = context->CreateRenderPass(render_pass_desc);
-    }
-    {
-        LLGL::RenderPassDescriptor render_pass_desc;
-        render_pass_desc.colorAttachments[0].format = state.swap_chain->GetColorFormat();
-        render_pass_desc.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Clear;
-        render_pass_desc.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
-
-        render_pass_desc.depthAttachment.format = state.swap_chain->GetDepthStencilFormat();
-        render_pass_desc.depthAttachment.loadOp = LLGL::AttachmentLoadOp::Clear;
-        render_pass_desc.depthAttachment.storeOp = LLGL::AttachmentStoreOp::Store;
-
-        render_pass_desc.stencilAttachment.format = state.swap_chain->GetDepthStencilFormat();
-        render_pass_desc.stencilAttachment.loadOp = LLGL::AttachmentLoadOp::Undefined;
-        render_pass_desc.stencilAttachment.storeOp = LLGL::AttachmentStoreOp::Undefined;
-        state.clear_render_pass = context->CreateRenderPass(render_pass_desc);
-    }
+    state.sprite_batch.init();
+    state.glyph_batch.init();
+    state.world_renderer.init();
+    state.background_renderer.init();
+    state.particle_renderer.init();
 
     const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Tiles).size());
     const glm::vec2 wall_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Walls).size());
@@ -220,7 +194,7 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
         LLGL::CombinedTextureSamplerDescriptor{ "u_world_texture", "u_world_texture", "u_world_sampler", 5 },
         LLGL::CombinedTextureSamplerDescriptor{ "u_light_texture", "u_light_texture", "u_light_sampler", 7 },
     };
-    pipelineLayoutDesc.bindings = {
+    pipelineLayoutDesc.heapBindings = {
         LLGL::BindingDescriptor(
             "GlobalUniformBuffer",
             LLGL::ResourceType::Buffer,
@@ -236,6 +210,14 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
+    const LLGL::ResourceViewDescriptor resource_views[] = {
+        state.constant_buffer,
+        state.background_render_texture,
+        state.world_render_texture,
+        Assets::GetTexture(TextureAsset::Stub)
+    };
+    state.resource_heap = context->CreateResourceHeap(LLGL::ResourceHeapDescriptor(pipelineLayout, ARRAY_LEN(resource_views)), resource_views);
+
     const ShaderPipeline& postprocess_shader = Assets::GetShader(ShaderAsset::PostProcessShader);
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
@@ -249,14 +231,6 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
     state.postprocess_pipeline = context->CreatePipelineState(pipelineDesc);
 
-    ResizeTextures(resolution);
-
-    state.sprite_batch.init();
-    state.glyph_batch.init();
-    state.world_renderer.init();
-    state.background_renderer.init();
-    state.particle_renderer.init();
-
     return true;
 }
 
@@ -266,44 +240,55 @@ void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
 
     if (state.world_render_texture) context->Release(*state.world_render_texture);
     if (state.world_depth_texture) context->Release(*state.world_depth_texture);
-    if (state.background_render_texture) context->Release(*state.background_render_texture);
-
     if (state.world_render_target) context->Release(*state.world_render_target);
+
+    if (state.background_render_texture) context->Release(*state.background_render_texture);
     if (state.background_render_target) context->Release(*state.background_render_target);
 
     state.world_render_texture = nullptr;
-    state.background_render_texture = nullptr;
     state.world_render_target = nullptr;
+    state.background_render_texture = nullptr;
     state.background_render_target = nullptr;
 
     LLGL::TextureDescriptor texture_desc;
     texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
     texture_desc.format = swap_chain->GetColorFormat();
+    texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
     texture_desc.miscFlags = 0;
     texture_desc.cpuAccessFlags = 0;
 
     LLGL::TextureDescriptor depth_texture_desc;
     depth_texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
     depth_texture_desc.format = swap_chain->GetDepthStencilFormat();
-    depth_texture_desc.bindFlags = LLGL::BindFlags::DepthStencilAttachment;
+    depth_texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::DepthStencilAttachment;
     depth_texture_desc.miscFlags = 0;
     depth_texture_desc.cpuAccessFlags = 0;
 
-    state.world_depth_texture = context->CreateTexture(depth_texture_desc);
-    state.world_render_texture = context->CreateTexture(texture_desc);
-    state.background_render_texture = context->CreateTexture(texture_desc);
+    LLGL::Texture* world_depth_texture = context->CreateTexture(depth_texture_desc);
+    LLGL::Texture* world_render_texture = context->CreateTexture(texture_desc);
+    LLGL::Texture* background_render_texture = context->CreateTexture(texture_desc);
+
+    state.world_depth_texture = world_depth_texture;
+    state.world_render_texture = world_render_texture;
+    state.background_render_texture = background_render_texture;
     
     LLGL::RenderTargetDescriptor render_target_desc;
     render_target_desc.resolution = resolution;
-    render_target_desc.colorAttachments[0] = state.world_render_texture;
-    render_target_desc.depthStencilAttachment = state.world_depth_texture;
+    render_target_desc.colorAttachments[0] = world_render_texture;
+    render_target_desc.depthStencilAttachment = world_depth_texture;
+    render_target_desc.depthStencilAttachment.format = swap_chain->GetDepthStencilFormat();
     state.world_render_target = context->CreateRenderTarget(render_target_desc);
     
     LLGL::RenderTargetDescriptor background_target_desc;
     background_target_desc.resolution = resolution;
-    background_target_desc.colorAttachments[0] = state.background_render_texture;
+    background_target_desc.colorAttachments[0] = background_render_texture;
     background_target_desc.depthStencilAttachment.format = swap_chain->GetDepthStencilFormat();
     state.background_render_target = context->CreateRenderTarget(background_target_desc);
+
+    if (state.resource_heap != nullptr) {
+        context->WriteResourceHeap(*state.resource_heap, 1, {background_render_texture});
+        context->WriteResourceHeap(*state.resource_heap, 2, {world_render_texture});
+    }
 }
 
 void Renderer::InitWorldRenderer(const WorldData &world) {
@@ -324,6 +309,7 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
     state.fullscreen_triangle_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::PostProcessVertex));
 
     state.world_renderer.init_lightmap_texture(world);
+    context->WriteResourceHeap(*state.resource_heap, 3, {state.world_renderer.lightmap_texture()});
 }
 
 void Renderer::Begin(const Camera& camera, WorldData& world) {
@@ -393,31 +379,26 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
 
     state.particle_renderer.compute();
 
-    LLGL::ClearValue clear_value[] = {
-        LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f),
-        LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f)
-    };
+    LLGL::ClearValue clear_value = LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
-    commands->BeginRenderPass(*state.background_render_target, state.clear_render_pass, 2, clear_value);
+    commands->BeginRenderPass(*state.background_render_target);
+        commands->Clear(LLGL::ClearFlags::ColorDepth, clear_value);
         state.background_renderer.render();
     commands->EndRenderPass();
 
-    commands->BeginRenderPass(*state.world_render_target, state.clear_render_pass, 2, clear_value);
+    commands->BeginRenderPass(*state.world_render_target);
+        commands->Clear(LLGL::ClearFlags::ColorDepth, clear_value);
         state.background_renderer.render_world();
         state.world_renderer.render(chunk_manager);
         state.sprite_batch.render_world();
     commands->EndRenderPass();
 
-    commands->BeginRenderPass(*state.swap_chain, Renderer::DefaultRenderPass());
+    commands->BeginRenderPass(*state.swap_chain);
         commands->Clear(LLGL::ClearFlags::ColorDepth, LLGL::ClearValue(1.0f, 0.0f, 0.0f, 1.0f, 0.0f));
 
         commands->SetVertexBuffer(*state.fullscreen_triangle_vertex_buffer);
         commands->SetPipelineState(*state.postprocess_pipeline);
-
-        commands->SetResource(0, *state.constant_buffer);
-        commands->SetResource(1, *state.background_render_texture);
-        commands->SetResource(2, *state.world_render_texture);
-        commands->SetResource(3, *state.world_renderer.lightmap_texture());
+        commands->SetResourceHeap(*state.resource_heap);
 
         commands->Draw(3, 0);
 

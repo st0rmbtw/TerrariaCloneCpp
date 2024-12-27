@@ -11,6 +11,8 @@
 
 #include "assets.hpp"
 
+#define ARRAY_LEN(array) (sizeof(array)/sizeof(array[0]))
+
 inline const char* glfwGetErrorString() {
     const char* description = nullptr;
     glfwGetError(&description);

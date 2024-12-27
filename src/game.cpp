@@ -217,6 +217,8 @@ void window_resized(uint32_t width, uint32_t height, uint32_t scaled_width, uint
 
     g.camera.set_viewport(glm::uvec2(width, height));
     g.camera.update();
+
+    Background::Update(g.camera);
 }
 
 bool load_assets() {

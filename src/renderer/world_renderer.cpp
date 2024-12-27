@@ -27,8 +27,6 @@ void WorldRenderer::init() {
 
     m_depth_buffer = context->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(DepthUniformData)), &depth_uniform);
 
-    const auto* render_pass = Renderer::DefaultRenderPass();
-
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.heapBindings = {
         LLGL::BindingDescriptor(
@@ -46,11 +44,11 @@ void WorldRenderer::init() {
             LLGL::BindingSlot(3)
         ),
     };
-    pipelineLayoutDesc.staticSamplers = {
-        LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, 5, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
-    };
     pipelineLayoutDesc.bindings = {
         LLGL::BindingDescriptor("u_texture_array", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4)),
+    };
+    pipelineLayoutDesc.staticSamplers = {
+        LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, 5, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
@@ -71,7 +69,6 @@ void WorldRenderer::init() {
     pipelineDesc.pipelineLayout = pipelineLayout;
     pipelineDesc.indexFormat = LLGL::Format::R16UInt;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
-    pipelineDesc.renderPass = render_pass;
     pipelineDesc.rasterizer.frontCCW = true;
     pipelineDesc.depth = LLGL::DepthDescriptor {
         .testEnabled = true,

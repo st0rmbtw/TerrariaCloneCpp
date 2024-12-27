@@ -38,6 +38,7 @@ private:
     std::vector<LayerData> m_world_layers;
     
     LLGL::PipelineState* m_pipeline = nullptr;
+    LLGL::ResourceHeap* m_resource_heap = nullptr;
     LLGL::Buffer* m_vertex_buffer = nullptr;
     LLGL::Buffer* m_world_vertex_buffer = nullptr;
     LLGL::Buffer* m_index_buffer = nullptr;

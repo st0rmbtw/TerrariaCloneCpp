@@ -1,6 +1,6 @@
 #include "background_renderer.hpp"
 
-#include "LLGL/ShaderFlags.h"
+#include <LLGL/ShaderFlags.h>
 #include "renderer.hpp"
 #include "utils.hpp"
 
@@ -38,19 +38,26 @@ void BackgroundRenderer::init() {
     m_index_buffer = CreateIndexBuffer(indices, LLGL::Format::R32UInt, "BackgroundRenderer IndexBuffer");
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
-    pipelineLayoutDesc.bindings = {
+    pipelineLayoutDesc.heapBindings = {
         LLGL::BindingDescriptor(
             "GlobalUniformBuffer",
             LLGL::ResourceType::Buffer,
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::VertexStage,
             LLGL::BindingSlot(2)
-        ),
+        )
+    };
+    pipelineLayoutDesc.bindings = {
         LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
         LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
+
+    const LLGL::ResourceViewDescriptor resource_views[] = {
+        Renderer::GlobalUniformBuffer()
+    };
+    m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
 
     const ShaderPipeline& background_shader = Assets::GetShader(ShaderAsset::BackgroundShader);
 
@@ -169,11 +176,11 @@ void BackgroundRenderer::render() {
     commands->SetIndexBuffer(*m_index_buffer);
 
     commands->SetPipelineState(*m_pipeline);
-    commands->SetResource(0, *Renderer::GlobalUniformBuffer());
+    commands->SetResourceHeap(*m_resource_heap);
 
     for (const LayerData& layer : m_layers) {
-        commands->SetResource(1, layer.texture);
-        commands->SetResource(2, Assets::GetSampler(layer.texture));
+        commands->SetResource(0, layer.texture);
+        commands->SetResource(1, Assets::GetSampler(layer.texture));
         commands->DrawIndexed(6, 0, layer.offset);
     }
 
@@ -193,11 +200,11 @@ void BackgroundRenderer::render_world() {
     commands->SetIndexBuffer(*m_index_buffer);
 
     commands->SetPipelineState(*m_pipeline);
-    commands->SetResource(0, *Renderer::GlobalUniformBuffer());
+    commands->SetResourceHeap(*m_resource_heap);
 
     for (const LayerData& layer : m_world_layers) {
-        commands->SetResource(1, layer.texture);
-        commands->SetResource(2, Assets::GetSampler(layer.texture));
+        commands->SetResource(0, layer.texture);
+        commands->SetResource(1, Assets::GetSampler(layer.texture));
         commands->DrawIndexed(6, 0, layer.offset);
     }
 

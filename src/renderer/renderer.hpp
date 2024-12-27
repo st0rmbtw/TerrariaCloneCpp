@@ -100,7 +100,6 @@ namespace Renderer {
     [[nodiscard]] uint32_t GetMainDepthIndex();
     [[nodiscard]] uint32_t GetWorldDepthIndex();
     [[nodiscard]] uint32_t GetUiDepthIndex();
-    [[nodiscard]] const LLGL::RenderPass* DefaultRenderPass();
     [[nodiscard]] LLGL::Buffer* ChunkVertexBuffer();
 
 #if DEBUG

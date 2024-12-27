@@ -1,9 +1,9 @@
 #ifndef TERRARIA_TEXTURE_HPP
 #define TERRARIA_TEXTURE_HPP
 
-#include "LLGL/ResourceHeapFlags.h"
 #pragma once
 
+#include <LLGL/ResourceHeapFlags.h>
 #include <LLGL/Texture.h>
 #include <glm/glm.hpp>
 
@@ -31,6 +31,7 @@ public:
     [[nodiscard]] inline glm::uvec2 size() const { return m_size; }
     [[nodiscard]] inline uint32_t width() const { return m_size.x; }
     [[nodiscard]] inline uint32_t height() const { return m_size.y; }
+    [[nodiscard]] inline LLGL::Texture* internal() const { return m_internal; }
 
     inline operator LLGL::Resource*() const { return m_internal; }
     inline operator LLGL::Texture*() const { return m_internal; }

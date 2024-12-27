@@ -268,7 +268,7 @@ static void handle_window_resize_events(GLFWwindow*, int width, int height) {
     Renderer::SwapChain()->ResizeBuffers(resolution);
 
     state.window_width = width;
-    state.window_width = height;
+    state.window_height = height;
 
     state.window_resize_callback(static_cast<uint32_t>(width), static_cast<uint32_t>(height), resolution.width, resolution.height);
 

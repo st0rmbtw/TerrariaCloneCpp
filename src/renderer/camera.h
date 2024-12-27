@@ -48,10 +48,6 @@ public:
     inline void set_viewport(const glm::uvec2& viewport) {
         m_viewport = viewport;
         m_screen_projection_matrix = glm::ortho(0.0f, static_cast<float>(viewport.x), static_cast<float>(viewport.y), 0.0f);
-        m_area_nozoom = math::Rect::from_corners(
-            -glm::vec2(m_viewport) / 2.0f,
-            glm::vec2(m_viewport) / 2.0f
-        );
         update_projection_area();
     }
 
