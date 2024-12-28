@@ -519,7 +519,7 @@ void Renderer::DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, Depth depth) 
     add_atlas_sprite_to_batch(sprite, RenderLayer::Main, true, depth);
 }
 
-void Renderer::DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontAsset key, bool is_ui, Depth depth) {
+void Renderer::DrawText(const char* text, float size, const glm::vec2& position, const glm::vec3& color, FontAsset key, bool is_ui, Depth depth) {
     ZoneScopedN("Renderer::DrawText");
 
     const Font& font = Assets::GetFont(key);
@@ -538,8 +538,9 @@ void Renderer::DrawText(const char* text, uint32_t length, float size, const glm
     if (depth.advance) depth_index = std::max(depth_index, static_cast<uint32_t>(new_index));
     if (static_cast<uint32_t>(order) > state.max_main_depth) state.max_main_depth = order;
 
-    for (uint32_t i = 0; i < length; ++i) {
-        const char c = text[i];
+    for (; *text != '\0';) {
+        const uint32_t c = next_utf8_codepoint(&text);
+
         if (c == '\n') {
             y += size;
             x = position.x;

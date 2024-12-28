@@ -11,7 +11,7 @@
 #include "time/time.hpp"
 #include "utils.hpp"
 
-constexpr float INVENTORY_TITLE_SIZE = 22.0f;
+constexpr float INVENTORY_TITLE_SIZE = 24.0f;
 constexpr float MIN_CURSOR_SCALE = 1.0;
 constexpr float MAX_CURSOR_SCALE = MIN_CURSOR_SCALE + 0.20;
 constexpr float INVENTORY_PADDING = 10;

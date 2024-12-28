@@ -57,20 +57,22 @@ namespace Renderer {
     void DrawSpriteUI(const Sprite& sprite, Depth depth = -1);
     void DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, Depth depth = -1);
 
-    void DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, bool is_ui = false, Depth depth = -1);
+    void DrawText(const char* text, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, bool is_ui = false, Depth depth = -1);
 
     inline void DrawText(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font) {
-        DrawText(text.data(), text.length(), size, position, color, font, false);
+        DrawText(text.c_str(), size, position, color, font, false);
     }
     inline void DrawTextUI(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, Depth depth = -1) {
-        DrawText(text.data(), text.length(), size, position, color, font, true, depth);
+        DrawText(text.c_str(), size, position, color, font, true, depth);
     }
 
     inline void DrawChar(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, Depth depth = -1) {
-        DrawText(&ch, 1, size, position, color, font, false, depth);
+        char text[] = {ch, '\0'};
+        DrawText(text, size, position, color, font, false, depth);
     }
     inline void DrawCharUI(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, Depth depth = -1) {
-        DrawText(&ch, 1, size, position, color, font, true, depth);
+        char text[] = {ch, '\0'};
+        DrawText(text, size, position, color, font, true, depth);
     }
 
     void DrawBackground(const BackgroundLayer& layer);
