@@ -721,58 +721,94 @@ Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, c
 }
 
 bool load_font(FT_Library ft, const std::string& path, Font& font) {
+    static constexpr uint32_t FONT_SIZE = 48;
+    static constexpr uint32_t PADDING = 2;
+
     FT_Face face;
     if (FT_New_Face(ft, path.c_str(), 0, &face)) {
         LOG_ERROR("Failed to load font: %s", path.c_str());
         return false;
     }
-
-    static constexpr uint32_t FONT_SIZE = 22;
-    static constexpr uint32_t PADDING = 2;
-
+    
     FT_Set_Pixel_Sizes(face, 0, FONT_SIZE);
 
-    static constexpr uint32_t texture_width = 512;
-    static constexpr uint32_t texture_height = 512;
+    struct GlyphInfo {
+        uint8_t* buffer;
+        uint32_t bitmap_width;
+        uint32_t bitmap_rows;
+        FT_Int bitmap_left;
+        FT_Int bitmap_top;
+        FT_Vector advance;
+        uint32_t col;
+        uint32_t row;
+    };
+
+    std::vector<std::pair<FT_ULong, GlyphInfo>> glyphs;
+
+    FT_UInt index;
+    FT_ULong character = FT_Get_First_Char(face, &index);
+
+    const uint32_t texture_width = 1024;
+
+    uint32_t col = 0;
+    uint32_t row = 0;
+
+    while (true) {
+        if (FT_Load_Char(face, character, FT_LOAD_RENDER)) {
+            LOG_ERROR("Failed to load glyph '%c'", (char) character);
+        } else {
+            if (col + face->glyph->bitmap.width + PADDING >= texture_width) {
+                col = PADDING;
+                row += FONT_SIZE + PADDING;
+            }
+
+            GlyphInfo info;
+            info.bitmap_width = face->glyph->bitmap.width;
+            info.bitmap_rows = face->glyph->bitmap.rows;
+            info.bitmap_left = face->glyph->bitmap_left;
+            info.bitmap_top = face->glyph->bitmap_top;
+            info.advance = face->glyph->advance;
+            info.col = col;
+            info.row = row;
+            info.buffer = new uint8_t[info.bitmap_width * info.bitmap_rows];
+            memcpy(info.buffer, face->glyph->bitmap.buffer, info.bitmap_width * info.bitmap_rows);
+
+            glyphs.emplace_back(character, info);
+
+            col += info.bitmap_width + PADDING;
+        }
+
+        character = FT_Get_Next_Char(face, character, &index);
+        if (!index) break;
+    }
+
+    const uint32_t texture_height = row + FONT_SIZE;
 
     const glm::vec2 texture_size = glm::vec2(texture_width, texture_height);
-
-    uint32_t row = 0;
-    uint32_t col = PADDING;
 
     uint8_t* texture_data = new uint8_t[texture_width * texture_height];
     memset(texture_data, 0, texture_width * texture_height * sizeof(uint8_t));
 
-    for (unsigned char c = 32; c < 127; ++c) {
-        if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
-            LOG_ERROR("Failed to load glyph '%c'", c);
-            continue;
-        }
-
-        if (col + face->glyph->bitmap.width + PADDING >= texture_width) {
-            col = PADDING;
-            row += FONT_SIZE;
-        }
-
-        for (uint32_t y = 0; y < face->glyph->bitmap.rows; ++y) {
-            for (uint32_t x = 0; x < face->glyph->bitmap.width; ++x) {
-                texture_data[(row + y) * texture_width + col + x] = face->glyph->bitmap.buffer[y * face->glyph->bitmap.width + x];
+    for (auto [c, info] : glyphs) {
+        for (uint32_t y = 0; y < info.bitmap_rows; ++y) {
+            for (uint32_t x = 0; x < info.bitmap_width; ++x) {
+                texture_data[(info.row + y) * texture_width + info.col + x] = info.buffer[y * info.bitmap_width + x];
             }
         }
 
-        const glm::ivec2 size = glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows);
+        const glm::ivec2 size = glm::ivec2(info.bitmap_width, info.bitmap_rows);
         
         Glyph glyph = {
             .size = size,
             .tex_size = glm::vec2(size) / texture_size,
-            .bearing = glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
-            .advance = face->glyph->advance.x,
-            .texture_coords = glm::vec2(col, row) / texture_size
+            .bearing = glm::ivec2(info.bitmap_left, info.bitmap_top),
+            .advance = info.advance.x,
+            .texture_coords = glm::vec2(info.col, info.row) / texture_size
         };
 
         font.glyphs[c] = glyph;
 
-        col += face->glyph->bitmap.width + PADDING;
+        if (info.buffer) delete[] info.buffer;
     }
 
     font.texture = Renderer::CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::R, texture_width, texture_height, 1, TextureSampler::Linear, texture_data);

@@ -10,7 +10,7 @@
 struct Font {
     float font_size;
     Texture texture;
-    std::unordered_map<char, Glyph> glyphs;
+    std::unordered_map<uint32_t, Glyph> glyphs;
 };
 
 #endif
