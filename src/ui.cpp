@@ -1,5 +1,8 @@
 #include "ui.hpp"
 
+#include <set>
+#include <utility>
+
 #include <tracy/Tracy.hpp>
 
 #include "renderer/renderer.hpp"
@@ -7,6 +10,64 @@
 #include "assets.hpp"
 #include "time/time.hpp"
 #include "utils.hpp"
+
+constexpr float INVENTORY_TITLE_SIZE = 22.0f;
+constexpr float MIN_CURSOR_SCALE = 1.0;
+constexpr float MAX_CURSOR_SCALE = MIN_CURSOR_SCALE + 0.20;
+constexpr float INVENTORY_PADDING = 10;
+constexpr float HOTBAR_SLOT_SIZE = 40;
+constexpr float INVENTORY_SLOT_SIZE = HOTBAR_SLOT_SIZE * 1.1;
+constexpr float HOTBAR_SLOT_SIZE_SELECTED = HOTBAR_SLOT_SIZE * 1.3;
+constexpr float INVENTORY_CELL_MARGIN = 4;
+
+enum class AnimationDirection: uint8_t {
+    Backward = 0,
+    Forward = 1,
+};
+
+enum class UiElement : uint8_t {
+    HotbarCell,
+    InventoryCell
+};
+
+class Element {
+public:
+    enum : uint8_t {
+        None = 0,
+        Hovered = 1 << 0,
+        Pressed = 1 << 1
+    };
+
+    Element(UiElement element_type, uint32_t depth, int data, math::Rect rect) :
+        m_element_type(element_type),
+        m_data(data),
+        m_depth(depth),
+        m_rect(std::move(rect)) {}
+
+    inline void press() noexcept { m_state = m_state | Pressed; }
+    inline void hover() noexcept { m_state = m_state | Hovered; }
+
+    [[nodiscard]] inline bool none() const noexcept { return m_state == None; }
+    [[nodiscard]] inline bool hovered() const noexcept { return m_state & Hovered; }
+    [[nodiscard]] inline bool pressed() const noexcept { return m_state & Pressed; }
+
+    [[nodiscard]] inline const math::Rect& rect() const noexcept { return m_rect; }
+    [[nodiscard]] inline UiElement type() const noexcept { return m_element_type; }
+    [[nodiscard]] inline int data() const noexcept { return m_data; }
+    [[nodiscard]] inline int depth() const noexcept { return m_depth; }
+private:
+    uint8_t m_state = 0;
+    UiElement m_element_type;
+    int m_data = 0;
+    uint32_t m_depth = 0;
+    math::Rect m_rect;
+};
+
+struct ElementSort {
+    constexpr bool operator()(const Element& a, const Element& b) const {
+        return a.depth() > b.depth();
+    }
+};
 
 static struct UiState {
     bool show_extra_ui = false;
@@ -20,7 +81,7 @@ static struct UiState {
     Sprite cursor_foreground;
     Sprite cursor_background;
     
-    std::vector<Element> elements;
+    std::set<Element, ElementSort> elements;
 } state;
 
 void render_inventory(const Inventory& inventory);
@@ -43,8 +104,6 @@ void UI::Init() {
         .set_texture(Assets::GetTexture(TextureAsset::UiCursorForeground))
         .set_color(state.cursor_foreground_color)
         .set_anchor(Anchor::TopLeft);
-
-    state.elements.reserve(100);
 }
 
 void UI::PreUpdate(Inventory& inventory) {
@@ -148,8 +207,10 @@ void update_cursor() {
 
 inline void render_inventory_cell(UiElement element_type, uint8_t index, const glm::vec2& size, const glm::vec2& position, TextureAsset texture) {
     const glm::vec2 pos = INVENTORY_PADDING + position;
+
+    const uint32_t depth = Renderer::GetUiDepthIndex();
     
-    state.elements.emplace_back(element_type, index, math::Rect::from_top_left(pos, size));
+    state.elements.emplace(element_type, depth, index, math::Rect::from_top_left(pos, size));
     
     Sprite cell_sprite;
     cell_sprite.set_position(pos);
@@ -172,14 +233,14 @@ inline void render_cell_item(const glm::vec2& item_size, const glm::vec2& cell_s
 void render_inventory(const Inventory& inventory) {
     ZoneScopedN("UI::render_inventory");
 
-    auto offset = glm::vec2(0.0f, 18.0f);
+    auto offset = glm::vec2(0.0f, INVENTORY_TITLE_SIZE);
     auto item_offset = glm::vec2(0.0f);
 
     if (state.show_extra_ui) {
         offset.x = 0.0f;
         offset.y += INVENTORY_SLOT_SIZE + INVENTORY_CELL_MARGIN;
 
-        const glm::vec2 cell_size = glm::vec2(state.show_extra_ui ? INVENTORY_SLOT_SIZE : HOTBAR_SLOT_SIZE);
+        const glm::vec2 cell_size = glm::vec2(INVENTORY_SLOT_SIZE);
 
         for (uint8_t y = 1; y < INVENTORY_ROWS; ++y) {
             for (uint8_t x = 0; x < CELLS_IN_ROW; ++x) {
@@ -194,17 +255,18 @@ void render_inventory(const Inventory& inventory) {
         }
     }
 
-    offset = glm::vec2(0.0f, 18.0f);
+    offset = glm::vec2(0.0f, INVENTORY_TITLE_SIZE);
     item_offset = glm::vec2(0.0f);
+
+    glm::vec2 item_size = glm::vec2(0.0f);
+    glm::vec2 cell_size = glm::vec2(0.0f);
 
     for (size_t x = 0; x < CELLS_IN_ROW; ++x) {
         TextureAsset texture;
-        auto item_size = glm::vec2(0.0f);
-        auto cell_size = glm::vec2(0.0f);
-        auto padding = glm::vec2(0.0f);
+        glm::vec2 padding = glm::vec2(0.0f);
         float text_size = 14.0f;
 
-        auto item = inventory.get_item(x);
+        tl::optional<const Item&> item = inventory.get_item(x);
         const bool item_selected = inventory.selected_slot() == x;
 
         if (item.is_some()) {
@@ -244,12 +306,12 @@ void render_inventory(const Inventory& inventory) {
 
             const char index = '0' + (x + 1) % 10;
 
-            Renderer::DrawCharUi(index, index_size, offset + padding + glm::vec2(16.0f, text_size * 1.7f), glm::vec3(index_color), FontAsset::AndyBold);
+            Renderer::DrawCharUI(index, index_size, offset + padding + glm::vec2(16.0f, text_size * 1.7f), glm::vec3(index_color), FontAsset::AndyBold);
         }
 
         // Draw item stack
         if (item.is_some() && item->stack > 1) {
-            Renderer::DrawTextUi(std::to_string(item->stack), text_size, offset + padding + glm::vec2(16.0f, cell_size.y * 0.5f + text_size * 1.6f), glm::vec3(0.8f), FontAsset::AndyBold);
+            Renderer::DrawTextUI(std::to_string(item->stack), text_size, offset + padding + glm::vec2(16.0f, cell_size.y * 0.5f + text_size * 1.6f), glm::vec3(0.8f), FontAsset::AndyBold);
         }
 
         offset.x += cell_size.x + INVENTORY_CELL_MARGIN;
@@ -257,12 +319,12 @@ void render_inventory(const Inventory& inventory) {
     }
 
     if (state.show_extra_ui) {
-        Renderer::DrawTextUi("Inventory", 22.0f, glm::vec2(INVENTORY_PADDING + INVENTORY_SLOT_SIZE * 0.5f, 22.0f), glm::vec3(0.8f), FontAsset::AndyBold);
+        Renderer::DrawTextUI("Inventory", INVENTORY_TITLE_SIZE, glm::vec2(INVENTORY_PADDING + INVENTORY_SLOT_SIZE * 0.5f, 22.0f), glm::vec3(0.8f), FontAsset::AndyBold);
     } else {
         auto item = inventory.get_item(inventory.selected_slot());
         const std::string& title = item.is_some() ? item->name : "Items";
 
-        glm::vec2 bounds = calculate_text_bounds(FontAsset::AndyBold, title, 22.0f);
-        Renderer::DrawTextUi(title, 22.0f, glm::vec2((offset.x - bounds.x) * 0.5f, 22.0f), glm::vec3(0.8f), FontAsset::AndyBold);
+        glm::vec2 bounds = calculate_text_bounds(FontAsset::AndyBold, title, INVENTORY_TITLE_SIZE);
+        Renderer::DrawTextUI(title, INVENTORY_TITLE_SIZE, glm::vec2((offset.x - bounds.x) * 0.5f, 22.0f), glm::vec3(0.8f), FontAsset::AndyBold);
     }
 }

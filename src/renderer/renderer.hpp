@@ -59,19 +59,16 @@ namespace Renderer {
     void DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, bool is_ui = false, int depth = -1);
 
     inline void DrawText(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font) {
-        DrawText(text.c_str(), text.length(), size, position, color, font, false);
+        DrawText(text.data(), text.length(), size, position, color, font, false);
     }
-    inline void DrawTextUi(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, int depth = -1) {
-        DrawText(text, length, size, position, color, font, true, depth);
-    }
-    inline void DrawTextUi(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, int depth = -1) {
-        DrawText(text.c_str(), text.length(), size, position, color, font, true, depth);
+    inline void DrawTextUI(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, int depth = -1) {
+        DrawText(text.data(), text.length(), size, position, color, font, true, depth);
     }
 
     inline void DrawChar(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, int depth = -1) {
         DrawText(&ch, 1, size, position, color, font, false, depth);
     }
-    inline void DrawCharUi(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, int depth = -1) {
+    inline void DrawCharUI(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, int depth = -1) {
         DrawText(&ch, 1, size, position, color, font, true, depth);
     }
 

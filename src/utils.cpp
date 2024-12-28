@@ -1,5 +1,8 @@
-#include <stdio.h>
 #include "utils.hpp"
+
+#include <stdio.h>
+#include <tracy/Tracy.hpp>
+
 #include "assets.hpp"
 #include "defines.hpp"
 
@@ -21,22 +24,23 @@ bool FileExists(const char *path) {
 }
 
 glm::vec2 calculate_text_bounds(FontAsset key, const std::string &text, float size) {
+    ZoneScopedN("Utils::calculate_text_bounds");
+
     const Font& font = Assets::GetFont(key);
 
     auto bounds = glm::vec2(0.0f);
     float prev_x = 0.0f;
 
-    float scale = size / font.font_size;
+    const float scale = size / font.font_size;
 
-    const char* c = text.c_str();
-    for (; *c != '\0'; c++) {
-        if (*c == '\n') {
+    for (size_t i = 0; i < text.length(); ++i) {
+        if (text[i] == '\n') {
             bounds.y += size;
             prev_x = 0.0f;
             continue;
         }
 
-        const Glyph& glyph = font.glyphs.find(*c)->second;
+        const Glyph& glyph = font.glyphs.find(text[i])->second;
         prev_x += glyph.size.x * scale;
         bounds.x = std::max(prev_x, bounds.x);
     }
