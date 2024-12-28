@@ -4,6 +4,8 @@
 #include <memory>
 #include <thread>
 
+#include <tracy/Tracy.hpp>
+
 #include "../defines.hpp"
 #include "lightmap.hpp"
 
@@ -111,6 +113,8 @@ Neighbors<Wall&> WorldData::get_wall_neighbors_mut(TilePos pos) {
 }
 
 static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, const math::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
+    ZoneScopedN("LightMap::init_area");
+
     const int min_y = area.min.y * SUBDIVISION;
     const int max_y = area.max.y * SUBDIVISION;
 
@@ -175,6 +179,8 @@ static void blur_line(LightMap& lightmap, int start, int end, int stride, glm::v
 }
 
 static void internal_lightmap_blur_area(WorldData& world, LightMap& lightmap, const math::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
+    ZoneScopedN("LightMap::blur_area");
+
     const math::IRect lightmap_area = area * SUBDIVISION;
 
     const int min_x = lightmap_area.min.x;

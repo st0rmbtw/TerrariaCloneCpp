@@ -1,6 +1,9 @@
 #include "background_renderer.hpp"
 
 #include <LLGL/ShaderFlags.h>
+
+#include <tracy/Tracy.hpp>
+
 #include "renderer.hpp"
 #include "utils.hpp"
 
@@ -11,6 +14,8 @@ constexpr uint32_t MAX_INDICES = MAX_QUADS * 6;
 constexpr uint32_t MAX_VERTICES = MAX_QUADS * 4;
 
 void BackgroundRenderer::init() {
+    ZoneScopedN("BackgroundRenderer::init");
+
     const RenderBackend backend = Renderer::Backend();
     const auto& context = Renderer::Context();
     const auto* swap_chain = Renderer::SwapChain();
@@ -79,6 +84,8 @@ void BackgroundRenderer::init() {
 }
 
 void BackgroundRenderer::draw_layer(const BackgroundLayer& layer) {
+    ZoneScopedN("BackgroundRenderer::draw_layer");
+
     const glm::vec2 offset = layer.anchor().to_vec2();
     const glm::vec2 pos = layer.position() - layer.size() * offset;
 
@@ -122,6 +129,8 @@ void BackgroundRenderer::draw_layer(const BackgroundLayer& layer) {
 }
 
 void BackgroundRenderer::draw_world_layer(const BackgroundLayer& layer) {
+    ZoneScopedN("BackgroundRenderer::draw_world_layer");
+
     const glm::vec2 offset = layer.anchor().to_vec2();
     const glm::vec2 pos = layer.position() - layer.size() * offset;
 
@@ -167,6 +176,8 @@ void BackgroundRenderer::draw_world_layer(const BackgroundLayer& layer) {
 void BackgroundRenderer::render() {
     if (m_layers.empty()) return;
 
+    ZoneScopedN("BackgroundRenderer::render");
+
     auto* const commands = Renderer::CommandBuffer();
 
     const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
@@ -190,6 +201,8 @@ void BackgroundRenderer::render() {
 
 void BackgroundRenderer::render_world() {
     if (m_world_layers.empty()) return;
+
+    ZoneScopedN("BackgroundRenderer::render_world");
 
     auto* const commands = Renderer::CommandBuffer();
 

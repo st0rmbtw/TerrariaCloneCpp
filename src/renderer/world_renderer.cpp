@@ -1,15 +1,18 @@
 #include "world_renderer.hpp"
 
 #include <LLGL/Utils/Utility.h>
+#include <LLGL/PipelineStateFlags.h>
+#include <LLGL/ResourceHeapFlags.h>
+#include <LLGL/TextureFlags.h>
+#include <LLGL/Types.h>
+
 #include <glm/gtc/type_ptr.hpp>
+
+#include <tracy/Tracy.hpp>
 
 #include "../assets.hpp"
 #include "../world/chunk.hpp"
 
-#include "LLGL/PipelineStateFlags.h"
-#include "LLGL/ResourceHeapFlags.h"
-#include "LLGL/TextureFlags.h"
-#include "LLGL/Types.h"
 #include "renderer.hpp"
 
 struct __attribute__((aligned(16))) DepthUniformData {
@@ -18,6 +21,8 @@ struct __attribute__((aligned(16))) DepthUniformData {
 };
 
 void WorldRenderer::init() {
+    ZoneScopedN("WorldRenderer::init");
+
     const auto& context = Renderer::Context();
 
     auto depth_uniform = DepthUniformData {
@@ -91,6 +96,8 @@ void WorldRenderer::init() {
 }
 
 void WorldRenderer::init_lightmap_texture(const WorldData& world) {
+    ZoneScopedN("WorldRenderer::init_lightmap_texture");
+
     using Constants::SUBDIVISION;
 
     auto& context = Renderer::Context();
@@ -114,6 +121,8 @@ void WorldRenderer::init_lightmap_texture(const WorldData& world) {
 }
 
 void WorldRenderer::update_lightmap_texture(WorldData& world, LightMapTaskResult result) {
+    ZoneScopedN("WorldRenderer::update_lightmap_texture");
+
     for (int y = 0; y < result.height; ++y) {
         LLGL::ImageView image_view;
         image_view.format   = LLGL::ImageFormat::RGBA;
@@ -129,6 +138,8 @@ void WorldRenderer::update_lightmap_texture(WorldData& world, LightMapTaskResult
 }
 
 void WorldRenderer::render(const ChunkManager& chunk_manager) {
+    ZoneScopedN("WorldRenderer::render");
+
     auto* const commands = Renderer::CommandBuffer();
 
     commands->SetPipelineState(*m_pipeline);

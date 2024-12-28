@@ -1,5 +1,7 @@
 #include "chunk.hpp"
 
+#include <tracy/Tracy.hpp>
+
 #include "../optional.hpp"
 #include "../types/block.hpp"
 #include "../types/texture_atlas_pos.hpp"
@@ -16,6 +18,8 @@ using Constants::RENDER_CHUNK_SIZE;
 using Constants::RENDER_CHUNK_SIZE_U;
 
 void RenderChunk::destroy() {
+    ZoneScopedN("WorldChunk::destroy");
+
     if (block_instance_buffer) Renderer::Context()->Release(*block_instance_buffer);
     if (wall_instance_buffer) Renderer::Context()->Release(*wall_instance_buffer);
 
@@ -38,6 +42,8 @@ static FORCE_INLINE uint16_t pack_tile_data(uint16_t tile_id, uint8_t tile_type)
 }
 
 void RenderChunk::build_mesh(const WorldData& world) {
+    ZoneScopedN("WorldChunk::build_mesh");
+
     std::vector<ChunkInstance> block_instance;
     std::vector<ChunkInstance> wall_instance;
 

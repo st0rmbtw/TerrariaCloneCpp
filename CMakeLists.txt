@@ -59,6 +59,8 @@ endif()
 
 add_compile_definitions(GLM_FORCE_INTRINSICS)
 
+option(ENABLE_TRACY "Enable Tracy profiler" OFF)
+
 set(LLGL_BUILD_RENDERER_NULL OFF CACHE BOOL "" FORCE)
 
 if (APPLE)
@@ -87,6 +89,7 @@ add_subdirectory(thirdparty/STB)
 add_subdirectory(thirdparty/FastNoiseLite)
 add_subdirectory(shader_compiler)
 add_subdirectory(thirdparty/freetype-2.13.2)
+add_subdirectory(thirdparty/tracy-0.11.1)
 
 unset(EXECUTABLE_OUTPUT_PATH CACHE)
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR} CACHE STRING "" FORCE)
@@ -112,7 +115,7 @@ if(OpenMP_CXX_FOUND)
     target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE glm STB glfw LLGL FastNoiseLite freetype)
+target_link_libraries(${PROJECT_NAME} PRIVATE glm STB glfw LLGL FastNoiseLite freetype TracyClient)
 
 file(GLOB_RECURSE ASSETS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/**/*.*)
 

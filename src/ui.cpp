@@ -1,5 +1,7 @@
 #include "ui.hpp"
 
+#include <tracy/Tracy.hpp>
+
 #include "renderer/renderer.hpp"
 #include "input.hpp"
 #include "assets.hpp"
@@ -25,6 +27,8 @@ void render_inventory(const Inventory& inventory);
 void update_cursor();
 
 void UI::Init() {
+    ZoneScopedN("UI::Init");
+
     state.cursor_foreground_color = glm::vec3(1.0, 0.08, 0.58);
     state.cursor_background_color = glm::vec3(0.9, 0.9, 0.9);
 
@@ -44,6 +48,8 @@ void UI::Init() {
 }
 
 void UI::PreUpdate(Inventory& inventory) {
+    ZoneScopedN("UI::PreUpdate");
+
     for (const Element& element : state.elements) {
         if (element.rect().contains(Input::MouseScreenPosition())) {
             Input::SetMouseOverUi(true);
@@ -62,6 +68,8 @@ void UI::PreUpdate(Inventory& inventory) {
 }
 
 void UI::Update(Inventory& inventory) {
+    ZoneScopedN("UI::Update");
+
     update_cursor();
 
     if (Input::JustPressed(Key::Escape)) {
@@ -87,10 +95,14 @@ void UI::Update(Inventory& inventory) {
 }
 
 void UI::PostUpdate() {
+    ZoneScopedN("UI::PostUpdate");
+
     state.elements.clear();
 }
 
 void UI::Draw(const Camera&, const Inventory& inventory) {
+    ZoneScopedN("UI::Draw");
+
     render_inventory(inventory);
 
     const int depth = Renderer::GetUiDepthIndex();
@@ -158,6 +170,8 @@ inline void render_cell_item(const glm::vec2& item_size, const glm::vec2& cell_s
 }
 
 void render_inventory(const Inventory& inventory) {
+    ZoneScopedN("UI::render_inventory");
+
     auto offset = glm::vec2(0.0f, 18.0f);
     auto item_offset = glm::vec2(0.0f);
 

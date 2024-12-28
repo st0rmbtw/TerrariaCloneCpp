@@ -1,6 +1,7 @@
 #include "LLGL/Types.h"
 
 #include <GLFW/glfw3.h>
+#include <tracy/Tracy.hpp>
 
 #include "renderer/renderer.hpp"
 #include "log.hpp"
@@ -131,7 +132,9 @@ void Engine::HideCursor() {
     glfwSetInputMode(state.window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 }
 
-bool Engine::Init(RenderBackend backend, bool vsync, WindowSettings settings) {
+bool Engine::Init(RenderBackend backend, bool vsync, WindowSettings settings, glm::uvec2* output_viewport) {
+    ZoneScopedN("Engine::Init");
+
     if (state.pre_update_callback == nullptr) state.pre_update_callback = default_callback;
     if (state.update_callback == nullptr) state.update_callback = default_callback;
     if (state.post_update_callback == nullptr) state.post_update_callback = default_callback;
@@ -163,10 +166,12 @@ bool Engine::Init(RenderBackend backend, bool vsync, WindowSettings settings) {
     if (window == nullptr) return false;
 
     state.window = window;
-    state.window_width = settings.width;
-    state.window_height = settings.height;
+    state.window_width = window_size.width;
+    state.window_height = window_size.height;
+
+    *output_viewport = glm::uvec2(window_size.width, window_size.height);
     
-    const LLGL::Extent2D resolution = get_scaled_resolution(settings.width, settings.height);
+    const LLGL::Extent2D resolution = get_scaled_resolution(window_size.width, window_size.height);
     if (!Renderer::Init(window, resolution, vsync, settings.fullscreen)) return false;
 
     Time::set_fixed_timestep_seconds(1.0f / 60.0f);
@@ -207,6 +212,8 @@ void Engine::Run() {
 
             Input::Clear();
         MACOS_AUTORELEASEPOOL_CLOSE
+
+        FrameMark;
     }
 }
 
@@ -256,11 +263,10 @@ static void handle_cursor_pos_events(GLFWwindow*, double xpos, double ypos) {
 static void handle_window_resize_events(GLFWwindow*, int width, int height) {
     if (width <= 0 || height <= 0) {
         state.minimized = true;
-        state.window_resize_callback(0, 0, 0, 0);
         return;
-    } else {
-        state.minimized = false;
     }
+
+    state.minimized = false;
 
     const LLGL::Extent2D resolution = get_scaled_resolution(width, height);
 

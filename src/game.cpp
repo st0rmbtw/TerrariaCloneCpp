@@ -21,6 +21,8 @@
 #include "background.hpp"
 #include "defines.hpp"
 
+#include <tracy/Tracy.hpp>
+
 static struct GameState {
     Camera camera;
     World world;
@@ -75,6 +77,8 @@ glm::vec2 camera_free() {
 #endif
 
 void pre_update() {
+    ZoneScopedN("Game::pre_update");
+
     ParticleManager::DeleteExpired();
 
     UI::PreUpdate(g.player.inventory());
@@ -85,6 +89,8 @@ void pre_update() {
 }
 
 void fixed_update() {
+    ZoneScopedN("Game::fixed_update");
+
     ParticleManager::Update();
 
 #if DEBUG
@@ -97,6 +103,8 @@ void fixed_update() {
 }
 
 void update() {
+    ZoneScopedN("Game::update");
+
     float scale_speed = 2.f;
 
     if (Input::Pressed(Key::LeftShift)) {
@@ -149,10 +157,14 @@ void update() {
 }
 
 void post_update() {
+    ZoneScopedN("Game::post_update");
+
     UI::PostUpdate();
 }
 
 void render() {
+    ZoneScopedN("Game::render");
+
     // Renderer::Debugger()->SetTimeRecording(true);
         Renderer::Begin(g.camera, g.world.data());
 
@@ -200,6 +212,8 @@ void render() {
 }
 
 void post_render() {
+    ZoneScopedN("Game::post_render");
+
     if (g.world.chunk_manager().any_chunks_to_destroy()) {
         Renderer::CommandQueue()->WaitIdle();
         g.world.chunk_manager().destroy_hidden_chunks();
@@ -245,6 +259,8 @@ void destroy() {
 }
 
 bool Game::Init(RenderBackend backend, GameConfig config) {
+    ZoneScopedN("Game::Init");
+
     Engine::SetLoadAssetsCallback(load_assets);
     Engine::SetPreUpdateCallback(pre_update);
     Engine::SetUpdateCallback(update);
@@ -255,15 +271,14 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     Engine::SetDestroyCallback(destroy);
     Engine::SetWindowResizeCallback(window_resized);
 
-    const glm::uvec2 window_size = glm::uvec2(1280, 720);
-
     WindowSettings settings;
-    settings.width = window_size.x;
-    settings.height = window_size.y;
+    settings.width = 1280;
+    settings.height = 720;
     settings.fullscreen = config.fullscreen;
     settings.hidden = true;
 
-    if (!Engine::Init(backend, config.vsync, settings)) return false;
+    glm::uvec2 resolution;
+    if (!Engine::Init(backend, config.vsync, settings, &resolution)) return false;
 
     Time::set_fixed_timestep_seconds(Constants::FIXED_UPDATE_INTERVAL);
 
@@ -279,7 +294,7 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     UI::Init();
     Background::SetupWorldBackground(g.world);
 
-    g.camera.set_viewport({window_size.x, window_size.y});
+    g.camera.set_viewport(resolution);
     g.camera.set_zoom(1.0f);
 
     g.player.init();

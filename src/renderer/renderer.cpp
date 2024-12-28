@@ -14,6 +14,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+#include <tracy/Tracy.hpp>
+
 #include "../assets.hpp"
 #include "../log.hpp"
 #include "../types/shader_type.hpp"
@@ -313,6 +315,8 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
 }
 
 void Renderer::Begin(const Camera& camera, WorldData& world) {
+    ZoneScopedN("Renderer::Begin");
+
     for (auto it = world.lightmap_tasks.cbegin(); it != world.lightmap_tasks.cend();) {
         const LightMapTask& task = *it;
         LightMapTaskResult result = task.result->load();
@@ -359,6 +363,8 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
 }
 
 void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
+    ZoneScopedN("Renderer::Render");
+
     auto* const commands = state.command_buffer;
     auto* const queue = state.command_queue;
 
@@ -472,6 +478,8 @@ inline void add_atlas_sprite_to_batch(const TextureAtlasSprite& sprite, RenderLa
 }
 
 void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer, int depth) {
+    ZoneScopedN("Renderer::DrawSprite");
+
     const math::Rect aabb = sprite.calculate_aabb();
 
     if (sprite.ignore_camera_zoom() && !state.nozoom_camera_frustum.intersects(aabb)) return;
@@ -481,6 +489,8 @@ void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer, int de
 }
 
 void Renderer::DrawSpriteUI(const Sprite& sprite, int depth) {
+    ZoneScopedN("Renderer::DrawSpriteUI");
+
     const math::Rect aabb = sprite.calculate_aabb();
     if (!state.ui_frustum.intersects(aabb)) return;
 
@@ -488,6 +498,8 @@ void Renderer::DrawSpriteUI(const Sprite& sprite, int depth) {
 }
 
 void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer, int depth) {
+    ZoneScopedN("Renderer::DrawAtlasSprite");
+
     const math::Rect aabb = sprite.calculate_aabb();
 
     if (sprite.ignore_camera_zoom() && !state.nozoom_camera_frustum.intersects(aabb)) return;
@@ -497,6 +509,8 @@ void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer ren
 }
 
 void Renderer::DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, int depth) {
+    ZoneScopedN("Renderer::DrawAtlasSpriteUI");
+
     const math::Rect aabb = sprite.calculate_aabb();
     if (!state.ui_frustum.intersects(aabb)) return;
 
@@ -504,6 +518,8 @@ void Renderer::DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, int depth) {
 }
 
 void Renderer::DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontAsset key, bool is_ui, int depth) {
+    ZoneScopedN("Renderer::DrawText");
+
     const Font& font = Assets::GetFont(key);
     
     float x = position.x;
@@ -544,6 +560,8 @@ void Renderer::DrawText(const char* text, uint32_t length, float size, const glm
 }
 
 void Renderer::DrawBackground(const BackgroundLayer& layer) {
+    ZoneScopedN("Renderer::DrawBackground");
+
     const math::Rect aabb = math::Rect::from_top_left(layer.position() - layer.anchor().to_vec2() * layer.size(), layer.size());
 
     if (layer.nonscale() && !state.nozoom_camera_frustum.intersects(aabb)) return;
@@ -553,10 +571,14 @@ void Renderer::DrawBackground(const BackgroundLayer& layer) {
 }
 
 void Renderer::DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, int depth) {
+    ZoneScopedN("Renderer::DrawParticle");
+
     state.particle_renderer.draw_particle(position, rotation, scale, type, variant, depth);
 }
 
 Texture Renderer::CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, uint32_t width, uint32_t height, uint32_t layers, int sampler, const uint8_t* data, bool generate_mip_maps) {
+    ZoneScopedN("Renderer::CreateTexture");
+
     LLGL::TextureDescriptor texture_desc;
     texture_desc.type = type;
     texture_desc.extent = LLGL::Extent3D(width, height, 1);
@@ -588,6 +610,8 @@ Texture Renderer::CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_
 }
 
 LLGL::Shader* Renderer::LoadShader(ShaderPath shader_path, const std::vector<ShaderDef>& shader_defs, const std::vector<LLGL::VertexAttribute>& vertex_attributes) {
+    ZoneScopedN("Renderer::LoadShader");
+
     const RenderBackend backend = state.backend;
     const ShaderType shader_type = shader_path.shader_type;
 
@@ -688,6 +712,8 @@ void Renderer::Terminate() {
 //
 
 void RenderBatchSprite::init() {
+    ZoneScopedN("RenderBatchSprite::init");
+
     const RenderBackend backend = state.backend;
     const auto& context = state.context;
 
@@ -768,6 +794,8 @@ void RenderBatchSprite::init() {
 }
 
 void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, RenderLayer layer, bool is_ui, int depth) {
+    ZoneScopedN("RenderBatchSprite::draw_sprite");
+
     if (m_sprites.size() >= MAX_QUADS) {
         render();
         begin();
@@ -804,6 +832,8 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
 }
 
 void RenderBatchSprite::render() {
+    ZoneScopedN("RenderBatchSprite::render");
+
     std::vector<SpriteData>& sprites = m_sprites;
 
     if (sprites.empty()) return;
@@ -872,6 +902,8 @@ void RenderBatchSprite::render() {
 }
 
 void RenderBatchSprite::render_world() {
+    ZoneScopedN("RenderBatchSprite::render_world");
+
     std::vector<SpriteData>& sprites = m_world_sprites;
 
     if (sprites.empty()) return;
@@ -936,6 +968,8 @@ void RenderBatchSprite::render_world() {
 }
 
 void RenderBatchSprite::flush() {
+    ZoneScopedN("RenderBatchSprite::flush");
+
     auto* const commands = state.command_buffer;
 
     // ptrdiff_t remaining = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
@@ -983,6 +1017,8 @@ void RenderBatchSprite::flush() {
 }
 
 void RenderBatchSprite::flush_world() {
+    ZoneScopedN("RenderBatchSprite::flush_world");
+
     auto* const commands = state.command_buffer;
 
     // ptrdiff_t remaining = (uint8_t*) m_world_buffer_ptr - (uint8_t*) m_world_buffer;
@@ -1031,6 +1067,8 @@ void RenderBatchSprite::flush_world() {
 }
 
 void RenderBatchSprite::begin() {
+    ZoneScopedN("RenderBatchSprite::begin");
+
     m_buffer_ptr = m_buffer;
     m_world_buffer_ptr = m_world_buffer;
 
@@ -1051,6 +1089,8 @@ void RenderBatchSprite::terminate() {
 
 
 void RenderBatchGlyph::init() {
+    ZoneScopedN("RenderBatchGlyph::init");
+
     const RenderBackend backend = state.backend;
     const auto& context = state.context;
 
@@ -1121,6 +1161,8 @@ void RenderBatchGlyph::init() {
 }
 
 void RenderBatchGlyph::draw_glyph(const glm::vec2& pos, const glm::vec2& size, const glm::vec3& color, const Texture& font_texture, const glm::vec2& tex_uv, const glm::vec2& tex_size, bool ui, uint32_t depth) {
+    ZoneScopedN("RenderBatchGlyph::draw_glyph");
+
     if (m_glyphs.size() >= MAX_QUADS) {
         render();
         begin();
@@ -1139,6 +1181,8 @@ void RenderBatchGlyph::draw_glyph(const glm::vec2& pos, const glm::vec2& size, c
 }
 
 void RenderBatchGlyph::render() {
+    ZoneScopedN("RenderBatchGlyph::render");
+
     if (is_empty()) return;
 
     std::vector<GlyphData> sorted_glyphs = m_glyphs;
@@ -1192,6 +1236,8 @@ void RenderBatchGlyph::render() {
 }
 
 void RenderBatchGlyph::flush() {
+    ZoneScopedN("RenderBatchGlyph::flush");
+
     auto* const commands = state.command_buffer;
 
     // ptrdiff_t remaining = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
@@ -1240,6 +1286,8 @@ void RenderBatchGlyph::flush() {
 }
 
 void RenderBatchGlyph::begin() {
+    ZoneScopedN("RenderBatchGlyph::begin");
+
     m_buffer_ptr = m_buffer;
     m_glyphs_flush_queue.clear();
     m_glyphs.clear();

@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include <tracy/Tracy.hpp>
+
 #include "assets.hpp"
 #include "constants.hpp"
 #include "types/anchor.hpp"
@@ -82,6 +84,8 @@ void Background::SetupWorldBackground(const World& world) {
 }
 
 void Background::Update(const Camera &camera) {
+    ZoneScopedN("Background::Update");
+
     for (BackgroundLayer& layer : state.layers) {
         glm::vec2 new_position = layer.position();
 
@@ -100,6 +104,8 @@ void Background::Update(const Camera &camera) {
 }
 
 void Background::Draw() {
+    ZoneScopedN("Background::Draw");
+
     for (const BackgroundLayer& layer : state.layers) {
         Renderer::DrawBackground(layer);
     }

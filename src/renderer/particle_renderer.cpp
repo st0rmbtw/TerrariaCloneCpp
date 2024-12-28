@@ -1,13 +1,15 @@
 #include "particle_renderer.hpp"
 
-#include "LLGL/Format.h"
-#include "LLGL/PipelineLayoutFlags.h"
-#include "LLGL/ShaderFlags.h"
-#include "../assets.hpp"
-#include "renderer.hpp"
+#include <LLGL/Format.h>
+#include <LLGL/PipelineLayoutFlags.h>
+#include <LLGL/ShaderFlags.h>
 
-#include "../log.hpp"
+#include <tracy/Tracy.hpp>
+
+#include "renderer.hpp"
 #include "utils.hpp"
+#include "../assets.hpp"
+#include "../log.hpp"
 
 using Constants::PARTICLE_SIZE;
 
@@ -21,6 +23,8 @@ inline constexpr size_t get_particle_index(Particle::Type type, uint8_t variant)
 }
 
 void ParticleRenderer::init() {
+    ZoneScopedN("ParticleRenderer::init");
+
     const RenderBackend backend = Renderer::Backend();
     const auto& context = Renderer::Context();
     const auto* swap_chain = Renderer::SwapChain();
@@ -223,6 +227,8 @@ void ParticleRenderer::init() {
 }
 
 void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, int depth) {
+    ZoneScopedN("ParticleRenderer::draw_particle");
+
     const math::Rect& rect = m_atlas.get_rect(get_particle_index(type, variant));
 
     *m_position_buffer_data_ptr = position;
@@ -243,6 +249,8 @@ void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat&
 
 void ParticleRenderer::compute() {
     if (m_particle_count == 0) return;
+
+    ZoneScopedN("ParticleRenderer::compute");
 
     const auto& context = Renderer::Context();
     auto* const commands = Renderer::CommandBuffer();
@@ -287,6 +295,8 @@ void ParticleRenderer::compute() {
 
 void ParticleRenderer::render() {
     if (m_particle_count == 0) return;
+    
+    ZoneScopedN("ParticleRenderer::render");
 
     const auto& context = Renderer::Context();
     auto* const commands = Renderer::CommandBuffer();

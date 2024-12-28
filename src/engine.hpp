@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <glm/vec2.hpp>
+
 #include "types/backend.hpp"
 #include "types/window_settings.hpp"
 
@@ -17,7 +19,7 @@ namespace Engine {
     using LoadAssetsCallback = bool (*)(void);
     using WindowResizeCallback = void (*)(uint32_t width, uint32_t height, uint32_t scaled_width, uint32_t scaled_height);
 
-    bool Init(RenderBackend backend, bool vsync, WindowSettings settings);
+    bool Init(RenderBackend backend, bool vsync, WindowSettings settings, glm::uvec2* viewport);
     void SetPreUpdateCallback(PreUpdateCallback);
     void SetUpdateCallback(UpdateCallback);
     void SetPostUpdateCallback(PostUpdateCallback);

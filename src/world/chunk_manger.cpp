@@ -1,5 +1,7 @@
 #include "chunk_manager.hpp"
 
+#include <tracy/Tracy.hpp>
+
 #include "utils.hpp"
 
 using Constants::TILE_SIZE;
@@ -36,6 +38,8 @@ static math::URect get_chunk_range(const math::Rect& camera_fov, const glm::uvec
 }
 
 void ChunkManager::manage_chunks(const WorldData& world, const Camera& camera) {
+    ZoneScopedN("ChunkManager::manage_chunks");
+
     const math::Rect camera_fov = utils::get_camera_fov(camera);
     const math::URect chunk_range = get_chunk_range(camera_fov, world.area.size(), 2);
     const math::URect render_chunk_range = get_chunk_range(camera_fov, world.area.size());

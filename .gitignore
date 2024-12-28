@@ -10,3 +10,4 @@ glslang.exe
 glslang
 *.bat
 *.sh
+*.tracy

@@ -4,6 +4,8 @@
 #include <glm/glm.hpp>
 #include <ctime>
 
+#include <tracy/Tracy.hpp>
+
 #include "../types/block.hpp"
 #include "../world/world_gen.h"
 #include "../world/autotile.hpp"
@@ -12,6 +14,8 @@
 #include "../renderer/renderer.hpp"
 
 void World::set_block(TilePos pos, const Block& block) {
+    ZoneScopedN("World::set_block");
+
     if (!m_data.is_tilepos_valid(pos)) return;
 
     const size_t index = m_data.get_tile_index(pos);
@@ -29,6 +33,8 @@ void World::set_block(TilePos pos, const Block& block) {
 }
 
 void World::set_block(TilePos pos, BlockType block_type) {
+    ZoneScopedN("World::set_block");
+
     if (!m_data.is_tilepos_valid(pos)) return;
 
     const size_t index = m_data.get_tile_index(pos);
@@ -49,6 +55,8 @@ void World::set_block(TilePos pos, BlockType block_type) {
 }
 
 void World::remove_block(TilePos pos) {
+    ZoneScopedN("World::remove_block");
+
     if (!m_data.is_tilepos_valid(pos)) return;
 
     const size_t index = m_data.get_tile_index(pos);
@@ -70,6 +78,8 @@ void World::remove_block(TilePos pos) {
 }
 
 void World::update_block(TilePos pos, BlockType new_type, uint8_t new_variant) {
+    ZoneScopedN("World::update_block");
+
     const size_t index = m_data.get_tile_index(pos);
     m_data.blocks[index]->type = new_type;
     m_data.blocks[index]->variant = new_variant;
@@ -79,6 +89,8 @@ void World::update_block(TilePos pos, BlockType new_type, uint8_t new_variant) {
 }
 
 void World::set_wall(TilePos pos, WallType wall_type) {
+    ZoneScopedN("World::set_wall");
+
     if (!m_data.is_tilepos_valid(pos)) return;
 
     const size_t index = m_data.get_tile_index(pos);
@@ -96,10 +108,14 @@ void World::set_wall(TilePos pos, WallType wall_type) {
 }
 
 void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
+    ZoneScopedN("World::generate");
+
     world_generate(m_data, width, height, seed);
 }
 
 void World::update(const Camera& camera) {
+    ZoneScopedN("World::update");
+
     m_changed = false;
     m_chunk_manager.manage_chunks(m_data, camera);
 
@@ -126,6 +142,8 @@ void World::update(const Camera& camera) {
 }
 
 void World::draw() const {
+    ZoneScopedN("World::draw");
+
     for (const auto& [pos, cracks] : m_tile_cracks) {
         TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));
         sprite.set_position(pos.to_world_pos_center());

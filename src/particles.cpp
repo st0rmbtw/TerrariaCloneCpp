@@ -2,6 +2,8 @@
 
 #include <xmmintrin.h>
 
+#include <tracy/Tracy.hpp>
+
 #include "math/math.hpp"
 #include "renderer/renderer.hpp"
 #include "defines.hpp"
@@ -34,6 +36,8 @@ static struct ParticlesState {
 } state;
 
 void ParticleManager::Init() {
+    ZoneScopedN("ParticleManager::Init");
+
 #if defined(__AVX__)
     state.position = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 2 * sizeof(float), sizeof(__m256));
     state.velocity = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 2 * sizeof(float), sizeof(__m256));
@@ -59,6 +63,8 @@ void ParticleManager::Init() {
 }
 
 void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
+    ZoneScopedN("ParticleManager::SpawnParticle");
+
     const uint32_t index = state.active_count;
     ParticleData particle_data = builder.build();
 
@@ -92,6 +98,8 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
 }
 
 void ParticleManager::Draw() {
+    ZoneScopedN("ParticleManager::Draw");
+
     const uint32_t depth = Renderer::GetMainDepthIndex();
 
     for (size_t i = 0; i < state.active_count; ++i) {
@@ -108,6 +116,8 @@ void ParticleManager::Draw() {
 }
 
 void ParticleManager::Update() {
+    ZoneScopedN("ParticleManager::Update");
+
     for (size_t i = 0; i < state.active_count; ++i) {
         const bool gravity = state.gravity[i];
         float& velocity_y = state.velocity[i * 2 + 1];
@@ -173,6 +183,8 @@ void ParticleManager::Update() {
 }
 
 void ParticleManager::DeleteExpired() {
+    ZoneScopedN("ParticleManager::DeleteExpired");
+
     size_t i = 0;
 
     while (state.active_count > 0) {

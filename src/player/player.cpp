@@ -3,6 +3,8 @@
 #include <cfloat>
 #include <glm/gtc/random.hpp>
 
+#include <tracy/Tracy.hpp>
+
 #include "../assets.hpp"
 #include "../constants.hpp"
 #include "../input.hpp"
@@ -39,6 +41,8 @@ void spawn_particles_on_dig(const glm::vec2& position, BlockType type) {
 }
 
 void Player::init() {
+    ZoneScopedN("Player::init");
+
     m_hair = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerHair));
     m_head = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerHead));
     m_body = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerChest));
@@ -95,6 +99,8 @@ void Player::set_position(const World& world, const glm::vec2& position) {
 }
 
 void Player::horizontal_movement(bool handle_input) {
+    ZoneScopedN("Player::horizontal_movement");
+
     int8_t dir = 0;
 
     if (handle_input && Input::Pressed(Key::A)) { dir -= 1; }
@@ -120,6 +126,8 @@ void Player::horizontal_movement(bool handle_input) {
 }
 
 void Player::vertical_movement(bool handle_input) {
+    ZoneScopedN("Player::vertical_movement");
+
     if (do_jump && m_collisions.down) {
         m_jump = JUMP_HEIGHT;
         m_velocity.y = -JUMP_SPEED;
@@ -143,6 +151,8 @@ void Player::vertical_movement(bool handle_input) {
 }
 
 void Player::gravity() {
+    ZoneScopedN("Player::gravity");
+
     if (!m_collisions.down && m_velocity.y > 0 && m_fall_start < 0) {
         m_fall_start = m_position.y;
     }
@@ -152,6 +162,8 @@ void Player::gravity() {
 }
 
 glm::vec2 Player::check_collisions(const World& world) {
+    ZoneScopedN("Player::check_collisions");
+
     glm::vec2 result = m_velocity;
     const glm::vec2 pos = m_position;
     const glm::vec2 next_pos = m_position + m_velocity;
@@ -235,6 +247,8 @@ glm::vec2 Player::check_collisions(const World& world) {
 }
 
 void Player::update_walk_anim_timer() {
+    ZoneScopedN("Player::update_walk_anim_timer");
+
     if (m_velocity.x != 0.0) {
         const long long time = glm::abs(100.0 / glm::abs(m_velocity.x));
         m_walk_anim_timer.set_duration(Timer::Duration(glm::max(time, 1LL)));
@@ -242,6 +256,8 @@ void Player::update_walk_anim_timer() {
 }
 
 void Player::update_using_item_anim() {
+    ZoneScopedN("Player::update_using_item_anim");
+
     m_using_item_visible = false;
     
     if (!m_swing_anim) return;
@@ -278,6 +294,8 @@ void Player::update_using_item_anim() {
 }
 
 void Player::update_sprites_index() {
+    ZoneScopedN("Player::update_sprites_index");
+
     PlayerSprite* sprites[] = { &m_hair, &m_head, &m_body, &m_legs, &m_left_hand, &m_left_shoulder, &m_right_arm, &m_left_eye, &m_right_eye };
 
     switch (m_movement_state) {
@@ -320,6 +338,8 @@ void Player::update_sprites_index() {
 }
 
 void Player::update_movement_state() {
+    ZoneScopedN("Player::update_movement_state");
+
     constexpr float threshold = TILE_SIZE / 2.0f * GRAVITY;
 
     if (abs(m_velocity.y) > threshold + FLT_EPSILON || m_jumping) {
@@ -332,12 +352,16 @@ void Player::update_movement_state() {
 }
 
 void Player::pre_update() {
+    ZoneScopedN("Player::pre_update");
+
     if (Input::JustPressed(Key::Space)) {
         do_jump = true;
     }
 }
 
 void Player::spawn_particles_on_walk() const {
+    ZoneScopedN("Player::spawn_particles_on_walk");
+
     if (m_movement_state != MovementState::Walking) return;
     if (m_stand_on_block.is_none()) return;
     if (glm::abs(m_velocity.x) < 1.0f) return;
@@ -360,6 +384,8 @@ void Player::spawn_particles_on_walk() const {
 }
 
 void Player::spawn_particles_grounded() const {
+    ZoneScopedN("Player::spawn_particles_grounded");
+    
     if (m_stand_on_block.is_none()) return;
     const BlockType block = m_stand_on_block.value();
 
@@ -387,6 +413,8 @@ void Player::spawn_particles_grounded() const {
 }
 
 void Player::fixed_update(const World& world, bool handle_input) {
+    ZoneScopedN("Player::fixed_update");
+
     horizontal_movement(handle_input);
     vertical_movement(handle_input);
     gravity();
@@ -419,6 +447,8 @@ void Player::fixed_update(const World& world, bool handle_input) {
 }
 
 void Player::update(const Camera& camera, World& world) {
+    ZoneScopedN("Player::update");
+
     if (Input::Pressed(MouseButton::Left) && !Input::IsMouseOverUi()) {
         use_item(camera, world);
     }
@@ -427,6 +457,8 @@ void Player::update(const Camera& camera, World& world) {
 }
 
 void Player::keep_in_world_bounds(const World& world) {
+    ZoneScopedN("Player::keep_in_world_bounds");
+
     const math::Rect area = world.playable_area() * TILE_SIZE;
 
     if (m_position.x - PLAYER_WIDTH_HALF < area.min.x) m_position.x = area.min.x + PLAYER_WIDTH_HALF;
@@ -441,6 +473,8 @@ float Player::get_fall_distance() const {
 }
 
 void Player::update_sprites() {
+    ZoneScopedN("Player::update_sprites");
+
     const bool flip_x = m_direction == Direction::Left;
 
     m_hair.sprite
@@ -473,6 +507,8 @@ void Player::update_sprites() {
 }
 
 void Player::draw() const {
+    ZoneScopedN("Player::draw");
+
     Renderer::DrawAtlasSprite(m_head.sprite, RenderLayer::World);
 
     Renderer::DrawAtlasSprite(m_right_arm.sprite, RenderLayer::World);
@@ -497,6 +533,8 @@ void Player::draw() const {
 }
 
 void Player::use_item(const Camera& camera, World& world) {
+    ZoneScopedN("Player::use_item");
+
     const tl::optional<const Item&> item = m_inventory.get_selected_item();
     if (item.is_none()) return;
 
