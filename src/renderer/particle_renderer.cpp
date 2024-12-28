@@ -226,7 +226,7 @@ void ParticleRenderer::init() {
     m_is_metal = backend.IsMetal();
 }
 
-void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, int depth) {
+void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth) {
     ZoneScopedN("ParticleRenderer::draw_particle");
 
     const math::Rect& rect = m_atlas.get_rect(get_particle_index(type, variant));
@@ -241,7 +241,7 @@ void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat&
     m_scale_buffer_data_ptr++;
 
     m_instance_buffer_data_ptr->uv = rect.min;
-    m_instance_buffer_data_ptr->depth = static_cast<float>(depth);
+    m_instance_buffer_data_ptr->depth = static_cast<float>(depth.value);
     m_instance_buffer_data_ptr++;
 
     m_particle_count++;

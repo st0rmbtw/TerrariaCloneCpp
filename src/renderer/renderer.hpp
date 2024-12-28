@@ -12,6 +12,7 @@
 #include "../types/background_layer.hpp"
 #include "../types/render_layer.hpp"
 #include "../types/shader_path.hpp"
+#include "../types/depth.hpp"
 #include "../assets.hpp"
 #include "../particles.hpp"
 
@@ -43,43 +44,43 @@ namespace Renderer {
     void Begin(const Camera& camera, WorldData& world);
     void Render(const Camera& camera, const ChunkManager& chunk_manager);
 
-    void DrawSprite(const Sprite& sprite, RenderLayer render_layer = RenderLayer::Main, int depth = -1);
-    inline void DrawSprite(const Sprite& sprite, int depth) {
+    void DrawSprite(const Sprite& sprite, RenderLayer render_layer = RenderLayer::Main, Depth depth = {});
+    inline void DrawSprite(const Sprite& sprite, Depth depth) {
         DrawSprite(sprite, RenderLayer::Main, depth);
     }
     
-    void DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer = RenderLayer::Main, int depth = -1);
-    inline void DrawAtlasSprite(const TextureAtlasSprite& sprite, int depth) {
+    void DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer = RenderLayer::Main, Depth depth = {});
+    inline void DrawAtlasSprite(const TextureAtlasSprite& sprite, Depth depth) {
         DrawAtlasSprite(sprite, RenderLayer::Main, depth);
     }
 
-    void DrawSpriteUI(const Sprite& sprite, int depth = -1);
-    void DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, int depth = -1);
+    void DrawSpriteUI(const Sprite& sprite, Depth depth = -1);
+    void DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, Depth depth = -1);
 
-    void DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, bool is_ui = false, int depth = -1);
+    void DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, bool is_ui = false, Depth depth = -1);
 
     inline void DrawText(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font) {
         DrawText(text.data(), text.length(), size, position, color, font, false);
     }
-    inline void DrawTextUI(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, int depth = -1) {
+    inline void DrawTextUI(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, Depth depth = -1) {
         DrawText(text.data(), text.length(), size, position, color, font, true, depth);
     }
 
-    inline void DrawChar(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, int depth = -1) {
+    inline void DrawChar(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, Depth depth = -1) {
         DrawText(&ch, 1, size, position, color, font, false, depth);
     }
-    inline void DrawCharUI(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, int depth = -1) {
+    inline void DrawCharUI(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, Depth depth = -1) {
         DrawText(&ch, 1, size, position, color, font, true, depth);
     }
 
     void DrawBackground(const BackgroundLayer& layer);
-    void DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, int depth = -1);
+    void DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth = -1);
 
 #if DEBUG
     void PrintDebugInfo();
 #endif
 
-    void BeginDepth(int depth = -1);
+    void BeginDepth(Depth depth = {});
     void EndDepth();
 
     Texture CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, uint32_t width, uint32_t height, uint32_t layers, int sampler, const uint8_t* data, bool generate_mip_maps = false);

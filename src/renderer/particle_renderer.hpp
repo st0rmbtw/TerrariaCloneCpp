@@ -12,6 +12,7 @@
 
 #include "../particles.hpp"
 #include "../types/texture_atlas.hpp"
+#include "../types/depth.hpp"
 
 class ParticleRenderer {
 public:
@@ -20,7 +21,7 @@ public:
     void compute();
     void terminate();
 
-    void draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, int depth);
+    void draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth);
 
 private:
     LLGL::PipelineState* m_pipeline = nullptr;

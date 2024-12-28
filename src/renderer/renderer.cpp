@@ -73,7 +73,7 @@ static struct RendererState {
     math::Rect camera_frustum;
 
     bool custom_depth_mode = false;
-    int depth = -1;
+    Depth depth;
 } state;
 
 const LLGL::RenderSystemPtr& Renderer::Context() { return state.context; }
@@ -428,8 +428,8 @@ void Renderer::PrintDebugInfo() {
 }
 #endif
 
-void Renderer::BeginDepth(int depth) {
-    state.depth = depth;
+void Renderer::BeginDepth(Depth depth) {
+    state.depth = depth.value;
     state.custom_depth_mode = true;
 }
 
@@ -438,7 +438,7 @@ void Renderer::EndDepth() {
     state.custom_depth_mode = false;
 }
 
-inline void add_sprite_to_batch(const Sprite& sprite, RenderLayer layer, bool is_ui, int depth) {
+inline void add_sprite_to_batch(const Sprite& sprite, RenderLayer layer, bool is_ui, Depth depth) {
     glm::vec4 uv_offset_scale = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
 
     if (sprite.flip_x()) {
@@ -451,10 +451,12 @@ inline void add_sprite_to_batch(const Sprite& sprite, RenderLayer layer, bool is
         uv_offset_scale.w *= -1.0f;
     }
 
+    if (state.custom_depth_mode) depth = state.depth;
+
     state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.texture(), layer, is_ui, depth);
 }
 
-inline void add_atlas_sprite_to_batch(const TextureAtlasSprite& sprite, RenderLayer layer, bool is_ui, int depth) {
+inline void add_atlas_sprite_to_batch(const TextureAtlasSprite& sprite, RenderLayer layer, bool is_ui, Depth depth) {
     const math::Rect& rect = sprite.atlas().get_rect(sprite.index());
 
     glm::vec4 uv_offset_scale = glm::vec4(
@@ -477,7 +479,7 @@ inline void add_atlas_sprite_to_batch(const TextureAtlasSprite& sprite, RenderLa
     state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), layer, is_ui, depth);
 }
 
-void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer, int depth) {
+void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer, Depth depth) {
     ZoneScopedN("Renderer::DrawSprite");
 
     const math::Rect aabb = sprite.calculate_aabb();
@@ -488,7 +490,7 @@ void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer, int de
     add_sprite_to_batch(sprite, render_layer, false, depth);
 }
 
-void Renderer::DrawSpriteUI(const Sprite& sprite, int depth) {
+void Renderer::DrawSpriteUI(const Sprite& sprite, Depth depth) {
     ZoneScopedN("Renderer::DrawSpriteUI");
 
     const math::Rect aabb = sprite.calculate_aabb();
@@ -497,7 +499,7 @@ void Renderer::DrawSpriteUI(const Sprite& sprite, int depth) {
     add_sprite_to_batch(sprite, RenderLayer::Main, true, depth);
 }
 
-void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer, int depth) {
+void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer render_layer, Depth depth) {
     ZoneScopedN("Renderer::DrawAtlasSprite");
 
     const math::Rect aabb = sprite.calculate_aabb();
@@ -508,7 +510,7 @@ void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer ren
     add_atlas_sprite_to_batch(sprite, render_layer, false, depth);
 }
 
-void Renderer::DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, int depth) {
+void Renderer::DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, Depth depth) {
     ZoneScopedN("Renderer::DrawAtlasSpriteUI");
 
     const math::Rect aabb = sprite.calculate_aabb();
@@ -517,7 +519,7 @@ void Renderer::DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, int depth) {
     add_atlas_sprite_to_batch(sprite, RenderLayer::Main, true, depth);
 }
 
-void Renderer::DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontAsset key, bool is_ui, int depth) {
+void Renderer::DrawText(const char* text, uint32_t length, float size, const glm::vec2& position, const glm::vec3& color, FontAsset key, bool is_ui, Depth depth) {
     ZoneScopedN("Renderer::DrawText");
 
     const Font& font = Assets::GetFont(key);
@@ -529,8 +531,11 @@ void Renderer::DrawText(const char* text, uint32_t length, float size, const glm
 
     uint32_t& depth_index = is_ui ? state.ui_depth_index : state.main_depth_index;
 
-    int order = state.custom_depth_mode ? state.depth > 0 ? state.depth : depth_index : depth;
-    if (order < 0) order = depth_index++;
+    if (state.custom_depth_mode) depth = state.depth;
+
+    const int order = depth.value < 0 ? depth_index : depth.value;
+    const uint32_t new_index = depth.value < 0 ? depth_index + 1 : depth.value;
+    if (depth.advance) depth_index = std::max(depth_index, static_cast<uint32_t>(new_index));
     if (static_cast<uint32_t>(order) > state.max_main_depth) state.max_main_depth = order;
 
     for (uint32_t i = 0; i < length; ++i) {
@@ -570,7 +575,7 @@ void Renderer::DrawBackground(const BackgroundLayer& layer) {
     layer.is_world() ? state.background_renderer.draw_world_layer(layer) : state.background_renderer.draw_layer(layer);
 }
 
-void Renderer::DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, int depth) {
+void Renderer::DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth) {
     ZoneScopedN("Renderer::DrawParticle");
 
     state.particle_renderer.draw_particle(position, rotation, scale, type, variant, depth);
@@ -793,7 +798,7 @@ void RenderBatchSprite::init() {
     }
 }
 
-void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, RenderLayer layer, bool is_ui, int depth) {
+void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, RenderLayer layer, bool is_ui, Depth depth) {
     ZoneScopedN("RenderBatchSprite::draw_sprite");
 
     if (m_sprites.size() >= MAX_QUADS) {
@@ -811,8 +816,10 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
         max_depth = &state.max_world_depth;
     }
 
-    int order = state.custom_depth_mode ? state.depth > 0 ? state.depth : *depth_index : depth;
-    if (order < 0) order = (*depth_index)++;
+    const int order = depth.value < 0 ? *depth_index : depth.value;
+    const uint32_t new_index = depth.value < 0 ? *depth_index + 1 : depth.value;
+
+    if (depth.advance) *depth_index = std::max(*depth_index, static_cast<uint32_t>(new_index));
     if (static_cast<uint32_t>(order) > *max_depth) *max_depth = order;
 
     sprites->push_back(SpriteData {

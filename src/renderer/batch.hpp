@@ -11,6 +11,7 @@
 
 #include "../types/sprite.hpp"
 #include "../types/render_layer.hpp"
+#include "../types/depth.hpp"
 #include "../optional.hpp"
 
 constexpr size_t MAX_QUADS = 5000 / 2;
@@ -74,7 +75,7 @@ protected:
 
 class RenderBatchSprite : public RenderBatch {
 public:
-    void draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, RenderLayer layer, bool is_ui, int depth);
+    void draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, RenderLayer layer, bool is_ui, Depth depth);
     void init() override;
     void render() override;
     void render_world();
