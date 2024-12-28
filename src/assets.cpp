@@ -157,7 +157,7 @@ static const std::pair<uint16_t, std::string> ITEM_ASSETS[] = {
 };
 
 static const std::array FONT_ASSETS = {
-    std::make_pair(FontAsset::AndyBold, "assets/fonts/andy_bold.ttf"),
+    std::make_pair(FontAsset::AndyBold, "assets/fonts/andy_bold.otf"),
     std::make_pair(FontAsset::AndyRegular, "assets/fonts/andy_regular.otf"),
 };
 
