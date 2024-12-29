@@ -61,7 +61,6 @@ static struct RendererState {
     
     uint32_t main_depth_index = 0;
     uint32_t world_depth_index = 0;
-    uint32_t ui_depth_index = 0;
 
     uint32_t max_main_depth = 0;
     uint32_t max_world_depth = 0;
@@ -85,7 +84,6 @@ LLGL::Buffer* Renderer::GlobalUniformBuffer() { return state.constant_buffer; }
 RenderBackend Renderer::Backend() { return state.backend; }
 uint32_t Renderer::GetMainDepthIndex() { return state.main_depth_index; };
 uint32_t Renderer::GetWorldDepthIndex() { return state.world_depth_index; };
-uint32_t Renderer::GetUiDepthIndex() { return state.ui_depth_index; };
 LLGL::Buffer* Renderer::ChunkVertexBuffer() { return state.chunk_vertex_buffer; }
 
 #if DEBUG
@@ -355,7 +353,6 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
     state.glyph_batch.begin();
 
     state.main_depth_index = 0;
-    state.ui_depth_index = 0;
     // The first three are reserved for background, walls and tiles
     state.world_depth_index = 3;
     state.max_world_depth = 3;

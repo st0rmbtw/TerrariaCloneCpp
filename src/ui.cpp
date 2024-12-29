@@ -164,7 +164,7 @@ void UI::Draw(const Camera&, const Inventory& inventory) {
 
     render_inventory(inventory);
 
-    const int depth = Renderer::GetUiDepthIndex();
+    const int depth = Renderer::GetMainDepthIndex();
 
     Renderer::DrawSpriteUI(state.cursor_background, depth);
 
@@ -208,7 +208,7 @@ void update_cursor() {
 inline void render_inventory_cell(UiElement element_type, uint8_t index, const glm::vec2& size, const glm::vec2& position, TextureAsset texture, Depth depth) {
     const glm::vec2 pos = INVENTORY_PADDING + position;
     
-    const uint32_t d = depth.value < 0 ? Renderer::GetUiDepthIndex() : depth.value;
+    const uint32_t d = depth.value < 0 ? Renderer::GetMainDepthIndex() : depth.value;
     state.elements.emplace(element_type, d, index, math::Rect::from_top_left(pos, size));
     
     Sprite cell_sprite;
@@ -235,7 +235,7 @@ void render_inventory(const Inventory& inventory) {
     auto offset = glm::vec2(0.0f, INVENTORY_TITLE_SIZE);
     auto item_offset = glm::vec2(0.0f);
 
-    const uint32_t inventory_index = Renderer::GetUiDepthIndex();
+    const uint32_t inventory_index = Renderer::GetMainDepthIndex();
     const uint32_t item_index = inventory_index + 1;
     const uint32_t text_index = item_index + 1;
 

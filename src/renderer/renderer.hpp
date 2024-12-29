@@ -99,7 +99,6 @@ namespace Renderer {
     [[nodiscard]] RenderBackend Backend();
     [[nodiscard]] uint32_t GetMainDepthIndex();
     [[nodiscard]] uint32_t GetWorldDepthIndex();
-    [[nodiscard]] uint32_t GetUiDepthIndex();
     [[nodiscard]] LLGL::Buffer* ChunkVertexBuffer();
 
 #if DEBUG
