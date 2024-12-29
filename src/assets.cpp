@@ -99,19 +99,6 @@ static const std::pair<TextureAsset, AssetTexture> TEXTURE_ASSETS[] = {
     { TextureAsset::UiInventorySelected,   AssetTexture("assets/sprites/ui/Inventory_Back14.png", TextureSampler::Linear) },
     { TextureAsset::UiInventoryHotbar,     AssetTexture("assets/sprites/ui/Inventory_Back9.png", TextureSampler::Linear) },
 
-    { TextureAsset::Background0, AssetTexture("assets/sprites/backgrounds/Background_0.png", TextureSampler::Nearest) },
-    { TextureAsset::Background7, AssetTexture("assets/sprites/backgrounds/Background_7.png", TextureSampler::Nearest) },
-    { TextureAsset::Background55, AssetTexture("assets/sprites/backgrounds/Background_55.png", TextureSampler::Nearest) },
-    { TextureAsset::Background74, AssetTexture("assets/sprites/backgrounds/Background_74.png", TextureSampler::Nearest) },
-    { TextureAsset::Background77, AssetTexture("assets/sprites/backgrounds/Background_77.png", TextureSampler::Nearest) },
-    { TextureAsset::Background78, AssetTexture("assets/sprites/backgrounds/Background_78.png", TextureSampler::Nearest) },
-    { TextureAsset::Background90, AssetTexture("assets/sprites/backgrounds/Background_90.png", TextureSampler::Nearest) },
-    { TextureAsset::Background91, AssetTexture("assets/sprites/backgrounds/Background_91.png", TextureSampler::Nearest) },
-    { TextureAsset::Background92, AssetTexture("assets/sprites/backgrounds/Background_92.png", TextureSampler::Nearest) },
-    { TextureAsset::Background93, AssetTexture("assets/sprites/backgrounds/Background_93.png", TextureSampler::Nearest) },
-    { TextureAsset::Background112, AssetTexture("assets/sprites/backgrounds/Background_112.png", TextureSampler::Nearest) },
-    { TextureAsset::Background114, AssetTexture("assets/sprites/backgrounds/Background_114.png", TextureSampler::Nearest) },
-
     { TextureAsset::TileCracks, AssetTexture("assets/sprites/tiles/TileCracks.png", TextureSampler::Nearest) },
 
     { TextureAsset::Particles, AssetTexture("assets/sprites/Particles.png") }
@@ -144,6 +131,21 @@ static const std::array WALL_ASSETS = {
     std::make_tuple(static_cast<uint16_t>(WallType::StoneWall), TextureAsset::Stub, "assets/sprites/walls/Wall_1.png"),
 };
 
+static const std::array BACKGROUND_ASSETS = {
+    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background0), TextureAsset::Stub, "assets/sprites/backgrounds/Background_0.png"),
+    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background7), TextureAsset::Stub, "assets/sprites/backgrounds/Background_7.png"),
+    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background55), TextureAsset::Stub, "assets/sprites/backgrounds/Background_55.png"),
+    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background74), TextureAsset::Stub, "assets/sprites/backgrounds/Background_74.png"),
+    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background77), TextureAsset::Stub, "assets/sprites/backgrounds/Background_77.png"),
+    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background78), TextureAsset::Stub, "assets/sprites/backgrounds/Background_78.png"),
+    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background90), TextureAsset::Stub, "assets/sprites/backgrounds/Background_90.png"),
+    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background91), TextureAsset::Stub, "assets/sprites/backgrounds/Background_91.png"),
+    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background92), TextureAsset::Stub, "assets/sprites/backgrounds/Background_92.png"),
+    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background93), TextureAsset::Stub, "assets/sprites/backgrounds/Background_93.png"),
+    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background112), TextureAsset::Stub, "assets/sprites/backgrounds/Background_112.png"),
+    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background114), TextureAsset::Stub, "assets/sprites/backgrounds/Background_114.png"),
+};
+
 static const std::pair<uint16_t, std::string> ITEM_ASSETS[] = {
     { 2, "assets/sprites/items/Item_2.png" },
     { 3, "assets/sprites/items/Item_3.png" },
@@ -162,7 +164,7 @@ static const std::array FONT_ASSETS = {
 };
 
 const std::pair<ShaderAsset, AssetShader> SHADER_ASSETS[] = {
-    { ShaderAsset::BackgroundShader, AssetShader("background", ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::BackgroundVertex) },
+    { ShaderAsset::BackgroundShader, AssetShader("background", ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::BackgroundVertex, VertexFormatAsset::BackgroundInstance }) },
     { ShaderAsset::PostProcessShader,AssetShader("postprocess",ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::PostProcessVertex) },
     { ShaderAsset::TilemapShader,    AssetShader("tilemap",    ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::TilemapVertex,  VertexFormatAsset::TilemapInstance  }) },
     { ShaderAsset::FontShader,       AssetShader("font",       ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::FontVertex,     VertexFormatAsset::FontInstance     }) },
@@ -212,6 +214,17 @@ bool Assets::Load() {
         state.textures_atlases[asset_key] = TextureAtlas::from_grid(texture, glm::uvec2(16, 16), (texture.width() - (texture.width() / 16) * 2) / 16 + 1, (texture.height() - (texture.height() / 16) * 2) / 16 + 1, glm::uvec2(2));
     }
 
+    std::vector<math::Rect> background_rects(static_cast<size_t>(BackgroundAsset::Count));
+    for (const auto& [id, asset_key, path] : BACKGROUND_ASSETS) {
+        int width;
+        int height;
+
+        stbi_info(path, &width, &height, nullptr);
+
+        background_rects[id] = math::URect::from_top_left(glm::uvec2(0), glm::uvec2(width, height));
+    }
+    state.textures_atlases[TextureAsset::Backgrounds] = TextureAtlas(Assets::GetTexture(TextureAsset::Stub), background_rects, glm::vec2(0.0f), 0, 0);
+
     for (const auto& [key, asset] : TEXTURE_ATLAS_ASSETS) {
         state.textures_atlases[key] = TextureAtlas::from_grid(Assets::GetTexture(key), asset.tile_size, asset.columns, asset.rows, asset.padding, asset.offset);
     }
@@ -229,6 +242,7 @@ bool Assets::Load() {
 
     state.textures[TextureAsset::Tiles] = load_texture_array(BLOCK_ASSETS, mip_maps ? TextureSampler::NearestMips : TextureSampler::Nearest, mip_maps);
     state.textures[TextureAsset::Walls] = load_texture_array(WALL_ASSETS, TextureSampler::Nearest);
+    state.textures[TextureAsset::Backgrounds] = load_texture_array(BACKGROUND_ASSETS, TextureSampler::Nearest);
 
     return true;
 }
@@ -372,16 +386,17 @@ void Assets::InitVertexFormats() {
     LLGL::VertexFormat font_vertex_format;
     LLGL::VertexFormat font_instance_format;
     LLGL::VertexFormat background_vertex_format;
+    LLGL::VertexFormat background_instance_format;
     LLGL::VertexFormat particle_vertex_format;
     LLGL::VertexFormat particle_instance_format;
     LLGL::VertexFormat lightmap_vertex_format;
 
     if (backend.IsGLSL()) {
-        sprite_vertex_format.AppendAttribute({ "a_position", LLGL::Format::RG32Float, 0, 0, sizeof(SpriteVertex), 0, 0 });
+        sprite_vertex_format.AppendAttribute({ "a_position", LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 });
     } else if (backend.IsHLSL()) {
-        sprite_vertex_format.AppendAttribute({ "Position",   LLGL::Format::RG32Float, 0, 0, sizeof(SpriteVertex), 0, 0 });
+        sprite_vertex_format.AppendAttribute({ "Position",   LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 });
     } else {
-        sprite_vertex_format.AppendAttribute({ "position",   LLGL::Format::RG32Float, 0, 0, sizeof(SpriteVertex), 0, 0 });
+        sprite_vertex_format.AppendAttribute({ "position",   LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 });
     }
 
     if (backend.IsGLSL()) {
@@ -472,11 +487,11 @@ void Assets::InitVertexFormats() {
     }
 
     if (backend.IsGLSL()) {
-        font_vertex_format.AppendAttribute({"a_position", LLGL::Format::RG32Float, 0, 0, sizeof(GlyphVertex), 0, 0});
+        font_vertex_format.AppendAttribute({"a_position", LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0});
     } else if (backend.IsHLSL()) {
-        font_vertex_format.AppendAttribute({"Position",   LLGL::Format::RG32Float, 0, 0, sizeof(GlyphVertex), 0, 0});
+        font_vertex_format.AppendAttribute({"Position",   LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0});
     } else {
-        font_vertex_format.AppendAttribute({"position",   LLGL::Format::RG32Float, 0, 0, sizeof(GlyphVertex), 0, 0});
+        font_vertex_format.AppendAttribute({"position",   LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0});
     }
 
     if (backend.IsGLSL()) {
@@ -509,26 +524,49 @@ void Assets::InitVertexFormats() {
     }
 
     if (backend.IsGLSL()) {
-        background_vertex_format.AppendAttribute({"a_position", LLGL::Format::RG32Float});
-        background_vertex_format.AppendAttribute({"a_uv", LLGL::Format::RG32Float});
-        background_vertex_format.AppendAttribute({"a_size", LLGL::Format::RG32Float});
-        background_vertex_format.AppendAttribute({"a_tex_size", LLGL::Format::RG32Float});
-        background_vertex_format.AppendAttribute({"a_speed", LLGL::Format::RG32Float});
-        background_vertex_format.AppendAttribute({"a_nonscale", LLGL::Format::R32SInt});
+        background_vertex_format.attributes = {
+            {"a_position",     LLGL::Format::RG32Float, 0, 0, sizeof(BackgroundVertex), 0, 0},
+            {"a_texture_size", LLGL::Format::RG32Float, 1, offsetof(BackgroundVertex,texture_size), sizeof(BackgroundVertex), 0, 0},
+        };
     } else if (backend.IsHLSL()) {
-        background_vertex_format.AppendAttribute({"Position", LLGL::Format::RG32Float});
-        background_vertex_format.AppendAttribute({"Uv", LLGL::Format::RG32Float});
-        background_vertex_format.AppendAttribute({"Size", LLGL::Format::RG32Float});
-        background_vertex_format.AppendAttribute({"TexSize", LLGL::Format::RG32Float});
-        background_vertex_format.AppendAttribute({"Speed", LLGL::Format::RG32Float});
-        background_vertex_format.AppendAttribute({"NonScale", LLGL::Format::R32SInt});
+        background_vertex_format.attributes = {
+            {"Position",       LLGL::Format::RG32Float, 0, 0, sizeof(BackgroundVertex), 0, 0},
+            {"TextureSize",    LLGL::Format::RG32Float, 1, offsetof(BackgroundVertex,texture_size), sizeof(BackgroundVertex), 0, 0},
+        };
     } else {
-        background_vertex_format.AppendAttribute({"position", LLGL::Format::RG32Float});
-        background_vertex_format.AppendAttribute({"uv", LLGL::Format::RG32Float});
-        background_vertex_format.AppendAttribute({"size", LLGL::Format::RG32Float});
-        background_vertex_format.AppendAttribute({"tex_size", LLGL::Format::RG32Float});
-        background_vertex_format.AppendAttribute({"speed", LLGL::Format::RG32Float});
-        background_vertex_format.AppendAttribute({"nonscale", LLGL::Format::R32SInt});
+        background_vertex_format.attributes = {
+            {"position",       LLGL::Format::RG32Float, 0, 0, sizeof(BackgroundVertex), 0, 0},
+            {"a_texture_size", LLGL::Format::RG32Float, 1, offsetof(BackgroundVertex,texture_size), sizeof(BackgroundVertex), 0, 0},
+        };
+    }
+
+    if (backend.IsGLSL()) {
+        background_instance_format.attributes = {
+            {"i_position", LLGL::Format::RG32Float,  2, offsetof(BackgroundInstance, position), sizeof(BackgroundInstance), 1, 1},
+            {"i_size",     LLGL::Format::RG32Float,  3, offsetof(BackgroundInstance, size),     sizeof(BackgroundInstance), 1, 1},
+            {"i_tex_size", LLGL::Format::RG32Float,  4, offsetof(BackgroundInstance, tex_size), sizeof(BackgroundInstance), 1, 1},
+            {"i_speed",    LLGL::Format::RG32Float,  5, offsetof(BackgroundInstance, speed),    sizeof(BackgroundInstance), 1, 1},
+            {"i_id",       LLGL::Format::R32UInt,    6, offsetof(BackgroundInstance, id),       sizeof(BackgroundInstance), 1, 1},
+            {"i_flags",    LLGL::Format::R32SInt,    7, offsetof(BackgroundInstance, flags),    sizeof(BackgroundInstance), 1, 1},
+        };
+    } else if (backend.IsHLSL()) {
+        background_instance_format.attributes = {
+            {"I_Position", LLGL::Format::RG32Float,  2, offsetof(BackgroundInstance, position), sizeof(BackgroundInstance), 1, 1},
+            {"I_Size",     LLGL::Format::RG32Float,  3, offsetof(BackgroundInstance, size),     sizeof(BackgroundInstance), 1, 1},
+            {"I_TexSize",  LLGL::Format::RG32Float,  4, offsetof(BackgroundInstance, tex_size), sizeof(BackgroundInstance), 1, 1},
+            {"I_Speed",    LLGL::Format::RG32Float,  5, offsetof(BackgroundInstance, speed),    sizeof(BackgroundInstance), 1, 1},
+            {"I_ID",       LLGL::Format::R32UInt,    6, offsetof(BackgroundInstance, id),       sizeof(BackgroundInstance), 1, 1},
+            {"I_Flags",    LLGL::Format::R32SInt,    7, offsetof(BackgroundInstance, flags),    sizeof(BackgroundInstance), 1, 1},
+        };
+    } else {
+        background_instance_format.attributes = {
+            {"i_position", LLGL::Format::RG32Float,  2, offsetof(BackgroundInstance, position), sizeof(BackgroundInstance), 1, 1},
+            {"i_size",     LLGL::Format::RG32Float,  3, offsetof(BackgroundInstance, size),     sizeof(BackgroundInstance), 1, 1},
+            {"i_tex_size", LLGL::Format::RG32Float,  4, offsetof(BackgroundInstance, tex_size), sizeof(BackgroundInstance), 1, 1},
+            {"i_speed",    LLGL::Format::RG32Float,  5, offsetof(BackgroundInstance, speed),    sizeof(BackgroundInstance), 1, 1},
+            {"i_id",       LLGL::Format::R32UInt,    6, offsetof(BackgroundInstance, id),       sizeof(BackgroundInstance), 1, 1},
+            {"i_flags",    LLGL::Format::R32SInt,    7, offsetof(BackgroundInstance, flags),    sizeof(BackgroundInstance), 1, 1},
+        };
     }
 
     if (backend.IsGLSL()) {
@@ -589,6 +627,7 @@ void Assets::InitVertexFormats() {
     state.vertex_formats[VertexFormatAsset::FontVertex] = font_vertex_format;
     state.vertex_formats[VertexFormatAsset::FontInstance] = font_instance_format;
     state.vertex_formats[VertexFormatAsset::BackgroundVertex] = background_vertex_format;
+    state.vertex_formats[VertexFormatAsset::BackgroundInstance] = background_instance_format;
     state.vertex_formats[VertexFormatAsset::ParticleVertex] = particle_vertex_format;
     state.vertex_formats[VertexFormatAsset::ParticleInstance] = particle_instance_format;
     state.vertex_formats[VertexFormatAsset::PostProcessVertex] = lightmap_vertex_format;
@@ -683,7 +722,8 @@ Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, c
 
     struct Layer {
         uint8_t* data;
-        size_t size;
+        uint32_t cols;
+        uint32_t rows;
     };
 
     std::unordered_map<uint16_t, Layer> layer_to_data_map;
@@ -701,7 +741,8 @@ Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, c
 
         layer_to_data_map[block_type] = Layer {
             .data = layer_data,
-            .size = static_cast<size_t>(w * h * 4)
+            .cols = static_cast<uint32_t>(w),
+            .rows = static_cast<uint32_t>(h),
         };
 
         width = glm::max(width, static_cast<uint32_t>(w));
@@ -711,9 +752,12 @@ Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, c
 
     const size_t data_size = width * height * layers_count * 4;
     uint8_t* image_data = new uint8_t[data_size];
+    memset(image_data, 0, data_size);
 
     for (const auto& [layer, layer_data] : layer_to_data_map) {
-        memcpy(&image_data[width * height * 4 * layer], layer_data.data, layer_data.size);
+        for (size_t row = 0; row < layer_data.rows; ++row) {
+            memcpy(&image_data[width * height * 4 * layer + row * width * 4], &layer_data.data[row * layer_data.cols * 4], layer_data.cols * 4);
+        }
         stbi_image_free(layer_data.data);
     }
     

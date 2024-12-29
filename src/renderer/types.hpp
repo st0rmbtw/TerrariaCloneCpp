@@ -7,11 +7,11 @@
 #include <glm/vec3.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-struct SpriteVertex {
+struct Vertex {
     float x;
     float y;
 
-    explicit SpriteVertex(float x, float y) : x(x), y(y) {}
+    explicit Vertex(float x, float y) : x(x), y(y) {}
 };
 
 struct SpriteInstance {
@@ -24,13 +24,6 @@ struct SpriteInstance {
     glm::vec4 outline_color;
     float outline_thickness;
     int flags;
-};
-
-struct GlyphVertex {
-    float x;
-    float y;
-
-    explicit GlyphVertex(float x, float y) : x(x), y(y) {}
 };
 
 struct GlyphInstance {
@@ -81,6 +74,24 @@ struct ChunkVertex {
         x(x), y(y),
         wall_tex_size(wall_tex_size), tile_tex_size(tile_tex_size), 
         wall_padding(wall_padding), tile_padding(tile_padding) {}
+};
+
+struct BackgroundVertex {
+    explicit BackgroundVertex(glm::vec2 position, glm::vec2 texture_size) :
+        position(position),
+        texture_size(texture_size) {}
+
+    glm::vec2 position;
+    glm::vec2 texture_size;
+};
+
+struct BackgroundInstance {
+    glm::vec2 position;
+    glm::vec2 size;
+    glm::vec2 tex_size;
+    glm::vec2 speed;
+    uint32_t id;
+    int flags;
 };
 
 #endif

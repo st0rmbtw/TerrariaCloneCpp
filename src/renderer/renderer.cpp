@@ -529,7 +529,7 @@ void Renderer::DrawText(const char* text, float size, const glm::vec2& position,
 
     const float scale = size / font.font_size;
 
-    uint32_t& depth_index = is_ui ? state.ui_depth_index : state.main_depth_index;
+    uint32_t& depth_index = state.main_depth_index;
 
     if (state.custom_depth_mode) depth = state.depth;
 
@@ -573,7 +573,11 @@ void Renderer::DrawBackground(const BackgroundLayer& layer) {
     if (layer.nonscale() && !state.nozoom_camera_frustum.intersects(aabb)) return;
     if (!layer.nonscale() && !state.camera_frustum.intersects(aabb)) return;
 
-    layer.is_world() ? state.background_renderer.draw_world_layer(layer) : state.background_renderer.draw_layer(layer);
+    if (layer.is_world()) {
+        state.background_renderer.draw_world_layer(layer);
+    } else {
+        state.background_renderer.draw_layer(layer);
+    }
 }
 
 void Renderer::DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth) {
@@ -726,11 +730,11 @@ void RenderBatchSprite::init() {
     m_buffer = new SpriteInstance[MAX_QUADS];
     m_world_buffer = new SpriteInstance[MAX_QUADS];
 
-    const SpriteVertex vertices[] = {
-        SpriteVertex(0.0f, 0.0f),
-        SpriteVertex(0.0f, 1.0f),
-        SpriteVertex(1.0f, 0.0f),
-        SpriteVertex(1.0f, 1.0f),
+    const Vertex vertices[] = {
+        Vertex(0.0f, 0.0f),
+        Vertex(0.0f, 1.0f),
+        Vertex(1.0f, 0.0f),
+        Vertex(1.0f, 1.0f),
     };
 
     m_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::SpriteVertex), "SpriteBatch VertexBuffer");
@@ -808,7 +812,7 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
     }
 
     std::vector<SpriteData>* sprites = &m_sprites;
-    uint32_t* depth_index = is_ui ? &state.ui_depth_index : &state.main_depth_index;
+    uint32_t* depth_index = &state.main_depth_index;
     uint32_t* max_depth = &state.max_main_depth;
 
     if (layer == RenderLayer::World) {
@@ -876,14 +880,14 @@ void RenderBatchSprite::render() {
             vertex_offset = total_sprite_count;
         }
 
-        const uint32_t order = sprite_data.is_ui ? sprite_data.order + state.main_depth_index : sprite_data.order;
+        const float order = static_cast<float>(sprite_data.order);
 
         int flags = 0;
         flags |= sprite_data.ignore_camera_zoom << SpriteFlags::IgnoreCameraZoom;
         flags |= sprite_data.is_ui << SpriteFlags::UI;
         flags |= (curr_texture_id >= 0) << SpriteFlags::HasTexture;
 
-        m_buffer_ptr->position = glm::vec3(sprite_data.position, static_cast<float>(order));
+        m_buffer_ptr->position = glm::vec3(sprite_data.position, order);
         m_buffer_ptr->rotation = sprite_data.rotation;
         m_buffer_ptr->size = sprite_data.size;
         m_buffer_ptr->offset = sprite_data.offset;
@@ -1104,11 +1108,11 @@ void RenderBatchGlyph::init() {
 
     m_buffer = new GlyphInstance[MAX_QUADS];
 
-    const GlyphVertex vertices[] = {
-        GlyphVertex(0.0f, 0.0f),
-        GlyphVertex(0.0f, 1.0f),
-        GlyphVertex(1.0f, 0.0f),
-        GlyphVertex(1.0f, 1.0f),
+    const Vertex vertices[] = {
+        Vertex(0.0f, 0.0f),
+        Vertex(0.0f, 1.0f),
+        Vertex(1.0f, 0.0f),
+        Vertex(1.0f, 1.0f),
     };
 
     m_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::FontVertex), "GlyphBatch VertexBuffer");
@@ -1218,7 +1222,7 @@ void RenderBatchGlyph::render() {
             vertex_offset = total_sprite_count;
         }
 
-        const float order = glyph_data.is_ui ? glyph_data.order + state.main_depth_index : glyph_data.order;
+        const float order = glyph_data.order;
 
         m_buffer_ptr->color = glyph_data.color;
         m_buffer_ptr->pos = glm::vec3(glyph_data.pos, static_cast<float>(order));

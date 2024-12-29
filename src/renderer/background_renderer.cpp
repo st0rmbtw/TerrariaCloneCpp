@@ -4,14 +4,20 @@
 
 #include <tracy/Tracy.hpp>
 
+#include "LLGL/PipelineLayoutFlags.h"
 #include "renderer.hpp"
 #include "utils.hpp"
+#include "types.hpp"
 
 #include "../log.hpp"
 
 constexpr uint32_t MAX_QUADS = 500;
-constexpr uint32_t MAX_INDICES = MAX_QUADS * 6;
-constexpr uint32_t MAX_VERTICES = MAX_QUADS * 4;
+
+namespace BackgroundFlags {
+    enum : uint8_t {
+        IgnoreCameraZoom = 0,
+    };
+};
 
 void BackgroundRenderer::init() {
     ZoneScopedN("BackgroundRenderer::init");
@@ -20,27 +26,33 @@ void BackgroundRenderer::init() {
     const auto& context = Renderer::Context();
     const auto* swap_chain = Renderer::SwapChain();
 
-    m_buffer = new BackgroundVertex[MAX_VERTICES];
+    const Texture& backgrounds_texture = Assets::GetTexture(TextureAsset::Backgrounds);
+
+    m_buffer = new BackgroundInstance[MAX_QUADS];
     m_buffer_ptr = m_buffer;
 
-    m_world_buffer = new BackgroundVertex[MAX_VERTICES];
-    m_world_buffer_ptr = m_buffer;
+    m_world_buffer = new BackgroundInstance[MAX_QUADS];
+    m_world_buffer_ptr = m_world_buffer;
 
-    uint32_t indices[MAX_INDICES];
-    uint32_t offset = 0;
-    for (size_t i = 0; i < MAX_INDICES; i += 6) {
-        indices[i + 0] = 0 + offset;
-        indices[i + 1] = 1 + offset;
-        indices[i + 2] = 2 + offset;
-        indices[i + 3] = 2 + offset;
-        indices[i + 4] = 3 + offset;
-        indices[i + 5] = 1 + offset;
-        offset += 4;
+    const BackgroundVertex vertices[] = {
+        BackgroundVertex(glm::vec2(0.0f, 0.0f), backgrounds_texture.size()),
+        BackgroundVertex(glm::vec2(0.0f, 1.0f), backgrounds_texture.size()),
+        BackgroundVertex(glm::vec2(1.0f, 0.0f), backgrounds_texture.size()),
+        BackgroundVertex(glm::vec2(1.0f, 1.0f), backgrounds_texture.size()),
+    };
+
+    m_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::BackgroundVertex), "BackgroundRenderer VertexBuffer");
+    m_instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(BackgroundInstance), Assets::GetVertexFormat(VertexFormatAsset::BackgroundInstance), "BackgroundRenderer InstanceBuffer");
+    m_world_instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(BackgroundInstance), Assets::GetVertexFormat(VertexFormatAsset::BackgroundInstance), "BackgroundRenderer InstanceBuffer");
+
+    {
+        LLGL::Buffer* buffers[] = { m_vertex_buffer, m_instance_buffer };
+        m_buffer_array = context->CreateBufferArray(2, buffers);
     }
-
-    m_vertex_buffer = CreateVertexBuffer(MAX_VERTICES * sizeof(BackgroundVertex), Assets::GetVertexFormat(VertexFormatAsset::BackgroundVertex), "BackgroundRenderer VertexBuffer");
-    m_world_vertex_buffer = CreateVertexBuffer(MAX_VERTICES * sizeof(BackgroundVertex), Assets::GetVertexFormat(VertexFormatAsset::BackgroundVertex), "BackgroundRenderer VertexBuffer");
-    m_index_buffer = CreateIndexBuffer(indices, LLGL::Format::R32UInt, "BackgroundRenderer IndexBuffer");
+    {
+        LLGL::Buffer* buffers[] = { m_vertex_buffer, m_world_instance_buffer };
+        m_world_buffer_array = context->CreateBufferArray(2, buffers);
+    }
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.heapBindings = {
@@ -50,17 +62,17 @@ void BackgroundRenderer::init() {
             LLGL::BindFlags::ConstantBuffer,
             LLGL::StageFlags::VertexStage,
             LLGL::BindingSlot(2)
-        )
-    };
-    pipelineLayoutDesc.bindings = {
+        ),
         LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
-        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
+    };
+    pipelineLayoutDesc.staticSamplers = {
+        LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4), Assets::GetSampler(backgrounds_texture.sampler()).descriptor()),
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
     const LLGL::ResourceViewDescriptor resource_views[] = {
-        Renderer::GlobalUniformBuffer()
+        Renderer::GlobalUniformBuffer(), backgrounds_texture
     };
     m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
 
@@ -72,7 +84,7 @@ void BackgroundRenderer::init() {
     pipelineDesc.fragmentShader = background_shader.ps;
     pipelineDesc.pipelineLayout = pipelineLayout;
     pipelineDesc.indexFormat = LLGL::Format::R16UInt;
-    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleList;
+    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = swap_chain->GetRenderPass();
     pipelineDesc.rasterizer.frontCCW = true;
 
@@ -83,154 +95,78 @@ void BackgroundRenderer::init() {
     }
 }
 
-void BackgroundRenderer::draw_layer(const BackgroundLayer& layer) {
+void BackgroundRenderer::draw_layer_internal(const BackgroundLayer& layer, BackgroundInstance** p_buffer) {
     ZoneScopedN("BackgroundRenderer::draw_layer");
 
     const glm::vec2 offset = layer.anchor().to_vec2();
     const glm::vec2 pos = layer.position() - layer.size() * offset;
 
-    const glm::vec2 tex_size = layer.texture().size();
-    m_buffer_ptr->position = pos;
-    m_buffer_ptr->uv = glm::vec2(0.0f);
-    m_buffer_ptr->size = layer.size();
-    m_buffer_ptr->tex_size = tex_size;
-    m_buffer_ptr->speed = layer.speed();
-    m_buffer_ptr->nonscale = layer.nonscale();
-    m_buffer_ptr++;
+    int flags = 0;
+    flags |= layer.nonscale() << BackgroundFlags::IgnoreCameraZoom;
 
-    m_buffer_ptr->position = pos + glm::vec2(layer.size().x, 0.0f);
-    m_buffer_ptr->uv = glm::vec2(1.0f, 0.0f);
-    m_buffer_ptr->size = layer.size();
-    m_buffer_ptr->tex_size = tex_size;
-    m_buffer_ptr->speed = layer.speed();
-    m_buffer_ptr->nonscale = layer.nonscale();
-    m_buffer_ptr++;
+    BackgroundInstance* buffer = *p_buffer;
 
-    m_buffer_ptr->position = pos + glm::vec2(0.0f, layer.size().y);
-    m_buffer_ptr->uv = glm::vec2(0.0f, 1.0f);
-    m_buffer_ptr->size = layer.size();
-    m_buffer_ptr->tex_size = tex_size;
-    m_buffer_ptr->speed = layer.speed();
-    m_buffer_ptr->nonscale = layer.nonscale();
-    m_buffer_ptr++;
-
-    m_buffer_ptr->position = pos + layer.size();
-    m_buffer_ptr->uv = glm::vec2(1.0f);
-    m_buffer_ptr->size = layer.size();
-    m_buffer_ptr->tex_size = tex_size;
-    m_buffer_ptr->speed = layer.speed();
-    m_buffer_ptr->nonscale = layer.nonscale();
-    m_buffer_ptr++;
-
-    m_layers.push_back(LayerData {
-        .texture = layer.texture(),
-        .offset = static_cast<int>(m_layers.size() * 4)
-    });
-}
-
-void BackgroundRenderer::draw_world_layer(const BackgroundLayer& layer) {
-    ZoneScopedN("BackgroundRenderer::draw_world_layer");
-
-    const glm::vec2 offset = layer.anchor().to_vec2();
-    const glm::vec2 pos = layer.position() - layer.size() * offset;
-
-    const glm::vec2 tex_size = layer.texture().size();
-    m_world_buffer_ptr->position = pos;
-    m_world_buffer_ptr->uv = glm::vec2(0.0f);
-    m_world_buffer_ptr->size = layer.size();
-    m_world_buffer_ptr->tex_size = tex_size;
-    m_world_buffer_ptr->speed = layer.speed();
-    m_world_buffer_ptr->nonscale = layer.nonscale();
-    m_world_buffer_ptr++;
-
-    m_world_buffer_ptr->position = pos + glm::vec2(layer.size().x, 0.0f);
-    m_world_buffer_ptr->uv = glm::vec2(1.0f, 0.0f);
-    m_world_buffer_ptr->size = layer.size();
-    m_world_buffer_ptr->tex_size = tex_size;
-    m_world_buffer_ptr->speed = layer.speed();
-    m_world_buffer_ptr->nonscale = layer.nonscale();
-    m_world_buffer_ptr++;
-
-    m_world_buffer_ptr->position = pos + glm::vec2(0.0f, layer.size().y);
-    m_world_buffer_ptr->uv = glm::vec2(0.0f, 1.0f);
-    m_world_buffer_ptr->size = layer.size();
-    m_world_buffer_ptr->tex_size = tex_size;
-    m_world_buffer_ptr->speed = layer.speed();
-    m_world_buffer_ptr->nonscale = layer.nonscale();
-    m_world_buffer_ptr++;
-
-    m_world_buffer_ptr->position = pos + layer.size();
-    m_world_buffer_ptr->uv = glm::vec2(1.0f);
-    m_world_buffer_ptr->size = layer.size();
-    m_world_buffer_ptr->tex_size = tex_size;
-    m_world_buffer_ptr->speed = layer.speed();
-    m_world_buffer_ptr->nonscale = layer.nonscale();
-    m_world_buffer_ptr++;
-
-    m_world_layers.push_back(LayerData {
-        .texture = layer.texture(),
-        .offset = static_cast<int>(m_world_layers.size() * 4)
-    });
+    buffer->position = pos;
+    buffer->size = layer.size();
+    buffer->tex_size = layer.texture_size();
+    buffer->speed = layer.speed();
+    buffer->flags = flags;
+    buffer->id = layer.id();
+    (*p_buffer)++;
 }
 
 void BackgroundRenderer::render() {
-    if (m_layers.empty()) return;
+    if (m_layer_count == 0) return;
 
     ZoneScopedN("BackgroundRenderer::render");
 
     auto* const commands = Renderer::CommandBuffer();
 
     const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    commands->UpdateBuffer(*m_vertex_buffer, 0, m_buffer, size);
+    commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, size);
     
-    commands->SetVertexBuffer(*m_vertex_buffer);
-    commands->SetIndexBuffer(*m_index_buffer);
+    commands->SetVertexBufferArray(*m_buffer_array);
 
     commands->SetPipelineState(*m_pipeline);
     commands->SetResourceHeap(*m_resource_heap);
 
-    for (const LayerData& layer : m_layers) {
-        commands->SetResource(0, layer.texture);
-        commands->SetResource(1, Assets::GetSampler(layer.texture));
-        commands->DrawIndexed(6, 0, layer.offset);
-    }
+    commands->DrawInstanced(4, 0, m_layer_count);
 
     m_buffer_ptr = m_buffer;
-    m_layers.clear();
+    m_layer_count = 0;
 }
 
 void BackgroundRenderer::render_world() {
-    if (m_world_layers.empty()) return;
+    if (m_world_layer_count == 0) return;
 
     ZoneScopedN("BackgroundRenderer::render_world");
 
     auto* const commands = Renderer::CommandBuffer();
 
     const ptrdiff_t size = (uint8_t*) m_world_buffer_ptr - (uint8_t*) m_world_buffer;
-    commands->UpdateBuffer(*m_world_vertex_buffer, 0, m_world_buffer, size);
+    commands->UpdateBuffer(*m_world_instance_buffer, 0, m_world_buffer, size);
     
-    commands->SetVertexBuffer(*m_world_vertex_buffer);
-    commands->SetIndexBuffer(*m_index_buffer);
+    commands->SetVertexBufferArray(*m_world_buffer_array);
 
     commands->SetPipelineState(*m_pipeline);
     commands->SetResourceHeap(*m_resource_heap);
 
-    for (const LayerData& layer : m_world_layers) {
-        commands->SetResource(0, layer.texture);
-        commands->SetResource(1, Assets::GetSampler(layer.texture));
-        commands->DrawIndexed(6, 0, layer.offset);
-    }
+    commands->DrawInstanced(4, 0, m_world_layer_count);
 
     m_world_buffer_ptr = m_world_buffer;
-    m_world_layers.clear();
+    m_world_layer_count = 0;
 }
 
 void BackgroundRenderer::terminate() {
     const auto& context = Renderer::Context();
 
     if (m_vertex_buffer) context->Release(*m_vertex_buffer);
-    if (m_index_buffer) context->Release(*m_index_buffer);
+    if (m_instance_buffer) context->Release(*m_instance_buffer);
+    if (m_world_instance_buffer) context->Release(*m_world_instance_buffer);
+    if (m_world_buffer_array) context->Release(*m_world_buffer_array);
+    if (m_buffer_array) context->Release(*m_buffer_array);
     if (m_pipeline) context->Release(*m_pipeline);
 
     delete[] m_buffer;
+    delete[] m_world_buffer;
 }

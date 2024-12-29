@@ -7,19 +7,11 @@
 #include <LLGL/Buffer.h>
 #include <LLGL/PipelineState.h>
 
+#include "types.hpp"
+
 #include "../types/background_layer.hpp"
 
-struct BackgroundVertex {
-    glm::vec2 position;
-    glm::vec2 uv;
-    glm::vec2 size;
-    glm::vec2 tex_size;
-    glm::vec2 speed;
-    int nonscale;
-};
-
 struct LayerData {
-    Texture texture;
     int offset;
 };
 
@@ -30,24 +22,38 @@ public:
     void render_world();
     void terminate();
 
-    void draw_layer(const BackgroundLayer& layer);
-    void draw_world_layer(const BackgroundLayer& layer);
+    inline void draw_layer(const BackgroundLayer& layer) {
+        draw_layer_internal(layer, &m_buffer_ptr);
+        m_layer_count++;
+    }
+
+    inline void draw_world_layer(const BackgroundLayer& layer) {
+        draw_layer_internal(layer, &m_world_buffer_ptr);
+        m_world_layer_count++;
+    }
 
 private:
-    std::vector<LayerData> m_layers;
-    std::vector<LayerData> m_world_layers;
+    void draw_layer_internal(const BackgroundLayer& layer, BackgroundInstance** p_buffer);
+
+private:
+    size_t m_layer_count = 0;
+    size_t m_world_layer_count = 0;
     
     LLGL::PipelineState* m_pipeline = nullptr;
     LLGL::ResourceHeap* m_resource_heap = nullptr;
     LLGL::Buffer* m_vertex_buffer = nullptr;
-    LLGL::Buffer* m_world_vertex_buffer = nullptr;
-    LLGL::Buffer* m_index_buffer = nullptr;
+    
+    LLGL::Buffer* m_instance_buffer = nullptr;
+    LLGL::Buffer* m_world_instance_buffer = nullptr;
+    
+    LLGL::BufferArray* m_buffer_array = nullptr;
+    LLGL::BufferArray* m_world_buffer_array = nullptr;
 
-    BackgroundVertex* m_buffer = nullptr;
-    BackgroundVertex* m_buffer_ptr = nullptr;
+    BackgroundInstance* m_buffer = nullptr;
+    BackgroundInstance* m_buffer_ptr = nullptr;
 
-    BackgroundVertex* m_world_buffer = nullptr;
-    BackgroundVertex* m_world_buffer_ptr = nullptr;
+    BackgroundInstance* m_world_buffer = nullptr;
+    BackgroundInstance* m_world_buffer_ptr = nullptr;
 };
 
 #endif
