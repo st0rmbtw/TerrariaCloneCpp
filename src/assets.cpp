@@ -766,7 +766,7 @@ Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, c
 }
 
 bool load_font(FT_Library ft, const std::string& path, Font& font) {
-    static constexpr uint32_t FONT_SIZE = 64;
+    static constexpr uint32_t FONT_SIZE = 68;
     static constexpr uint32_t PADDING = 4;
 
     FT_Face face;
