@@ -59,11 +59,17 @@ float4 scroll(
 ) {
     const float2 new_offset = float2(-offset.x, offset.y);
 
+    const float tex_aspect = tex_size.x / tex_size.y;
+    const float frame_aspect = size.x / size.y;
+    const float aspect = tex_aspect / frame_aspect;
+
+    const float2 scale = float2(1.0 / aspect, 1.0);
+
     if (!nonscale) {
         speed.x = speed.x / (size.x / tex_size.x);
     }
 
-    float2 new_uv = uv - (new_offset * float2(speed.x, 0.0f));
+    float2 new_uv = scale * uv - (new_offset * float2(speed.x, 0.0f));
     if (!nonscale) {
         new_uv = new_uv * (size / tex_size);
     }
