@@ -1,11 +1,12 @@
 #ifndef TERRARIA_RENDERER_HPP
 #define TERRARIA_RENDERER_HPP
 
-#include "LLGL/RenderingDebugger.h"
+#include "LLGL/Format.h"
 #pragma once
 
 #include <LLGL/SwapChain.h>
 #include <LLGL/RenderSystem.h>
+#include <LLGL/RenderingDebugger.h>
 
 #include "../types/sprite.hpp"
 #include "../types/backend.hpp"
@@ -13,6 +14,7 @@
 #include "../types/render_layer.hpp"
 #include "../types/shader_path.hpp"
 #include "../types/depth.hpp"
+#include "../types/rich_text.hpp"
 #include "../assets.hpp"
 #include "../particles.hpp"
 
@@ -57,22 +59,27 @@ namespace Renderer {
     void DrawSpriteUI(const Sprite& sprite, Depth depth = -1);
     void DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, Depth depth = -1);
 
-    void DrawText(const char* text, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, bool is_ui = false, Depth depth = -1);
+    void DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, bool is_ui = false, Depth depth = -1);
 
-    inline void DrawText(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font) {
-        DrawText(text.c_str(), size, position, color, font, false);
-    }
-    inline void DrawTextUI(const std::string& text, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, Depth depth = -1) {
-        DrawText(text.c_str(), size, position, color, font, true, depth);
+    template <size_t L>
+    inline void DrawText(const RichText<L>& text, const glm::vec2& position, FontAsset font, Depth depth = -1) {
+        DrawText(text.sections().data(), L, position, font, false, depth);
     }
 
-    inline void DrawChar(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, Depth depth = -1) {
-        char text[] = {ch, '\0'};
-        DrawText(text, size, position, color, font, false, depth);
+    template <size_t L>
+    inline void DrawTextUI(const RichText<L>& text, const glm::vec2& position, FontAsset font, Depth depth = -1) {
+        DrawText(text.sections().data(), L, position, font, true, depth);
     }
-    inline void DrawCharUI(char ch, float size, const glm::vec2& position, const glm::vec3& color, FontAsset font, Depth depth = -1) {
+
+    inline void DrawChar(char ch, const glm::vec2& position, float size, const glm::vec3& color, FontAsset font, Depth depth = -1) {
         char text[] = {ch, '\0'};
-        DrawText(text, size, position, color, font, true, depth);
+        const RichTextSection section(text, size, color);
+        DrawText(&section, 1, position, font, false, depth);
+    }
+    inline void DrawCharUI(char ch, const glm::vec2& position, float size, const glm::vec3& color, FontAsset font, Depth depth = -1) {
+        char text[] = {ch, '\0'};
+        const RichTextSection section(text, size, color);
+        DrawText(&section, 1, position, font, true, depth);
     }
 
     void DrawBackground(const BackgroundLayer& layer);
@@ -85,7 +92,13 @@ namespace Renderer {
     void BeginDepth(Depth depth = {});
     void EndDepth();
 
-    Texture CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, uint32_t width, uint32_t height, uint32_t layers, int sampler, const uint8_t* data, bool generate_mip_maps = false);
+    Texture CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, LLGL::DataType data_type, uint32_t width, uint32_t height, uint32_t layers, int sampler, const void* data, bool generate_mip_maps = false);
+    inline Texture CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, uint32_t width, uint32_t height, uint32_t layers, int sampler, const uint8_t* data, bool generate_mip_maps = false) {
+        return CreateTexture(type, image_format, LLGL::DataType::UInt8, width, height, layers, sampler, data, generate_mip_maps);
+    }
+    inline Texture CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, uint32_t width, uint32_t height, uint32_t layers, int sampler, const int8_t* data, bool generate_mip_maps = false) {
+        return CreateTexture(type, image_format, LLGL::DataType::Int8, width, height, layers, sampler, data, generate_mip_maps);
+    }
     LLGL::Shader* LoadShader(ShaderPath shader_path, const std::vector<ShaderDef>& shader_defs = {}, const std::vector<LLGL::VertexAttribute>& vertex_attributes = {});
 
     void Terminate();

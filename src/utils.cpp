@@ -75,7 +75,7 @@ uint32_t next_utf8_codepoint(const char** p_text) {
     return c;
 }
 
-glm::vec2 calculate_text_bounds(FontAsset key, const char* text, float size) {
+glm::vec2 calculate_text_bounds(const char* text, float size, FontAsset key) {
     ZoneScopedN("Utils::calculate_text_bounds");
 
     const Font& font = Assets::GetFont(key);
@@ -95,7 +95,7 @@ glm::vec2 calculate_text_bounds(FontAsset key, const char* text, float size) {
         }
 
         const Glyph& glyph = font.glyphs.find(ch)->second;
-        prev_x += glyph.size.x * scale;
+        prev_x += (glyph.advance >> 6) * scale;
         bounds.x = std::max(prev_x, bounds.x);
     }
 

@@ -11,6 +11,7 @@
 #include <ft2build.h>
 #include <freetype/freetype.h>
 
+#include "LLGL/Format.h"
 #include "renderer/renderer.hpp"
 #include "renderer/types.hpp"
 #include "log.hpp"
@@ -765,8 +766,8 @@ Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, c
 }
 
 bool load_font(FT_Library ft, const std::string& path, Font& font) {
-    static constexpr uint32_t FONT_SIZE = 48;
-    static constexpr uint32_t PADDING = 2;
+    static constexpr uint32_t FONT_SIZE = 64;
+    static constexpr uint32_t PADDING = 4;
 
     FT_Face face;
     if (FT_New_Face(ft, path.c_str(), 0, &face)) {
@@ -792,19 +793,26 @@ bool load_font(FT_Library ft, const std::string& path, Font& font) {
     FT_UInt index;
     FT_ULong character = FT_Get_First_Char(face, &index);
 
-    const uint32_t texture_width = 1024;
+    const uint32_t texture_width = 1512;
 
-    uint32_t col = 0;
-    uint32_t row = 0;
+    uint32_t col = PADDING;
+    uint32_t row = PADDING;
+
+    uint32_t max_height = 0;
 
     while (true) {
-        if (FT_Load_Char(face, character, FT_LOAD_RENDER)) {
-            LOG_ERROR("Failed to load glyph '%c'", (char) character);
+        if (FT_Load_Char(face, character, FT_LOAD_DEFAULT)) {
+            LOG_ERROR("Failed to load glyph %lu", character);
         } else {
+            FT_Render_Glyph(face->glyph, FT_RENDER_MODE_SDF);
+
             if (col + face->glyph->bitmap.width + PADDING >= texture_width) {
                 col = PADDING;
-                row += FONT_SIZE + PADDING;
+                row += max_height + PADDING;
+                max_height = 0;
             }
+
+            max_height = std::max(max_height, face->glyph->bitmap.rows);
 
             GlyphInfo info;
             info.bitmap_width = face->glyph->bitmap.width;
@@ -814,8 +822,8 @@ bool load_font(FT_Library ft, const std::string& path, Font& font) {
             info.advance = face->glyph->advance;
             info.col = col;
             info.row = row;
-            info.buffer = new uint8_t[info.bitmap_width * info.bitmap_rows];
-            memcpy(info.buffer, face->glyph->bitmap.buffer, info.bitmap_width * info.bitmap_rows);
+            info.buffer = new uint8_t[face->glyph->bitmap.pitch * info.bitmap_rows];
+            memcpy(info.buffer, face->glyph->bitmap.buffer, face->glyph->bitmap.pitch * info.bitmap_rows);
 
             glyphs.emplace_back(character, info);
 
@@ -826,7 +834,7 @@ bool load_font(FT_Library ft, const std::string& path, Font& font) {
         if (!index) break;
     }
 
-    const uint32_t texture_height = row + FONT_SIZE;
+    const uint32_t texture_height = row + max_height;
 
     const glm::vec2 texture_size = glm::vec2(texture_width, texture_height);
 
@@ -856,7 +864,10 @@ bool load_font(FT_Library ft, const std::string& path, Font& font) {
     }
 
     font.texture = Renderer::CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::R, texture_width, texture_height, 1, TextureSampler::Linear, texture_data);
+
     font.font_size = FONT_SIZE;
+
+    delete[] texture_data;
 
     FT_Done_Face(face);
 

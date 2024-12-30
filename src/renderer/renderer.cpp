@@ -9,6 +9,7 @@
 #include <LLGL/CommandBufferFlags.h>
 #include <LLGL/PipelineStateFlags.h>
 #include <LLGL/RendererConfiguration.h>
+#include <LLGL/Format.h>
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -29,11 +30,23 @@
 #include "particle_renderer.hpp"
 
 static struct RendererState {
+    ParticleRenderer particle_renderer;
+    RenderBatchSprite sprite_batch;
+    RenderBatchGlyph glyph_batch;
+    BackgroundRenderer background_renderer;
+    WorldRenderer world_renderer;
+
     LLGL::RenderSystemPtr context = nullptr;
+    std::shared_ptr<CustomSurface> surface = nullptr;
+
+    math::Rect ui_frustum;
+    math::Rect nozoom_camera_frustum;
+    math::Rect camera_frustum;
+
+    
     LLGL::SwapChain* swap_chain = nullptr;
     LLGL::CommandBuffer* command_buffer = nullptr;
     LLGL::CommandQueue* command_queue = nullptr;
-    std::shared_ptr<CustomSurface> surface = nullptr;
 #if DEBUG
     LLGL::RenderingDebugger* debugger = nullptr;
 #endif
@@ -52,12 +65,7 @@ static struct RendererState {
     LLGL::PipelineState* postprocess_pipeline = nullptr;
     LLGL::Buffer* fullscreen_triangle_vertex_buffer = nullptr;
     
-    RenderBatchSprite sprite_batch;
-    RenderBatchGlyph glyph_batch;
-    WorldRenderer world_renderer;
-    BackgroundRenderer background_renderer;
-    ParticleRenderer particle_renderer;
-    RenderBackend backend;
+    Depth depth;
     
     uint32_t main_depth_index = 0;
     uint32_t world_depth_index = 0;
@@ -67,12 +75,8 @@ static struct RendererState {
 
     uint32_t texture_index = 0;
 
-    math::Rect ui_frustum;
-    math::Rect nozoom_camera_frustum;
-    math::Rect camera_frustum;
-
+    RenderBackend backend;
     bool custom_depth_mode = false;
-    Depth depth;
 } state;
 
 const LLGL::RenderSystemPtr& Renderer::Context() { return state.context; }
@@ -516,15 +520,10 @@ void Renderer::DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, Depth depth) 
     add_atlas_sprite_to_batch(sprite, RenderLayer::Main, true, depth);
 }
 
-void Renderer::DrawText(const char* text, float size, const glm::vec2& position, const glm::vec3& color, FontAsset key, bool is_ui, Depth depth) {
+void Renderer::DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset key, bool is_ui, Depth depth) {
     ZoneScopedN("Renderer::DrawText");
 
     const Font& font = Assets::GetFont(key);
-    
-    float x = position.x;
-    float y = position.y;
-
-    const float scale = size / font.font_size;
 
     uint32_t& depth_index = state.main_depth_index;
 
@@ -535,30 +534,39 @@ void Renderer::DrawText(const char* text, float size, const glm::vec2& position,
     if (depth.advance) depth_index = std::max(depth_index, static_cast<uint32_t>(new_index));
     if (static_cast<uint32_t>(order) > state.max_main_depth) state.max_main_depth = order;
 
-    for (; *text != '\0';) {
-        const uint32_t c = next_utf8_codepoint(&text);
+    float x = position.x;
+    float y = position.y;
 
-        if (c == '\n') {
-            y += size;
-            x = position.x;
-            continue;
-        }
+    for (size_t i = 0; i < size; ++i) {
+        const RichTextSection section = sections[i];
+        const char* str = section.text.c_str();
+        const float scale = section.size / font.font_size;
 
-        const Glyph& ch = font.glyphs.find(c)->second;
+        for (; *str != '\0';) {
+            const uint32_t c = next_utf8_codepoint(&str);
 
-        if (c == ' ') {
+            if (c == '\n') {
+                y += section.size;
+                x = position.x;
+                continue;
+            }
+
+            const Glyph& ch = font.glyphs.find(c)->second;
+
+            if (c == ' ') {
+                x += (ch.advance >> 6) * scale;
+                continue;
+            }
+
+            const float xpos = x + ch.bearing.x * scale;
+            const float ypos = y - ch.bearing.y * scale;
+            const glm::vec2 pos = glm::vec2(xpos, ypos);
+            const glm::vec2 size = glm::vec2(ch.size) * scale;
+
+            state.glyph_batch.draw_glyph(pos, size, section.color, font.texture, ch.texture_coords, ch.tex_size, is_ui, order);
+
             x += (ch.advance >> 6) * scale;
-            continue;
         }
-
-        const float xpos = x + ch.bearing.x * scale;
-        const float ypos = y - ch.bearing.y * scale;
-        const glm::vec2 pos = glm::vec2(xpos, ypos);
-        const glm::vec2 size = glm::vec2(ch.size) * scale;
-
-        state.glyph_batch.draw_glyph(pos, size, color, font.texture, ch.texture_coords, ch.tex_size, is_ui, order);
-
-        x += (ch.advance >> 6) * scale;
     }
 }
 
@@ -583,7 +591,7 @@ void Renderer::DrawParticle(const glm::vec2& position, const glm::quat& rotation
     state.particle_renderer.draw_particle(position, rotation, scale, type, variant, depth);
 }
 
-Texture Renderer::CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, uint32_t width, uint32_t height, uint32_t layers, int sampler, const uint8_t* data, bool generate_mip_maps) {
+Texture Renderer::CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, LLGL::DataType data_type, uint32_t width, uint32_t height, uint32_t layers, int sampler, const void* data, bool generate_mip_maps) {
     ZoneScopedN("Renderer::CreateTexture");
 
     LLGL::TextureDescriptor texture_desc;
@@ -607,7 +615,7 @@ Texture Renderer::CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_
     else components = 1;
 
     image_view.format = image_format;
-    image_view.dataType = LLGL::DataType::UInt8;
+    image_view.dataType = data_type;
     image_view.data = data;
     image_view.dataSize = width * height * layers * components;
 

@@ -9,6 +9,7 @@
 #include "input.hpp"
 #include "assets.hpp"
 #include "time/time.hpp"
+#include "types/rich_text.hpp"
 #include "utils.hpp"
 
 constexpr float INVENTORY_TITLE_SIZE = 24.0f;
@@ -84,7 +85,7 @@ static struct UiState {
     std::multiset<Element, ElementSort> elements;
 } state;
 
-void render_inventory(const Inventory& inventory);
+void render_inventory(const Inventory& inventory, const glm::vec2& window_size);
 void update_cursor();
 
 void UI::Init() {
@@ -159,10 +160,10 @@ void UI::PostUpdate() {
     state.elements.clear();
 }
 
-void UI::Draw(const Camera&, const Inventory& inventory) {
+void UI::Draw(const Camera& camera, const Inventory& inventory) {
     ZoneScopedN("UI::Draw");
 
-    render_inventory(inventory);
+    render_inventory(inventory, camera.viewport());
 
     const int depth = Renderer::GetMainDepthIndex();
 
@@ -229,7 +230,7 @@ inline void render_cell_item(const glm::vec2& item_size, const glm::vec2& cell_s
     Renderer::DrawSpriteUI(cell_sprite, depth);
 }
 
-void render_inventory(const Inventory& inventory) {
+void render_inventory(const Inventory& inventory, const glm::vec2&) {
     ZoneScopedN("UI::render_inventory");
 
     auto offset = glm::vec2(0.0f, INVENTORY_TITLE_SIZE);
@@ -309,12 +310,13 @@ void render_inventory(const Inventory& inventory) {
 
             const char index = '0' + (i + 1) % 10;
 
-            Renderer::DrawCharUI(index, index_size, offset + padding + glm::vec2(16.0f, text_size * 1.7f), glm::vec3(index_color), FontAsset::AndyBold, text_index);
+            Renderer::DrawCharUI(index, offset + padding + glm::vec2(16.0f, text_size * 1.7f), index_size, glm::vec3(index_color), FontAsset::AndyBold, text_index);
         }
 
         // Draw item stack
         if (item.is_some() && item->stack > 1) {
-            Renderer::DrawTextUI(std::to_string(item->stack), text_size, offset + padding + glm::vec2(16.0f, cell_size.y * 0.5f + text_size * 1.6f), glm::vec3(0.8f), FontAsset::AndyBold, text_index);
+            const RichText text = rich_text(std::to_string(item->stack), text_size, glm::vec3(0.8f));
+            Renderer::DrawTextUI(text, offset + padding + glm::vec2(16.0f, cell_size.y * 0.5f + text_size * 1.6f), FontAsset::AndyBold, text_index);
         }
 
         offset.x += cell_size.x + INVENTORY_CELL_MARGIN;
@@ -322,12 +324,14 @@ void render_inventory(const Inventory& inventory) {
     }
 
     if (state.show_extra_ui) {
-        Renderer::DrawTextUI("Inventory", INVENTORY_TITLE_SIZE, glm::vec2(INVENTORY_PADDING + INVENTORY_SLOT_SIZE * 0.5f, 22.0f), glm::vec3(0.8f), FontAsset::AndyBold, inventory_index);
+        const RichText text = rich_text("Inventory", INVENTORY_TITLE_SIZE, glm::vec3(0.8f));
+        Renderer::DrawTextUI(text, glm::vec2(INVENTORY_PADDING + INVENTORY_SLOT_SIZE * 0.5f, 22.0f), FontAsset::AndyBold, inventory_index);
     } else {
         auto item = inventory.get_item(inventory.selected_slot());
         const std::string& title = item.is_some() ? item->name : "Items";
+        const RichText text = rich_text(title, INVENTORY_TITLE_SIZE, glm::vec3(0.8f));
 
-        glm::vec2 bounds = calculate_text_bounds(FontAsset::AndyBold, title, INVENTORY_TITLE_SIZE);
-        Renderer::DrawTextUI(title, INVENTORY_TITLE_SIZE, glm::vec2((offset.x - bounds.x) * 0.5f, 22.0f), glm::vec3(0.8f), FontAsset::AndyBold, inventory_index);
+        const glm::vec2 bounds = calculate_text_bounds(title, INVENTORY_TITLE_SIZE, FontAsset::AndyBold);
+        Renderer::DrawTextUI(text, glm::vec2((offset.x - bounds.x) * 0.5f, 22.0f), FontAsset::AndyBold, inventory_index);
     }
 }
