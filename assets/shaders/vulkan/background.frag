@@ -25,11 +25,17 @@ void main() {
     const bool nonscale = v_nonscale > 0;
     vec2 speed = v_speed;
 
+    const float tex_aspect = v_tex_size.x / v_tex_size.y;
+    const float frame_aspect = v_size.x / v_size.y;
+    const float aspect = tex_aspect / frame_aspect;
+
+    const vec2 scale = vec2(1.0 / aspect, 1.0);
+
     if (!nonscale) {
         speed.x = speed.x / (v_size.x / v_tex_size.x);
     }
 
-    vec2 uv = v_uv - (new_offset * vec2(speed.x, 0.0));
+    vec2 uv = scale * v_uv - (new_offset * vec2(speed.x, 0.0));
     if (!nonscale) {
         uv = uv * (v_size / v_tex_size);
     }

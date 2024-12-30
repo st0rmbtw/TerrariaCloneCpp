@@ -88,27 +88,25 @@ float2 scroll(
 ) {
     float2 new_offset = float2(-offset.x, offset.y);
 
+    const float tex_aspect = tex_size.x / tex_size.y;
+    const float frame_aspect = size.x / size.y;
+    const float aspect = tex_aspect / frame_aspect;
+
+    const float2 scale = float2(1.0 / aspect, 1.0);
+
     if (!nonscale) {
         speed.x = speed.x / (size.x / tex_size.x);
     }
 
-    float2 new_uv = uv - (new_offset * float2(speed.x, 0.0));
+    float2 new_uv = scale * uv - (new_offset * float2(speed.x, 0.0));
     if (!nonscale) {
         new_uv = new_uv * (size / tex_size);
     }
 
     new_uv.x = fmodb(new_uv.x, 1.0);
     new_uv.y = fmodb(new_uv.y, 1.0);
-    
-    if (id == 0) {
-        float x = new_uv.x;
-        new_uv.x = new_uv.y;
-        new_uv.y = x;
-    }
 
-    new_uv = new_uv * tex_size / texture_size;
-
-    return new_uv;
+    return new_uv * tex_size / texture_size;
 }
 
 fragment float4 PS(
@@ -118,6 +116,13 @@ fragment float4 PS(
     sampler texture_sampler [[sampler(4)]]
 ) {
     float2 uv = scroll(inp.speed, inp.uv, inp.offset, inp.texture_size, inp.tex_size, inp.size, inp.nonscale > 0);
+
+    if (inp.id == 0) {
+        float x = uv.x;
+        uv.x = uv.y;
+        uv.y = x;
+    }
+
     float4 color = texture.sample(texture_sampler, uv, inp.id);
 
     if (color.a < 0.05) discard_fragment();
