@@ -76,7 +76,7 @@ static struct RendererState {
     uint32_t texture_index = 0;
 
     RenderBackend backend;
-    bool custom_depth_mode = false;
+    bool depth_mode = false;
 } state;
 
 const LLGL::RenderSystemPtr& Renderer::Context() { return state.context; }
@@ -431,12 +431,12 @@ void Renderer::PrintDebugInfo() {
 
 void Renderer::BeginDepth(Depth depth) {
     state.depth = depth.value;
-    state.custom_depth_mode = true;
+    state.depth_mode = true;
 }
 
 void Renderer::EndDepth() {
     state.depth = -1;
-    state.custom_depth_mode = false;
+    state.depth_mode = false;
 }
 
 inline void add_sprite_to_batch(const Sprite& sprite, RenderLayer layer, bool is_ui, Depth depth) {
@@ -452,9 +452,11 @@ inline void add_sprite_to_batch(const Sprite& sprite, RenderLayer layer, bool is
         uv_offset_scale.w *= -1.0f;
     }
 
-    if (state.custom_depth_mode) depth = state.depth;
-
-    state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.texture(), layer, is_ui, depth);
+    if (layer == RenderLayer::World) {
+        state.sprite_batch.draw_world_sprite(sprite, uv_offset_scale, sprite.texture(), depth);
+    } else {
+        state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.texture(), is_ui, depth);
+    }
 }
 
 inline void add_atlas_sprite_to_batch(const TextureAtlasSprite& sprite, RenderLayer layer, bool is_ui, Depth depth) {
@@ -477,7 +479,11 @@ inline void add_atlas_sprite_to_batch(const TextureAtlasSprite& sprite, RenderLa
         uv_offset_scale.w *= -1.0f;
     }
 
-    state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), layer, is_ui, depth);
+    if (layer == RenderLayer::World) {
+        state.sprite_batch.draw_world_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), depth);
+    } else {
+        state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), is_ui, depth);
+    }
 }
 
 void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer, Depth depth) {
@@ -527,7 +533,7 @@ void Renderer::DrawText(const RichTextSection* sections, size_t size, const glm:
 
     uint32_t& depth_index = state.main_depth_index;
 
-    if (state.custom_depth_mode) depth = state.depth;
+    if (state.depth_mode) depth = state.depth;
 
     const int order = depth.value < 0 ? depth_index : depth.value;
     const uint32_t new_index = depth.value < 0 ? depth_index + 1 : depth.value;
@@ -808,7 +814,7 @@ void RenderBatchSprite::init() {
     }
 }
 
-void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, RenderLayer layer, bool is_ui, Depth depth) {
+void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, bool is_ui, Depth depth) {
     ZoneScopedN("RenderBatchSprite::draw_sprite");
 
     if (m_sprites.size() >= MAX_QUADS) {
@@ -816,23 +822,18 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
         begin();
     }
 
-    std::vector<SpriteData>* sprites = &m_sprites;
-    uint32_t* depth_index = &state.main_depth_index;
-    uint32_t* max_depth = &state.max_main_depth;
+    if (state.depth_mode) depth = state.depth;
 
-    if (layer == RenderLayer::World) {
-        sprites = &m_world_sprites;
-        depth_index = &state.world_depth_index;
-        max_depth = &state.max_world_depth;
-    }
+    uint32_t& depth_index = state.main_depth_index;
+    uint32_t& max_depth = state.max_main_depth;
 
-    const int order = depth.value < 0 ? *depth_index : depth.value;
-    const uint32_t new_index = depth.value < 0 ? *depth_index + 1 : depth.value;
+    const int order = depth.value < 0 ? depth_index : depth.value;
+    const uint32_t new_index = depth.value < 0 ? depth_index + 1 : depth.value;
 
-    if (depth.advance) *depth_index = std::max(*depth_index, static_cast<uint32_t>(new_index));
-    if (static_cast<uint32_t>(order) > *max_depth) *max_depth = order;
+    if (depth.advance) depth_index = std::max(depth_index, static_cast<uint32_t>(new_index));
+    if (static_cast<uint32_t>(order) > max_depth) max_depth = order;
 
-    sprites->push_back(SpriteData {
+    m_sprites.push_back(SpriteData {
         .position = sprite.position(),
         .rotation = sprite.rotation(),
         .size = sprite.size(),
@@ -841,9 +842,44 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
         .color = sprite.color(),
         .outline_color = sprite.outline_color(),
         .outline_thickness = sprite.outline_thickness(),
-        .texture = sprite_texture.is_some() ? sprite_texture.get() : Texture(),
+        .texture = sprite_texture.is_some() ? sprite_texture.get() : Assets::GetTexture(TextureAsset::Stub),
         .order = static_cast<uint32_t>(order),
         .is_ui = is_ui,
+        .ignore_camera_zoom = sprite.ignore_camera_zoom()
+    });
+}
+
+void RenderBatchSprite::draw_world_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, Depth depth) {
+    ZoneScopedN("RenderBatchSprite::draw_world_sprite");
+
+    if (m_world_sprites.size() >= MAX_QUADS) {
+        render();
+        begin();
+    }
+
+    if (state.depth_mode) depth = state.depth;
+
+    uint32_t& depth_index = state.world_depth_index;
+    uint32_t& max_depth = state.max_world_depth;
+
+    const int order = depth.value < 0 ? depth_index : depth.value;
+    const uint32_t new_index = depth.value < 0 ? depth_index + 1 : depth.value;
+
+    if (depth.advance) depth_index = std::max(depth_index, static_cast<uint32_t>(new_index));
+    if (static_cast<uint32_t>(order) > max_depth) max_depth = order;
+
+    m_world_sprites.push_back(SpriteData {
+        .position = sprite.position(),
+        .rotation = sprite.rotation(),
+        .size = sprite.size(),
+        .offset = sprite.anchor().to_vec2(),
+        .uv_offset_scale = uv_offset_scale,
+        .color = sprite.color(),
+        .outline_color = sprite.outline_color(),
+        .outline_thickness = sprite.outline_thickness(),
+        .texture = sprite_texture.is_some() ? sprite_texture.get() : Assets::GetTexture(TextureAsset::Stub),
+        .order = static_cast<uint32_t>(order),
+        .is_ui = false,
         .ignore_camera_zoom = sprite.ignore_camera_zoom()
     });
 }
@@ -872,10 +908,10 @@ void RenderBatchSprite::render() {
     int vertex_offset = 0;
 
     for (const SpriteData& sprite_data : sprites) {
-        const int prev_texture_id = prev_texture.id();
-        const int curr_texture_id = sprite_data.texture.id();
+        const uint32_t prev_texture_id = prev_texture.id();
+        const uint32_t curr_texture_id = sprite_data.texture.id();
 
-        if (prev_texture_id >= 0 && prev_texture_id != curr_texture_id) {
+        if (prev_texture_id != curr_texture_id) {
             m_sprite_flush_queue.push_back(FlushData {
                 .texture = prev_texture,
                 .offset = vertex_offset,
@@ -939,10 +975,10 @@ void RenderBatchSprite::render_world() {
     int vertex_offset = 0;
 
     for (const SpriteData& sprite_data : sprites) {
-        const int prev_texture_id = prev_texture.id();
-        const int curr_texture_id = sprite_data.texture.id();
+        const uint32_t prev_texture_id = prev_texture.id();
+        const uint32_t curr_texture_id = sprite_data.texture.id();
 
-        if (prev_texture_id >= 0 && prev_texture_id != curr_texture_id) {
+        if (prev_texture_id != curr_texture_id) {
             m_world_sprite_flush_queue.push_back(FlushData {
                 .texture = prev_texture,
                 .offset = vertex_offset,
@@ -1025,10 +1061,8 @@ void RenderBatchSprite::flush() {
     commands->SetResource(0, *state.constant_buffer);
 
     for (const FlushData& flush_data : m_sprite_flush_queue) {
-        const Texture& t = flush_data.texture.id() >= 0 ? flush_data.texture : Assets::GetTexture(TextureAsset::Stub);
-
-        commands->SetResource(1, t);
-        commands->SetResource(2, Assets::GetSampler(t));
+        commands->SetResource(1, flush_data.texture);
+        commands->SetResource(2, Assets::GetSampler(flush_data.texture));
         commands->DrawInstanced(4, 0, flush_data.count, flush_data.offset);
     }
 }
@@ -1075,10 +1109,8 @@ void RenderBatchSprite::flush_world() {
     commands->SetResource(0, *state.constant_buffer);
 
     for (const FlushData& flush_data : m_world_sprite_flush_queue) {
-        const Texture& t = flush_data.texture.id() >= 0 ? flush_data.texture : Assets::GetTexture(TextureAsset::Stub);
-
-        commands->SetResource(1, t);
-        commands->SetResource(2, Assets::GetSampler(t));
+        commands->SetResource(1, flush_data.texture);
+        commands->SetResource(2, Assets::GetSampler(flush_data.texture));
         commands->DrawInstanced(4, 0, flush_data.count, flush_data.offset);
     }
 }
@@ -1217,7 +1249,7 @@ void RenderBatchGlyph::render() {
     int vertex_offset = 0;
 
     for (const GlyphData& glyph_data : sorted_glyphs) {
-        if (prev_texture.id() >= 0 && prev_texture.id() != glyph_data.texture.id()) {
+        if (prev_texture.id() != glyph_data.texture.id()) {
             m_glyphs_flush_queue.push_back(FlushData {
                 .texture = prev_texture,
                 .offset = vertex_offset,

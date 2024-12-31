@@ -20,7 +20,7 @@ class Texture {
 public:
     Texture() = default;
 
-    Texture(uint32_t id, int sampler, glm::uvec2 size, LLGL::Texture* internal) :
+    Texture(int id, int sampler, glm::uvec2 size, LLGL::Texture* internal) :
         m_id(id),
         m_sampler(sampler),
         m_size(size),

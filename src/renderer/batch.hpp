@@ -10,7 +10,6 @@
 #include "types.hpp"
 
 #include "../types/sprite.hpp"
-#include "../types/render_layer.hpp"
 #include "../types/depth.hpp"
 #include "../optional.hpp"
 
@@ -75,7 +74,8 @@ protected:
 
 class RenderBatchSprite : public RenderBatch {
 public:
-    void draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, RenderLayer layer, bool is_ui, Depth depth);
+    void draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, bool is_ui, Depth depth);
+    void draw_world_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, Depth depth);
     void init() override;
     void render() override;
     void render_world();

@@ -517,7 +517,7 @@ void Player::draw() const {
     Renderer::DrawAtlasSprite(m_body.sprite, RenderLayer::World);
     Renderer::DrawAtlasSprite(m_legs.sprite, RenderLayer::World);
 
-    Renderer::BeginDepth();
+    Renderer::BeginDepth(Renderer::GetWorldDepthIndex());
         Renderer::DrawAtlasSprite(m_left_eye.sprite, RenderLayer::World);
         Renderer::DrawAtlasSprite(m_right_eye.sprite, RenderLayer::World);
     Renderer::EndDepth();
@@ -526,7 +526,7 @@ void Player::draw() const {
         Renderer::DrawSprite(m_using_item, RenderLayer::World);
     }
 
-    Renderer::BeginDepth();
+    Renderer::BeginDepth(Renderer::GetWorldDepthIndex());
         Renderer::DrawAtlasSprite(m_left_hand.sprite, RenderLayer::World);
         Renderer::DrawAtlasSprite(m_left_shoulder.sprite, RenderLayer::World);
     Renderer::EndDepth();
