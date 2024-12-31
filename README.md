@@ -78,6 +78,8 @@ cmake --build ./build_release/
 
 `K` - Spawn particles at the cursor position
 
+`F10` - Hide/Show FPS (in the bottom left corner)
+
 ### Debug
 
 `F` - Toggle free camera mode
