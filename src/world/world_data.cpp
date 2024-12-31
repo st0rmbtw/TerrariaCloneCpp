@@ -229,7 +229,7 @@ static void internal_lightmap_blur_area(WorldData& world, LightMap& lightmap, co
     }
 }
 
-static void internal_lightmap_update_area_async(std::shared_ptr<std::atomic<LightMapTaskResult>> result, WorldData* world, math::IRect area) {
+static void internal_lightmap_update_area_async(const std::shared_ptr<std::atomic<LightMapTaskResult>>& result, WorldData* world, const math::IRect& area) {
     LightMap lightmap(area.width(), area.height());
 
     const math::IRect a = math::IRect::from_top_left(glm::ivec2(0), area.size());
@@ -251,7 +251,7 @@ static void internal_lightmap_update_area_async(std::shared_ptr<std::atomic<Ligh
     lightmap.masks = nullptr;
 }
 
-void WorldData::lightmap_blur_area_sync(math::IRect area) {
+void WorldData::lightmap_blur_area_sync(const math::IRect& area) {
     internal_lightmap_blur_area(*this, this->lightmap, area);
 }
 
@@ -260,6 +260,6 @@ void WorldData::lightmap_update_area_async(math::IRect area) {
     lightmap_tasks.emplace_back(std::thread(internal_lightmap_update_area_async, result, this, area), result);
 }
 
-void WorldData::lightmap_init_area(math::IRect area) {
+void WorldData::lightmap_init_area(const math::IRect& area) {
     internal_lightmap_init_area(*this, this->lightmap, area);
 }

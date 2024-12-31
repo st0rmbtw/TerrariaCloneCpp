@@ -60,18 +60,17 @@ struct AssetShader {
 
     explicit AssetShader(std::string file_name, uint8_t stages) :
         file_name(std::move(file_name)),
-        stages(stages),
-        vertex_format_assets() {}
+        stages(stages) {}
 
     explicit AssetShader(std::string file_name, uint8_t stages, VertexFormatAsset vertex_format) :
         file_name(std::move(file_name)),
         stages(stages),
         vertex_format_assets({vertex_format}) {}
 
-    explicit AssetShader(std::string file_name, uint8_t stages, const std::vector<VertexFormatAsset> vertex_formats) :
+    explicit AssetShader(std::string file_name, uint8_t stages, std::vector<VertexFormatAsset> vertex_formats) :
         file_name(std::move(file_name)),
         stages(stages),
-        vertex_format_assets(vertex_formats) {}
+        vertex_format_assets(std::move(vertex_formats)) {}
 };
 
 struct AssetComputeShader {
@@ -239,7 +238,7 @@ bool Assets::Load() {
     }
 
     // There is some glitches in mipmaps on Metal
-    bool mip_maps = !Renderer::Backend().IsMetal();
+    const bool mip_maps = !Renderer::Backend().IsMetal();
 
     state.textures[TextureAsset::Tiles] = load_texture_array(BLOCK_ASSETS, mip_maps ? TextureSampler::NearestMips : TextureSampler::Nearest, mip_maps);
     state.textures[TextureAsset::Walls] = load_texture_array(WALL_ASSETS, TextureSampler::Nearest);
@@ -256,7 +255,7 @@ bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
 
         std::vector<LLGL::VertexAttribute> attributes;
 
-        for (VertexFormatAsset asset : asset.vertex_format_assets) {
+        for (const VertexFormatAsset asset : asset.vertex_format_assets) {
             const LLGL::VertexFormat& vertex_format = Assets::GetVertexFormat(asset);
             attributes.insert(attributes.end(), vertex_format.attributes.begin(), vertex_format.attributes.end());
         }
@@ -850,7 +849,7 @@ bool load_font(FT_Library ft, const std::string& path, Font& font) {
 
         const glm::ivec2 size = glm::ivec2(info.bitmap_width, info.bitmap_rows);
         
-        Glyph glyph = {
+        const Glyph glyph = {
             .size = size,
             .tex_size = glm::vec2(size) / texture_size,
             .bearing = glm::ivec2(info.bitmap_left, info.bitmap_top),
@@ -860,12 +859,13 @@ bool load_font(FT_Library ft, const std::string& path, Font& font) {
 
         font.glyphs[c] = glyph;
 
-        if (info.buffer) delete[] info.buffer;
+        delete[] info.buffer;
     }
 
     font.texture = Renderer::CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::R, texture_width, texture_height, 1, TextureSampler::Linear, texture_data);
 
     font.font_size = FONT_SIZE;
+    font.ascender = face->ascender >> 6;
 
     delete[] texture_data;
 

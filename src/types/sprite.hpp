@@ -36,14 +36,14 @@ protected:
     explicit BaseSprite(glm::vec2 position) : m_position(position) {}
 
     BaseSprite(glm::vec2 position, glm::vec2 scale) : 
-        m_position(std::move(position)),
-        m_scale(std::move(scale)) {}
+        m_position(position),
+        m_scale(scale) {}
 
     BaseSprite(glm::vec2 position, glm::vec2 scale, glm::vec4 color, Anchor anchor) : 
-        m_position(std::move(position)),
-        m_scale(std::move(scale)),
-        m_color(std::move(color)),
-        m_anchor(std::move(anchor)) {}
+        m_position(position),
+        m_scale(scale),
+        m_color(color),
+        m_anchor(anchor) {}
 
 public:
 

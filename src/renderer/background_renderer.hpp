@@ -33,7 +33,7 @@ public:
     }
 
 private:
-    void draw_layer_internal(const BackgroundLayer& layer, BackgroundInstance** p_buffer);
+    static void draw_layer_internal(const BackgroundLayer& layer, BackgroundInstance** p_buffer);
 
 private:
     size_t m_layer_count = 0;

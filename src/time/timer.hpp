@@ -24,16 +24,16 @@ public:
     using Duration = std::chrono::milliseconds;
     Timer() :
         m_duration(Duration::zero()),
+        m_times_finished_this_tick(0),
         m_mode(TimerMode::Once),
-        m_finished(false),
-        m_times_finished_this_tick(0) {}
+        m_finished(false) {}
 
     template <class Rep, class Period>
     Timer(const std::chrono::duration<Rep, Period>& duration, TimerMode mode) : 
         m_duration(std::chrono::duration_cast<Duration>(duration)),
+        m_times_finished_this_tick(0),
         m_mode(mode),
-        m_finished(false),
-        m_times_finished_this_tick(0) {}
+        m_finished(false) {}
 
     [[nodiscard]] inline bool finished() const { return m_finished; }
     [[nodiscard]] inline bool just_finished() const { return m_times_finished_this_tick > 0; }
@@ -68,15 +68,17 @@ public:
         return *this;
     }
 
+    constexpr void set_finished() { set_elapsed(m_duration); }
+
 private:
     void tick_impl(const Duration& delta);
 
 private:
     Stopwatch m_stopwatch;
     Duration m_duration;
+    uint32_t m_times_finished_this_tick;
     TimerMode m_mode;
     bool m_finished;
-    uint32_t m_times_finished_this_tick;
 };
 
 #endif

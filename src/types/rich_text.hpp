@@ -26,7 +26,7 @@ private:
     using sections_t = std::array<RichTextSection, 1>;
 public:
     explicit inline RichText(std::string text, float size, glm::vec3 color) :
-        m_sections{RichTextSection(text, size, color)} {}
+        m_sections{RichTextSection(std::move(text), size, color)} {}
     
     [[nodiscard]] inline const sections_t& sections() const { return m_sections; }
     [[nodiscard]] constexpr inline size_t size() const { return 1; }
@@ -57,7 +57,7 @@ constexpr inline auto rich_text(N&&... args) -> RichText<sizeof...(args)> {
 }
 
 inline RichText<1> rich_text(std::string text, float size, glm::vec3 color) {
-    return RichText<1>(text, size, color);
+    return RichText<1>(std::move(text), size, color);
 }
 
 inline RichText<1> rich_text(const char* text, float size, glm::vec3 color) {

@@ -88,8 +88,8 @@ struct WorldData {
     }
 
     void lightmap_update_area_async(math::IRect area);
-    void lightmap_blur_area_sync(math::IRect area);
-    void lightmap_init_area(math::IRect area);
+    void lightmap_blur_area_sync(const math::IRect& area);
+    void lightmap_init_area(const math::IRect& area);
 
     inline void lightmap_tasks_wait() {
         for (LightMapTask& task : lightmap_tasks) {

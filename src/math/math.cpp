@@ -15,9 +15,9 @@ float move_towards(float current, float target, float max_delta) noexcept {
 }
 
 glm::vec2 random_point_cone(glm::vec2 direction, float angle, float radius) {
-    ASSERT(-1.0f <= direction.x <= 1.0f, "direction must be normalized");
-    ASSERT(-1.0f <= direction.y <= 1.0f, "direction must be normalized");
-    ASSERT(0.0f <= angle <= 180.0f, "angle must be from 0 to 180");
+    ASSERT(-1.0f <= direction.x && direction.x <= 1.0f, "direction must be normalized");
+    ASSERT(-1.0f <= direction.y && direction.y <= 1.0f, "direction must be normalized");
+    ASSERT(0.0f <= angle && angle <= 180.0f, "angle must be from 0 to 180");
 
     const float rad = glm::radians(angle);
     const float a = glm::atan(direction.y, direction.x);
@@ -31,9 +31,9 @@ glm::vec2 random_point_cone(glm::vec2 direction, float angle, float radius) {
 }
 
 glm::vec2 random_point_cone(glm::vec2 direction, float angle) {
-    ASSERT(-1.0f <= direction.x <= 1.0f, "direction must be normalized");
-    ASSERT(-1.0f <= direction.y <= 1.0f, "direction must be normalized");
-    ASSERT(0.0f <= angle <= 180.0f, "angle must be from 0 to 180");
+    ASSERT(-1.0f <= direction.x && direction.x <= 1.0f, "direction must be normalized");
+    ASSERT(-1.0f <= direction.y && direction.y <= 1.0f, "direction must be normalized");
+    ASSERT(0.0f <= angle && angle <= 180.0f, "angle must be from 0 to 180");
 
     const float rad = glm::radians(angle);
     const float a = glm::atan(direction.y, direction.x);
@@ -47,8 +47,8 @@ glm::vec2 random_point_cone(glm::vec2 direction, float angle) {
 }
 
 glm::vec2 random_point_circle(float xradius, float yradius) {
-    ASSERT(0.0f <= xradius <= 1.0f, "radius must be between 0 and 1");
-    ASSERT(0.0f <= yradius <= 1.0f, "radius must be between 0 and 1");
+    ASSERT(0.0f <= xradius && xradius <= 1.0f, "radius must be between 0 and 1");
+    ASSERT(0.0f <= yradius && yradius <= 1.0f, "radius must be between 0 and 1");
 
     const glm::vec2 radius = glm::vec2(xradius, yradius) * glm::sqrt(rand_range(0.0f, 1.0f));
     const float theta = rand_range(0.0f, 1.0f) * 2.0f * glm::pi<float>();

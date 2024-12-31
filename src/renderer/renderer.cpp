@@ -321,7 +321,7 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
 
     for (auto it = world.lightmap_tasks.cbegin(); it != world.lightmap_tasks.cend();) {
         const LightMapTask& task = *it;
-        LightMapTaskResult result = task.result->load();
+        const LightMapTaskResult result = task.result->load();
 
         if (result.is_complete) {
             state.world_renderer.update_lightmap_texture(world, result);
@@ -558,8 +558,8 @@ void Renderer::DrawText(const RichTextSection* sections, size_t size, const glm:
                 continue;
             }
 
-            const float xpos = x + ch.bearing.x * scale;
-            const float ypos = y - ch.bearing.y * scale;
+            const float xpos = x + ch.bearing.x * scale; // ⌄ Make the origin at the top left corner
+            const float ypos = y - ch.bearing.y * scale + section.size - font.ascender * scale;
             const glm::vec2 pos = glm::vec2(xpos, ypos);
             const glm::vec2 size = glm::vec2(ch.size) * scale;
 
@@ -624,7 +624,7 @@ Texture Renderer::CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_
     return Texture(id, sampler, glm::uvec2(width, height), state.context->CreateTexture(texture_desc, &image_view));
 }
 
-LLGL::Shader* Renderer::LoadShader(ShaderPath shader_path, const std::vector<ShaderDef>& shader_defs, const std::vector<LLGL::VertexAttribute>& vertex_attributes) {
+LLGL::Shader* Renderer::LoadShader(const ShaderPath& shader_path, const std::vector<ShaderDef>& shader_defs, const std::vector<LLGL::VertexAttribute>& vertex_attributes) {
     ZoneScopedN("Renderer::LoadShader");
 
     const RenderBackend backend = state.backend;

@@ -132,12 +132,12 @@ struct LightMapTask {
     LightMapTask(const LightMapTask&) = delete;
     LightMapTask& operator=(const LightMapTask&) = delete;
 
-    LightMapTask(LightMapTask&& other) {
+    LightMapTask(LightMapTask&& other) noexcept {
         result = std::move(other.result);
         t.swap(other.t);
     }
 
-    LightMapTask& operator=(LightMapTask&& other) {
+    LightMapTask& operator=(LightMapTask&& other) noexcept {
         result = std::move(other.result);
         t.swap(other.t);
         return *this;

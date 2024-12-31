@@ -8,9 +8,10 @@
 #include "glyph.hpp"
 
 struct Font {
-    float font_size;
-    Texture texture;
     std::unordered_map<uint32_t, Glyph> glyphs;
+    Texture texture;
+    float font_size;
+    int16_t ascender;
 };
 
 #endif

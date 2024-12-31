@@ -99,7 +99,7 @@ namespace Renderer {
     inline Texture CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, uint32_t width, uint32_t height, uint32_t layers, int sampler, const int8_t* data, bool generate_mip_maps = false) {
         return CreateTexture(type, image_format, LLGL::DataType::Int8, width, height, layers, sampler, data, generate_mip_maps);
     }
-    LLGL::Shader* LoadShader(ShaderPath shader_path, const std::vector<ShaderDef>& shader_defs = {}, const std::vector<LLGL::VertexAttribute>& vertex_attributes = {});
+    LLGL::Shader* LoadShader(const ShaderPath& shader_path, const std::vector<ShaderDef>& shader_defs = {}, const std::vector<LLGL::VertexAttribute>& vertex_attributes = {});
 
     void Terminate();
 

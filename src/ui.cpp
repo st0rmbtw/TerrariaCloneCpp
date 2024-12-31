@@ -1,7 +1,6 @@
 #include "ui.hpp"
 
 #include <set>
-#include <utility>
 
 #include <tracy/Tracy.hpp>
 
@@ -9,6 +8,7 @@
 #include "input.hpp"
 #include "assets.hpp"
 #include "time/time.hpp"
+#include "time/timer.hpp"
 #include "types/rich_text.hpp"
 #include "utils.hpp"
 
@@ -39,11 +39,11 @@ public:
         Pressed = 1 << 1
     };
 
-    Element(UiElement element_type, uint32_t depth, int data, math::Rect rect) :
+    Element(UiElement element_type, uint32_t depth, int data, const math::Rect& rect) :
         m_element_type(element_type),
         m_data(data),
         m_depth(depth),
-        m_rect(std::move(rect)) {}
+        m_rect(rect) {}
 
     inline void press() noexcept { m_state = m_state | Pressed; }
     inline void hover() noexcept { m_state = m_state | Hovered; }
@@ -71,18 +71,24 @@ struct ElementSort {
 };
 
 static struct UiState {
-    bool show_extra_ui = false;
+    Sprite cursor_foreground;
+    Sprite cursor_background;
 
-    float cursor_anim_progress;
-    AnimationDirection cursor_anim_dir;
+    std::string fps_text;
+
+    Timer fps_update_timer;
+
+    std::multiset<Element, ElementSort> elements;
 
     glm::vec3 cursor_foreground_color;
     glm::vec3 cursor_background_color;
 
-    Sprite cursor_foreground;
-    Sprite cursor_background;
-    
-    std::multiset<Element, ElementSort> elements;
+    float cursor_anim_progress;
+
+    bool show_extra_ui = false;
+    bool show_fps = false;
+
+    AnimationDirection cursor_anim_dir;
 } state;
 
 void render_inventory(const Inventory& inventory, const glm::vec2& window_size);
@@ -90,6 +96,9 @@ void update_cursor();
 
 void UI::Init() {
     ZoneScopedN("UI::Init");
+
+    state.fps_update_timer = Timer(duration::seconds_float(0.5f), TimerMode::Repeating);
+    state.fps_update_timer.set_finished();
 
     state.cursor_foreground_color = glm::vec3(1.0, 0.08, 0.58);
     state.cursor_background_color = glm::vec3(0.9, 0.9, 0.9);
@@ -105,6 +114,16 @@ void UI::Init() {
         .set_texture(Assets::GetTexture(TextureAsset::UiCursorForeground))
         .set_color(state.cursor_foreground_color)
         .set_anchor(Anchor::TopLeft);
+}
+
+void UI::FixedUpdate() {
+    if (state.show_fps) {
+        const float delta = Time::delta_seconds();
+        if (delta > 0.0f && state.fps_update_timer.tick(Time::fixed_delta()).just_finished()) {
+            const int fps = (int) (1.0f / delta);
+            state.fps_text = std::to_string(fps);
+        }
+    }
 }
 
 void UI::PreUpdate(Inventory& inventory) {
@@ -136,6 +155,10 @@ void UI::Update(Inventory& inventory) {
         state.show_extra_ui = !state.show_extra_ui;
     }
 
+    if (Input::JustPressed(Key::F10)) {
+        state.show_fps = !state.show_fps;
+    }
+
     if (Input::JustPressed(Key::Digit1)) inventory.set_selected_slot(0);
     if (Input::JustPressed(Key::Digit2)) inventory.set_selected_slot(1);
     if (Input::JustPressed(Key::Digit3)) inventory.set_selected_slot(2);
@@ -147,9 +170,9 @@ void UI::Update(Inventory& inventory) {
     if (Input::JustPressed(Key::Digit9)) inventory.set_selected_slot(8);
     if (Input::JustPressed(Key::Digit0)) inventory.set_selected_slot(9);
 
-    for (float scroll : Input::ScrollEvents()) {
-        int next_index = static_cast<int>(inventory.selected_slot()) - static_cast<int>(glm::sign(scroll));
-        int new_index = (next_index % CELLS_IN_ROW + CELLS_IN_ROW) % CELLS_IN_ROW;
+    for (const float scroll : Input::ScrollEvents()) {
+        const int next_index = static_cast<int>(inventory.selected_slot()) - static_cast<int>(glm::sign(scroll));
+        const int new_index = (next_index % CELLS_IN_ROW + CELLS_IN_ROW) % CELLS_IN_ROW;
         inventory.set_selected_slot(static_cast<uint8_t>(new_index));
     }
 }
@@ -163,7 +186,14 @@ void UI::PostUpdate() {
 void UI::Draw(const Camera& camera, const Inventory& inventory) {
     ZoneScopedN("UI::Draw");
 
-    render_inventory(inventory, camera.viewport());
+    const glm::vec2& window_size = camera.viewport();
+
+    render_inventory(inventory, window_size);
+
+    if (state.show_fps) {
+        const RichText text = rich_text(state.fps_text, 22.0f, glm::vec3(0.8f));
+        Renderer::DrawTextUI(text, glm::vec2(10.0f, window_size.y - 10.0f - 22.0f), FontAsset::AndyBold);
+    }
 
     const int depth = Renderer::GetMainDepthIndex();
 
@@ -265,7 +295,7 @@ void render_inventory(const Inventory& inventory, const glm::vec2&) {
     glm::vec2 item_size = glm::vec2(0.0f);
     glm::vec2 cell_size = glm::vec2(0.0f);
 
-    for (size_t i = 0; i < CELLS_IN_ROW; ++i) {
+    for (uint8_t i = 0; i < CELLS_IN_ROW; ++i) {
         TextureAsset texture;
         glm::vec2 padding = glm::vec2(0.0f);
         float text_size = 14.0f;
@@ -310,13 +340,13 @@ void render_inventory(const Inventory& inventory, const glm::vec2&) {
 
             const char index = '0' + (i + 1) % 10;
 
-            Renderer::DrawCharUI(index, offset + padding + glm::vec2(16.0f, text_size * 1.7f), index_size, glm::vec3(index_color), FontAsset::AndyBold, text_index);
+            Renderer::DrawCharUI(index, offset + padding + INVENTORY_PADDING + glm::vec2(5.0f, 5.0f), index_size, glm::vec3(index_color), FontAsset::AndyBold, text_index);
         }
 
         // Draw item stack
         if (item.is_some() && item->stack > 1) {
             const RichText text = rich_text(std::to_string(item->stack), text_size, glm::vec3(0.8f));
-            Renderer::DrawTextUI(text, offset + padding + glm::vec2(16.0f, cell_size.y * 0.5f + text_size * 1.6f), FontAsset::AndyBold, text_index);
+            Renderer::DrawTextUI(text, offset + padding + INVENTORY_PADDING + glm::vec2(5.0f, cell_size.y - text_size - 2.5f), FontAsset::AndyBold, text_index);
         }
 
         offset.x += cell_size.x + INVENTORY_CELL_MARGIN;
@@ -325,14 +355,14 @@ void render_inventory(const Inventory& inventory, const glm::vec2&) {
 
     if (state.show_extra_ui) {
         const RichText text = rich_text("Inventory", INVENTORY_TITLE_SIZE, glm::vec3(0.8f));
-        Renderer::DrawTextUI(text, glm::vec2(INVENTORY_PADDING + INVENTORY_SLOT_SIZE * 0.5f, 22.0f), FontAsset::AndyBold, inventory_index);
+        Renderer::DrawTextUI(text, glm::vec2(INVENTORY_PADDING + INVENTORY_SLOT_SIZE * 0.5f, INVENTORY_TITLE_SIZE * 0.5f), FontAsset::AndyBold, inventory_index);
     } else {
         auto item = inventory.get_item(inventory.selected_slot());
         const std::string& title = item.is_some() ? item->name : "Items";
         const RichText text = rich_text(title, INVENTORY_TITLE_SIZE, glm::vec3(0.8f));
 
         const glm::vec2 bounds = calculate_text_bounds(title, INVENTORY_TITLE_SIZE, FontAsset::AndyBold);
-        Renderer::DrawTextUI(text, glm::vec2((offset.x - bounds.x) * 0.5f, 22.0f), FontAsset::AndyBold, inventory_index);
+        Renderer::DrawTextUI(text, glm::vec2((offset.x - bounds.x) * 0.5f, INVENTORY_TITLE_SIZE * 0.5f), FontAsset::AndyBold, inventory_index);
     }
 
     // Draw pangramas in different languages to test text rendering

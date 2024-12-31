@@ -10,7 +10,7 @@ public:
 
     explicit Sampler(LLGL::Sampler* internal, LLGL::SamplerDescriptor descriptor) :
         m_internal(internal),
-        m_descriptor(std::move(descriptor)) {}
+        m_descriptor(descriptor) {}
 
     [[nodiscard]] inline const LLGL::SamplerDescriptor& descriptor() const { return m_descriptor; }
     [[nodiscard]] inline LLGL::Sampler* internal() const { return m_internal; }

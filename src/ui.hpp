@@ -8,6 +8,7 @@
 
 namespace UI {
     void Init();
+    void FixedUpdate();
     void PreUpdate(Inventory& inventory);
     void Update(Inventory& inventory);
     void PostUpdate();

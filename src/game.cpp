@@ -100,6 +100,8 @@ void fixed_update() {
 #endif
 
     g.player.fixed_update(g.world, handle_input);
+
+    UI::FixedUpdate();
 }
 
 void update() {
