@@ -124,17 +124,17 @@ void WorldRenderer::update_lightmap_texture(WorldData& world, LightMapTaskResult
     ZoneScopedN("WorldRenderer::update_lightmap_texture");
 
     for (int y = 0; y < result.height; ++y) {
-        LLGL::ImageView image_view;
-        image_view.format   = LLGL::ImageFormat::RGBA;
-        image_view.dataType = LLGL::DataType::UInt8;
-        image_view.data     = &result.data[y * result.width];
-        image_view.dataSize = result.width * 1 * 4;
-
         memcpy(&world.lightmap.colors[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.data[y * result.width], result.width * sizeof(Color));
         memcpy(&world.lightmap.masks[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.mask[y * result.width], result.width * sizeof(LightMask));
-
-        Renderer::Context()->WriteTexture(*m_lightmap_texture, LLGL::TextureRegion(LLGL::Offset3D(result.offset_x, result.offset_y + y, 0), LLGL::Extent3D(result.width, 1, 1)), image_view);
     }
+
+    LLGL::ImageView image_view;
+    image_view.format   = LLGL::ImageFormat::RGBA;
+    image_view.dataType = LLGL::DataType::UInt8;
+    image_view.data     = result.data;
+    image_view.dataSize = result.width * result.height * 4;
+
+    Renderer::Context()->WriteTexture(*m_lightmap_texture, LLGL::TextureRegion(LLGL::Offset3D(result.offset_x, result.offset_y, 0), LLGL::Extent3D(result.width, result.height, 1)), image_view);
 }
 
 void WorldRenderer::render(const ChunkManager& chunk_manager) {
