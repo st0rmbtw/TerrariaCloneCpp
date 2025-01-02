@@ -5,8 +5,8 @@
 
 #include "inventory.hpp"
 
+#include <optional>
 #include <glm/glm.hpp>
-#include "../optional.hpp"
 
 #include "../renderer/camera.h"
 #include "../types/sprite.hpp"
@@ -162,7 +162,7 @@ private:
     bool m_swing_anim = false;
     bool m_using_item_visible = false;
     bool m_prev_grounded = false;
-    tl::optional<BlockType> m_stand_on_block = tl::nullopt;
+    std::optional<BlockType> m_stand_on_block = std::nullopt;
 
     MovementState m_movement_state;
 

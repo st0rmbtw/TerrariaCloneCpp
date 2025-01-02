@@ -2,11 +2,12 @@
 
 #include <GLFW/glfw3.h>
 
+#include <glm/gtc/random.hpp>
+
 #include "LLGL/RenderingDebuggerFlags.h"
 #include "LLGL/Timer.h"
 #include "constants.hpp"
 #include "engine.hpp"
-#include "glm/gtc/random.hpp"
 #include "log.hpp"
 #include "renderer/camera.h"
 #include "renderer/renderer.hpp"
@@ -24,9 +25,9 @@
 #include <tracy/Tracy.hpp>
 
 static struct GameState {
-    Camera camera;
-    World world;
     Player player;
+    World world;
+    Camera camera;
     bool free_camera = false;
 } g;
 

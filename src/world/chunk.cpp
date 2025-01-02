@@ -2,7 +2,6 @@
 
 #include <tracy/Tracy.hpp>
 
-#include "../optional.hpp"
 #include "../types/block.hpp"
 #include "../types/texture_atlas_pos.hpp"
 #include "../renderer/renderer.hpp"
@@ -65,8 +64,8 @@ void RenderChunk::build_mesh(const WorldData& world) {
                     this->index.y * RENDER_CHUNK_SIZE_U + y
                 );
 
-                const tl::optional<const Block&> block = world.get_block(map_pos);
-                if (block.is_some()) {
+                const Block* block = world.get_block(map_pos);
+                if (block != nullptr) {
                     blocks_count += 1;
 
                     const glm::vec2 atlas_pos = glm::vec2(block->atlas_pos.x, block->atlas_pos.y);
@@ -88,8 +87,8 @@ void RenderChunk::build_mesh(const WorldData& world) {
                     this->index.y * RENDER_CHUNK_SIZE_U + y
                 );
 
-                const tl::optional<const Wall&> wall = world.get_wall(map_pos);
-                if (wall.is_some()) {
+                const Wall* wall = world.get_wall(map_pos);
+                if (wall != nullptr) {
                     walls_count += 1;
 
                     const glm::vec2 atlas_pos = glm::vec2(wall->atlas_pos.x, wall->atlas_pos.y);

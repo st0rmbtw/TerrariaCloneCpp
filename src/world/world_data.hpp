@@ -22,8 +22,8 @@ struct Layers {
 };
 
 struct WorldData {
-    tl::optional<Block>* blocks;
-    tl::optional<Wall>* walls;
+    std::optional<Block>* blocks;
+    std::optional<Wall>* walls;
     LightMap lightmap;
     math::IRect area;
     math::IRect playable_area;
@@ -42,48 +42,48 @@ struct WorldData {
     }
 
     [[nodiscard]]
-    tl::optional<const Block&> get_block(TilePos pos) const;
+    const Block* get_block(TilePos pos) const;
 
     [[nodiscard]]
-    tl::optional<const Wall&> get_wall(TilePos pos) const;
+    const Wall* get_wall(TilePos pos) const;
 
     [[nodiscard]]
-    tl::optional<Block&> get_block_mut(TilePos pos);
+    Block* get_block_mut(TilePos pos);
 
     [[nodiscard]]
-    tl::optional<Wall&> get_wall_mut(TilePos pos);
+    Wall* get_wall_mut(TilePos pos);
 
     [[nodiscard]]
     inline bool block_exists(TilePos pos) const {
         if (!is_tilepos_valid(pos)) return false;
-        return blocks[this->get_tile_index(pos)].is_some();
+        return blocks[this->get_tile_index(pos)].has_value();
     }
 
     [[nodiscard]]
     inline bool wall_exists(TilePos pos) const {
         if (!is_tilepos_valid(pos)) return false;
-        return walls[this->get_tile_index(pos)].is_some();
+        return walls[this->get_tile_index(pos)].has_value();
     }
 
     [[nodiscard]]
-    tl::optional<BlockType> get_block_type(TilePos pos) const;
+    std::optional<BlockType> get_block_type(TilePos pos) const;
 
     [[nodiscard]]
-    Neighbors<const Block&> get_block_neighbors(TilePos pos) const;
+    Neighbors<Block> get_block_neighbors(TilePos pos) const;
 
     [[nodiscard]]
-    Neighbors<Block&> get_block_neighbors_mut(TilePos pos);
+    Neighbors<Block*> get_block_neighbors_mut(TilePos pos);
 
     [[nodiscard]]
-    Neighbors<const Wall&> get_wall_neighbors(TilePos pos) const;
+    Neighbors<Wall> get_wall_neighbors(TilePos pos) const;
 
     [[nodiscard]]
-    Neighbors<Wall&> get_wall_neighbors_mut(TilePos pos);
+    Neighbors<Wall*> get_wall_neighbors_mut(TilePos pos);
     
     [[nodiscard]]
     bool block_exists_with_type(TilePos pos, BlockType block_type) const {
-        const tl::optional<BlockType> block = this->get_block_type(pos);
-        if (block.is_none()) return false;
+        const std::optional<BlockType> block = this->get_block_type(pos);
+        if (!block.has_value()) return false;
         return block.value() == block_type;
     }
 

@@ -3,11 +3,12 @@
 
 #pragma once
 
+#include <optional>
+
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 
 #include "../math/rect.hpp"
-#include "../optional.hpp"
 #include "anchor.hpp"
 #include "texture.hpp"
 #include "texture_atlas.hpp"
@@ -88,16 +89,16 @@ public:
     Sprite(glm::vec2 position, glm::vec2 scale) : BaseSprite(position, scale) {}
 
     inline Sprite& set_texture(Texture texture) { m_texture = texture; return *this; }
-    inline BaseSprite& set_custom_size(tl::optional<glm::vec2> custom_size) { m_custom_size = custom_size; return *this; }
+    inline BaseSprite& set_custom_size(std::optional<glm::vec2> custom_size) { m_custom_size = custom_size; return *this; }
 
-    [[nodiscard]] inline const tl::optional<Texture>& texture() const { return m_texture; }
-    [[nodiscard]] inline const tl::optional<glm::vec2>& custom_size() const { return m_custom_size; }
+    [[nodiscard]] inline const std::optional<Texture>& texture() const { return m_texture; }
+    [[nodiscard]] inline const std::optional<glm::vec2>& custom_size() const { return m_custom_size; }
 
     [[nodiscard]] glm::vec2 size() const override {
         auto size = glm::vec2(1.0f);
 
-        if (m_texture.is_some()) size = m_texture->size();
-        if (m_custom_size.is_some()) size = m_custom_size.value();
+        if (m_texture.has_value()) size = m_texture->size();
+        if (m_custom_size.has_value()) size = m_custom_size.value();
 
         return size * scale();
     }
@@ -105,8 +106,8 @@ public:
     SPRITE_SETTERS(Sprite, override)
 
 private:
-    tl::optional<glm::vec2> m_custom_size = tl::nullopt;
-    tl::optional<Texture> m_texture = tl::nullopt;
+    std::optional<glm::vec2> m_custom_size = std::nullopt;
+    std::optional<Texture> m_texture = std::nullopt;
 };
 
 class TextureAtlasSprite : public BaseSprite {

@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <string>
 
-#include "../optional.hpp"
+#include <optional>
 
 #include "block.hpp"
 
@@ -23,7 +23,7 @@ struct Item {
     bool is_axe;
     bool is_pickaxe;
     bool is_hammer;
-    tl::optional<BlockType> places_block;
+    std::optional<BlockType> places_block;
     std::string name;
 
     inline Item with_stack(ItemStack stack) {

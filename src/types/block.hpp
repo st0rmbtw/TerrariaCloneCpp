@@ -4,8 +4,8 @@
 #pragma once
 
 #include <stdint.h>
+#include <optional>
 
-#include "../optional.hpp"
 #include "texture_atlas_pos.hpp"
 #include "../assets.hpp"
 
@@ -30,9 +30,9 @@ inline constexpr static int16_t block_hp(BlockType block_type) {
     }
 }
 
-inline constexpr static tl::optional<BlockType> block_merge_with(BlockType block_type) {
+inline constexpr static std::optional<BlockType> block_merge_with(BlockType block_type) {
     switch (block_type) {
-    case BlockType::Dirt:  return tl::nullopt;
+    case BlockType::Dirt:  return std::nullopt;
     case BlockType::Grass: return BlockType::Dirt;
     case BlockType::Stone: return BlockType::Dirt;
     case BlockType::Wood:  return BlockType::Dirt;
@@ -40,12 +40,12 @@ inline constexpr static tl::optional<BlockType> block_merge_with(BlockType block
 }
 
 inline constexpr static bool block_merges_with(BlockType block, BlockType other) {
-    const tl::optional<BlockType> this_merge = block_merge_with(block);
-    const tl::optional<BlockType> other_merge = block_merge_with(other);
+    const std::optional<BlockType> this_merge = block_merge_with(block);
+    const std::optional<BlockType> other_merge = block_merge_with(other);
 
     if (other_merge == block) return true;
     if (this_merge == other) return true;
-    if (this_merge.is_some() && other_merge.is_some() && this_merge == other_merge) return true;
+    if (this_merge.has_value() && other_merge.has_value() && this_merge == other_merge) return true;
 
     return false;
 }

@@ -1,5 +1,4 @@
 #include "item.hpp"
-#include "../optional.hpp"
 
 Item ITEM_COPPER_AXE = {
     .id = 3506,
@@ -12,7 +11,7 @@ Item ITEM_COPPER_AXE = {
     .is_axe = true,
     .is_pickaxe = false,
     .is_hammer = false,
-    .places_block = tl::nullopt,
+    .places_block = std::nullopt,
     .name = "Copper Axe"
 };
 
@@ -27,7 +26,7 @@ Item ITEM_COPPER_PICKAXE = {
     .is_axe = false,
     .is_pickaxe = true,
     .is_hammer = false,
-    .places_block = tl::nullopt,
+    .places_block = std::nullopt,
     .name = "Copper Pickaxe"
 };
 
@@ -42,7 +41,7 @@ Item ITEM_COPPER_HAMMER = {
     .is_axe = false,
     .is_pickaxe = false,
     .is_hammer = true,
-    .places_block = tl::nullopt,
+    .places_block = std::nullopt,
     .name = "Copper Hammer"
 };
 

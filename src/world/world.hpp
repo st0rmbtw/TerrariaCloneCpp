@@ -11,7 +11,6 @@
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
 #include "../types/tile_pos.hpp"
-#include "../optional.hpp"
 
 #include "chunk_manager.hpp"
 
@@ -48,24 +47,24 @@ public:
     
     void draw() const;
 
-    [[nodiscard]] inline tl::optional<const Block&> get_block(TilePos pos) const { return m_data.get_block(pos); }
-    [[nodiscard]] inline tl::optional<Block&> get_block_mut(TilePos pos) { return m_data.get_block_mut(pos); }
+    [[nodiscard]] inline const Block* get_block(TilePos pos) const { return m_data.get_block(pos); }
+    [[nodiscard]] inline Block* get_block_mut(TilePos pos) { return m_data.get_block_mut(pos); }
 
-    [[nodiscard]] inline tl::optional<BlockType> get_block_type(TilePos pos) const { return m_data.get_block_type(pos); }
+    [[nodiscard]] inline std::optional<BlockType> get_block_type(TilePos pos) const { return m_data.get_block_type(pos); }
 
     [[nodiscard]] inline bool block_exists(TilePos pos) const { return m_data.block_exists(pos); }
     [[nodiscard]] inline bool block_exists_with_type(TilePos pos, BlockType block_type) const { return m_data.block_exists_with_type(pos, block_type); }
 
-    [[nodiscard]] inline Neighbors<const Block&> get_block_neighbors(TilePos pos) const { return m_data.get_block_neighbors(pos); }
-    [[nodiscard]] inline Neighbors<Block&> get_block_neighbors_mut(TilePos pos) { return m_data.get_block_neighbors_mut(pos); }
+    [[nodiscard]] inline Neighbors<Block> get_block_neighbors(TilePos pos) const { return m_data.get_block_neighbors(pos); }
+    [[nodiscard]] inline Neighbors<Block*> get_block_neighbors_mut(TilePos pos) { return m_data.get_block_neighbors_mut(pos); }
 
-    [[nodiscard]] inline tl::optional<const Wall&> get_wall(TilePos pos) const { return m_data.get_wall(pos); }
-    [[nodiscard]] inline tl::optional<Wall&> get_wall_mut(TilePos pos) { return m_data.get_wall_mut(pos); }
+    [[nodiscard]] inline const Wall* get_wall(TilePos pos) const { return m_data.get_wall(pos); }
+    [[nodiscard]] inline Wall* get_wall_mut(TilePos pos) { return m_data.get_wall_mut(pos); }
 
     [[nodiscard]] inline bool wall_exists(TilePos pos) const { return m_data.wall_exists(pos); }
 
-    [[nodiscard]] inline Neighbors<const Wall&> get_wall_neighbors(TilePos pos) const { return m_data.get_wall_neighbors(pos); }
-    [[nodiscard]] inline Neighbors<Wall&> get_wall_neighbors_mut(TilePos pos) { return m_data.get_wall_neighbors_mut(pos); }
+    [[nodiscard]] inline Neighbors<Wall> get_wall_neighbors(TilePos pos) const { return m_data.get_wall_neighbors(pos); }
+    [[nodiscard]] inline Neighbors<Wall*> get_wall_neighbors_mut(TilePos pos) { return m_data.get_wall_neighbors_mut(pos); }
 
     [[nodiscard]] inline const math::IRect& area() const { return m_data.area; }
     [[nodiscard]] inline const math::IRect& playable_area() const { return m_data.playable_area; }

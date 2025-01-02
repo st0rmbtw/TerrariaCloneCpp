@@ -7,7 +7,6 @@
 
 #include "../types/wall.hpp"
 #include "../log.hpp"
-#include "../optional.hpp"
 #include "../math/math.hpp"
 
 #include "autotile.hpp"
@@ -21,7 +20,7 @@ static inline void set_block(WorldData& world, TilePos pos, BlockType block) {
 
 static inline void remove_block(WorldData& world, TilePos pos) {
     const size_t index = world.get_tile_index(pos);
-    world.blocks[index] = tl::nullopt;
+    world.blocks[index] = std::nullopt;
 }
 
 static inline void set_wall(WorldData& world, TilePos pos, const Wall& wall) {
@@ -31,22 +30,22 @@ static inline void set_wall(WorldData& world, TilePos pos, const Wall& wall) {
 
 static inline void remove_wall(WorldData& world, TilePos pos) {
     const size_t index = world.get_tile_index(pos);
-    world.walls[index] = tl::nullopt;
+    world.walls[index] = std::nullopt;
 }
 
 static void update_tile_sprite_index(WorldData& world, const TilePos& pos) {
     if (!world.is_tilepos_valid(pos)) return;
 
-    tl::optional<Block>& block = world.blocks[world.get_tile_index(pos)];
-    tl::optional<Wall>& wall = world.walls[world.get_tile_index(pos)];
+    std::optional<Block>& block = world.blocks[world.get_tile_index(pos)];
+    std::optional<Wall>& wall = world.walls[world.get_tile_index(pos)];
 
-    if (block.is_some()) {
-        const Neighbors<const Block&> neighbors = world.get_block_neighbors(pos);
+    if (block.has_value()) {
+        const Neighbors<Block> neighbors = world.get_block_neighbors(pos);
         update_block_sprite_index(block.value(), neighbors);
     }
 
-    if (wall.is_some()) {
-        const Neighbors<const Wall&> neighbors = world.get_wall_neighbors(pos);
+    if (wall.has_value()) {
+        const Neighbors<Wall> neighbors = world.get_wall_neighbors(pos);
         update_wall_sprite_index(wall.value(), neighbors);
     }
 }
@@ -128,7 +127,7 @@ static bool remove_walls_is_valid(WorldData& world, TilePos pos) {
 
     if (!world.wall_exists(pos)) return false;
 
-    const Neighbors<const Block&> neighbors = world.get_block_neighbors(pos);
+    const Neighbors<Block> neighbors = world.get_block_neighbors(pos);
     if (neighbors.any_not_exists()) return true;
 
     if (world.block_exists(pos)) return false;
@@ -419,8 +418,8 @@ static void world_generate_rocks_in_dirt(WorldData& world, int seed) {
 
             if (noise_value >= 0.4) {
                 auto pos = TilePos(x, y);
-                const tl::optional<BlockType> block = world.get_block_type(pos);
-                if (block.is_none()) continue;
+                const std::optional<BlockType> block = world.get_block_type(pos);
+                if (!block.has_value()) continue;
 
                 if (block.value() == BlockType::Dirt || block.value() == BlockType::Grass) {
                     remove_block(world, pos);
@@ -495,7 +494,7 @@ static bool grassify_is_valid(const WorldData& world, const TilePos& pos) {
     if (pos.y >= world.area.height()) return false;
     if (!world.block_exists_with_type(pos, BlockType::Dirt)) return false;
 
-    const Neighbors<const Block&> neighbors = world.get_block_neighbors(pos);
+    const Neighbors<Block> neighbors = world.get_block_neighbors(pos);
 
     return neighbors.any_not_exists();
 }
@@ -603,8 +602,8 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
         .dirt_height = (underground_level - surface_level) / 4
     };
 
-    world.blocks = new tl::optional<Block>[area.width() * area.height()];
-    world.walls = new tl::optional<Wall>[area.width() * area.height()];
+    world.blocks = new std::optional<Block>[area.width() * area.height()];
+    world.walls = new std::optional<Wall>[area.width() * area.height()];
     world.lightmap = LightMap(area.width(), area.height());
     world.playable_area = playable_area;
     world.area = area;

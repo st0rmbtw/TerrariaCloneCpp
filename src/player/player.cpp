@@ -363,7 +363,7 @@ void Player::spawn_particles_on_walk() const {
     ZoneScopedN("Player::spawn_particles_on_walk");
 
     if (m_movement_state != MovementState::Walking) return;
-    if (m_stand_on_block.is_none()) return;
+    if (!m_stand_on_block.has_value()) return;
     if (glm::abs(m_velocity.x) < 1.0f) return;
 
     const BlockType block = m_stand_on_block.value();
@@ -386,7 +386,7 @@ void Player::spawn_particles_on_walk() const {
 void Player::spawn_particles_grounded() const {
     ZoneScopedN("Player::spawn_particles_grounded");
     
-    if (m_stand_on_block.is_none()) return;
+    if (!m_stand_on_block.has_value()) return;
     const BlockType block = m_stand_on_block.value();
 
     if (!block_dusty(block)) return;
@@ -535,8 +535,8 @@ void Player::draw() const {
 void Player::use_item(const Camera& camera, World& world) {
     ZoneScopedN("Player::use_item");
 
-    const tl::optional<const Item&> item = m_inventory.get_selected_item();
-    if (item.is_none()) return;
+    const Item* item = m_inventory.get_selected_item();
+    if (!item) return;
 
     if (m_swing_counter <= 0) {
         m_swing_counter = item->swing_speed;
@@ -555,16 +555,16 @@ void Player::use_item(const Camera& camera, World& world) {
     const TilePos tile_pos = TilePos::from_world_pos(world_pos);
 
     if (item->is_pickaxe && world.block_exists(tile_pos)) {
-        Block& block = world.get_block_mut(tile_pos).value();
+        Block* block = world.get_block_mut(tile_pos);
 
-        if (block.hp > 0) {
-            block.hp -= item->power;
+        if (block->hp > 0) {
+            block->hp -= item->power;
         }
 
         const glm::vec2 position = tile_pos.to_world_pos_center();
-        spawn_particles_on_dig(position, block.type);
+        spawn_particles_on_dig(position, block->type);
         
-        if (block.hp <= 0) {
+        if (block->hp <= 0) {
             world.remove_block(tile_pos);
             world.remove_tile_cracks(tile_pos);
             return;
@@ -572,16 +572,16 @@ void Player::use_item(const Camera& camera, World& world) {
 
         uint8_t new_variant = rand() % 3;
         BlockType new_block_type;
-        switch (block.type) {
+        switch (block->type) {
             case BlockType::Grass: new_block_type = BlockType::Dirt; break;
-            default: new_block_type = block.type;
+            default: new_block_type = block->type;
         }
 
         world.update_block(tile_pos, new_block_type, new_variant);
 
-        world.create_dig_block_animation(block, tile_pos);
-        world.create_tile_cracks(tile_pos, map_range(block_hp(block.type), 0, 0, 3, block.hp) * 6 + (rand() % 6));
-    } else if (item->places_block.is_some() && !world.block_exists(tile_pos)) {
+        world.create_dig_block_animation(*block, tile_pos);
+        world.create_tile_cracks(tile_pos, map_range(block_hp(block->type), 0, 0, 3, block->hp) * 6 + (rand() % 6));
+    } else if (item->places_block.has_value() && !world.block_exists(tile_pos)) {
         const math::Rect player_rect = math::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
         const math::Rect tile_rect = math::Rect::from_center_size(tile_pos.to_world_pos_center(), glm::vec2(TILE_SIZE));
 

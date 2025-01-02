@@ -8,7 +8,7 @@
 #include "../types/block.hpp"
 #include "world.hpp"
 
-const uint8_t MERGE_VALIDATION[22][16] = {
+inline static constexpr uint8_t MERGE_VALIDATION[22][16] = {
     {11, 13, 13, 13, 14, 10, 8, 8, 8, 1, 15, 15, 4, 13, 13, 13},
     {11, 15, 15, 15, 14, 10, 15, 15, 15, 1, 15, 15, 4, 7, 7, 7},
     {11, 7, 7, 7, 14, 10, 15, 15, 15, 1, 15, 15, 4, 11, 11, 11},
@@ -51,8 +51,8 @@ private:
 };
 
 void init_tile_rules();
-void update_block_sprite_index(Block& block, const Neighbors<const Block&>& neighbors);
-void update_wall_sprite_index(Wall& block, const Neighbors<const Wall&>& neighbors);
+void update_block_sprite_index(Block& block, const Neighbors<Block>& neighbors);
+void update_wall_sprite_index(Wall& block, const Neighbors<Wall>& neighbors);
 void reset_tiles(const TilePos& initial_pos, World& world);
 
 #endif

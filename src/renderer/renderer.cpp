@@ -814,7 +814,7 @@ void RenderBatchSprite::init() {
     }
 }
 
-void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, bool is_ui, Depth depth) {
+void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const std::optional<Texture>& sprite_texture, bool is_ui, Depth depth) {
     ZoneScopedN("RenderBatchSprite::draw_sprite");
 
     if (m_sprites.size() >= MAX_QUADS) {
@@ -842,14 +842,14 @@ void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& u
         .color = sprite.color(),
         .outline_color = sprite.outline_color(),
         .outline_thickness = sprite.outline_thickness(),
-        .texture = sprite_texture.is_some() ? sprite_texture.get() : Assets::GetTexture(TextureAsset::Stub),
+        .texture = sprite_texture.has_value() ? sprite_texture.value() : Assets::GetTexture(TextureAsset::Stub),
         .order = static_cast<uint32_t>(order),
         .is_ui = is_ui,
         .ignore_camera_zoom = sprite.ignore_camera_zoom()
     });
 }
 
-void RenderBatchSprite::draw_world_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const tl::optional<Texture>& sprite_texture, Depth depth) {
+void RenderBatchSprite::draw_world_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const std::optional<Texture>& sprite_texture, Depth depth) {
     ZoneScopedN("RenderBatchSprite::draw_world_sprite");
 
     if (m_world_sprites.size() >= MAX_QUADS) {
@@ -877,7 +877,7 @@ void RenderBatchSprite::draw_world_sprite(const BaseSprite& sprite, const glm::v
         .color = sprite.color(),
         .outline_color = sprite.outline_color(),
         .outline_thickness = sprite.outline_thickness(),
-        .texture = sprite_texture.is_some() ? sprite_texture.get() : Assets::GetTexture(TextureAsset::Stub),
+        .texture = sprite_texture.has_value() ? sprite_texture.value() : Assets::GetTexture(TextureAsset::Stub),
         .order = static_cast<uint32_t>(order),
         .is_ui = false,
         .ignore_camera_zoom = sprite.ignore_camera_zoom()

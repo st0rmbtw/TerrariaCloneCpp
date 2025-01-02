@@ -9,7 +9,6 @@
 #include "../types/block.hpp"
 #include "../world/world_gen.h"
 #include "../world/autotile.hpp"
-#include "../optional.hpp"
 #include "../time/time.hpp"
 #include "../renderer/renderer.hpp"
 
@@ -61,11 +60,11 @@ void World::remove_block(TilePos pos) {
 
     const size_t index = m_data.get_tile_index(pos);
     
-    if (m_data.blocks[index].is_some()) {
+    if (m_data.blocks[index].has_value()) {
         m_chunk_manager.set_blocks_changed(pos);
     }
 
-    m_data.blocks[index] = tl::nullopt;
+    m_data.blocks[index] = std::nullopt;
     m_changed = true;
 
     const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
@@ -184,21 +183,21 @@ void World::update_neighbors(TilePos initial_pos) {
 }
 
 void World::update_tile_sprite_index(TilePos pos) {
-    tl::optional<Block&> block = this->get_block_mut(pos);
-    tl::optional<Wall&> wall = this->get_wall_mut(pos);
+    Block* block = this->get_block_mut(pos);
+    Wall* wall = this->get_wall_mut(pos);
 
-    if (block.is_some()) {
-        const Neighbors<const Block&> neighbors = this->get_block_neighbors(pos);
+    if (block) {
+        const Neighbors<Block> neighbors = this->get_block_neighbors(pos);
 
-        update_block_sprite_index(block.get(), neighbors);
+        update_block_sprite_index(*block, neighbors);
     
         m_chunk_manager.set_blocks_changed(pos);
     }
 
-    if (wall.is_some()) {
-        const Neighbors<const Wall&> neighbors = this->get_wall_neighbors(pos);
+    if (wall) {
+        const Neighbors<Wall> neighbors = this->get_wall_neighbors(pos);
 
-        update_wall_sprite_index(wall.get(), neighbors);
+        update_wall_sprite_index(*wall, neighbors);
         
         m_chunk_manager.set_walls_changed(pos);
     }
