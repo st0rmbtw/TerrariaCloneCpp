@@ -321,7 +321,7 @@ bool Assets::InitSamplers() {
         sampler_desc.minFilter = LLGL::SamplerFilter::Linear;
         sampler_desc.mipMapFilter = LLGL::SamplerFilter::Linear;
         sampler_desc.minLOD = 0.0f;
-        sampler_desc.maxLOD = 1.0f;
+        sampler_desc.maxLOD = 0.0f;
         sampler_desc.mipMapEnabled = false;
         sampler_desc.maxAnisotropy = 1;
 
@@ -351,7 +351,7 @@ bool Assets::InitSamplers() {
         sampler_desc.minFilter = LLGL::SamplerFilter::Nearest;
         sampler_desc.mipMapFilter = LLGL::SamplerFilter::Linear;
         sampler_desc.minLOD = 0.0f;
-        sampler_desc.maxLOD = 1.0f;
+        sampler_desc.maxLOD = 0.0f;
         sampler_desc.mipMapEnabled = false;
         sampler_desc.maxAnisotropy = 1;
 

@@ -179,7 +179,7 @@ void render() {
 
         ParticleManager::Draw();
 
-        UI::Draw(g.camera, g.player.inventory());
+        UI::Draw(g.camera, g.player);
 
         Renderer::Render(g.camera, g.world.chunk_manager());
     // Renderer::Debugger()->SetTimeRecording(false);

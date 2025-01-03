@@ -535,7 +535,9 @@ void Player::draw() const {
 void Player::use_item(const Camera& camera, World& world) {
     ZoneScopedN("Player::use_item");
 
-    const Item* item = m_inventory.get_selected_item();
+    const ItemSlot& taken_item = m_inventory.taken_item();
+    const ItemSlot& item_slot = taken_item.has_item() ? taken_item : m_inventory.get_selected_item();
+    const std::optional<Item>& item = item_slot.item;
     if (!item) return;
 
     if (m_swing_counter <= 0) {
@@ -554,6 +556,8 @@ void Player::use_item(const Camera& camera, World& world) {
 
     const TilePos tile_pos = TilePos::from_world_pos(world_pos);
 
+    bool used = false;
+
     if (item->is_pickaxe && world.block_exists(tile_pos)) {
         Block* block = world.get_block_mut(tile_pos);
 
@@ -567,26 +571,30 @@ void Player::use_item(const Camera& camera, World& world) {
         if (block->hp <= 0) {
             world.remove_block(tile_pos);
             world.remove_tile_cracks(tile_pos);
-            return;
+        } else {
+            uint8_t new_variant = rand() % 3;
+            BlockType new_block_type;
+            switch (block->type) {
+                case BlockType::Grass: new_block_type = BlockType::Dirt; break;
+                default: new_block_type = block->type;
+            }
+
+            world.update_block(tile_pos, new_block_type, new_variant);
+
+            world.create_dig_block_animation(*block, tile_pos);
+            world.create_tile_cracks(tile_pos, map_range(block_hp(block->type), 0, 0, 3, block->hp) * 6 + (rand() % 6));
         }
 
-        uint8_t new_variant = rand() % 3;
-        BlockType new_block_type;
-        switch (block->type) {
-            case BlockType::Grass: new_block_type = BlockType::Dirt; break;
-            default: new_block_type = block->type;
-        }
-
-        world.update_block(tile_pos, new_block_type, new_variant);
-
-        world.create_dig_block_animation(*block, tile_pos);
-        world.create_tile_cracks(tile_pos, map_range(block_hp(block->type), 0, 0, 3, block->hp) * 6 + (rand() % 6));
+        used = true;
     } else if (item->places_block.has_value() && !world.block_exists(tile_pos)) {
         const math::Rect player_rect = math::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
         const math::Rect tile_rect = math::Rect::from_center_size(tile_pos.to_world_pos_center(), glm::vec2(TILE_SIZE));
 
-        if (player_rect.intersects(tile_rect)) return;
-
-        world.set_block(tile_pos, item->places_block.value());
+        if (!player_rect.intersects(tile_rect)) {
+            world.set_block(tile_pos, item->places_block.value());
+            used = true;
+        }
     }
+
+    if (used) m_inventory.consume_item(item_slot.index);
 }

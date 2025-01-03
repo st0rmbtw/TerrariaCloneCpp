@@ -124,6 +124,8 @@ public:
 
     [[nodiscard]] const Inventory& inventory() const { return m_inventory; }
     [[nodiscard]] Inventory& inventory() { return m_inventory; }
+
+    [[nodiscard]] constexpr bool can_use_item() const { return true; }
     
 private:
     void horizontal_movement(bool handle_input);
@@ -139,7 +141,7 @@ private:
     void spawn_particles_on_walk() const;
     void spawn_particles_grounded() const;
 
-    inline float get_fall_distance() const;
+    [[nodiscard]] float get_fall_distance() const;
 
     void use_item(const Camera& camera, World& world);
 
