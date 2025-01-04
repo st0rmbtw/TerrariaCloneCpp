@@ -193,17 +193,17 @@ void UI::PostUpdate() {
     state.elements.clear();
 }
 
-inline void draw_item(const glm::vec2& item_size, const glm::vec2& position, const Item& item, Depth item_depth) {
-    Sprite cell_sprite;
-    cell_sprite.set_position(position);
-    cell_sprite.set_anchor(Anchor::Center);
-    cell_sprite.set_custom_size(item_size);
-    cell_sprite.set_texture(Assets::GetItemTexture(item.id));
-    Renderer::DrawSpriteUI(cell_sprite, item_depth);
+inline void draw_item(Sprite& item_sprite, const glm::vec2& item_size, const glm::vec2& position, const Item& item, Depth item_depth) {
+    item_sprite.set_position(position);
+    item_sprite.set_anchor(Anchor::Center);
+    item_sprite.set_custom_size(item_size);
+    item_sprite.set_texture(Assets::GetItemTexture(item.id));
+    item_sprite.set_color(glm::vec3(1.0f));
+    Renderer::DrawSpriteUI(item_sprite, item_depth);
 }
 
-inline void draw_item_with_stack(const glm::vec2& item_size, float stack_size, const glm::vec2& position, const Item& item, Depth item_depth, Depth stack_depth) {
-    draw_item(item_size, position, item, item_depth);
+inline void draw_item_with_stack(Sprite& item_sprite, const glm::vec2& item_size, float stack_size, const glm::vec2& position, const Item& item, Depth item_depth, Depth stack_depth) {
+    draw_item(item_sprite, item_size, position, item, item_depth);
 
     if (item.stack > 1) {
         const RichText text = rich_text(std::to_string(item.stack), stack_size, glm::vec3(0.9f));
@@ -240,12 +240,16 @@ void UI::Draw(const Camera& camera, const Player& player) {
         const glm::vec2 size = glm::vec2(texture.size()) * state.cursor_scale;
         const uint32_t item_depth = ++depth;
         const uint32_t stack_depth = ++depth;
-        draw_item_with_stack(size, 16.0f * state.cursor_scale, position, taken_item.item.value(), item_depth, stack_depth);
+
+        Sprite item_sprite;
+        draw_item_with_stack(item_sprite, size, 16.0f * state.cursor_scale, position, taken_item.item.value(), item_depth, stack_depth);
     } else if (player.can_use_item() && selected_item.has_item()) {
         const Texture& texture = Assets::GetItemTexture(selected_item.item->id);
         const glm::vec2 size = glm::vec2(texture.size()) * state.cursor_scale;
         const uint32_t item_depth = ++depth;
-        draw_item(size, position, *selected_item.item, item_depth);
+
+        Sprite item_sprite;
+        draw_item(item_sprite, size, position, *selected_item.item, item_depth);
     }
 }
 
@@ -279,11 +283,10 @@ void update_cursor() {
     state.cursor_foreground.set_color(state.cursor_foreground_color * (0.7f + 0.3f * state.cursor_anim_progress));
 }
 
-inline void draw_inventory_cell(UiElement element_type, uint8_t index, const glm::vec2& size, const glm::vec2& position, TextureAsset texture, Depth depth) {    
+inline void draw_inventory_cell(Sprite& cell_sprite, UiElement element_type, uint8_t index, const glm::vec2& size, const glm::vec2& position, TextureAsset texture, Depth depth) {    
     const uint32_t d = depth.value < 0 ? Renderer::GetMainDepthIndex() : depth.value;
     state.elements.emplace(element_type, d, index, math::Rect::from_top_left(position, size));
     
-    Sprite cell_sprite;
     cell_sprite.set_position(position);
     cell_sprite.set_anchor(Anchor::TopLeft);
     cell_sprite.set_custom_size(size);
@@ -308,6 +311,7 @@ void draw_inventory(const Inventory& inventory, const glm::vec2&) {
     const ItemSlot& taken_item = inventory.taken_item();
     bool item_is_taken = taken_item.has_item();
 
+    Sprite sprite;
     for (uint8_t i = 0; i < CELLS_IN_ROW; ++i) {
         TextureAsset texture;
         glm::vec2 padding = glm::vec2(0.0f);
@@ -337,11 +341,11 @@ void draw_inventory(const Inventory& inventory, const glm::vec2&) {
             padding.y = (HOTBAR_SLOT_SIZE_SELECTED - cell_size.y) * 0.5f;
         }
 
-        draw_inventory_cell(UiElement::HotbarCell, i, cell_size, offset + padding, texture, inventory_index);
+        draw_inventory_cell(sprite, UiElement::HotbarCell, i, cell_size, offset + padding, texture, inventory_index);
 
         if (item_slot.has_item()) {
             const glm::vec2 position = offset + padding + cell_size * 0.5f;
-            draw_item_with_stack(item_size, text_size, position, item_slot.item.value(), item_index, text_index);
+            draw_item_with_stack(sprite, item_size, text_size, position, item_slot.item.value(), item_index, text_index);
         }
 
         // Draw cell index
@@ -394,11 +398,11 @@ void draw_inventory(const Inventory& inventory, const glm::vec2&) {
                     item_size *= 0.95f;
                 }
 
-                draw_inventory_cell(UiElement::InventoryCell, index, cell_size, offset, TextureAsset::UiInventoryBackground, inventory_index);
+                draw_inventory_cell(sprite, UiElement::InventoryCell, index, cell_size, offset, TextureAsset::UiInventoryBackground, inventory_index);
 
                 if (item_slot.has_item()) {
                     const glm::vec2 position = offset + cell_size * 0.5f;
-                    draw_item_with_stack(item_size, 14.0f * 1.15f, position, item_slot.item.value(), item_index, text_index);
+                    draw_item_with_stack(sprite, item_size, 14.0f * 1.15f, position, item_slot.item.value(), item_index, text_index);
                 }
 
                 offset.x += cell_size.x + INVENTORY_CELL_MARGIN;
