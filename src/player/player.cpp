@@ -199,10 +199,10 @@ glm::vec2 Player::check_collisions(const World& world) {
     top = glm::clamp(top, static_cast<int>(world.playable_area().min.y), static_cast<int>(world.playable_area().max.y));
     bottom = glm::clamp(bottom, static_cast<int>(world.playable_area().min.y), static_cast<int>(world.playable_area().max.y));
 
-    int num5 = -1;
-    int num6 = -1;
-    int num7 = -1;
-    int num8 = -1;
+    int hx = -1;
+    int hy = -1;
+    int vx = -1;
+    int vy = -1;
 
     m_collisions = Collisions();
 
@@ -222,29 +222,29 @@ glm::vec2 Player::check_collisions(const World& world) {
                             m_jumping = false;
                             m_stand_on_block = world.get_block_type(TilePos(x, y));
                         }
-                        num7 = x;
-                        num8 = y;
-                        if (num7 != num5) {
+                        vx = x;
+                        vy = y;
+                        if (vx != hx) {
                             result.y = tile_pos.y - (pos.y + PLAYER_HEIGHT_HALF);
                         }
                     } else if (pos.x + PLAYER_WIDTH_HALF <= tile_pos.x) {
-                        m_collisions.right = true;
-                        num5 = x;
-                        num6 = y;
-                        if (num6 != num8) {
+                        hx = x;
+                        hy = y;
+                        if (hy != vy) {
                             result.x = tile_pos.x - (pos.x + PLAYER_WIDTH_HALF);
+                            m_collisions.right = true;
                         }
-                        if (num7 == num5) {
+                        if (vx == hx) {
                             result.y = m_velocity.y;
                         }
                     } else if (pos.x - PLAYER_WIDTH_HALF >= tile_pos.x + TILE_SIZE) {
                         m_collisions.left = true;
-                        num5 = x;
-                        num6 = y;
-                        if (num6 != num8) {
+                        hx = x;
+                        hy = y;
+                        if (hy != vy) {
                             result.x = tile_pos.x + TILE_SIZE - (pos.x - PLAYER_WIDTH_HALF);
                         }
-                        if (num7 == num5) {
+                        if (vx == hx) {
                             result.y = m_velocity.y;
                         }
                     } else if (pos.y - PLAYER_HEIGHT_HALF >= tile_pos.y + TILE_SIZE) {
@@ -252,16 +252,31 @@ glm::vec2 Player::check_collisions(const World& world) {
                             m_collisions.up = true;
                         }
 
-                        num7 = x;
-                        num8 = y;
+                        vx = x;
+                        vy = y;
                         result.y = tile_pos.y + TILE_SIZE - (pos.y - PLAYER_HEIGHT_HALF);
-                        if (num8 == num6) {
+                        if (vy == hy) {
                             result.x = m_velocity.x;
                         }
                     }
                 }
             }
         }
+    }
+
+    if (
+        (m_collisions.left || m_collisions.right) && (
+            !world.block_exists(TilePos(hx, hy - 1)) &&
+            !world.block_exists(TilePos(hx, hy - 2)) &&
+            !world.block_exists(TilePos(hx, hy - 3))
+        )
+    ) {
+        result.x = m_velocity.x;
+        result.y = 0.0f;
+        const float new_y = hy * 16.0f - PLAYER_HEIGHT_HALF;
+        m_draw_offset_y = m_position.y - new_y;
+        m_step_speed = 2.5f;
+        m_position.y = new_y;
     }
 
     return result;
@@ -299,7 +314,7 @@ void Player::update_using_item_anim() {
     glm::vec2 offset = ITEM_ANIMATION_POINTS[m_swing_anim_index];
     offset.x *= direction;
 
-    const glm::vec2 item_position = m_position + offset;
+    const glm::vec2 item_position = draw_position() + offset;
 
     // 0..1
     float rotation = static_cast<float>(m_swing_counter) / static_cast<float>(m_swing_counter_max);
@@ -392,7 +407,7 @@ void Player::spawn_particles_on_walk() const {
 
     const float direction = m_direction == Direction::Right ? -1.0f : 1.0f;
 
-    const glm::vec2 position = m_position + glm::vec2(0., PLAYER_HEIGHT_HALF);
+    const glm::vec2 position = draw_position() + glm::vec2(0., PLAYER_HEIGHT_HALF);
     const glm::vec2 velocity = random_point_cone(glm::vec2(direction, 0.0f), 45.0f);
     const float scale = rand_range(0.0f, 1.0f);
     const float rotation_speed = glm::pi<float>() / 12.0f;
@@ -416,7 +431,7 @@ void Player::spawn_particles_grounded() const {
 
     const float fall_distance = get_fall_distance();
     const float rotation_speed = glm::pi<float>() / 12.0f;
-    const glm::vec2 position = m_position + glm::vec2(0., PLAYER_HEIGHT_HALF);
+    const glm::vec2 position = draw_position() + glm::vec2(0., PLAYER_HEIGHT_HALF);
 
     if (!m_prev_grounded && m_collisions.down && fall_distance > TILE_SIZE * 1.5) {
         for (int i = 0; i < 10; i++) {
@@ -439,6 +454,11 @@ void Player::fixed_update(const World& world, bool handle_input) {
     horizontal_movement(handle_input);
     vertical_movement(handle_input);
     gravity();
+
+    if (m_draw_offset_y > 0.0f) {
+        float a = 1.0f + abs(m_velocity.x) / MAX_WALK_SPEED;
+        m_draw_offset_y = glm::max(m_draw_offset_y - a * m_step_speed, 0.0f);
+    }
 
     m_velocity = check_collisions(world);
     m_position += m_velocity;
@@ -498,33 +518,35 @@ void Player::update_sprites() {
 
     const bool flip_x = m_direction == Direction::Left;
 
+    const glm::vec2 position = draw_position();
+
     m_hair.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_head.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_body.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_legs.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_left_hand.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_left_shoulder.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_right_arm.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_left_eye.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
     m_right_eye.sprite
         .set_flip_x(flip_x)
-        .set_position(m_position);
+        .set_position(position);
 }
 
 void Player::draw() const {

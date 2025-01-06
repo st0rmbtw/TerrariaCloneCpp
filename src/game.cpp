@@ -34,7 +34,7 @@ static struct GameState {
 static glm::vec2 camera_follow_player() {
     static constexpr float OFFSET = 2.0f;
 
-    glm::vec2 position = g.player.position();
+    glm::vec2 position = g.player.draw_position();
 
     const math::Rect area = g.world.playable_area() * Constants::TILE_SIZE;
     const math::Rect& camera_area = g.camera.get_projection_area();

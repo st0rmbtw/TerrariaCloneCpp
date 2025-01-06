@@ -98,6 +98,11 @@ public:
 
     void set_position(const World& world, const glm::vec2& position);
 
+    [[nodiscard]]
+    inline glm::vec2 draw_position() const noexcept {
+        return glm::vec2(m_position.x, m_position.y + m_draw_offset_y);
+    }
+
     [[nodiscard]] const glm::vec2& position() const { return m_position; }
     [[nodiscard]] Direction direction() const { return m_direction; }
 
@@ -134,6 +139,8 @@ private:
     Collisions m_collisions;
     int m_jump = 0;
     float m_fall_start = -1;
+    float m_step_speed = 1.0f;
+    float m_draw_offset_y = 0.0f;
     bool m_jumping = false;
     bool do_jump = false;
     int m_use_cooldown = 0;
