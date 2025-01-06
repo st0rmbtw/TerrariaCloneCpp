@@ -57,9 +57,9 @@ struct ChunkInstance {
     uint16_t tile_data;
 
     ChunkInstance(glm::vec2 position, glm::vec2 atlas_pos, glm::vec2 world_pos, uint16_t tile_data) :
-        position(std::move(position)),
-        atlas_pos(std::move(atlas_pos)),
-        world_pos(std::move(world_pos)),
+        position(position),
+        atlas_pos(atlas_pos),
+        world_pos(world_pos),
         tile_data(tile_data) {}
 };
 

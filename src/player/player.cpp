@@ -21,6 +21,27 @@
 
 using Constants::TILE_SIZE;
 
+static constexpr float PLAYER_WIDTH = 20.0f;
+static constexpr float PLAYER_HEIGHT = 42.0f;
+static constexpr float PLAYER_WIDTH_HALF = PLAYER_WIDTH / 2.0f;
+static constexpr float PLAYER_HEIGHT_HALF = PLAYER_HEIGHT / 2.0f;
+
+static constexpr float GRAVITY = 0.4f;
+static constexpr float ACCELERATION = 0.1f;
+static constexpr float SLOWDOWN = 0.2f;
+
+static constexpr uint32_t JUMP_HEIGHT = 15;
+static constexpr float JUMP_SPEED = 5.01;
+
+static constexpr float MAX_WALK_SPEED = 3.0;
+static constexpr float MAX_FALL_SPEED = 10.0;
+
+static const glm::vec2 ITEM_ANIMATION_POINTS[] = {
+    glm::vec2(-7.5f, -11.0f), glm::vec2(6.0f, -7.5f), glm::vec2(7.0f, 4.0f)
+};
+
+static constexpr float ITEM_ROTATION = 1.7;
+
 void spawn_particles_on_dig(const glm::vec2& position, BlockType type) {
     const float rotation_speed = glm::pi<float>() / 12.0f;
     const Particle::Type particle = Particle::get_by_block(type);
@@ -535,8 +556,8 @@ void Player::draw() const {
 void Player::use_item(const Camera& camera, World& world) {
     ZoneScopedN("Player::use_item");
 
-    const ItemSlot& taken_item = m_inventory.taken_item();
-    const ItemSlot& item_slot = taken_item.has_item() ? taken_item : m_inventory.get_selected_item();
+    const ItemSlot taken_item = m_inventory.taken_item();
+    const ItemSlot item_slot = taken_item.has_item() ? taken_item : m_inventory.get_selected_item();
     const std::optional<Item>& item = item_slot.item;
     if (!item) return;
 

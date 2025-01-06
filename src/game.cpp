@@ -31,7 +31,7 @@ static struct GameState {
     bool free_camera = false;
 } g;
 
-glm::vec2 camera_follow_player() {
+static glm::vec2 camera_follow_player() {
     static constexpr float OFFSET = 2.0f;
 
     glm::vec2 position = g.player.position();
@@ -55,7 +55,7 @@ glm::vec2 camera_follow_player() {
 }
 
 #if DEBUG
-glm::vec2 camera_free() {
+static glm::vec2 camera_free() {
     const float dt = Time::delta_seconds();
     glm::vec2 position = g.camera.position();
 

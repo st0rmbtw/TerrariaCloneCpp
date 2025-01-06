@@ -1035,7 +1035,7 @@ void RenderBatchSprite::flush() {
     // }
 
     const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    if (size <= (1 << 16)) {
+    if (size < (1 << 16)) {
         commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, size);
     } else {
         state.context->WriteBuffer(*m_instance_buffer, 0, m_buffer, size);
@@ -1082,7 +1082,7 @@ void RenderBatchSprite::flush_world() {
     // }
 
     const ptrdiff_t size = (uint8_t*) m_world_buffer_ptr - (uint8_t*) m_world_buffer;
-    if (size <= (1 << 16)) {
+    if (size < (1 << 16)) {
         commands->UpdateBuffer(*m_world_instance_buffer, 0, m_world_buffer, size);
     } else {
         state.context->WriteBuffer(*m_world_instance_buffer, 0, m_world_buffer, size);
@@ -1299,7 +1299,7 @@ void RenderBatchGlyph::flush() {
     // }
 
     const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    if (size <= (1 << 16)) {
+    if (size < (1 << 16)) {
         commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, size);
     } else {
         state.context->WriteBuffer(*m_instance_buffer, 0, m_buffer, size);

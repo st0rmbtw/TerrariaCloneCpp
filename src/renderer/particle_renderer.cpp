@@ -13,7 +13,7 @@
 
 using Constants::PARTICLE_SIZE;
 
-inline constexpr size_t get_particle_index(Particle::Type type, uint8_t variant) {
+static inline constexpr size_t get_particle_index(Particle::Type type, uint8_t variant) {
     ASSERT(variant <= 2, "Variant must be in range from 0 to 3");
 
     const size_t index = static_cast<uint8_t>(type);
@@ -256,21 +256,21 @@ void ParticleRenderer::compute() {
     auto* const commands = Renderer::CommandBuffer();
 
     ptrdiff_t size = (uint8_t*) m_position_buffer_data_ptr - (uint8_t*) m_position_buffer_data;
-    if (size <= (1 << 16)) {
+    if (size < (1 << 16)) {
         commands->UpdateBuffer(*m_position_buffer, 0, m_position_buffer_data, size);
     } else {
         context->WriteBuffer(*m_position_buffer, 0, m_position_buffer_data, size);
     }
 
     size = (uint8_t*) m_rotation_buffer_data_ptr - (uint8_t*) m_rotation_buffer_data;
-    if (size <= (1 << 16)) {
+    if (size < (1 << 16)) {
         commands->UpdateBuffer(*m_rotation_buffer, 0, m_rotation_buffer_data, size);
     } else {
         context->WriteBuffer(*m_rotation_buffer, 0, m_rotation_buffer_data, size);
     }
 
     size = (uint8_t*) m_scale_buffer_data_ptr - (uint8_t*) m_scale_buffer_data;
-    if (size <= (1 << 16)) {
+    if (size < (1 << 16)) {
         commands->UpdateBuffer(*m_scale_buffer, 0, m_scale_buffer_data, size);
     } else {
         context->WriteBuffer(*m_scale_buffer, 0, m_scale_buffer_data, size);
@@ -302,7 +302,7 @@ void ParticleRenderer::render() {
     auto* const commands = Renderer::CommandBuffer();
 
     const ptrdiff_t size = (uint8_t*) m_instance_buffer_data_ptr - (uint8_t*) m_instance_buffer_data;
-    if (size <= (1 << 16)) {
+    if (size < (1 << 16)) {
         commands->UpdateBuffer(*m_instance_buffer, 0, m_instance_buffer_data, size);
     } else {
         context->WriteBuffer(*m_instance_buffer, 0, m_instance_buffer_data, size);

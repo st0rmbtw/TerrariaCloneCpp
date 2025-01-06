@@ -111,7 +111,7 @@ void Background::Draw() {
     }
 }
 
-void setup_sky_background() {
+static void setup_sky_background() {
     state.layers.push_back(
         BackgroundLayer(BackgroundAsset::Background0, 1.0f)
             .set_anchor(Anchor::Center)
@@ -124,7 +124,7 @@ void setup_sky_background() {
     );
 }
 
-void setup_cavern_background(const World& world) {
+static void setup_cavern_background(const World& world) {
     const float underground_level = static_cast<float>(world.layers().underground) * TILE_SIZE + TILE_SIZE;
     const float world_height = static_cast<float>(world.area().height() - (world.area().height() - world.playable_area().height()) / 2) * TILE_SIZE;
     const float world_width = static_cast<float>(world.playable_area().width()) * TILE_SIZE;

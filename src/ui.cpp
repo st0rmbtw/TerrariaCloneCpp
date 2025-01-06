@@ -93,8 +93,8 @@ static struct UiState {
     AnimationDirection cursor_anim_dir;
 } state;
 
-void draw_inventory(const Inventory& inventory, const glm::vec2& window_size);
-void update_cursor();
+static void draw_inventory(const Inventory& inventory, const glm::vec2& window_size);
+static void update_cursor();
 
 void UI::Init() {
     ZoneScopedN("UI::Init");
@@ -193,7 +193,7 @@ void UI::PostUpdate() {
     state.elements.clear();
 }
 
-inline void draw_item(Sprite& item_sprite, const glm::vec2& item_size, const glm::vec2& position, const Item& item, Depth item_depth) {
+static inline void draw_item(Sprite& item_sprite, const glm::vec2& item_size, const glm::vec2& position, const Item& item, Depth item_depth) {
     item_sprite.set_position(position);
     item_sprite.set_anchor(Anchor::Center);
     item_sprite.set_custom_size(item_size);
@@ -202,7 +202,7 @@ inline void draw_item(Sprite& item_sprite, const glm::vec2& item_size, const glm
     Renderer::DrawSpriteUI(item_sprite, item_depth);
 }
 
-inline void draw_item_with_stack(Sprite& item_sprite, const glm::vec2& item_size, float stack_size, const glm::vec2& position, const Item& item, Depth item_depth, Depth stack_depth) {
+static inline void draw_item_with_stack(Sprite& item_sprite, const glm::vec2& item_size, float stack_size, const glm::vec2& position, const Item& item, Depth item_depth, Depth stack_depth) {
     draw_item(item_sprite, item_size, position, item, item_depth);
 
     if (item.stack > 1) {
@@ -253,7 +253,7 @@ void UI::Draw(const Camera& camera, const Player& player) {
     }
 }
 
-void update_cursor() {
+static void update_cursor() {
     if (state.cursor_anim_progress >= 1.0f) {
         state.cursor_anim_dir = AnimationDirection::Backward;
     } else if (state.cursor_anim_progress <= 0.0f) {
@@ -295,7 +295,7 @@ inline void draw_inventory_cell(Sprite& cell_sprite, UiElement element_type, uin
     Renderer::DrawSpriteUI(cell_sprite, depth);
 }
 
-void draw_inventory(const Inventory& inventory, const glm::vec2&) {
+static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
     ZoneScopedN("UI::render_inventory");
 
     static constexpr float TITLE_OFFSET = 4.0f;
@@ -391,7 +391,7 @@ void draw_inventory(const Inventory& inventory, const glm::vec2&) {
             for (uint8_t x = 0; x < CELLS_IN_ROW; ++x) {
                 const uint8_t index = y * CELLS_IN_ROW + x;
 
-                const ItemSlot& item_slot = inventory.get_item(index);
+                const ItemSlot item_slot = inventory.get_item(index);
                 if (item_slot.has_item()) {
                     item_size = Assets::GetItemTexture(item_slot.item->id).size();
                     item_size = glm::min(item_size, glm::vec2(32.0f)); // The maximum size of an item image is 32px
