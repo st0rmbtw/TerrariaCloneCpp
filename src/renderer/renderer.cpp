@@ -190,13 +190,15 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     pipelineLayoutDesc.staticSamplers = {   
         LLGL::StaticSamplerDescriptor("u_background_sampler", LLGL::StageFlags::FragmentStage, 4, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
         LLGL::StaticSamplerDescriptor("u_world_sampler", LLGL::StageFlags::FragmentStage, 6, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
-        LLGL::StaticSamplerDescriptor("u_light_sampler", LLGL::StageFlags::FragmentStage, 8, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("u_lightmap_sampler", LLGL::StageFlags::FragmentStage, 8, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("u_light_sampler", LLGL::StageFlags::FragmentStage, 10, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
     };
     pipelineLayoutDesc.combinedTextureSamplers =
     {
         LLGL::CombinedTextureSamplerDescriptor{ "u_background_texture", "u_background_texture", "u_background_sampler", 3 },
         LLGL::CombinedTextureSamplerDescriptor{ "u_world_texture", "u_world_texture", "u_world_sampler", 5 },
-        LLGL::CombinedTextureSamplerDescriptor{ "u_light_texture", "u_light_texture", "u_light_sampler", 7 },
+        LLGL::CombinedTextureSamplerDescriptor{ "u_lightmap_texture", "u_lightmap_texture", "u_lightmap_sampler", 7 },
+        LLGL::CombinedTextureSamplerDescriptor{ "u_light_texture", "u_light_texture", "u_light_sampler", 9 },
     };
     pipelineLayoutDesc.heapBindings = {
         LLGL::BindingDescriptor(
@@ -209,7 +211,8 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
         LLGL::BindingDescriptor("u_background_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 3),
         LLGL::BindingDescriptor("u_world_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 5),
-        LLGL::BindingDescriptor("u_light_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 7),
+        LLGL::BindingDescriptor("u_lightmap_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 7),
+        LLGL::BindingDescriptor("u_light_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 9),
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
@@ -218,7 +221,8 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
         state.constant_buffer,
         state.background_render_texture,
         state.world_render_texture,
-        Assets::GetTexture(TextureAsset::Stub)
+        nullptr,
+        nullptr,
     };
     state.resource_heap = context->CreateResourceHeap(LLGL::ResourceHeapDescriptor(pipelineLayout, ARRAY_LEN(resource_views)), resource_views);
 
@@ -312,8 +316,8 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
     };
     state.fullscreen_triangle_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::PostProcessVertex));
 
-    state.world_renderer.init_lightmap_texture(world);
-    context->WriteResourceHeap(*state.resource_heap, 3, {state.world_renderer.lightmap_texture()});
+    state.world_renderer.init_textures(world);
+    context->WriteResourceHeap(*state.resource_heap, 3, {state.world_renderer.lightmap_texture(), state.world_renderer.light_texture()});
 }
 
 void Renderer::Begin(const Camera& camera, WorldData& world) {
@@ -363,7 +367,7 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
     state.max_main_depth = 0;
 }
 
-void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
+void Renderer::Render(const Camera& camera, const World& world) {
     ZoneScopedN("Renderer::Render");
 
     auto* const commands = state.command_buffer;
@@ -388,6 +392,12 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
 
     LLGL::ClearValue clear_value = LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
+    commands->BeginRenderPass(*state.world_renderer.light_texture_target());
+        commands->Clear(LLGL::ClearFlags::Color, clear_value);
+    commands->EndRenderPass();
+
+    state.world_renderer.compute_light(camera, world);
+
     commands->BeginRenderPass(*state.background_render_target);
         commands->Clear(LLGL::ClearFlags::ColorDepth, clear_value);
         state.background_renderer.render();
@@ -396,7 +406,7 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
     commands->BeginRenderPass(*state.world_render_target);
         commands->Clear(LLGL::ClearFlags::ColorDepth, clear_value);
         state.background_renderer.render_world();
-        state.world_renderer.render(chunk_manager);
+        state.world_renderer.render(world.chunk_manager());
         state.sprite_batch.render_world();
     commands->EndRenderPass();
 

@@ -10,11 +10,11 @@
 #include "../defines.hpp"
 
 struct Color {
-    uint8_t r, g, b, a;
+    uint8_t r, g, b;
 
-    Color() : r(0), g(0), b(0), a(0xFF) {}
+    Color() : r(0), g(0), b(0) {}
 
-    explicit Color(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b), a(0xFF) {}
+    explicit Color(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b) {}
 };
 
 using LightMask = bool;

@@ -14,8 +14,8 @@
 #include "utils.hpp"
 
 constexpr float INVENTORY_TITLE_SIZE = 22.0f;
-constexpr float MIN_CURSOR_SCALE = 1.0;
-constexpr float MAX_CURSOR_SCALE = MIN_CURSOR_SCALE + 0.15;
+constexpr float MIN_CURSOR_SCALE = 1.2;
+constexpr float MAX_CURSOR_SCALE = MIN_CURSOR_SCALE + 0.1;
 constexpr float INVENTORY_PADDING = 10;
 constexpr float HOTBAR_SLOT_SIZE = 40;
 constexpr float INVENTORY_SLOT_SIZE = HOTBAR_SLOT_SIZE * 1.15;

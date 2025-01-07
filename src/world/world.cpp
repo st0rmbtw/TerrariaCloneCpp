@@ -116,6 +116,7 @@ void World::update(const Camera& camera) {
     ZoneScopedN("World::update");
 
     m_changed = false;
+    m_lights.clear();
     m_chunk_manager.manage_chunks(m_data, camera);
 
     for (auto it = m_block_dig_animations.begin(); it != m_block_dig_animations.end();) {

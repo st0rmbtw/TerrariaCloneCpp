@@ -11,6 +11,7 @@
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
 #include "../types/tile_pos.hpp"
+#include "../types/light.hpp"
 
 #include "chunk_manager.hpp"
 
@@ -79,6 +80,8 @@ public:
     [[nodiscard]] inline const WorldData& data() const { return m_data; }
     [[nodiscard]] inline WorldData& data() { return m_data; }
 
+    [[nodiscard]] inline const std::vector<Light>& lights() const { return m_lights; }
+
     [[nodiscard]] inline void create_dig_block_animation(const Block& block, TilePos pos) {
         m_block_dig_animations.push_back(BlockDigAnimation {
             .tile_pos = pos,
@@ -99,6 +102,11 @@ public:
     [[nodiscard]] inline void remove_tile_cracks(TilePos pos) {
         m_tile_cracks.erase(pos);
     }
+
+    [[nodiscard]] inline void add_light(Light light) {
+        m_lights.push_back(light);
+    }
+
 private:
     void update_neighbors(TilePos pos);
 
@@ -106,6 +114,7 @@ private:
     WorldData m_data;
     ChunkManager m_chunk_manager;
     std::vector<BlockDigAnimation> m_block_dig_animations;
+    std::vector<Light> m_lights;
     std::unordered_map<TilePos, TileCracks> m_tile_cracks;
     bool m_changed = false;
 };

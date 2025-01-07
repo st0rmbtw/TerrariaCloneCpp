@@ -93,31 +93,198 @@ void WorldRenderer::init() {
     };
 
     m_pipeline = context->CreatePipelineState(pipelineDesc);
+
+
+
+
+
+
+
+
+
+
+    LLGL::PipelineLayoutDescriptor lightPipelineLayoutDesc;
+    lightPipelineLayoutDesc.heapBindings = {
+        LLGL::BindingDescriptor(
+            "GlobalUniformBuffer",
+            LLGL::ResourceType::Buffer,
+            LLGL::BindFlags::ConstantBuffer,
+            LLGL::StageFlags::ComputeStage,
+            LLGL::BindingSlot(3)
+        ),
+        LLGL::BindingDescriptor(
+            "LightBuffer",
+            LLGL::ResourceType::Buffer,
+            LLGL::BindFlags::Sampled,
+            LLGL::StageFlags::ComputeStage,
+            LLGL::BindingSlot(4)
+        ),
+        LLGL::BindingDescriptor(
+            "TileTexture",
+            LLGL::ResourceType::Texture,
+            LLGL::BindFlags::Sampled,
+            LLGL::StageFlags::ComputeStage,
+            LLGL::BindingSlot(5)
+        ),
+        LLGL::BindingDescriptor(
+            "LightTexture",
+            LLGL::ResourceType::Texture,
+            LLGL::BindFlags::Storage,
+            LLGL::StageFlags::ComputeStage,
+            LLGL::BindingSlot(6)
+        ),
+    };
+    lightPipelineLayoutDesc.uniforms = {
+        LLGL::UniformDescriptor("uniform_min", LLGL::UniformType::UInt2),
+        LLGL::UniformDescriptor("uniform_max", LLGL::UniformType::UInt2),
+    };
+
+    LLGL::PipelineLayout* lightPipelineLayout = context->CreatePipelineLayout(lightPipelineLayoutDesc);
+
+    LLGL::BufferDescriptor light_buffer;
+    light_buffer.bindFlags = LLGL::BindFlags::Sampled;
+    light_buffer.stride = sizeof(Light);
+    light_buffer.size = sizeof(Light) * 1000;
+    m_light_buffer = context->CreateBuffer(light_buffer);
+
+    const LLGL::ResourceViewDescriptor lightResourceViews[] = {
+        Renderer::GlobalUniformBuffer(), m_light_buffer, nullptr, nullptr
+    };
+
+    LLGL::ResourceHeapDescriptor lightResourceHeapDesc;
+    lightResourceHeapDesc.pipelineLayout = lightPipelineLayout;
+    lightResourceHeapDesc.numResourceViews = 4;
+
+    m_light_resource_heap = context->CreateResourceHeap(lightResourceHeapDesc, lightResourceViews);
+
+    {
+        LLGL::ComputePipelineDescriptor lightPipelineDesc;
+        lightPipelineDesc.debugName = "WorldLightSetLightSourcesComputePipeline";
+        lightPipelineDesc.pipelineLayout = lightPipelineLayout;
+        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightSetLightSources);
+
+        m_light_set_light_sources_pipeline = context->CreatePipelineState(lightPipelineDesc);
+    }
+
+    {
+        LLGL::ComputePipelineDescriptor lightPipelineDesc;
+        lightPipelineDesc.debugName = "WorldLightTopToBottomComputePipeline";
+        lightPipelineDesc.pipelineLayout = lightPipelineLayout;
+        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightTopToBottom);
+
+        m_light_top_to_bottom_pipeline = context->CreatePipelineState(lightPipelineDesc);
+    }
+    {
+        LLGL::ComputePipelineDescriptor lightPipelineDesc;
+        lightPipelineDesc.debugName = "WorldLightBottomToTopComputePipeline";
+        lightPipelineDesc.pipelineLayout = lightPipelineLayout;
+        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightBottomToTop);
+
+        m_light_bottom_to_top_pipeline = context->CreatePipelineState(lightPipelineDesc);
+    }
+    {
+        LLGL::ComputePipelineDescriptor lightPipelineDesc;
+        lightPipelineDesc.debugName = "WorldLightLeftToRightComputePipeline";
+        lightPipelineDesc.pipelineLayout = lightPipelineLayout;
+        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightLeftToRight);
+
+        m_light_left_to_right_pipeline = context->CreatePipelineState(lightPipelineDesc);
+    }
+    {
+        LLGL::ComputePipelineDescriptor lightPipelineDesc;
+        lightPipelineDesc.debugName = "WorldLightRightToLeftComputePipeline";
+        lightPipelineDesc.pipelineLayout = lightPipelineLayout;
+        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightRightToLeft);
+
+        m_light_right_to_left_pipeline = context->CreatePipelineState(lightPipelineDesc);
+    }
+
+    m_light_buffer_data = new Light[1000];
+    m_light_buffer_data_ptr = m_light_buffer_data;
 }
 
-void WorldRenderer::init_lightmap_texture(const WorldData& world) {
-    ZoneScopedN("WorldRenderer::init_lightmap_texture");
+void WorldRenderer::init_textures(const WorldData& world) {
+    ZoneScopedN("WorldRenderer::init_textures");
 
     using Constants::SUBDIVISION;
 
     auto& context = Renderer::Context();
 
     if (m_lightmap_texture) context->Release(*m_lightmap_texture);
+    if (m_light_texture) context->Release(*m_light_texture);
+    if (m_tile_texture) context->Release(*m_tile_texture);
+    if (m_light_texture_target) context->Release(*m_light_texture_target);
 
-    LLGL::TextureDescriptor lightmap_texture_desc;
-    lightmap_texture_desc.type      = LLGL::TextureType::Texture2D;
-    lightmap_texture_desc.format    = LLGL::Format::RGBA8UNorm;
-    lightmap_texture_desc.extent    = LLGL::Extent3D(world.lightmap.width, world.lightmap.height, 1);
-    lightmap_texture_desc.miscFlags = 0;
-    lightmap_texture_desc.bindFlags = LLGL::BindFlags::Sampled;
+    {
+        LLGL::TextureDescriptor lightmap_texture_desc;
+        lightmap_texture_desc.type      = LLGL::TextureType::Texture2D;
+        lightmap_texture_desc.format    = LLGL::Format::RGBA8UNorm;
+        lightmap_texture_desc.extent    = LLGL::Extent3D(world.lightmap.width, world.lightmap.height, 1);
+        lightmap_texture_desc.miscFlags = 0;
+        lightmap_texture_desc.bindFlags = LLGL::BindFlags::Sampled;
 
-    LLGL::ImageView image_view;
-    image_view.format   = LLGL::ImageFormat::RGBA;
-    image_view.dataType = LLGL::DataType::UInt8;
-    image_view.data     = world.lightmap.colors;
-    image_view.dataSize = world.lightmap.width * world.lightmap.height * 4;
+        LLGL::ImageView image_view;
+        image_view.format   = LLGL::ImageFormat::RGB;
+        image_view.dataType = LLGL::DataType::UInt8;
+        image_view.data     = world.lightmap.colors;
+        image_view.dataSize = world.lightmap.width * world.lightmap.height * 3;
 
-    m_lightmap_texture = context->CreateTexture(lightmap_texture_desc, &image_view);
+        m_lightmap_texture = context->CreateTexture(lightmap_texture_desc, &image_view);
+    }
+    {
+        LLGL::TextureDescriptor light_texture_desc;
+        light_texture_desc.type      = LLGL::TextureType::Texture2D;
+        light_texture_desc.format    = LLGL::Format::RGBA8UNorm;
+        light_texture_desc.extent    = LLGL::Extent3D(world.lightmap.width, world.lightmap.height, 1);
+        light_texture_desc.miscFlags = 0;
+        light_texture_desc.bindFlags = LLGL::BindFlags::Storage | LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
+
+        const size_t size = world.lightmap.width * world.lightmap.height * 3;
+        uint8_t* data = new uint8_t[size];
+        memset(data, 0, size);
+
+        LLGL::ImageView image_view;
+        image_view.format   = LLGL::ImageFormat::RGB;
+        image_view.dataType = LLGL::DataType::UInt8;
+        image_view.data     = data;
+        image_view.dataSize = size;
+
+        m_light_texture = context->CreateTexture(light_texture_desc, &image_view);
+    }
+
+    LLGL::TextureDescriptor tile_texture_desc;
+    tile_texture_desc.type      = LLGL::TextureType::Texture2D;
+    tile_texture_desc.format    = LLGL::Format::R8UInt;
+    tile_texture_desc.extent    = LLGL::Extent3D(world.area.width(), world.area.height(), 1);
+    tile_texture_desc.miscFlags = 0;
+    tile_texture_desc.bindFlags = LLGL::BindFlags::Sampled;
+
+    {
+        const size_t size = world.area.width() * world.area.height();
+        uint8_t* data = new uint8_t[size];
+        for (int y = 0; y < world.area.height(); ++y) {
+            for (int x = 0; x < world.area.width(); ++x) {
+                uint8_t tile = world.block_exists(TilePos(x, y)) ? 1 : 0;
+                data[y * world.area.width() + x] = tile;
+            }
+        }
+
+        LLGL::ImageView image_view;
+        image_view.format   = LLGL::ImageFormat::R;
+        image_view.dataType = LLGL::DataType::UInt8;
+        image_view.data     = data;
+        image_view.dataSize = size;
+
+        m_tile_texture = context->CreateTexture(tile_texture_desc, &image_view);
+    }
+
+    context->WriteResourceHeap(*m_light_resource_heap, 2, {m_tile_texture, m_light_texture});
+
+    LLGL::RenderTargetDescriptor lightTextureRenderTarget;
+    lightTextureRenderTarget.resolution = LLGL::Extent2D(world.lightmap.width, world.lightmap.height);
+    lightTextureRenderTarget.colorAttachments[0].texture = m_light_texture;
+
+    m_light_texture_target = context->CreateRenderTarget(lightTextureRenderTarget);
 }
 
 void WorldRenderer::update_lightmap_texture(WorldData& world, LightMapTaskResult result) {
@@ -129,12 +296,22 @@ void WorldRenderer::update_lightmap_texture(WorldData& world, LightMapTaskResult
     }
 
     LLGL::ImageView image_view;
-    image_view.format   = LLGL::ImageFormat::RGBA;
+    image_view.format   = LLGL::ImageFormat::RGB;
     image_view.dataType = LLGL::DataType::UInt8;
     image_view.data     = result.data;
-    image_view.dataSize = result.width * result.height * 4;
+    image_view.dataSize = result.width * result.height * 3;
 
     Renderer::Context()->WriteTexture(*m_lightmap_texture, LLGL::TextureRegion(LLGL::Offset3D(result.offset_x, result.offset_y, 0), LLGL::Extent3D(result.width, result.height, 1)), image_view);
+}
+
+void WorldRenderer::update_tile_texture(TilePos pos, uint8_t value) {
+    LLGL::ImageView image_view;
+    image_view.format   = LLGL::ImageFormat::R;
+    image_view.dataType = LLGL::DataType::UInt8;
+    image_view.data     = &value;
+    image_view.dataSize = 1;
+
+    Renderer::Context()->WriteTexture(*m_tile_texture, LLGL::TextureRegion(LLGL::Offset3D(pos.x, pos.y, 0), LLGL::Extent3D(1, 1, 1)), image_view);
 }
 
 void WorldRenderer::render(const ChunkManager& chunk_manager) {
@@ -168,8 +345,102 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
     }
 }
 
+void WorldRenderer::compute_light(const Camera& camera, const World& world) {
+    ZoneScopedN("WorldRenderer::compute_light");
+
+    const std::vector<Light>& lights = world.lights();
+    if (lights.empty()) return;
+
+    auto* const commands = Renderer::CommandBuffer();
+    auto& context = Renderer::Context();
+
+    for (const Light& light : lights) {
+        m_light_buffer_data_ptr->color = light.color;
+        m_light_buffer_data_ptr->pos = light.pos * Constants::SUBDIVISION;
+        m_light_buffer_data_ptr->size = light.size * static_cast<uint32_t>(Constants::SUBDIVISION);
+        m_light_buffer_data_ptr++;
+    }
+
+    ptrdiff_t size = (uint8_t*) m_light_buffer_data_ptr - (uint8_t*) m_light_buffer_data;
+    if (size < (1 << 16)) {
+        commands->UpdateBuffer(*m_light_buffer, 0, m_light_buffer_data, size);
+    } else {
+        context->WriteBuffer(*m_light_buffer, 0, m_light_buffer_data, size);
+    }
+
+    constexpr uint32_t WORKGROUP = 16;
+
+    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / Constants::TILE_SIZE) - 16;
+    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / Constants::TILE_SIZE) + 16;
+
+    math::URect blur_area = math::URect::from_corners(
+        glm::uvec2(glm::max(proj_area_min * Constants::SUBDIVISION, glm::ivec2(0))),
+        glm::uvec2(glm::max(proj_area_max * Constants::SUBDIVISION, glm::ivec2(0)))
+    );
+
+    const uint32_t grid_w = blur_area.width() / WORKGROUP;
+    const uint32_t grid_h = blur_area.height() / WORKGROUP;
+
+    if (grid_w * grid_h == 0) return;
+
+    commands->PushDebugGroup("CS Light SetLightSources");
+    {
+        commands->SetPipelineState(*m_light_set_light_sources_pipeline);
+        commands->SetResourceHeap(*m_light_resource_heap);
+        commands->Dispatch(1, lights.size(), 1);
+    }
+    commands->PopDebugGroup();
+
+    for (int i = 0; i < 3; ++i) {
+
+        commands->PushDebugGroup("CS Light BlurLeftToRight");
+        {
+            commands->SetPipelineState(*m_light_left_to_right_pipeline);
+            commands->SetResourceHeap(*m_light_resource_heap);
+            commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
+            commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
+            commands->Dispatch(grid_h, 1, 1);
+        }
+        commands->PopDebugGroup();
+
+        commands->PushDebugGroup("CS Light BlurTopToBottom");
+        {
+            commands->SetPipelineState(*m_light_top_to_bottom_pipeline);
+            commands->SetResourceHeap(*m_light_resource_heap);
+            commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
+            commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
+            commands->Dispatch(grid_w, 1, 1);
+        }
+        commands->PopDebugGroup();
+
+        commands->PushDebugGroup("CS Light BlurRightToLeft");
+        {
+            commands->SetPipelineState(*m_light_right_to_left_pipeline);
+            commands->SetResourceHeap(*m_light_resource_heap);
+            commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
+            commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
+            commands->Dispatch(grid_h, 1, 1);
+        }
+        commands->PopDebugGroup();
+
+        commands->PushDebugGroup("CS Light BlurBottomToTop");
+        {
+            commands->SetPipelineState(*m_light_bottom_to_top_pipeline);
+            commands->SetResourceHeap(*m_light_resource_heap);
+            commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
+            commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
+            commands->Dispatch(grid_w, 1, 1);
+        }
+        commands->PopDebugGroup();
+
+    }
+
+    m_light_buffer_data_ptr = m_light_buffer_data;
+}
+
 void WorldRenderer::terminate() {
     if (m_pipeline) Renderer::Context()->Release(*m_pipeline);
     if (m_depth_buffer) Renderer::Context()->Release(*m_depth_buffer);
     if (m_lightmap_texture) Renderer::Context()->Release(*m_lightmap_texture);
+    // TODO: Release newly added resources
 }

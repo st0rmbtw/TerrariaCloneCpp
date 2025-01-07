@@ -22,6 +22,7 @@
 #include "background.hpp"
 #include "defines.hpp"
 
+#include <string>
 #include <tracy/Tracy.hpp>
 
 static struct GameState {
@@ -146,6 +147,12 @@ void update() {
     
     g.player.update(g.camera, g.world);
 
+    g.world.add_light(Light {
+        .color = glm::vec3(1.0f, 0.0f, 0.0f),
+        .pos = TilePos::from_world_pos(g.camera.screen_to_world(Input::MouseScreenPosition())),
+        .size = glm::uvec2(1)
+    });
+
     if (Input::Pressed(Key::K)) {
         for (int i = 0; i < 500; ++i) {
             const glm::vec2 position = g.camera.screen_to_world(Input::MouseScreenPosition());
@@ -181,7 +188,7 @@ void render() {
 
         UI::Draw(g.camera, g.player);
 
-        Renderer::Render(g.camera, g.world.chunk_manager());
+        Renderer::Render(g.camera, g.world);
     // Renderer::Debugger()->SetTimeRecording(false);
 
     // LLGL::FrameProfile frame_profile;
@@ -248,6 +255,7 @@ bool load_assets() {
     const std::vector<ShaderDef> shader_defs = {
         ShaderDef("TILE_SIZE", std::to_string(Constants::TILE_SIZE)),
         ShaderDef("WALL_SIZE", std::to_string(Constants::WALL_SIZE)),
+        ShaderDef("DEF_SUBDIVISION", std::to_string(Constants::SUBDIVISION))
     };
 
     if (!Assets::LoadShaders(shader_defs)) return false;
