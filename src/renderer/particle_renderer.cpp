@@ -8,6 +8,8 @@
 
 #include "renderer.hpp"
 #include "utils.hpp"
+#include "macros.hpp"
+
 #include "../assets.hpp"
 #include "../log.hpp"
 
@@ -324,18 +326,16 @@ void ParticleRenderer::render() {
 }
 
 void ParticleRenderer::terminate() {
-    const auto& context = Renderer::Context();
+    RESOURCE_RELEASE(m_buffer_array);
+    RESOURCE_RELEASE(m_instance_buffer);
+    RESOURCE_RELEASE(m_vertex_buffer);
 
-    if (m_buffer_array) context->Release(*m_buffer_array);
-    if (m_instance_buffer) context->Release(*m_instance_buffer);
-    if (m_vertex_buffer) context->Release(*m_vertex_buffer);
+    RESOURCE_RELEASE(m_position_buffer);
+    RESOURCE_RELEASE(m_rotation_buffer);
+    RESOURCE_RELEASE(m_scale_buffer);
 
-    if (m_position_buffer) context->Release(*m_position_buffer);
-    if (m_rotation_buffer) context->Release(*m_rotation_buffer);
-    if (m_scale_buffer) context->Release(*m_scale_buffer);
+    RESOURCE_RELEASE(m_transform_buffer);
 
-    if (m_transform_buffer) context->Release(*m_transform_buffer);
-
-    if (m_pipeline) context->Release(*m_pipeline);
-    if (m_compute_pipeline) context->Release(*m_compute_pipeline);
+    RESOURCE_RELEASE(m_pipeline);
+    RESOURCE_RELEASE(m_compute_pipeline);
 }

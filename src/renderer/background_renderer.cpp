@@ -8,6 +8,7 @@
 #include "renderer.hpp"
 #include "utils.hpp"
 #include "types.hpp"
+#include "macros.hpp"
 
 #include "../log.hpp"
 
@@ -158,14 +159,12 @@ void BackgroundRenderer::render_world() {
 }
 
 void BackgroundRenderer::terminate() {
-    const auto& context = Renderer::Context();
-
-    if (m_vertex_buffer) context->Release(*m_vertex_buffer);
-    if (m_instance_buffer) context->Release(*m_instance_buffer);
-    if (m_world_instance_buffer) context->Release(*m_world_instance_buffer);
-    if (m_world_buffer_array) context->Release(*m_world_buffer_array);
-    if (m_buffer_array) context->Release(*m_buffer_array);
-    if (m_pipeline) context->Release(*m_pipeline);
+    RESOURCE_RELEASE(m_vertex_buffer);
+    RESOURCE_RELEASE(m_instance_buffer);
+    RESOURCE_RELEASE(m_world_instance_buffer);
+    RESOURCE_RELEASE(m_world_buffer_array);
+    RESOURCE_RELEASE(m_buffer_array);
+    RESOURCE_RELEASE(m_pipeline);
 
     delete[] m_buffer;
     delete[] m_world_buffer;

@@ -1,12 +1,12 @@
 #ifndef TERRARIA_RENDERER_HPP
 #define TERRARIA_RENDERER_HPP
 
-#include "LLGL/Format.h"
 #pragma once
 
 #include <LLGL/SwapChain.h>
 #include <LLGL/RenderSystem.h>
 #include <LLGL/RenderingDebugger.h>
+#include <LLGL/Format.h>
 
 #include "../types/sprite.hpp"
 #include "../types/backend.hpp"

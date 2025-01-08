@@ -6,6 +6,7 @@
 #include "../types/texture_atlas_pos.hpp"
 #include "../renderer/renderer.hpp"
 #include "../renderer/types.hpp"
+#include "../renderer/macros.hpp"
 
 #include "../defines.hpp"
 
@@ -19,11 +20,8 @@ using Constants::RENDER_CHUNK_SIZE_U;
 void RenderChunk::destroy() {
     ZoneScopedN("WorldChunk::destroy");
 
-    if (block_instance_buffer) Renderer::Context()->Release(*block_instance_buffer);
-    if (wall_instance_buffer) Renderer::Context()->Release(*wall_instance_buffer);
-
-    block_instance_buffer = nullptr;
-    wall_instance_buffer = nullptr;
+    RESOURCE_RELEASE(block_instance_buffer);
+    RESOURCE_RELEASE(wall_instance_buffer);
 }
 
 static inline LLGL::BufferDescriptor GetBufferDescriptor() {
@@ -49,14 +47,7 @@ void RenderChunk::build_mesh(const WorldData& world) {
     if (blocks_dirty) {
         blocks_count = 0;
         block_instance.reserve(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U);
-    }
 
-    if (walls_dirty) {
-        walls_count = 0;
-        wall_instance.reserve(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U);
-    }
-
-    if (blocks_dirty) {
         for (uint32_t y = 0; y < RENDER_CHUNK_SIZE_U; ++y) {
             for (uint32_t x = 0; x < RENDER_CHUNK_SIZE_U; ++x) {
                 const glm::uvec2 map_pos = glm::uvec2(
@@ -80,6 +71,9 @@ void RenderChunk::build_mesh(const WorldData& world) {
     }
 
     if (walls_dirty) {
+        walls_count = 0;
+        wall_instance.reserve(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U);
+
         for (uint32_t y = 0; y < RENDER_CHUNK_SIZE_U; ++y) {
             for (uint32_t x = 0; x < RENDER_CHUNK_SIZE_U; ++x) {
                 const glm::uvec2 map_pos = glm::uvec2(

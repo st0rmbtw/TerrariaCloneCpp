@@ -29,6 +29,7 @@
 #include "world_renderer.hpp"
 #include "background_renderer.hpp"
 #include "particle_renderer.hpp"
+#include "macros.hpp"
 
 static struct RendererState {
     ParticleRenderer particle_renderer;
@@ -250,17 +251,12 @@ void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
     const LLGL::RenderSystemPtr& context = state.context;
     const auto* swap_chain = state.swap_chain;
 
-    if (state.world_render_texture) context->Release(*state.world_render_texture);
-    if (state.world_depth_texture) context->Release(*state.world_depth_texture);
-    if (state.world_render_target) context->Release(*state.world_render_target);
+    RESOURCE_RELEASE(state.world_render_texture);
+    RESOURCE_RELEASE(state.world_depth_texture);
+    RESOURCE_RELEASE(state.world_render_target);
 
-    if (state.background_render_texture) context->Release(*state.background_render_texture);
-    if (state.background_render_target) context->Release(*state.background_render_target);
-
-    state.world_render_texture = nullptr;
-    state.world_render_target = nullptr;
-    state.background_render_texture = nullptr;
-    state.background_render_target = nullptr;
+    RESOURCE_RELEASE(state.background_render_texture);
+    RESOURCE_RELEASE(state.background_render_target);
 
     LLGL::TextureDescriptor texture_desc;
     texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
@@ -309,7 +305,7 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
 
     const auto& context = state.context;
 
-    if (state.fullscreen_triangle_vertex_buffer) context->Release(*state.fullscreen_triangle_vertex_buffer);
+    RESOURCE_RELEASE(state.fullscreen_triangle_vertex_buffer);
 
     const glm::vec2 world_size = glm::vec2(world.area.size()) * TILE_SIZE;
 
@@ -721,10 +717,9 @@ void Renderer::Terminate() {
     state.background_renderer.terminate();
     state.particle_renderer.terminate();
 
-    if (state.constant_buffer) state.context->Release(*state.constant_buffer);
-
-    if (state.command_buffer) state.context->Release(*state.command_buffer);
-    if (state.swap_chain) state.context->Release(*state.swap_chain);
+    RESOURCE_RELEASE(state.constant_buffer);
+    RESOURCE_RELEASE(state.command_buffer);
+    RESOURCE_RELEASE(state.swap_chain);
 
     Assets::DestroyTextures();
     Assets::DestroySamplers();
@@ -1133,8 +1128,8 @@ void RenderBatchSprite::begin() {
 }
 
 void RenderBatchSprite::terminate() {
-    if (m_vertex_buffer) state.context->Release(*m_vertex_buffer);
-    if (m_pipeline) state.context->Release(*m_pipeline);
+    RESOURCE_RELEASE(m_vertex_buffer)
+    RESOURCE_RELEASE(m_pipeline)
 
     delete[] m_buffer;
     delete[] m_world_buffer;
@@ -1347,8 +1342,8 @@ void RenderBatchGlyph::begin() {
 }
 
 void RenderBatchGlyph::terminate() {
-    if (m_vertex_buffer) state.context->Release(*m_vertex_buffer);
-    if (m_pipeline) state.context->Release(*m_pipeline);
+    RESOURCE_RELEASE(m_vertex_buffer)
+    RESOURCE_RELEASE(m_pipeline)
 
     delete[] m_buffer;
 }

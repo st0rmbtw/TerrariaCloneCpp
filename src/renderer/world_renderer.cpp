@@ -16,6 +16,7 @@
 #include "../utils.hpp"
 
 #include "renderer.hpp"
+#include "macros.hpp"
 
 struct __attribute__((aligned(16))) DepthUniformData {
     float tile_depth;
@@ -189,10 +190,10 @@ void WorldRenderer::init_textures(const WorldData& world) {
 
     auto& context = Renderer::Context();
 
-    if (m_lightmap_texture) context->Release(*m_lightmap_texture);
-    if (m_light_texture) context->Release(*m_light_texture);
-    if (m_tile_texture) context->Release(*m_tile_texture);
-    if (m_light_texture_target) context->Release(*m_light_texture_target);
+    RESOURCE_RELEASE(m_lightmap_texture);
+    RESOURCE_RELEASE(m_light_texture);
+    RESOURCE_RELEASE(m_tile_texture);
+    RESOURCE_RELEASE(m_light_texture_target);
 
     {
         LLGL::TextureDescriptor lightmap_texture_desc;
@@ -420,8 +421,15 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
 }
 
 void WorldRenderer::terminate() {
-    if (m_pipeline) Renderer::Context()->Release(*m_pipeline);
-    if (m_depth_buffer) Renderer::Context()->Release(*m_depth_buffer);
-    if (m_lightmap_texture) Renderer::Context()->Release(*m_lightmap_texture);
-    // TODO: Release newly added resources
+    RESOURCE_RELEASE(m_pipeline);
+    RESOURCE_RELEASE(m_light_set_light_sources_pipeline);
+    RESOURCE_RELEASE(m_light_vertical_pipeline);
+    RESOURCE_RELEASE(m_light_horizontal_pipeline);
+    RESOURCE_RELEASE(m_light_resource_heap);
+    RESOURCE_RELEASE(m_resource_heap);
+    RESOURCE_RELEASE(m_depth_buffer);
+    RESOURCE_RELEASE(m_lightmap_texture);
+    RESOURCE_RELEASE(m_light_texture);
+    RESOURCE_RELEASE(m_light_texture_target);
+    RESOURCE_RELEASE(m_tile_texture);
 }
