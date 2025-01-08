@@ -112,6 +112,11 @@ void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
     ZoneScopedN("World::generate");
 
     world_generate(m_data, width, height, seed);
+
+    m_light_count = 0;
+    if (m_lights == nullptr) {
+        m_lights = new Light[WORLD_MAX_LIGHT_COUNT];
+    }
 }
 
 void World::update(const Camera& camera) {

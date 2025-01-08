@@ -35,8 +35,6 @@ private:
     LLGL::ResourceHeap* m_resource_heap = nullptr;
 
     LLGL::Buffer* m_light_buffer = nullptr;
-    Light* m_light_buffer_data = nullptr;
-    Light* m_light_buffer_data_ptr = nullptr;
     LLGL::Texture* m_tile_texture = nullptr;
     LLGL::Texture* m_lightmap_texture = nullptr;
     LLGL::ResourceHeap* m_light_resource_heap = nullptr;

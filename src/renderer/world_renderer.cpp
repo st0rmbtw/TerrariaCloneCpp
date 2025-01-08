@@ -23,6 +23,8 @@ struct __attribute__((aligned(16))) DepthUniformData {
     float wall_depth;
 };
 
+static constexpr size_t MAX_LIGHT_COUNT = 0xFFFF / sizeof(Light);
+
 void WorldRenderer::init() {
     ZoneScopedN("WorldRenderer::init");
 
@@ -140,7 +142,7 @@ void WorldRenderer::init() {
     LLGL::BufferDescriptor light_buffer;
     light_buffer.bindFlags = LLGL::BindFlags::Sampled;
     light_buffer.stride = sizeof(Light);
-    light_buffer.size = sizeof(Light) * 1000;
+    light_buffer.size = sizeof(Light) * MAX_LIGHT_COUNT;
     m_light_buffer = context->CreateBuffer(light_buffer);
 
     const LLGL::ResourceViewDescriptor lightResourceViews[] = {
@@ -178,9 +180,6 @@ void WorldRenderer::init() {
 
         m_light_horizontal_pipeline = context->CreatePipelineState(lightPipelineDesc);
     }
-
-    m_light_buffer_data = new Light[1000];
-    m_light_buffer_data_ptr = m_light_buffer_data;
 }
 
 void WorldRenderer::init_textures(const WorldData& world) {
@@ -352,25 +351,12 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
 void WorldRenderer::compute_light(const Camera& camera, const World& world) {
     ZoneScopedN("WorldRenderer::compute_light");
 
-    const auto& lights = world.lights();
-    if (lights.empty()) return;
+    if (world.light_count() == 0) return;
 
     auto* const commands = Renderer::CommandBuffer();
-    auto& context = Renderer::Context();
 
-    for (const auto& [id, light] : lights) {
-        m_light_buffer_data_ptr->color = light.color;
-        m_light_buffer_data_ptr->pos = light.pos;
-        m_light_buffer_data_ptr->size = light.size * static_cast<uint32_t>(Constants::SUBDIVISION);
-        m_light_buffer_data_ptr++;
-    }
-
-    ptrdiff_t size = (uint8_t*) m_light_buffer_data_ptr - (uint8_t*) m_light_buffer_data;
-    if (size < (1 << 16)) {
-        commands->UpdateBuffer(*m_light_buffer, 0, m_light_buffer_data, size);
-    } else {
-        context->WriteBuffer(*m_light_buffer, 0, m_light_buffer_data, size);
-    }
+    const size_t size = world.light_count() * sizeof(Light);
+    commands->UpdateBuffer(*m_light_buffer, 0, world.lights(), size);
 
     constexpr uint32_t WORKGROUP = 16;
 
@@ -391,7 +377,7 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
     {
         commands->SetPipelineState(*m_light_set_light_sources_pipeline);
         commands->SetResourceHeap(*m_light_resource_heap);
-        commands->Dispatch(1, lights.size(), 1);
+        commands->Dispatch(world.light_count(), 1, 1);
     }
     commands->PopDebugGroup();
 
@@ -416,8 +402,6 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
         }
         commands->PopDebugGroup();
     }
-
-    m_light_buffer_data_ptr = m_light_buffer_data;
 }
 
 void WorldRenderer::terminate() {

@@ -4,11 +4,8 @@
 
 #include <glm/gtc/random.hpp>
 
-#include "LLGL/RenderingDebuggerFlags.h"
-#include "LLGL/Timer.h"
 #include "constants.hpp"
 #include "engine.hpp"
-#include "log.hpp"
 #include "renderer/camera.h"
 #include "renderer/renderer.hpp"
 #include "time/time.hpp"
@@ -30,6 +27,7 @@ static struct GameState {
     Player player;
     World world;
     Camera camera;
+    glm::vec3 mouse_light = glm::vec3(0.9f, 0.2f, 0.2f);
     bool free_camera = false;
 } g;
 
@@ -87,6 +85,7 @@ void pre_update() {
     UI::PreUpdate(g.player.inventory());
 
     g.player.pre_update();
+    g.world.clear_lights();
 
     if (Input::JustPressed(Key::F)) g.free_camera = !g.free_camera;
 }
@@ -94,7 +93,7 @@ void pre_update() {
 void fixed_update() {
     ZoneScopedN("Game::fixed_update");
 
-    ParticleManager::Update();
+    ParticleManager::Update(g.world);
 
 #if DEBUG
     const bool handle_input = !g.free_camera;
@@ -148,16 +147,19 @@ void update() {
     
     g.player.update(g.camera, g.world);
 
-    Light& mouse_light = g.world.get_light(0);
-    mouse_light.pos = glm::ivec2((g.camera.screen_to_world(Input::MouseScreenPosition()) * static_cast<float>(Constants::SUBDIVISION)) / Constants::TILE_SIZE);
-
     if (Input::JustPressed(MouseButton::Right)) {
-        mouse_light.color = glm::vec3(
+        g.mouse_light = glm::vec3(
             rand_range(0.2f, 1.0f),
             rand_range(0.2f, 1.0f),
             rand_range(0.2f, 1.0f)
         );
     }
+
+    g.world.add_light(Light {
+        .color = g.mouse_light,
+        .pos = glm::ivec2(g.camera.screen_to_world(Input::MouseScreenPosition()) * static_cast<float>(Constants::SUBDIVISION) / Constants::TILE_SIZE),
+        .size = glm::uvec2(4)
+    });
 
     if (Input::Pressed(Key::K)) {
         for (int i = 0; i < 500; ++i) {
@@ -167,6 +169,7 @@ void update() {
             ParticleManager::SpawnParticle(
                 ParticleBuilder::create(Particle::Type::Grass, position, velocity, 5.0f)
                     .with_rotation_speed(glm::pi<float>() / 12.0f)
+                    .with_light(glm::vec3(0.1f, 0.9f, 0.1f))
             );
         }
     }
@@ -181,50 +184,19 @@ void post_update() {
 void render() {
     ZoneScopedN("Game::render");
 
-    // Renderer::Debugger()->SetTimeRecording(true);
-        Renderer::Begin(g.camera, g.world.data());
+    Renderer::Begin(g.camera, g.world.data());
 
-        Background::Draw();
+    Background::Draw();
 
-        g.world.draw();
+    g.world.draw();
 
-        g.player.draw();
+    g.player.draw();
 
-        ParticleManager::Draw();
+    ParticleManager::Draw();
 
-        UI::Draw(g.camera, g.player);
+    UI::Draw(g.camera, g.player);
 
-        Renderer::Render(g.camera, g.world);
-    // Renderer::Debugger()->SetTimeRecording(false);
-
-    // LLGL::FrameProfile frame_profile;
-
-    // Renderer::Debugger()->FlushProfile(&frame_profile);
-
-    // double ticksToMilliseconds = 1000.0 / (double)LLGL::Timer::Frequency();
-    // std::pair<double, const char*> top5[5] = {
-    //     {0.0, NULL},
-    //     {0.0, NULL},
-    //     {0.0, NULL},
-    //     {0.0, NULL},
-    //     {0.0, NULL}
-    // };
-
-    // for (const auto& record : frame_profile.timeRecords) {
-    //     double cpu_time = (double)(record.cpuTicksEnd - record.cpuTicksStart) * ticksToMilliseconds;
-    //     double gpu_time = (double)record.elapsedTime * ticksToMilliseconds;
-    //     for (auto& i : top5) {
-    //         if (gpu_time > i.first && strcmp(record.annotation, "CommandBuffer") != 0 && strcmp(record.annotation, "BeginRenderPass") != 0) {
-    //             i.first = gpu_time;
-    //             i.second = record.annotation;
-    //             break;
-    //         }
-    //     }
-    // }
-
-    // for (const auto& i : top5) {
-    //     LOG_DEBUG("%s : %lf ms", i.second, i.first);
-    // }
+    Renderer::Render(g.camera, g.world);
 }
 
 void post_render() {
@@ -326,12 +298,6 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     inventory.set_item(5, ITEM_WOOD_BLOCK.with_max_stack());
 
     Engine::ShowWindow();
-
-    g.world.add_light(0, Light {
-        .color = glm::vec3(1.0f, 0.0f, 0.0f),
-        .pos = TilePos::from_world_pos(g.camera.screen_to_world(Input::MouseScreenPosition())),
-        .size = glm::uvec2(1)
-    });
 
     return true;
 }

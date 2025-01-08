@@ -28,6 +28,8 @@ struct TileCracks {
     uint8_t cracks_index;
 };
 
+static constexpr size_t WORLD_MAX_LIGHT_COUNT = 0xFFFF / sizeof(Light);
+
 class World {
 public:
     World() = default;
@@ -101,18 +103,14 @@ public:
         m_tile_cracks.erase(pos);
     }
 
-    [[nodiscard]] inline const std::unordered_map<uint32_t, Light>& lights() const { return m_lights; }
+    [[nodiscard]] inline const Light* lights() const { return m_lights; }
+    [[nodiscard]] inline uint32_t light_count() const { return m_light_count; }
 
-    [[nodiscard]] inline void add_light(uint32_t id, Light light) {
-        m_lights[id] = light;
-    }
+    inline void clear_lights() { m_light_count = 0; }
 
-    [[nodiscard]] inline Light& get_light(uint32_t id) {
-        return m_lights[id];
-    }
-
-    [[nodiscard]] inline void remove_light(uint32_t id) {
-        m_lights.erase(id);
+    [[nodiscard]] inline void add_light(Light light) {
+        m_lights[m_light_count] = light;
+        m_light_count = (m_light_count + 1) % WORLD_MAX_LIGHT_COUNT;
     }
 
 private:
@@ -122,8 +120,9 @@ private:
     WorldData m_data;
     ChunkManager m_chunk_manager;
     std::vector<BlockDigAnimation> m_block_dig_animations;
-    std::unordered_map<uint32_t, Light> m_lights;
     std::unordered_map<TilePos, TileCracks> m_tile_cracks;
+    Light* m_lights = nullptr;
+    uint32_t m_light_count = 0; 
     bool m_changed = false;
 };
 
