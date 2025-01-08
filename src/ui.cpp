@@ -22,6 +22,8 @@ constexpr float INVENTORY_SLOT_SIZE = HOTBAR_SLOT_SIZE * 1.15;
 constexpr float HOTBAR_SLOT_SIZE_SELECTED = HOTBAR_SLOT_SIZE * 1.3;
 constexpr float INVENTORY_CELL_MARGIN = 4;
 
+constexpr uint16_t FRAMETIME_RECORD_MAX_COUNT = 120;
+
 enum class AnimationDirection: uint8_t {
     Backward = 0,
     Forward = 1,
@@ -84,6 +86,10 @@ static struct UiState {
     glm::vec3 cursor_foreground_color;
     glm::vec3 cursor_background_color;
 
+    float* frametime_records;
+    uint16_t frametime_record_index = 0;
+    float frametime_record_sum = 0.0f;
+
     float cursor_anim_progress;
     float cursor_scale = 1.0f;
 
@@ -116,17 +122,11 @@ void UI::Init() {
         .set_texture(Assets::GetTexture(TextureAsset::UiCursorForeground))
         .set_color(state.cursor_foreground_color)
         .set_anchor(Anchor::TopLeft);
+
+    state.frametime_records = new float[FRAMETIME_RECORD_MAX_COUNT]();
 }
 
-void UI::FixedUpdate() {
-    if (state.show_fps) {
-        const float delta = Time::delta_seconds();
-        if (delta > 0.0f && state.fps_update_timer.tick(Time::fixed_delta()).just_finished()) {
-            const int fps = (int) (1.0f / delta);
-            state.fps_text = std::to_string(fps);
-        }
-    }
-}
+void UI::FixedUpdate() {}
 
 void UI::PreUpdate(Inventory& inventory) {
     ZoneScopedN("UI::PreUpdate");
@@ -184,6 +184,19 @@ void UI::Update(Inventory& inventory) {
         const int next_index = static_cast<int>(inventory.selected_slot()) - static_cast<int>(glm::sign(scroll));
         const int new_index = (next_index % CELLS_IN_ROW + CELLS_IN_ROW) % CELLS_IN_ROW;
         inventory.set_selected_slot(static_cast<uint8_t>(new_index));
+    }
+
+    const float frametime = Time::delta_seconds();
+    state.frametime_record_sum -= state.frametime_records[state.frametime_record_index];
+    state.frametime_record_sum += frametime;
+    state.frametime_records[state.frametime_record_index] = frametime;
+    state.frametime_record_index = (state.frametime_record_index + 1) % FRAMETIME_RECORD_MAX_COUNT;
+
+    if (state.show_fps) {
+        if (state.fps_update_timer.tick(Time::delta()).just_finished()) {
+            const int fps = (int) (1.0f / (state.frametime_record_sum / FRAMETIME_RECORD_MAX_COUNT));
+            state.fps_text = std::to_string(fps);
+        }
     }
 }
 
@@ -243,7 +256,7 @@ void UI::Draw(const Camera& camera, const Player& player) {
 
         Sprite item_sprite;
         draw_item_with_stack(item_sprite, size, 16.0f * state.cursor_scale, position, taken_item.item.value(), item_depth, stack_depth);
-    } else if (player.can_use_item() && selected_item.has_item()) {
+    } else if (player.can_use_item() && selected_item.has_item() && !Input::IsMouseOverUi()) {
         const Texture& texture = Assets::GetItemTexture(selected_item.item->id);
         const glm::vec2 size = glm::vec2(texture.size()) * state.cursor_scale;
         const uint32_t item_depth = ++depth;
