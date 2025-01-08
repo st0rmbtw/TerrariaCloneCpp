@@ -1,5 +1,5 @@
-#ifndef TERRARIA_WORLD_WORLD_DATA
-#define TERRARIA_WORLD_WORLD_DATA
+#ifndef WORLD_WORLD_DATA_HPP
+#define WORLD_WORLD_DATA_HPP
 
 #pragma once
 

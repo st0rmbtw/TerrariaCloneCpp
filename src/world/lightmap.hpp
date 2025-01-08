@@ -1,5 +1,5 @@
-#ifndef TERRARIA_WORLD_LIGHTMAP_HPP
-#define TERRARIA_WORLD_LIGHTMAP_HPP
+#ifndef WORLD_LIGHTMAP_HPP
+#define WORLD_LIGHTMAP_HPP
 
 #include <stdint.h>
 #include <thread>

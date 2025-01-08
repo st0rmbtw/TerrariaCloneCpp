@@ -1,5 +1,5 @@
-#ifndef TERRARIA_TYPES_NEIGHBORS
-#define TERRARIA_TYPES_NEIGHBORS
+#ifndef TYPES_NEIGHBORS
+#define TYPES_NEIGHBORS
 
 #pragma once
 

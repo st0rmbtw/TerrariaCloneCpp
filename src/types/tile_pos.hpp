@@ -1,5 +1,5 @@
-#ifndef TERRARIA_TILE_POS_HPP
-#define TERRARIA_TILE_POS_HPP
+#ifndef TYPES_TILE_POS_HPP
+#define TYPES_TILE_POS_HPP
 
 #pragma once
 

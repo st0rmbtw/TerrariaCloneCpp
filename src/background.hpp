@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef TERRARIA_BACKGROUND
-#define TERRARIA_BACKGROUND
+#ifndef BACKGROUND_HPP
+#define BACKGROUND_HPP
 
 #include "renderer/camera.h"
 #include "world/world.hpp"

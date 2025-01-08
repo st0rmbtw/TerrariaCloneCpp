@@ -1,5 +1,5 @@
-#ifndef TERRARIA_BLOCK_HPP
-#define TERRARIA_BLOCK_HPP
+#ifndef TYPES_BLOCK_HPP
+#define TYPES_BLOCK_HPP
 
 #pragma once
 

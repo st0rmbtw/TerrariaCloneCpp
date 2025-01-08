@@ -1,5 +1,5 @@
-#ifndef TERRARIA_TYPES_CONFIG_HPP
-#define TERRARIA_TYPES_CONFIG_HPP
+#ifndef TYPES_CONFIG_HPP
+#define TYPES_CONFIG_HPP
 
 #pragma once
 

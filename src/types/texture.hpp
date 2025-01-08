@@ -1,5 +1,5 @@
-#ifndef TERRARIA_TEXTURE_HPP
-#define TERRARIA_TEXTURE_HPP
+#ifndef TYPES_TEXTURE_HPP
+#define TYPES_TEXTURE_HPP
 
 #pragma once
 

@@ -1,18 +1,13 @@
 // Based on https://github.com/bevyengine/bevy/blob/main/crates/bevy_time/src/timer.rs
 
-#ifndef TERRARIA_TIME_TIMER_HPP
-#define TERRARIA_TIME_TIMER_HPP
+#ifndef TIME_TIMER_HPP
+#define TIME_TIMER_HPP
 
 #pragma once
 
 #include <chrono>
 #include <cstdint>
 #include "stopwatch.hpp"
-
-namespace duration {
-    using seconds = std::chrono::seconds;
-    using seconds_float = std::chrono::duration<float>;
-}
 
 enum class TimerMode : uint8_t {
     Once = 0,
@@ -37,7 +32,7 @@ public:
         m_finished(false) {}
 
     inline static Timer from_seconds(float seconds, TimerMode mode) {
-        return Timer(duration::seconds_float(seconds), mode);
+        return Timer(std::chrono::duration<float>(seconds), mode);
     }
 
     [[nodiscard]] inline bool finished() const { return m_finished; }

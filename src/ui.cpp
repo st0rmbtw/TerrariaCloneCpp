@@ -105,7 +105,7 @@ static void update_cursor();
 void UI::Init() {
     ZoneScopedN("UI::Init");
 
-    state.fps_update_timer = Timer(duration::seconds_float(0.5f), TimerMode::Repeating);
+    state.fps_update_timer = Timer::from_seconds(0.5f, TimerMode::Repeating);
     state.fps_update_timer.set_finished();
 
     state.cursor_foreground_color = glm::vec3(1.0, 0.08, 0.58);

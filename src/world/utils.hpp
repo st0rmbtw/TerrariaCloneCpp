@@ -1,5 +1,5 @@
-#ifndef TERRARIA_WORLD_UTILS_HPP
-#define TERRARIA_WORLD_UTILS_HPP
+#ifndef WORLD_UTILS_HPP
+#define WORLD_UTILS_HPP
 
 #include <glm/glm.hpp>
 

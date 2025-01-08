@@ -1,5 +1,5 @@
-#ifndef TERRARIA_WALL_HPP
-#define TERRARIA_WALL_HPP
+#ifndef TYPES_WALL_HPP
+#define TYPES_WALL_HPP
 
 #pragma once
 

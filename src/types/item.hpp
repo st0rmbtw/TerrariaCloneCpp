@@ -1,5 +1,5 @@
-#ifndef TERRARIA_ITEM_HPP
-#define TERRARIA_ITEM_HPP
+#ifndef TYPES_ITEM_HPP
+#define TYPES_ITEM_HPP
 
 #pragma once
 

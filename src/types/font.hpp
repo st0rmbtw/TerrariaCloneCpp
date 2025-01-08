@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef TERRARIA_TYPES_FONT
-#define TERRARIA_TYPES_FONT
+#ifndef TYPES_FONT
+#define TYPES_FONT
 
 #include <unordered_map>
 #include "texture.hpp"

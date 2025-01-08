@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef TERRARIA_RENDERER_WORLD_RENDERER
-#define TERRARIA_RENDERER_WORLD_RENDERER
+#ifndef RENDERER_WORLD_RENDERER_HPP
+#define RENDERER_WORLD_RENDERER_HPP
 
 #include <LLGL/LLGL.h>
 #include "../world/world_data.hpp"

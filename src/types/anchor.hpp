@@ -1,5 +1,5 @@
-#ifndef TERRARIA_ANCHOR_HPP
-#define TERRARIA_ANCHOR_HPP
+#ifndef TYPES_ANCHOR_HPP
+#define TYPES_ANCHOR_HPP
 
 #pragma once
 

@@ -1,5 +1,5 @@
-#ifndef TERRARIA_CONSTANTS_HPP
-#define TERRARIA_CONSTANTS_HPP
+#ifndef CONSTANTS_HPP
+#define CONSTANTS_HPP
 
 #pragma once
 

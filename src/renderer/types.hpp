@@ -1,5 +1,5 @@
-#ifndef TERRARIA_RENDERER_TYPES
-#define TERRARIA_RENDERER_TYPES
+#ifndef RENDERER_TYPES_HPP
+#define RENDERER_TYPES_HPP
 
 #pragma once
 

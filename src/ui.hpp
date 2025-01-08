@@ -1,5 +1,5 @@
-#ifndef TERRARIA_UI_HPP
-#define TERRARIA_UI_HPP
+#ifndef UI_HPP
+#define UI_HPP
 
 #pragma once
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef TERRARIA_TYPES_GLYPH
-#define TERRARIA_TYPES_GLYPH
+#ifndef TYPES_GLYPH
+#define TYPES_GLYPH
 
 #include <glm/vec2.hpp>
 

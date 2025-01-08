@@ -23,8 +23,6 @@ struct __attribute__((aligned(16))) DepthUniformData {
     float wall_depth;
 };
 
-static constexpr size_t MAX_LIGHT_COUNT = 0xFFFF / sizeof(Light);
-
 void WorldRenderer::init() {
     ZoneScopedN("WorldRenderer::init");
 
@@ -142,7 +140,7 @@ void WorldRenderer::init() {
     LLGL::BufferDescriptor light_buffer;
     light_buffer.bindFlags = LLGL::BindFlags::Sampled;
     light_buffer.stride = sizeof(Light);
-    light_buffer.size = sizeof(Light) * MAX_LIGHT_COUNT;
+    light_buffer.size = sizeof(Light) * WORLD_MAX_LIGHT_COUNT;
     m_light_buffer = context->CreateBuffer(light_buffer);
 
     const LLGL::ResourceViewDescriptor lightResourceViews[] = {

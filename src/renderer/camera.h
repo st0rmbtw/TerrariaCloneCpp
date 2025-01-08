@@ -1,5 +1,5 @@
-#ifndef TERRARIA_RENDERER_CAMERA_H
-#define TERRARIA_RENDERER_CAMERA_H
+#ifndef RENDERER_CAMERA_H
+#define RENDERER_CAMERA_H
 
 #pragma once
 
