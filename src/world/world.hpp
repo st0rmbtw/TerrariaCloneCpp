@@ -80,8 +80,6 @@ public:
     [[nodiscard]] inline const WorldData& data() const { return m_data; }
     [[nodiscard]] inline WorldData& data() { return m_data; }
 
-    [[nodiscard]] inline const std::vector<Light>& lights() const { return m_lights; }
-
     [[nodiscard]] inline void create_dig_block_animation(const Block& block, TilePos pos) {
         m_block_dig_animations.push_back(BlockDigAnimation {
             .tile_pos = pos,
@@ -103,8 +101,18 @@ public:
         m_tile_cracks.erase(pos);
     }
 
-    [[nodiscard]] inline void add_light(Light light) {
-        m_lights.push_back(light);
+    [[nodiscard]] inline const std::unordered_map<uint32_t, Light>& lights() const { return m_lights; }
+
+    [[nodiscard]] inline void add_light(uint32_t id, Light light) {
+        m_lights[id] = light;
+    }
+
+    [[nodiscard]] inline Light& get_light(uint32_t id) {
+        return m_lights[id];
+    }
+
+    [[nodiscard]] inline void remove_light(uint32_t id) {
+        m_lights.erase(id);
     }
 
 private:
@@ -114,7 +122,7 @@ private:
     WorldData m_data;
     ChunkManager m_chunk_manager;
     std::vector<BlockDigAnimation> m_block_dig_animations;
-    std::vector<Light> m_lights;
+    std::unordered_map<uint32_t, Light> m_lights;
     std::unordered_map<TilePos, TileCracks> m_tile_cracks;
     bool m_changed = false;
 };

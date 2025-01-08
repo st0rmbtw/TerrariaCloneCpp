@@ -68,10 +68,10 @@ float4 blend(float4 foreground, float4 background) {
 
 float4 PS(VSOutput inp) : SV_Target
 {
-    const float4 lightmap = float4(LightMap.Sample(LightMapSampler, float2(inp.light_uv)).rgb, 1.0f);
-    const float4 light = float4(Light.Sample(LightSampler, float2(inp.light_uv)).rgb, 1.0f);
+    const float lightmap = LightMap.Sample(LightMapSampler, inp.light_uv).r;
+    const float4 light = float4(Light.Sample(LightSampler, inp.light_uv).rgb, 1.0f);
 
-    const float4 final_light = max(lightmap, light);
+    const float4 final_light = max(float4(lightmap, lightmap, lightmap, 1.0f), light);
 
     const float4 background = BackgroundTexture.Sample(BackgroundTextureSampler, float2(inp.uv));
     const float4 world = WorldTexture.Sample(WorldTextureSampler, float2(inp.uv)) * final_light;

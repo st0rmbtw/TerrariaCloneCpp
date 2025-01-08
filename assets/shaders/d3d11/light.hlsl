@@ -50,37 +50,29 @@ float get_decay(uint2 pos) {
 void blur(uint2 pos, inout float3 prev_light, inout float prev_decay) {
     float4 this_light = LightTexture[pos];
     
-    bool this_light_changed = false;
-    
     if (prev_light.x < this_light.x) {
         prev_light.x = this_light.x;
     } else {
         this_light.x = prev_light.x;
-        this_light_changed = true;
     }
     
     if (prev_light.y < this_light.y) {
         prev_light.y = this_light.y;
     } else {
         this_light.y = prev_light.y;
-        this_light_changed = true;
     }
     
     if (prev_light.z < this_light.z) {
         prev_light.z = this_light.z;
     } else {
         this_light.z = prev_light.z;
-        this_light_changed = true;
     }
     
-    if (this_light_changed) {
-        LightTexture[pos] = this_light;
-    }
+    LightTexture[pos] = this_light;
     
     prev_light = prev_light * prev_decay;
     prev_decay = get_decay(pos);
 }
-
 
 [numthreads(1, 1, 1)]
 void CSComputeLightSetLightSources(uint3 thread_id : SV_DispatchThreadID)
@@ -96,54 +88,40 @@ void CSComputeLightSetLightSources(uint3 thread_id : SV_DispatchThreadID)
     }
 }
 
-[numthreads(16, 1, 1)]
-void CSComputeLightTopToBottom(uint3 thread_id : SV_DispatchThreadID)
+[numthreads(32, 1, 1)]
+void CSComputeLightVertical(uint3 thread_id : SV_DispatchThreadID)
 {
     const uint x = uniform_min.x + thread_id.x;
 
     float3 prev_light = float3(0.0, 0.0, 0.0);
     float prev_decay = 0.0;
 
-    for (uint y = uniform_min.y; y < uniform_max.y; ++y) {
-        blur(uint2(x, y), prev_light, prev_decay);
+    float3 prev_light2 = float3(0.0, 0.0, 0.0);
+    float prev_decay2 = 0.0;
+
+    const uint height = uniform_max.y - uniform_min.y;
+
+    for (uint y = 0; y < height; ++y) {
+        blur(uint2(x, uniform_min.y + y), prev_light, prev_decay);
+        blur(uint2(x, uniform_max.y - 1 - y), prev_light2, prev_decay2);
     }
 }
 
-[numthreads(16, 1, 1)]
-void CSComputeLightBottomToTop(uint3 thread_id : SV_DispatchThreadID)
-{
-    const uint x = uniform_min.x + thread_id.x;
-
-    float3 prev_light = float3(0.0, 0.0, 0.0);
-    float prev_decay = 0.0;
-
-    for (uint y = uniform_max.y - 1; y >= uniform_min.y; --y) {
-        blur(uint2(x, y), prev_light, prev_decay);
-    }
-}
-
-[numthreads(16, 1, 1)]
-void CSComputeLightLeftToRight(uint3 thread_id : SV_DispatchThreadID)
+[numthreads(32, 1, 1)]
+void CSComputeLightHorizontal(uint3 thread_id : SV_DispatchThreadID)
 {
     const uint y = uniform_min.y + thread_id.x;
 
     float3 prev_light = float3(0.0, 0.0, 0.0);
     float prev_decay = 0.0;
 
-    for (uint x = uniform_min.x; x < uniform_max.x; ++x) {
-        blur(uint2(x, y), prev_light, prev_decay);
-    }
-}
+    float3 prev_light2 = float3(0.0, 0.0, 0.0);
+    float prev_decay2 = 0.0;
 
-[numthreads(16, 1, 1)]
-void CSComputeLightRightToLeft(uint3 thread_id : SV_DispatchThreadID)
-{
-    const uint y = uniform_min.y + thread_id.x;
+    const uint width = uniform_max.x - uniform_min.x;
 
-    float3 prev_light = float3(0.0, 0.0, 0.0);
-    float prev_decay = 0.0;
-
-    for (uint x = uniform_max.x - 1; x >= uniform_min.x; --x) {
-        blur(uint2(x, y), prev_light, prev_decay);
+    for (uint x = 0; x < width; ++x) {
+        blur(uint2(uniform_min.x + x, y), prev_light, prev_decay);
+        blur(uint2(uniform_max.x - 1 - x, y), prev_light2, prev_decay2);
     }
 }

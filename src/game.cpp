@@ -21,6 +21,7 @@
 #include "particles.hpp"
 #include "background.hpp"
 #include "defines.hpp"
+#include "utils.hpp"
 
 #include <string>
 #include <tracy/Tracy.hpp>
@@ -147,11 +148,16 @@ void update() {
     
     g.player.update(g.camera, g.world);
 
-    g.world.add_light(Light {
-        .color = glm::vec3(1.0f, 0.0f, 0.0f),
-        .pos = TilePos::from_world_pos(g.camera.screen_to_world(Input::MouseScreenPosition())),
-        .size = glm::uvec2(1)
-    });
+    Light& mouse_light = g.world.get_light(0);
+    mouse_light.pos = glm::ivec2((g.camera.screen_to_world(Input::MouseScreenPosition()) * static_cast<float>(Constants::SUBDIVISION)) / Constants::TILE_SIZE);
+
+    if (Input::JustPressed(MouseButton::Right)) {
+        mouse_light.color = glm::vec3(
+            rand_range(0.2f, 1.0f),
+            rand_range(0.2f, 1.0f),
+            rand_range(0.2f, 1.0f)
+        );
+    }
 
     if (Input::Pressed(Key::K)) {
         for (int i = 0; i < 500; ++i) {
@@ -320,6 +326,12 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     inventory.set_item(5, ITEM_WOOD_BLOCK.with_max_stack());
 
     Engine::ShowWindow();
+
+    g.world.add_light(0, Light {
+        .color = glm::vec3(1.0f, 0.0f, 0.0f),
+        .pos = TilePos::from_world_pos(g.camera.screen_to_world(Input::MouseScreenPosition())),
+        .size = glm::uvec2(1)
+    });
 
     return true;
 }

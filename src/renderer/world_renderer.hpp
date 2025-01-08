@@ -15,9 +15,9 @@ public:
     void init();
     void init_textures(const WorldData& world);
 
-    void update_lightmap_texture(WorldData& world, LightMapTaskResult lightmap);
+    void update_lightmap_texture(WorldData& world);
 
-    void update_tile_texture(TilePos pos, uint8_t value);
+    void update_tile_texture(WorldData& world);
 
     void compute_light(const Camera& camera, const World& world);
 
@@ -45,11 +45,8 @@ private:
     LLGL::RenderTarget* m_light_texture_target = nullptr;
 
     LLGL::PipelineState* m_light_set_light_sources_pipeline = nullptr;
-    LLGL::PipelineState* m_light_top_to_bottom_pipeline = nullptr;
-    LLGL::PipelineState* m_light_bottom_to_top_pipeline = nullptr;
-    LLGL::PipelineState* m_light_left_to_right_pipeline = nullptr;
-    LLGL::PipelineState* m_light_right_to_left_pipeline = nullptr;
-
+    LLGL::PipelineState* m_light_vertical_pipeline = nullptr;
+    LLGL::PipelineState* m_light_horizontal_pipeline = nullptr;
 
     bool m_light_resource_heap_initialized = false;
 };

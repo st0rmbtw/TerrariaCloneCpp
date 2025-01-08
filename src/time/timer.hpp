@@ -21,7 +21,8 @@ enum class TimerMode : uint8_t {
 
 class Timer {
 public:
-    using Duration = std::chrono::milliseconds;
+    using Duration = Stopwatch::Duration;
+
     Timer() :
         m_duration(Duration::zero()),
         m_times_finished_this_tick(0),
@@ -34,6 +35,10 @@ public:
         m_times_finished_this_tick(0),
         m_mode(mode),
         m_finished(false) {}
+
+    inline static Timer from_seconds(float seconds, TimerMode mode) {
+        return Timer(duration::seconds_float(seconds), mode);
+    }
 
     [[nodiscard]] inline bool finished() const { return m_finished; }
     [[nodiscard]] inline bool just_finished() const { return m_times_finished_this_tick > 0; }

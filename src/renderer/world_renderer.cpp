@@ -6,12 +6,14 @@
 #include <LLGL/TextureFlags.h>
 #include <LLGL/Types.h>
 
+#include <cstddef>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <tracy/Tracy.hpp>
 
 #include "../assets.hpp"
 #include "../world/chunk.hpp"
+#include "../utils.hpp"
 
 #include "renderer.hpp"
 
@@ -94,14 +96,7 @@ void WorldRenderer::init() {
 
     m_pipeline = context->CreatePipelineState(pipelineDesc);
 
-
-
-
-
-
-
-
-
+    // =======================================================
 
     LLGL::PipelineLayoutDescriptor lightPipelineLayoutDesc;
     lightPipelineLayoutDesc.heapBindings = {
@@ -153,7 +148,7 @@ void WorldRenderer::init() {
 
     LLGL::ResourceHeapDescriptor lightResourceHeapDesc;
     lightResourceHeapDesc.pipelineLayout = lightPipelineLayout;
-    lightResourceHeapDesc.numResourceViews = 4;
+    lightResourceHeapDesc.numResourceViews = ARRAY_LEN(lightResourceViews);
 
     m_light_resource_heap = context->CreateResourceHeap(lightResourceHeapDesc, lightResourceViews);
 
@@ -168,35 +163,19 @@ void WorldRenderer::init() {
 
     {
         LLGL::ComputePipelineDescriptor lightPipelineDesc;
-        lightPipelineDesc.debugName = "WorldLightTopToBottomComputePipeline";
+        lightPipelineDesc.debugName = "WorldLightVerticalComputePipeline";
         lightPipelineDesc.pipelineLayout = lightPipelineLayout;
-        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightTopToBottom);
+        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightVertical);
 
-        m_light_top_to_bottom_pipeline = context->CreatePipelineState(lightPipelineDesc);
+        m_light_vertical_pipeline = context->CreatePipelineState(lightPipelineDesc);
     }
     {
         LLGL::ComputePipelineDescriptor lightPipelineDesc;
-        lightPipelineDesc.debugName = "WorldLightBottomToTopComputePipeline";
+        lightPipelineDesc.debugName = "WorldLightHorizontalComputePipeline";
         lightPipelineDesc.pipelineLayout = lightPipelineLayout;
-        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightBottomToTop);
+        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightHorizontal);
 
-        m_light_bottom_to_top_pipeline = context->CreatePipelineState(lightPipelineDesc);
-    }
-    {
-        LLGL::ComputePipelineDescriptor lightPipelineDesc;
-        lightPipelineDesc.debugName = "WorldLightLeftToRightComputePipeline";
-        lightPipelineDesc.pipelineLayout = lightPipelineLayout;
-        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightLeftToRight);
-
-        m_light_left_to_right_pipeline = context->CreatePipelineState(lightPipelineDesc);
-    }
-    {
-        LLGL::ComputePipelineDescriptor lightPipelineDesc;
-        lightPipelineDesc.debugName = "WorldLightRightToLeftComputePipeline";
-        lightPipelineDesc.pipelineLayout = lightPipelineLayout;
-        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightRightToLeft);
-
-        m_light_right_to_left_pipeline = context->CreatePipelineState(lightPipelineDesc);
+        m_light_horizontal_pipeline = context->CreatePipelineState(lightPipelineDesc);
     }
 
     m_light_buffer_data = new Light[1000];
@@ -218,16 +197,16 @@ void WorldRenderer::init_textures(const WorldData& world) {
     {
         LLGL::TextureDescriptor lightmap_texture_desc;
         lightmap_texture_desc.type      = LLGL::TextureType::Texture2D;
-        lightmap_texture_desc.format    = LLGL::Format::RGBA8UNorm;
+        lightmap_texture_desc.format    = LLGL::Format::R8UNorm;
         lightmap_texture_desc.extent    = LLGL::Extent3D(world.lightmap.width, world.lightmap.height, 1);
         lightmap_texture_desc.miscFlags = 0;
         lightmap_texture_desc.bindFlags = LLGL::BindFlags::Sampled;
 
         LLGL::ImageView image_view;
-        image_view.format   = LLGL::ImageFormat::RGB;
+        image_view.format   = LLGL::ImageFormat::R;
         image_view.dataType = LLGL::DataType::UInt8;
         image_view.data     = world.lightmap.colors;
-        image_view.dataSize = world.lightmap.width * world.lightmap.height * 3;
+        image_view.dataSize = world.lightmap.width * world.lightmap.height * sizeof(Color);
 
         m_lightmap_texture = context->CreateTexture(lightmap_texture_desc, &image_view);
     }
@@ -287,31 +266,55 @@ void WorldRenderer::init_textures(const WorldData& world) {
     m_light_texture_target = context->CreateRenderTarget(lightTextureRenderTarget);
 }
 
-void WorldRenderer::update_lightmap_texture(WorldData& world, LightMapTaskResult result) {
-    ZoneScopedN("WorldRenderer::update_lightmap_texture");
-
+inline static void internal_update_lightmap_texture(const WorldData& world, const LightMapTaskResult& result, LLGL::Texture* lightmap_texture, LLGL::ImageView& image_view) {
     for (int y = 0; y < result.height; ++y) {
         memcpy(&world.lightmap.colors[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.data[y * result.width], result.width * sizeof(Color));
         memcpy(&world.lightmap.masks[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.mask[y * result.width], result.width * sizeof(LightMask));
     }
 
-    LLGL::ImageView image_view;
-    image_view.format   = LLGL::ImageFormat::RGB;
-    image_view.dataType = LLGL::DataType::UInt8;
     image_view.data     = result.data;
-    image_view.dataSize = result.width * result.height * 3;
-
-    Renderer::Context()->WriteTexture(*m_lightmap_texture, LLGL::TextureRegion(LLGL::Offset3D(result.offset_x, result.offset_y, 0), LLGL::Extent3D(result.width, result.height, 1)), image_view);
+    image_view.dataSize = result.width * result.height * sizeof(Color);
+    Renderer::Context()->WriteTexture(*lightmap_texture, LLGL::TextureRegion(LLGL::Offset3D(result.offset_x, result.offset_y, 0), LLGL::Extent3D(result.width, result.height, 1)), image_view);
 }
 
-void WorldRenderer::update_tile_texture(TilePos pos, uint8_t value) {
+void WorldRenderer::update_lightmap_texture(WorldData& world) {
+    ZoneScopedN("WorldRenderer::update_lightmap_texture");
+
     LLGL::ImageView image_view;
     image_view.format   = LLGL::ImageFormat::R;
     image_view.dataType = LLGL::DataType::UInt8;
-    image_view.data     = &value;
+
+    for (auto it = world.lightmap_tasks.cbegin(); it != world.lightmap_tasks.cend();) {
+        const LightMapTask& task = *it;
+        const LightMapTaskResult result = task.result->load();
+
+        if (result.is_complete) {
+            internal_update_lightmap_texture(world, result, m_lightmap_texture, image_view);
+
+            delete[] result.data;
+            delete[] result.mask;
+            it = world.lightmap_tasks.erase(it);
+            continue;
+        }
+
+        ++it;
+    }
+
+}
+
+void WorldRenderer::update_tile_texture(WorldData& world) {
+    LLGL::ImageView image_view;
+    image_view.format   = LLGL::ImageFormat::R;
+    image_view.dataType = LLGL::DataType::UInt8;
     image_view.dataSize = 1;
 
-    Renderer::Context()->WriteTexture(*m_tile_texture, LLGL::TextureRegion(LLGL::Offset3D(pos.x, pos.y, 0), LLGL::Extent3D(1, 1, 1)), image_view);
+    while (!world.changed_tiles.empty()) {
+        auto [pos, value] = world.changed_tiles.back();
+        world.changed_tiles.pop_back();
+
+        image_view.data     = &value;
+        Renderer::Context()->WriteTexture(*m_tile_texture, LLGL::TextureRegion(LLGL::Offset3D(pos.x, pos.y, 0), LLGL::Extent3D(1, 1, 1)), image_view);
+    }
 }
 
 void WorldRenderer::render(const ChunkManager& chunk_manager) {
@@ -348,15 +351,15 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
 void WorldRenderer::compute_light(const Camera& camera, const World& world) {
     ZoneScopedN("WorldRenderer::compute_light");
 
-    const std::vector<Light>& lights = world.lights();
+    const auto& lights = world.lights();
     if (lights.empty()) return;
 
     auto* const commands = Renderer::CommandBuffer();
     auto& context = Renderer::Context();
 
-    for (const Light& light : lights) {
+    for (const auto& [id, light] : lights) {
         m_light_buffer_data_ptr->color = light.color;
-        m_light_buffer_data_ptr->pos = light.pos * Constants::SUBDIVISION;
+        m_light_buffer_data_ptr->pos = light.pos;
         m_light_buffer_data_ptr->size = light.size * static_cast<uint32_t>(Constants::SUBDIVISION);
         m_light_buffer_data_ptr++;
     }
@@ -370,10 +373,10 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
 
     constexpr uint32_t WORKGROUP = 16;
 
-    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / Constants::TILE_SIZE) - 16;
-    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / Constants::TILE_SIZE) + 16;
+    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / Constants::TILE_SIZE) - static_cast<int>(WORKGROUP);
+    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / Constants::TILE_SIZE) + static_cast<int>(WORKGROUP);
 
-    math::URect blur_area = math::URect::from_corners(
+    math::URect blur_area = math::URect(
         glm::uvec2(glm::max(proj_area_min * Constants::SUBDIVISION, glm::ivec2(0))),
         glm::uvec2(glm::max(proj_area_max * Constants::SUBDIVISION, glm::ivec2(0)))
     );
@@ -391,21 +394,10 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
     }
     commands->PopDebugGroup();
 
-    for (int i = 0; i < 3; ++i) {
-
-        commands->PushDebugGroup("CS Light BlurLeftToRight");
+    for (int i = 0; i < 2; ++i) {
+        commands->PushDebugGroup("CS Light BlurHorizontal");
         {
-            commands->SetPipelineState(*m_light_left_to_right_pipeline);
-            commands->SetResourceHeap(*m_light_resource_heap);
-            commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
-            commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
-            commands->Dispatch(grid_h, 1, 1);
-        }
-        commands->PopDebugGroup();
-
-        commands->PushDebugGroup("CS Light BlurTopToBottom");
-        {
-            commands->SetPipelineState(*m_light_top_to_bottom_pipeline);
+            commands->SetPipelineState(*m_light_horizontal_pipeline);
             commands->SetResourceHeap(*m_light_resource_heap);
             commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
             commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
@@ -413,26 +405,15 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
         }
         commands->PopDebugGroup();
 
-        commands->PushDebugGroup("CS Light BlurRightToLeft");
+        commands->PushDebugGroup("CS Light BlurVertical");
         {
-            commands->SetPipelineState(*m_light_right_to_left_pipeline);
+            commands->SetPipelineState(*m_light_vertical_pipeline);
             commands->SetResourceHeap(*m_light_resource_heap);
             commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
             commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
             commands->Dispatch(grid_h, 1, 1);
         }
         commands->PopDebugGroup();
-
-        commands->PushDebugGroup("CS Light BlurBottomToTop");
-        {
-            commands->SetPipelineState(*m_light_bottom_to_top_pipeline);
-            commands->SetResourceHeap(*m_light_resource_heap);
-            commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
-            commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
-            commands->Dispatch(grid_w, 1, 1);
-        }
-        commands->PopDebugGroup();
-
     }
 
     m_light_buffer_data_ptr = m_light_buffer_data;

@@ -174,10 +174,8 @@ const std::pair<ShaderAsset, AssetShader> SHADER_ASSETS[] = {
 
 const std::pair<ComputeShaderAsset, AssetComputeShader> COMPUTE_SHADER_ASSETS[] = {
     { ComputeShaderAsset::ParticleComputeTransformShader, AssetComputeShader("particle", "CSComputeTransform") },
-    { ComputeShaderAsset::LightTopToBottom, AssetComputeShader("light", "CSComputeLightTopToBottom") },
-    { ComputeShaderAsset::LightBottomToTop, AssetComputeShader("light", "CSComputeLightBottomToTop") },
-    { ComputeShaderAsset::LightLeftToRight, AssetComputeShader("light", "CSComputeLightLeftToRight") },
-    { ComputeShaderAsset::LightRightToLeft, AssetComputeShader("light", "CSComputeLightRightToLeft") },
+    { ComputeShaderAsset::LightVertical, AssetComputeShader("light", "CSComputeLightVertical") },
+    { ComputeShaderAsset::LightHorizontal, AssetComputeShader("light", "CSComputeLightHorizontal") },
     { ComputeShaderAsset::LightSetLightSources, AssetComputeShader("light", "CSComputeLightSetLightSources") },
 };
 

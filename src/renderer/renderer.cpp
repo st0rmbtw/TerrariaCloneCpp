@@ -21,6 +21,7 @@
 #include "../log.hpp"
 #include "../types/shader_type.hpp"
 #include "../utils.hpp"
+#include "../time/timer.hpp"
 
 #include "types.hpp"
 #include "utils.hpp"
@@ -36,6 +37,8 @@ static struct RendererState {
     BackgroundRenderer background_renderer;
     WorldRenderer world_renderer;
 
+    Timer compute_light_timer;
+
     LLGL::RenderSystemPtr context = nullptr;
     std::shared_ptr<CustomSurface> surface = nullptr;
 
@@ -43,7 +46,6 @@ static struct RendererState {
     math::Rect nozoom_camera_frustum;
     math::Rect camera_frustum;
 
-    
     LLGL::SwapChain* swap_chain = nullptr;
     LLGL::CommandBuffer* command_buffer = nullptr;
     LLGL::CommandQueue* command_queue = nullptr;
@@ -239,6 +241,8 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
     state.postprocess_pipeline = context->CreatePipelineState(pipelineDesc);
 
+    state.compute_light_timer = Timer::from_seconds(Constants::FIXED_UPDATE_INTERVAL, TimerMode::Repeating);
+
     return true;
 }
 
@@ -323,21 +327,6 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
 void Renderer::Begin(const Camera& camera, WorldData& world) {
     ZoneScopedN("Renderer::Begin");
 
-    for (auto it = world.lightmap_tasks.cbegin(); it != world.lightmap_tasks.cend();) {
-        const LightMapTask& task = *it;
-        const LightMapTaskResult result = task.result->load();
-
-        if (result.is_complete) {
-            state.world_renderer.update_lightmap_texture(world, result);
-            delete[] result.data;
-            delete[] result.mask;
-            it = world.lightmap_tasks.erase(it);
-            continue;
-        }
-
-        ++it;
-    }
-
     auto* const commands = state.command_buffer;
 
     const math::Rect camera_frustum = math::Rect::from_corners(
@@ -353,6 +342,9 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
     state.camera_frustum = camera_frustum;
     state.nozoom_camera_frustum = nozoom_camera_frustum;
     state.ui_frustum = ui_frustum;
+
+    state.world_renderer.update_lightmap_texture(world);
+    state.world_renderer.update_tile_texture(world);
 
     commands->Begin();
     commands->SetViewport(state.swap_chain->GetResolution());
@@ -392,11 +384,13 @@ void Renderer::Render(const Camera& camera, const World& world) {
 
     LLGL::ClearValue clear_value = LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
-    commands->BeginRenderPass(*state.world_renderer.light_texture_target());
-        commands->Clear(LLGL::ClearFlags::Color, clear_value);
-    commands->EndRenderPass();
+    if (state.compute_light_timer.tick(Time::delta()).finished()) {
+        commands->BeginRenderPass(*state.world_renderer.light_texture_target());
+            commands->Clear(LLGL::ClearFlags::Color, clear_value);
+        commands->EndRenderPass();
 
-    state.world_renderer.compute_light(camera, world);
+        state.world_renderer.compute_light(camera, world);
+    }
 
     commands->BeginRenderPass(*state.background_render_target);
         commands->Clear(LLGL::ClearFlags::ColorDepth, clear_value);

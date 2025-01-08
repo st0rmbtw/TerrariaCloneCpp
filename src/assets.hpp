@@ -71,11 +71,9 @@ enum class ShaderAsset : uint8_t {
 
 enum class ComputeShaderAsset : uint8_t {
     ParticleComputeTransformShader = 0,
-    LightTopToBottom,
-    LightBottomToTop,
-    LightLeftToRight,
-    LightRightToLeft,
     LightSetLightSources,
+    LightVertical,
+    LightHorizontal,
 };
 
 enum class FontAsset : uint8_t {

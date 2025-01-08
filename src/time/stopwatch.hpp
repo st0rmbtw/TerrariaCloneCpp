@@ -7,7 +7,7 @@
 
 class Stopwatch {
 public:
-    using Duration = std::chrono::milliseconds;
+    using Duration = std::chrono::duration<float, std::milli>;
     
     Stopwatch() :
         m_elapsed(Duration::zero()) {}
