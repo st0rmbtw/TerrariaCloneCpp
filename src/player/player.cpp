@@ -74,7 +74,7 @@ void Player::init() {
     m_left_eye = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerLeftEye));
     m_right_eye = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerRightEye));
     m_walk_anim_timer = Timer(Timer::Duration::zero(), TimerMode::Repeating);
-    m_walk_particles_timer = Timer(duration::seconds_float(1.0f / 20.0f), TimerMode::Repeating);
+    m_walk_particles_timer = Timer::from_seconds(1.0f / 20.0f, TimerMode::Repeating);
     m_walk_animation_index = 0;
 
     m_legs.set_walk_animation({ .offset = 6 });
@@ -194,10 +194,12 @@ glm::vec2 Player::check_collisions(const World& world) {
     int top = static_cast<int>((m_position.y - PLAYER_HEIGHT_HALF) / TILE_SIZE) - 1;
     int bottom = static_cast<int>((m_position.y + PLAYER_HEIGHT_HALF) / TILE_SIZE) + 2;
 
-    left = glm::clamp(left, static_cast<int>(world.playable_area().min.x), static_cast<int>(world.playable_area().max.x));
-    right = glm::clamp(right, static_cast<int>(world.playable_area().min.x), static_cast<int>(world.playable_area().max.x));
-    top = glm::clamp(top, static_cast<int>(world.playable_area().min.y), static_cast<int>(world.playable_area().max.y));
-    bottom = glm::clamp(bottom, static_cast<int>(world.playable_area().min.y), static_cast<int>(world.playable_area().max.y));
+    const math::IRect& area = world.playable_area();
+
+    left = glm::clamp(left, area.min.x, area.max.x);
+    right = glm::clamp(right, area.min.x, area.max.x);
+    top = glm::clamp(top, area.min.y, area.max.y);
+    bottom = glm::clamp(bottom, area.min.y, area.max.y);
 
     int hx = -1;
     int hy = -1;
@@ -209,55 +211,51 @@ glm::vec2 Player::check_collisions(const World& world) {
     for (int y = top; y < bottom; ++y) {
         for (int x = left; x < right; ++x) {
             const glm::vec2 tile_pos = glm::vec2(x * TILE_SIZE, y * TILE_SIZE);
-            if (world.block_exists(TilePos(x, y))) {
-                
-                if (next_pos.x + PLAYER_WIDTH_HALF > tile_pos.x && next_pos.x - PLAYER_WIDTH_HALF < tile_pos.x + TILE_SIZE &&
-                    next_pos.y + PLAYER_HEIGHT_HALF > tile_pos.y && next_pos.y - PLAYER_HEIGHT_HALF < tile_pos.y + TILE_SIZE)
-                {
-                    const bool collide_horizontal = pos.x + PLAYER_WIDTH_HALF > tile_pos.x && pos.x - PLAYER_WIDTH_HALF < tile_pos.x + TILE_SIZE;
 
-                    if (pos.y + PLAYER_HEIGHT_HALF <= tile_pos.y) {
-                        if (collide_horizontal) {
-                            m_collisions.down = true;
-                            m_jumping = false;
-                            m_stand_on_block = world.get_block_type(TilePos(x, y));
-                        }
-                        vx = x;
-                        vy = y;
-                        if (vx != hx) {
-                            result.y = tile_pos.y - (pos.y + PLAYER_HEIGHT_HALF);
-                        }
-                    } else if (pos.x + PLAYER_WIDTH_HALF <= tile_pos.x) {
-                        hx = x;
-                        hy = y;
-                        if (hy != vy) {
-                            result.x = tile_pos.x - (pos.x + PLAYER_WIDTH_HALF);
-                            m_collisions.right = true;
-                        }
-                        if (vx == hx) {
-                            result.y = m_velocity.y;
-                        }
-                    } else if (pos.x - PLAYER_WIDTH_HALF >= tile_pos.x + TILE_SIZE) {
-                        m_collisions.left = true;
-                        hx = x;
-                        hy = y;
-                        if (hy != vy) {
-                            result.x = tile_pos.x + TILE_SIZE - (pos.x - PLAYER_WIDTH_HALF);
-                        }
-                        if (vx == hx) {
-                            result.y = m_velocity.y;
-                        }
-                    } else if (pos.y - PLAYER_HEIGHT_HALF >= tile_pos.y + TILE_SIZE) {
-                        if (collide_horizontal) {
-                            m_collisions.up = true;
-                        }
+            if (!world.block_exists(TilePos(x, y))) continue;
+            
+            if (
+                next_pos.x + PLAYER_WIDTH_HALF > tile_pos.x && next_pos.x - PLAYER_WIDTH_HALF < tile_pos.x + TILE_SIZE &&
+                next_pos.y + PLAYER_HEIGHT_HALF > tile_pos.y && next_pos.y - PLAYER_HEIGHT_HALF < tile_pos.y + TILE_SIZE
+            ) {
+                if (pos.y + PLAYER_HEIGHT_HALF <= tile_pos.y) {
+                    vx = x;
+                    vy = y;
+                    if (vx != hx) {
+                        m_collisions.down = true;
+                        m_jumping = false;
+                        m_stand_on_block = world.get_block_type(TilePos(x, y));
 
-                        vx = x;
-                        vy = y;
-                        result.y = tile_pos.y + TILE_SIZE - (pos.y - PLAYER_HEIGHT_HALF);
-                        if (vy == hy) {
-                            result.x = m_velocity.x;
-                        }
+                        result.y = tile_pos.y - (pos.y + PLAYER_HEIGHT_HALF);
+                    }
+                } else if (pos.x + PLAYER_WIDTH_HALF <= tile_pos.x) {
+                    hx = x;
+                    hy = y;
+                    if (hy != vy) {
+                        result.x = tile_pos.x - (pos.x + PLAYER_WIDTH_HALF);
+                        m_collisions.right = true;
+                    }
+                    if (vx == hx) {
+                        result.y = m_velocity.y;
+                    }
+                } else if (pos.x - PLAYER_WIDTH_HALF >= tile_pos.x + TILE_SIZE) {
+                    m_collisions.left = true;
+                    hx = x;
+                    hy = y;
+                    if (hy != vy) {
+                        result.x = tile_pos.x + TILE_SIZE - (pos.x - PLAYER_WIDTH_HALF);
+                    }
+                    if (vx == hx) {
+                        result.y = m_velocity.y;
+                    }
+                } else if (pos.y - PLAYER_HEIGHT_HALF >= tile_pos.y + TILE_SIZE) {
+                    m_collisions.up = true;
+
+                    vx = x;
+                    vy = y;
+                    result.y = tile_pos.y + TILE_SIZE - (pos.y - PLAYER_HEIGHT_HALF);
+                    if (vy == hy) {
+                        result.x = m_velocity.x;
                     }
                 }
             }
@@ -265,7 +263,7 @@ glm::vec2 Player::check_collisions(const World& world) {
     }
 
     if (
-        (m_collisions.left || m_collisions.right) && (
+        !m_collisions.up && (m_collisions.left || m_collisions.right) && (
             !world.block_exists(TilePos(hx, hy - 1)) &&
             !world.block_exists(TilePos(hx, hy - 2)) &&
             !world.block_exists(TilePos(hx, hy - 3))
@@ -500,10 +498,12 @@ void Player::update(const Camera& camera, World& world) {
 void Player::keep_in_world_bounds(const World& world) {
     ZoneScopedN("Player::keep_in_world_bounds");
 
+    static constexpr float OFFSET = 2.0f;
+
     const math::Rect area = world.playable_area() * TILE_SIZE;
 
-    if (m_position.x - PLAYER_WIDTH_HALF < area.min.x) m_position.x = area.min.x + PLAYER_WIDTH_HALF;
-    if (m_position.x + PLAYER_WIDTH_HALF > area.max.x) m_position.x = area.max.x - PLAYER_WIDTH_HALF;
+    if (m_position.x - PLAYER_WIDTH_HALF < area.min.x + OFFSET) m_position.x = area.min.x + PLAYER_WIDTH_HALF + OFFSET;
+    if (m_position.x + PLAYER_WIDTH_HALF > area.max.x - OFFSET) m_position.x = area.max.x - PLAYER_WIDTH_HALF - OFFSET;
     if (m_position.y - PLAYER_HEIGHT_HALF < area.min.y) m_position.y = area.min.y + PLAYER_HEIGHT_HALF;
     if (m_position.y + PLAYER_HEIGHT_HALF > area.max.y) m_position.y = area.max.y - PLAYER_HEIGHT_HALF;
 }

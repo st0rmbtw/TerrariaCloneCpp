@@ -28,15 +28,17 @@ Texture2D<uint> TileTexture : register(t5);
 RWTexture2D<unorm float4> LightTexture : register(u6);
 
 #if DEF_SUBDIVISION == 8
-    static const float DECAY_THROUGH_SOLID = 0.86;
+    static const float DECAY_THROUGH_SOLID = 0.92;
     static const float DECAY_THROUGH_AIR = 0.975;
 #elif DEF_SUBDIVISION == 4
-    static const float DECAY_THROUGH_SOLID = 0.78;
-    static const float DECAY_THROUGH_AIR = 0.91;
+    static const float DECAY_THROUGH_SOLID = 0.84;
+    static const float DECAY_THROUGH_AIR = 0.942;
 #else
     static const float DECAY_THROUGH_SOLID = 0.56;
     static const float DECAY_THROUGH_AIR = 0.91;
 #endif
+
+static const float LIGHT_EPSILON = 0.0185f;
 
 float get_decay(uint2 pos) {
     uint tile = TileTexture[pos / DEF_SUBDIVISION].r;
@@ -49,6 +51,8 @@ float get_decay(uint2 pos) {
 
 void blur(uint2 pos, inout float3 prev_light, inout float prev_decay) {
     float4 this_light = LightTexture[pos];
+
+    prev_light = prev_light < LIGHT_EPSILON ? 0.0f : prev_light;
     
     if (prev_light.x < this_light.x) {
         prev_light.x = this_light.x;

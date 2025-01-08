@@ -402,6 +402,16 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
         }
         commands->PopDebugGroup();
     }
+
+    commands->PushDebugGroup("CS Light BlurHorizontal");
+    {
+        commands->SetPipelineState(*m_light_horizontal_pipeline);
+        commands->SetResourceHeap(*m_light_resource_heap);
+        commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
+        commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
+        commands->Dispatch(grid_w, 1, 1);
+    }
+    commands->PopDebugGroup();
 }
 
 void WorldRenderer::terminate() {
