@@ -12,8 +12,6 @@
 #include "world/world.hpp"
 #include "types/block.hpp"
 
-constexpr size_t MAX_PARTICLES_COUNT = 10 * 100000;
-
 namespace Particle {
 
     enum class Type : uint8_t {

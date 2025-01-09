@@ -14,6 +14,7 @@
 #include "../log.hpp"
 
 using Constants::PARTICLE_SIZE;
+using Constants::MAX_PARTICLES_COUNT;
 
 static inline constexpr size_t get_particle_index(Particle::Type type, uint8_t variant) {
     ASSERT(variant <= 2, "Variant must be in range from 0 to 3");

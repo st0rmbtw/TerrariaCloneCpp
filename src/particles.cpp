@@ -19,6 +19,8 @@
 #define ALIGNED_FREE(ptr) free((ptr))
 #endif
 
+using Constants::MAX_PARTICLES_COUNT;
+
 static struct ParticlesState {
     float* position;
     float* velocity;
