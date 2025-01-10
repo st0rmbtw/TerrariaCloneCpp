@@ -1,6 +1,5 @@
 #include "player.hpp"
 
-#include <cfloat>
 #include <glm/gtc/random.hpp>
 
 #include <tracy/Tracy.hpp>
@@ -188,13 +187,12 @@ glm::vec2 Player::check_collisions(const World& world) {
     glm::vec2 result = m_velocity;
     const glm::vec2 pos = m_position;
     const glm::vec2 next_pos = m_position + m_velocity;
+    const math::IRect& area = world.playable_area();
 
     int left = static_cast<int>((m_position.x - PLAYER_WIDTH_HALF) / TILE_SIZE) - 1;
     int right = static_cast<int>((m_position.x + PLAYER_WIDTH_HALF) / TILE_SIZE) + 2;
     int top = static_cast<int>((m_position.y - PLAYER_HEIGHT_HALF) / TILE_SIZE) - 1;
     int bottom = static_cast<int>((m_position.y + PLAYER_HEIGHT_HALF) / TILE_SIZE) + 2;
-
-    const math::IRect& area = world.playable_area();
 
     left = glm::clamp(left, area.min.x, area.max.x);
     right = glm::clamp(right, area.min.x, area.max.x);
@@ -210,10 +208,10 @@ glm::vec2 Player::check_collisions(const World& world) {
 
     for (int y = top; y < bottom; ++y) {
         for (int x = left; x < right; ++x) {
-            const glm::vec2 tile_pos = glm::vec2(x * TILE_SIZE, y * TILE_SIZE);
-
             if (!world.block_exists(TilePos(x, y))) continue;
             
+            const glm::vec2 tile_pos = glm::vec2(x * TILE_SIZE, y * TILE_SIZE);
+
             if (
                 next_pos.x + PLAYER_WIDTH_HALF > tile_pos.x && next_pos.x - PLAYER_WIDTH_HALF < tile_pos.x + TILE_SIZE &&
                 next_pos.y + PLAYER_HEIGHT_HALF > tile_pos.y && next_pos.y - PLAYER_HEIGHT_HALF < tile_pos.y + TILE_SIZE
@@ -262,8 +260,52 @@ glm::vec2 Player::check_collisions(const World& world) {
         }
     }
 
+    left = static_cast<int>((m_position.x - PLAYER_WIDTH_HALF) / TILE_SIZE);
+    right = static_cast<int>((m_position.x + PLAYER_WIDTH_HALF) / TILE_SIZE);
+    bottom = static_cast<int>((m_position.y + PLAYER_HEIGHT_HALF + 4.0f) / TILE_SIZE);
+
+    left = glm::clamp(left, area.min.x, area.max.x);
+    right = glm::clamp(right, area.min.x, area.max.x);
+    bottom = glm::clamp(bottom, area.min.y, area.max.y);
+
+    float step_down_y;
+    bool found_step_down_tile = false;
+
+    if (result.y == GRAVITY) {
+        const float pos_y = glm::floor((m_position.y + PLAYER_HEIGHT_HALF) / TILE_SIZE) * TILE_SIZE - PLAYER_HEIGHT_HALF;
+        const int a = ((pos_y + PLAYER_HEIGHT_HALF + 4.0) / TILE_SIZE);
+        const int b = PLAYER_HEIGHT_HALF / static_cast<int>(TILE_SIZE) + (static_cast<int>(PLAYER_HEIGHT_HALF) % 16 == 0 ? 0 : 1);
+        const float c = ((a + b) * TILE_SIZE);
+
+        for (int x = left; x <= right; ++x) {
+            for (int y = bottom; y <= bottom + 1; ++y) {
+                if (!world.block_exists(TilePos(x, y))) continue;
+
+                const glm::vec2 tile_pos = glm::vec2(x * TILE_SIZE, y * TILE_SIZE);
+                const math::Rect player_rect = math::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
+                const math::Rect tile_rect = math::Rect::from_top_left(glm::vec2(tile_pos.x, tile_pos.y - TILE_SIZE - 1.0f), glm::vec2(TILE_SIZE));
+
+                if (player_rect.intersects(tile_rect) && tile_pos.y < c) {
+                    step_down_y = tile_pos.y;
+                    found_step_down_tile = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (found_step_down_tile) {
+        result.y = 0.0f;
+        const float new_y = step_down_y - PLAYER_HEIGHT_HALF;
+        m_draw_offset_y = m_position.y - new_y;
+        m_position.y = new_y;
+        m_step_speed = 2.0f;
+    }
+
+    const int a = glm::floor((m_position.y + PLAYER_HEIGHT_HALF - 1.0f) / TILE_SIZE);
+
     if (
-        !m_collisions.up && (m_collisions.left || m_collisions.right) && (
+        hy == a && (
             !world.block_exists(TilePos(hx, hy - 1)) &&
             !world.block_exists(TilePos(hx, hy - 2)) &&
             !world.block_exists(TilePos(hx, hy - 3))
@@ -374,9 +416,7 @@ void Player::update_sprites_index() {
 void Player::update_movement_state() {
     ZoneScopedN("Player::update_movement_state");
 
-    constexpr float threshold = TILE_SIZE / 2.0f * GRAVITY;
-
-    if (abs(m_velocity.y) > threshold + FLT_EPSILON || m_jumping) {
+    if (abs(m_velocity.y) > 0.0 || m_jumping) {
         m_movement_state = MovementState::Flying;
     } else if (m_velocity.x != 0) {
         m_movement_state = MovementState::Walking;
@@ -453,9 +493,13 @@ void Player::fixed_update(const World& world, bool handle_input) {
     vertical_movement(handle_input);
     gravity();
 
+    const float a = 1.0f + abs(m_velocity.x) / MAX_WALK_SPEED;
     if (m_draw_offset_y > 0.0f) {
-        float a = 1.0f + abs(m_velocity.x) / MAX_WALK_SPEED;
-        m_draw_offset_y = glm::max(m_draw_offset_y - a * m_step_speed, 0.0f);
+        m_draw_offset_y -= a * m_step_speed;
+        if (m_draw_offset_y < 0.0f) m_draw_offset_y = 0.0f;
+    } else if (m_draw_offset_y < 0.0f) {
+        m_draw_offset_y += a * m_step_speed;
+        if (m_draw_offset_y > 0.0f) m_draw_offset_y = 0.0f;
     }
 
     m_velocity = check_collisions(world);
