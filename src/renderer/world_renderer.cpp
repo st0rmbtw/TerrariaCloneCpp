@@ -15,6 +15,7 @@
 #include "../world/chunk.hpp"
 #include "../utils.hpp"
 
+#include "LLGL/PipelineLayoutFlags.h"
 #include "renderer.hpp"
 #include "macros.hpp"
 
@@ -179,6 +180,7 @@ void WorldRenderer::init() {
             LLGL::UniformDescriptor("uniform_min", LLGL::UniformType::UInt2),
             LLGL::UniformDescriptor("uniform_max", LLGL::UniformType::UInt2),
         };
+        lightBlurPipelineLayoutDesc.barrierFlags = LLGL::BarrierFlags::StorageTexture;
 
         LLGL::PipelineLayout* lightBlurPipelineLayout = context->CreatePipelineLayout(lightBlurPipelineLayoutDesc);
 

@@ -8,7 +8,7 @@
 #include "tile_pos.hpp"
 
 struct Light {
-    glm::vec3 color;
+    glm::vec4 color;
     TilePos pos;
     glm::uvec2 size;
 };

@@ -18,7 +18,7 @@ cbuffer Uniforms : register(b2) {
 }
 
 struct Light {
-    float3 color;
+    float4 color;
     uint2 pos;
     uint2 size;
 };
@@ -87,7 +87,7 @@ void CSComputeLightSetLightSources(uint3 thread_id : SV_DispatchThreadID)
 
     for (uint x = 0; x < width; ++x) {
         for (uint y = 0; y < height; ++y) {
-            LightTexture[light.pos + uint2(x, y)] = float4(light.color, 1.0);
+            LightTexture[light.pos + uint2(x, y)] = float4(light.color.rgb, 1.0);
         }
     }
 }

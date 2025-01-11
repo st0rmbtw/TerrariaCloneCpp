@@ -27,7 +27,7 @@ static struct GameState {
     Player player;
     World world;
     Camera camera;
-    glm::vec3 mouse_light = glm::vec3(0.9f, 0.2f, 0.2f);
+    glm::vec4 mouse_light = glm::vec4(0.9f, 0.2f, 0.2f, 1.0f);
     bool free_camera = false;
 } g;
 
@@ -148,10 +148,11 @@ void update() {
     g.player.update(g.camera, g.world);
 
     if (Input::JustPressed(MouseButton::Right)) {
-        g.mouse_light = glm::vec3(
+        g.mouse_light = glm::vec4(
             rand_range(0.2f, 1.0f),
             rand_range(0.2f, 1.0f),
-            rand_range(0.2f, 1.0f)
+            rand_range(0.2f, 1.0f),
+            1.0f
         );
     }
 

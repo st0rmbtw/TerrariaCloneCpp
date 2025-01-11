@@ -16,12 +16,12 @@ layout(binding = 3) uniform GlobalUniformBuffer {
 } global_ubo;
 
 struct Light {
-    vec3 color;
-    uvec2 pos;
+    vec4 color;
+    ivec2 pos;
     uvec2 size;
 };
 
-layout(binding = 4, std430) buffer LightBuffer {
+layout(binding = 4, std430) readonly buffer LightBuffer {
     Light lights[];
 };
 
@@ -35,7 +35,7 @@ void main() {
 
     for (uint x = 0; x < width; ++x) {
         for (uint y = 0; y < height; ++y) {
-            imageStore(LightTexture, ivec2(light.pos) + ivec2(x, y), vec4(light.color, 1.0));
+            imageStore(LightTexture, light.pos + ivec2(x, y), vec4(light.color.rgb, 1.0));
         }
     }
 }

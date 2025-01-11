@@ -199,10 +199,11 @@ void ParticleManager::Update(World& world) {
         const bool emits_light = state.emits_light[i];
         if (!emits_light) continue;
 
-        const glm::vec3 light_color = glm::vec3(
+        const glm::vec4 light_color = glm::vec4(
             state.light_color[i * 3 + 0],
             state.light_color[i * 3 + 1],
-            state.light_color[i * 3 + 2]
+            state.light_color[i * 3 + 2],
+            1.0f
         );
 
         const glm::vec2 position = glm::vec2(state.position[i * 2 + 0], state.position[i * 2 + 1]);
