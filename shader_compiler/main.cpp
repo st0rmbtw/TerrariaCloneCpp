@@ -19,12 +19,6 @@
     #error "UNKNOWN PLATFORM"
 #endif
 
-#if DEBUG
-    #define GLSLANG_FLAGS ""
-#else
-    #define GLSLANG_FLAGS "-g0"
-#endif
-
 namespace fs = std::filesystem;
 
 bool CompileVulkanShader(const std::string& executable, const std::string& stage, const char* shaderSource, size_t shaderSourceSize, const std::string& outputPath);
@@ -55,7 +49,7 @@ int main(int argc, const char** argv) {
     const fs::path file = argv[3];
 
     const std::vector<ShaderDef> shader_defs = {
-        // ShaderDef("DEF_SUBDIVISION", std::to_string(config::SUBDIVISION)),
+        ShaderDef("DEF_SUBDIVISION", std::to_string(Constants::SUBDIVISION)),
         ShaderDef("CHUNK_WIDTH", std::to_string(Constants::RENDER_CHUNK_SIZE_U)),
         ShaderDef("CHUNK_HEIGHT", std::to_string(Constants::RENDER_CHUNK_SIZE_U)),
 
@@ -175,7 +169,7 @@ bool CompileVulkanShader(const std::string& executable, const std::string& stage
     si.hStdOutput = hStdOutWr;
     si.hStdError = hStdOutWr;
 
-    const std::string args = executable + " " + GLSLANG_FLAGS + " --quiet -V --enhanced-msgs --stdin -S " + stage + " -o " + outputPath;
+    const std::string args = executable + " --quiet -V --enhanced-msgs --stdin -S " + stage + " -o " + outputPath;
 
     // start the program up
     success = CreateProcessA(executable.c_str(), const_cast<char*>(args.c_str()), NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
