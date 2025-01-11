@@ -130,10 +130,6 @@ void WorldRenderer::init() {
             LLGL::BindingSlot(6)
         ),
     };
-    lightPipelineLayoutDesc.uniforms = {
-        LLGL::UniformDescriptor("uniform_min", LLGL::UniformType::UInt2),
-        LLGL::UniformDescriptor("uniform_max", LLGL::UniformType::UInt2),
-    };
 
     LLGL::PipelineLayout* lightPipelineLayout = context->CreatePipelineLayout(lightPipelineLayoutDesc);
 
@@ -161,6 +157,13 @@ void WorldRenderer::init() {
 
         m_light_set_light_sources_pipeline = context->CreatePipelineState(lightPipelineDesc);
     }
+
+    lightPipelineLayoutDesc.uniforms = {
+        LLGL::UniformDescriptor("uniform_min", LLGL::UniformType::UInt2),
+        LLGL::UniformDescriptor("uniform_max", LLGL::UniformType::UInt2),
+    };
+
+    lightPipelineLayout = context->CreatePipelineLayout(lightPipelineLayoutDesc);
 
     {
         LLGL::ComputePipelineDescriptor lightPipelineDesc;
