@@ -1,0 +1,94 @@
+#version 450 core
+
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 3) uniform GlobalUniformBuffer {
+    mat4 screen_projection;
+    mat4 view_projection;
+    mat4 nonscale_view_projection;
+    mat4 nonscale_projection;
+    mat4 transform_matrix;
+    mat4 inv_view_proj;
+    vec2 camera_position;
+    vec2 window_size;
+    float max_depth;
+    float max_world_depth;
+} global_ubo;
+
+layout(push_constant) uniform Uniforms {
+    uvec2 uniform_min;
+    uvec2 uniform_max;
+};
+
+layout(binding = 5, r8ui) uniform readonly uimage2D TileTexture;
+layout(binding = 6, rgba8) uniform image2D LightTexture;
+
+#if DEF_SUBDIVISION == 8
+    const float DECAY_THROUGH_SOLID = 0.92;
+    const float DECAY_THROUGH_AIR = 0.975;
+#elif DEF_SUBDIVISION == 4
+    const float DECAY_THROUGH_SOLID = 0.84;
+    const float DECAY_THROUGH_AIR = 0.942;
+#else
+    const float DECAY_THROUGH_SOLID = 0.56;
+    const float DECAY_THROUGH_AIR = 0.91;
+#endif
+
+const float LIGHT_EPSILON = 0.0185;
+
+float get_decay(ivec2 pos) {
+    uint tile = imageLoad(TileTexture, pos / DEF_SUBDIVISION).r;
+    if (tile == 1u) {
+        return DECAY_THROUGH_SOLID;
+    } else {
+        return DECAY_THROUGH_AIR;
+    }
+}
+
+void blur(ivec2 pos, inout vec3 prev_light, inout float prev_decay) {
+    vec4 this_light = imageLoad(LightTexture, pos);
+
+    prev_light.x = prev_light.x < LIGHT_EPSILON ? 0.0 : prev_light.x;
+    prev_light.y = prev_light.y < LIGHT_EPSILON ? 0.0 : prev_light.y;
+    prev_light.z = prev_light.z < LIGHT_EPSILON ? 0.0 : prev_light.z;
+    
+    if (prev_light.x < this_light.x) {
+        prev_light.x = this_light.x;
+    } else {
+        this_light.x = prev_light.x;
+    }
+    
+    if (prev_light.y < this_light.y) {
+        prev_light.y = this_light.y;
+    } else {
+        this_light.y = prev_light.y;
+    }
+    
+    if (prev_light.z < this_light.z) {
+        prev_light.z = this_light.z;
+    } else {
+        this_light.z = prev_light.z;
+    }
+    
+    imageStore(LightTexture, pos, this_light);
+    
+    prev_light = prev_light * prev_decay;
+    prev_decay = get_decay(pos);
+}
+
+void main() {
+    uint y = uniform_min.y + gl_GlobalInvocationID.x;
+
+    vec3 prev_light = vec3(0.0, 0.0, 0.0);
+    float prev_decay = 0.0;
+
+    vec3 prev_light2 = vec3(0.0, 0.0, 0.0);
+    float prev_decay2 = 0.0;
+
+    uint width = uniform_max.x - uniform_min.x;
+
+    for (uint x = 0; x < width; ++x) {
+        blur(ivec2(uniform_min.x + x, y), prev_light, prev_decay);
+        blur(ivec2(uniform_max.x - 1 - x, y), prev_light2, prev_decay2);
+    }
+}

@@ -20,22 +20,22 @@ public:
     constexpr rect() :
         min(static_cast<T>(0)),
         max(static_cast<T>(0)) {}
-        
-    constexpr rect(const rect<glm::float32>& r) :
-        min(r.min),
-        max(r.max) {}
 
-    constexpr rect(const rect<glm::int32>& r) :
-        min(r.min),
-        max(r.max) {}
-
-    constexpr rect(const rect<glm::uint32>& r) :
+    template <typename T2>
+    constexpr rect(const rect<T2>& r) :
         min(r.min),
         max(r.max) {}
 
     constexpr rect(vec2 min, vec2 max) :
         min(min),
         max(max) {}
+
+    template <typename T2>
+    inline constexpr Self& operator=(const rect<T2>& other) noexcept {
+        this->min = other.min;
+        this->max = other.max;
+        return *this;
+    }
     
     [[nodiscard]]
     inline constexpr static Self from_corners(vec2 p1, vec2 p2) noexcept {

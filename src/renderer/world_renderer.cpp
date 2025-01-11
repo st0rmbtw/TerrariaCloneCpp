@@ -99,86 +99,108 @@ void WorldRenderer::init() {
 
     // =======================================================
 
-    LLGL::PipelineLayoutDescriptor lightPipelineLayoutDesc;
-    lightPipelineLayoutDesc.heapBindings = {
-        LLGL::BindingDescriptor(
-            "GlobalUniformBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::ConstantBuffer,
-            LLGL::StageFlags::ComputeStage,
-            LLGL::BindingSlot(3)
-        ),
-        LLGL::BindingDescriptor(
-            "LightBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::Sampled,
-            LLGL::StageFlags::ComputeStage,
-            LLGL::BindingSlot(4)
-        ),
-        LLGL::BindingDescriptor(
-            "TileTexture",
-            LLGL::ResourceType::Texture,
-            LLGL::BindFlags::Sampled,
-            LLGL::StageFlags::ComputeStage,
-            LLGL::BindingSlot(5)
-        ),
-        LLGL::BindingDescriptor(
-            "LightTexture",
-            LLGL::ResourceType::Texture,
-            LLGL::BindFlags::Storage,
-            LLGL::StageFlags::ComputeStage,
-            LLGL::BindingSlot(6)
-        ),
-    };
-
-    LLGL::PipelineLayout* lightPipelineLayout = context->CreatePipelineLayout(lightPipelineLayoutDesc);
-
     LLGL::BufferDescriptor light_buffer;
     light_buffer.bindFlags = LLGL::BindFlags::Sampled;
     light_buffer.stride = sizeof(Light);
     light_buffer.size = sizeof(Light) * WORLD_MAX_LIGHT_COUNT;
     m_light_buffer = context->CreateBuffer(light_buffer);
 
-    const LLGL::ResourceViewDescriptor lightResourceViews[] = {
-        Renderer::GlobalUniformBuffer(), m_light_buffer, nullptr, nullptr
-    };
-
-    LLGL::ResourceHeapDescriptor lightResourceHeapDesc;
-    lightResourceHeapDesc.pipelineLayout = lightPipelineLayout;
-    lightResourceHeapDesc.numResourceViews = ARRAY_LEN(lightResourceViews);
-
-    m_light_resource_heap = context->CreateResourceHeap(lightResourceHeapDesc, lightResourceViews);
-
     {
+        LLGL::PipelineLayoutDescriptor lightInitPipelineLayoutDesc;
+        lightInitPipelineLayoutDesc.heapBindings = {
+            LLGL::BindingDescriptor(
+                "GlobalUniformBuffer",
+                LLGL::ResourceType::Buffer,
+                LLGL::BindFlags::ConstantBuffer,
+                LLGL::StageFlags::ComputeStage,
+                LLGL::BindingSlot(3)
+            ),
+            LLGL::BindingDescriptor(
+                "LightBuffer",
+                LLGL::ResourceType::Buffer,
+                LLGL::BindFlags::Sampled,
+                LLGL::StageFlags::ComputeStage,
+                LLGL::BindingSlot(4)
+            ),
+            LLGL::BindingDescriptor(
+                "LightTexture",
+                LLGL::ResourceType::Texture,
+                LLGL::BindFlags::Storage,
+                LLGL::StageFlags::ComputeStage,
+                LLGL::BindingSlot(6)
+            ),
+        };
+
+        LLGL::PipelineLayout* lightInitPipelineLayout = context->CreatePipelineLayout(lightInitPipelineLayoutDesc);
+
+        const LLGL::ResourceViewDescriptor lightInitResourceViews[] = {
+            Renderer::GlobalUniformBuffer(), m_light_buffer, nullptr
+        };
+
+        LLGL::ResourceHeapDescriptor lightResourceHeapDesc;
+        lightResourceHeapDesc.pipelineLayout = lightInitPipelineLayout;
+        lightResourceHeapDesc.numResourceViews = ARRAY_LEN(lightInitResourceViews);
+
+        m_light_init_resource_heap = context->CreateResourceHeap(lightResourceHeapDesc, lightInitResourceViews);
+
         LLGL::ComputePipelineDescriptor lightPipelineDesc;
         lightPipelineDesc.debugName = "WorldLightSetLightSourcesComputePipeline";
-        lightPipelineDesc.pipelineLayout = lightPipelineLayout;
+        lightPipelineDesc.pipelineLayout = lightInitPipelineLayout;
         lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightSetLightSources);
 
         m_light_set_light_sources_pipeline = context->CreatePipelineState(lightPipelineDesc);
     }
-
-    lightPipelineLayoutDesc.uniforms = {
-        LLGL::UniformDescriptor("uniform_min", LLGL::UniformType::UInt2),
-        LLGL::UniformDescriptor("uniform_max", LLGL::UniformType::UInt2),
-    };
-
-    lightPipelineLayout = context->CreatePipelineLayout(lightPipelineLayoutDesc);
-
     {
+        LLGL::PipelineLayoutDescriptor lightBlurPipelineLayoutDesc;
+        lightBlurPipelineLayoutDesc.heapBindings = {
+            LLGL::BindingDescriptor(
+                "GlobalUniformBuffer",
+                LLGL::ResourceType::Buffer,
+                LLGL::BindFlags::ConstantBuffer,
+                LLGL::StageFlags::ComputeStage,
+                LLGL::BindingSlot(3)
+            ),
+            LLGL::BindingDescriptor(
+                "TileTexture",
+                LLGL::ResourceType::Texture,
+                LLGL::BindFlags::Sampled,
+                LLGL::StageFlags::ComputeStage,
+                LLGL::BindingSlot(5)
+            ),
+            LLGL::BindingDescriptor(
+                "LightTexture",
+                LLGL::ResourceType::Texture,
+                LLGL::BindFlags::Storage,
+                LLGL::StageFlags::ComputeStage,
+                LLGL::BindingSlot(6)
+            ),
+        };
+        lightBlurPipelineLayoutDesc.uniforms = {
+            LLGL::UniformDescriptor("uniform_min", LLGL::UniformType::UInt2),
+            LLGL::UniformDescriptor("uniform_max", LLGL::UniformType::UInt2),
+        };
+
+        LLGL::PipelineLayout* lightBlurPipelineLayout = context->CreatePipelineLayout(lightBlurPipelineLayoutDesc);
+
+        const LLGL::ResourceViewDescriptor lightBlurResourceViews[] = {
+            Renderer::GlobalUniformBuffer(), nullptr, nullptr
+        };
+
+        LLGL::ResourceHeapDescriptor lightBlurResourceHeapDesc;
+        lightBlurResourceHeapDesc.pipelineLayout = lightBlurPipelineLayout;
+        lightBlurResourceHeapDesc.numResourceViews = ARRAY_LEN(lightBlurResourceViews);
+
+        m_light_blur_resource_heap = context->CreateResourceHeap(lightBlurResourceHeapDesc, lightBlurResourceViews);
+
         LLGL::ComputePipelineDescriptor lightPipelineDesc;
+        lightPipelineDesc.pipelineLayout = lightBlurPipelineLayout;
+
         lightPipelineDesc.debugName = "WorldLightVerticalComputePipeline";
-        lightPipelineDesc.pipelineLayout = lightPipelineLayout;
         lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightVertical);
-
         m_light_vertical_pipeline = context->CreatePipelineState(lightPipelineDesc);
-    }
-    {
-        LLGL::ComputePipelineDescriptor lightPipelineDesc;
-        lightPipelineDesc.debugName = "WorldLightHorizontalComputePipeline";
-        lightPipelineDesc.pipelineLayout = lightPipelineLayout;
-        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightHorizontal);
 
+        lightPipelineDesc.debugName = "WorldLightHorizontalComputePipeline";
+        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightHorizontal);
         m_light_horizontal_pipeline = context->CreatePipelineState(lightPipelineDesc);
     }
 }
@@ -258,7 +280,8 @@ void WorldRenderer::init_textures(const WorldData& world) {
         m_tile_texture = context->CreateTexture(tile_texture_desc, &image_view);
     }
 
-    context->WriteResourceHeap(*m_light_resource_heap, 2, {m_tile_texture, m_light_texture});
+    context->WriteResourceHeap(*m_light_init_resource_heap, 2, {m_light_texture});
+    context->WriteResourceHeap(*m_light_blur_resource_heap, 1, {m_tile_texture, m_light_texture});
 
     LLGL::RenderTargetDescriptor lightTextureRenderTarget;
     lightTextureRenderTarget.resolution = LLGL::Extent2D(world.lightmap.width, world.lightmap.height);
@@ -377,7 +400,7 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
     commands->PushDebugGroup("CS Light SetLightSources");
     {
         commands->SetPipelineState(*m_light_set_light_sources_pipeline);
-        commands->SetResourceHeap(*m_light_resource_heap);
+        commands->SetResourceHeap(*m_light_init_resource_heap);
         commands->Dispatch(world.light_count(), 1, 1);
     }
     commands->PopDebugGroup();
@@ -386,7 +409,7 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
         commands->PushDebugGroup("CS Light BlurHorizontal");
         {
             commands->SetPipelineState(*m_light_horizontal_pipeline);
-            commands->SetResourceHeap(*m_light_resource_heap);
+            commands->SetResourceHeap(*m_light_blur_resource_heap);
             commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
             commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
             commands->Dispatch(grid_w, 1, 1);
@@ -396,7 +419,7 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
         commands->PushDebugGroup("CS Light BlurVertical");
         {
             commands->SetPipelineState(*m_light_vertical_pipeline);
-            commands->SetResourceHeap(*m_light_resource_heap);
+            commands->SetResourceHeap(*m_light_blur_resource_heap);
             commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
             commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
             commands->Dispatch(grid_h, 1, 1);
@@ -407,7 +430,7 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
     commands->PushDebugGroup("CS Light BlurHorizontal");
     {
         commands->SetPipelineState(*m_light_horizontal_pipeline);
-        commands->SetResourceHeap(*m_light_resource_heap);
+        commands->SetResourceHeap(*m_light_blur_resource_heap);
         commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
         commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
         commands->Dispatch(grid_w, 1, 1);
@@ -420,7 +443,8 @@ void WorldRenderer::terminate() {
     RESOURCE_RELEASE(m_light_set_light_sources_pipeline);
     RESOURCE_RELEASE(m_light_vertical_pipeline);
     RESOURCE_RELEASE(m_light_horizontal_pipeline);
-    RESOURCE_RELEASE(m_light_resource_heap);
+    RESOURCE_RELEASE(m_light_init_resource_heap);
+    RESOURCE_RELEASE(m_light_blur_resource_heap);
     RESOURCE_RELEASE(m_resource_heap);
     RESOURCE_RELEASE(m_depth_buffer);
     RESOURCE_RELEASE(m_lightmap_texture);

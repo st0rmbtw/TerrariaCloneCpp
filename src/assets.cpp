@@ -76,10 +76,12 @@ struct AssetShader {
 struct AssetComputeShader {
     std::string file_name;
     std::string func_name;
+    std::string glsl_file_name;
 
-    explicit AssetComputeShader(std::string file_name, std::string func_name) :
+    explicit AssetComputeShader(std::string file_name, std::string func_name, std::string glsl_file_name = {}) :
         file_name(std::move(file_name)),
-        func_name(std::move(func_name)) {}
+        func_name(std::move(func_name)),
+        glsl_file_name(std::move(glsl_file_name)) {}
 };
 
 static const std::pair<TextureAsset, AssetTexture> TEXTURE_ASSETS[] = {
@@ -173,10 +175,10 @@ const std::pair<ShaderAsset, AssetShader> SHADER_ASSETS[] = {
 };
 
 const std::pair<ComputeShaderAsset, AssetComputeShader> COMPUTE_SHADER_ASSETS[] = {
-    { ComputeShaderAsset::ParticleComputeTransformShader, AssetComputeShader("particle", "CSComputeTransform") },
-    { ComputeShaderAsset::LightVertical, AssetComputeShader("light", "CSComputeLightVertical") },
-    { ComputeShaderAsset::LightHorizontal, AssetComputeShader("light", "CSComputeLightHorizontal") },
-    { ComputeShaderAsset::LightSetLightSources, AssetComputeShader("light", "CSComputeLightSetLightSources") },
+    { ComputeShaderAsset::ParticleComputeTransformShader, AssetComputeShader("particle", "CSComputeTransform", "particle") },
+    { ComputeShaderAsset::LightVertical, AssetComputeShader("light", "CSComputeLightVertical", "light_blur_vertical") },
+    { ComputeShaderAsset::LightHorizontal, AssetComputeShader("light", "CSComputeLightHorizontal", "light_blur_horizontal") },
+    { ComputeShaderAsset::LightSetLightSources, AssetComputeShader("light", "CSComputeLightSetLightSources", "light_init") },
 };
 
 static struct AssetsState {
@@ -253,6 +255,8 @@ bool Assets::Load() {
 bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
     InitVertexFormats();
 
+    RenderBackend backend = Renderer::Backend();
+
     for (const auto& [key, asset] : SHADER_ASSETS) {
         ShaderPipeline shader_pipeline;
 
@@ -282,7 +286,9 @@ bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
     }
 
     for (const auto& [key, asset] : COMPUTE_SHADER_ASSETS) {
-        if (!(state.compute_shaders[key] = Renderer::LoadShader(ShaderPath(ShaderType::Compute, asset.file_name, asset.func_name), shader_defs)))
+        const std::string& file_name = backend.IsGLSL() ? asset.glsl_file_name : asset.file_name;
+
+        if (!(state.compute_shaders[key] = Renderer::LoadShader(ShaderPath(ShaderType::Compute, file_name, asset.func_name), shader_defs)))
             return false;
     }
 
