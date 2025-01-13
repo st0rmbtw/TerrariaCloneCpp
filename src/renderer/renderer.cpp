@@ -100,22 +100,18 @@ LLGL::RenderingDebugger* Renderer::Debugger() { return state.debugger; }
 bool Renderer::InitEngine(RenderBackend backend) {
     LLGL::Report report;
 
-    void* configPtr = nullptr;
-    size_t configSize = 0;
-
-    if (backend.IsOpenGL()) {
-        LLGL::RendererConfigurationOpenGL config;
-        config.majorVersion = 4;
-        config.minorVersion = 3;
-        config.contextProfile = LLGL::OpenGLContextProfile::CoreProfile;
-        configPtr = &config;
-        configSize = sizeof(config);
-    }
-
     LLGL::RenderSystemDescriptor rendererDesc;
     rendererDesc.moduleName = backend.ToString();
-    rendererDesc.rendererConfig = configPtr;
-    rendererDesc.rendererConfigSize = configSize;
+
+    if (backend.IsOpenGL()) {
+        LLGL::RendererConfigurationOpenGL* config = new LLGL::RendererConfigurationOpenGL();
+        config->majorVersion = 4;
+        config->minorVersion = 3;
+        config->contextProfile = LLGL::OpenGLContextProfile::CoreProfile;
+
+        rendererDesc.rendererConfig = config;
+        rendererDesc.rendererConfigSize = sizeof(LLGL::RendererConfigurationOpenGL);
+    }
 
 #if DEBUG
     state.debugger = new LLGL::RenderingDebugger();
@@ -125,6 +121,10 @@ bool Renderer::InitEngine(RenderBackend backend) {
 
     state.context = LLGL::RenderSystem::Load(rendererDesc, &report);
     state.backend = backend;
+
+    if (backend.IsOpenGL()) {
+        delete (LLGL::OpenGLContextProfile*) rendererDesc.rendererConfig;
+    }
 
     if (report.HasErrors()) {
         LOG_ERROR("%s", report.GetText());
