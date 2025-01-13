@@ -39,6 +39,10 @@ static const glm::vec2 ITEM_ANIMATION_POINTS[] = {
     glm::vec2(-7.5f, -11.0f), glm::vec2(6.0f, -7.5f), glm::vec2(7.0f, 4.0f)
 };
 
+static const glm::vec2 ITEM_HOLD_POINTS[] = {
+    glm::vec2(7.0f, 4.0f) // HoldFront
+};
+
 static constexpr float ITEM_ROTATION = 1.7;
 
 void spawn_particles_on_dig(const glm::vec2& position, BlockType type) {
@@ -334,10 +338,6 @@ void Player::update_walk_anim_timer() {
 void Player::update_using_item_anim() {
     ZoneScopedN("Player::update_using_item_anim");
 
-    m_using_item_visible = false;
-    
-    if (!m_swing_anim) return;
-
     if (m_use_cooldown > 0) m_use_cooldown -= 1;
     if (m_swing_counter > 0) m_swing_counter -= 1;
 
@@ -369,23 +369,63 @@ void Player::update_using_item_anim() {
     m_using_item_visible = true;
 }
 
+void Player::update_hold_item() {
+    ZoneScopedN("Player::update_hold_item");
+
+    const std::optional<Item>& selected_item = m_inventory.get_selected_item().item;
+    if (!selected_item.has_value()) return;
+
+    const HoldStyle hold_style = selected_item->hold_style;
+    if (hold_style == HoldStyle::None) return;
+
+    m_using_item.set_texture(Assets::GetItemTexture(selected_item->id));
+    m_using_item.set_anchor(m_direction == Direction::Left ? Anchor::BottomRight : Anchor::BottomLeft);
+    m_using_item.set_flip_x(m_direction == Direction::Left);
+    m_using_item.set_rotation(glm::identity<glm::quat>());
+
+    glm::vec2 offset;
+    if (hold_style == HoldStyle::HoldFront) {
+        offset = ITEM_HOLD_POINTS[0];
+    }
+
+    const float direction = m_direction == Direction::Right ? 1.0f : -1.0f;
+    offset.x *= direction;
+
+    const glm::vec2 item_position = draw_position() + offset;
+    m_using_item.set_position(item_position);
+
+    m_using_item_visible = true;
+}
+
 void Player::update_sprites_index() {
     ZoneScopedN("Player::update_sprites_index");
 
     PlayerSprite* sprites[] = { &m_hair, &m_head, &m_body, &m_legs, &m_left_hand, &m_left_shoulder, &m_right_arm, &m_left_eye, &m_right_eye };
+
+    const std::optional<Item>& selected_item = m_inventory.get_selected_item().item;
+    const HoldStyle hold_style = selected_item.has_value() ? selected_item->hold_style : HoldStyle::None;
 
     switch (m_movement_state) {
     case MovementState::Walking: {
         if (m_walk_anim_timer.tick(Time::fixed_delta()).just_finished()) {
             m_walk_animation_index = (m_walk_animation_index + 1) % WALK_ANIMATION_LENGTH;
 
-            for (PlayerSprite* sprite : sprites) {
-                const int index = sprite->walk_animation.offset + map_range(
+            if (hold_style == HoldStyle::None) {
+                for (PlayerSprite* sprite : sprites) {
+                    const int index = sprite->walk_animation.offset + map_range(
+                        0, WALK_ANIMATION_LENGTH,
+                        0, sprite->walk_animation.length,
+                        m_walk_animation_index
+                    );
+                    sprite->sprite.set_index(index);
+                }
+            } else {
+                const int index = m_legs.walk_animation.offset + map_range(
                     0, WALK_ANIMATION_LENGTH,
-                    0, sprite->walk_animation.length,
+                    0, m_legs.walk_animation.length,
                     m_walk_animation_index
                 );
-                sprite->sprite.set_index(index);
+                m_legs.sprite.set_index(index);
             }
         }
     }
@@ -409,6 +449,12 @@ void Player::update_sprites_index() {
 
         for (PlayerSprite* sprite : use_item_sprites) {
             sprite->sprite.set_index(sprite->use_item_animation.offset + m_swing_anim_index);
+        }
+    } else if (hold_style == HoldStyle::HoldFront) {
+        PlayerSprite* use_item_sprites[] = { &m_left_hand, &m_left_shoulder, &m_right_arm };
+
+        for (PlayerSprite* sprite : use_item_sprites) {
+            sprite->sprite.set_index(sprite->use_item_animation.offset + 2);
         }
     }
 }
@@ -489,6 +535,8 @@ void Player::spawn_particles_grounded() const {
 void Player::fixed_update(const World& world, bool handle_input) {
     ZoneScopedN("Player::fixed_update");
 
+    m_using_item_visible = false;
+
     horizontal_movement(handle_input);
     vertical_movement(handle_input);
     gravity();
@@ -510,7 +558,11 @@ void Player::fixed_update(const World& world, bool handle_input) {
     update_movement_state();
     update_walk_anim_timer();
 
-    update_using_item_anim();
+    if (m_swing_anim) {
+        update_using_item_anim();
+    } else {
+        update_hold_item();
+    }
 
     update_sprites_index();
 
@@ -534,6 +586,18 @@ void Player::update(const Camera& camera, World& world) {
 
     if (Input::Pressed(MouseButton::Left) && !Input::IsMouseOverUi()) {
         use_item(camera, world);
+    }
+
+    const std::optional<Item>& selected_item = m_inventory.get_selected_item().item;
+    if (selected_item.has_value() && selected_item->id == ItemId::Torch) {
+        const float direction = m_direction == Direction::Right ? 1.0f : -1.0f;
+        const glm::vec2 size = m_using_item.size() - glm::vec2(2.0f * direction, 2.0f) * m_using_item.scale();
+
+        world.add_light(Light {
+            .color = glm::vec3(1.0f, 0.95f, 0.8f),
+            .pos = get_lightmap_pos(m_using_item.position() + glm::vec2(size.x * direction, -size.y)),
+            .size = glm::uvec2(2)
+        });
     }
 
     update_sprites();
@@ -645,7 +709,7 @@ void Player::use_item(const Camera& camera, World& world) {
 
     bool used = false;
 
-    if (item->is_pickaxe && world.block_exists(tile_pos)) {
+    if (item->is_pickaxe() && world.block_exists(tile_pos)) {
         Block* block = world.get_block_mut(tile_pos);
 
         if (block->hp > 0) {

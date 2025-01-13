@@ -27,7 +27,7 @@ namespace Constants {
     constexpr int SUBDIVISION = 8;
     constexpr float LIGHT_EPSILON = 0.0185;
     
-    constexpr float LightDecay(bool solid) {        
+    constexpr float LightDecay(bool solid) {
         if constexpr (SUBDIVISION == 8) {
             return solid ? 0.92 : 0.975;
         } else if constexpr (SUBDIVISION == 4) {

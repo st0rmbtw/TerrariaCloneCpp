@@ -18,7 +18,6 @@
 #include "particles.hpp"
 #include "background.hpp"
 #include "defines.hpp"
-#include "utils.hpp"
 
 #include <string>
 #include <tracy/Tracy.hpp>
@@ -27,7 +26,6 @@ static struct GameState {
     Player player;
     World world;
     Camera camera;
-    glm::vec4 mouse_light = glm::vec4(0.9f, 0.2f, 0.2f, 1.0f);
     bool free_camera = false;
 } g;
 
@@ -147,21 +145,6 @@ void update() {
     
     g.player.update(g.camera, g.world);
 
-    if (Input::JustPressed(MouseButton::Right)) {
-        g.mouse_light = glm::vec4(
-            rand_range(0.2f, 1.0f),
-            rand_range(0.2f, 1.0f),
-            rand_range(0.2f, 1.0f),
-            1.0f
-        );
-    }
-
-    g.world.add_light(Light {
-        .color = g.mouse_light,
-        .pos = glm::ivec2(g.camera.screen_to_world(Input::MouseScreenPosition()) * static_cast<float>(Constants::SUBDIVISION) / Constants::TILE_SIZE),
-        .size = glm::uvec2(4)
-    });
-
     if (Input::Pressed(Key::K)) {
         for (int i = 0; i < 500; ++i) {
             const glm::vec2 position = g.camera.screen_to_world(Input::MouseScreenPosition());
@@ -234,7 +217,9 @@ bool load_assets() {
     const std::vector<ShaderDef> shader_defs = {
         ShaderDef("TILE_SIZE", std::to_string(Constants::TILE_SIZE)),
         ShaderDef("WALL_SIZE", std::to_string(Constants::WALL_SIZE)),
-        ShaderDef("DEF_SUBDIVISION", std::to_string(Constants::SUBDIVISION))
+        ShaderDef("DEF_SUBDIVISION", std::to_string(Constants::SUBDIVISION)),
+        ShaderDef("DEF_SOLID_DECAY", std::to_string(Constants::LightDecay(true))),
+        ShaderDef("DEF_AIR_DECAY", std::to_string(Constants::LightDecay(false))),
     };
 
     if (!Assets::LoadShaders(shader_defs)) return false;
@@ -297,6 +282,7 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     inventory.set_item(3, ITEM_DIRT_BLOCK.with_max_stack());
     inventory.set_item(4, ITEM_STONE_BLOCK.with_max_stack());
     inventory.set_item(5, ITEM_WOOD_BLOCK.with_max_stack());
+    inventory.set_item(6, ITEM_TORCH.with_max_stack());
 
     Engine::ShowWindow();
 

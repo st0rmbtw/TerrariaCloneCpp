@@ -10,6 +10,7 @@
 #include <list>
 
 #include "types/rich_text.hpp"
+#include "types/tile_pos.hpp"
 
 #include "assets.hpp"
 
@@ -65,6 +66,10 @@ inline glm::vec2 calculate_text_bounds(const RichText<Size>& text, FontAsset key
     }
 
     return bounds;
+}
+
+inline TilePos get_lightmap_pos(glm::vec2 pos) {
+    return glm::ivec2(pos * static_cast<float>(Constants::SUBDIVISION) / Constants::TILE_SIZE);
 }
 
 #endif

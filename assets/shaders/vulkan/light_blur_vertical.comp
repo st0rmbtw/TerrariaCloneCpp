@@ -23,25 +23,14 @@ layout(push_constant) uniform Uniforms {
 layout(binding = 5, r8ui) uniform readonly uimage2D TileTexture;
 layout(binding = 6, rgba8) uniform image2D LightTexture;
 
-#if DEF_SUBDIVISION == 8
-    const float DECAY_THROUGH_SOLID = 0.92;
-    const float DECAY_THROUGH_AIR = 0.975;
-#elif DEF_SUBDIVISION == 4
-    const float DECAY_THROUGH_SOLID = 0.84;
-    const float DECAY_THROUGH_AIR = 0.942;
-#else
-    const float DECAY_THROUGH_SOLID = 0.56;
-    const float DECAY_THROUGH_AIR = 0.91;
-#endif
-
 const float LIGHT_EPSILON = 0.0185;
 
 float get_decay(ivec2 pos) {
     uint tile = imageLoad(TileTexture, pos / DEF_SUBDIVISION).r;
     if (tile == 1u) {
-        return DECAY_THROUGH_SOLID;
+        return DEF_SOLID_DECAY;
     } else {
-        return DECAY_THROUGH_AIR;
+        return DEF_AIR_DECAY;
     }
 }
 

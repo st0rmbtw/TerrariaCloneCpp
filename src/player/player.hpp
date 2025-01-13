@@ -122,6 +122,7 @@ private:
     void update_sprites_index();
     void update_movement_state();
     void update_using_item_anim();
+    void update_hold_item();
     void spawn_particles_on_walk() const;
     void spawn_particles_grounded() const;
 

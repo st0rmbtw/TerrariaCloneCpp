@@ -27,25 +27,14 @@ StructuredBuffer<Light> LightBuffer : register(t4);
 Texture2D<uint> TileTexture : register(t5);
 RWTexture2D<unorm float4> LightTexture : register(u6);
 
-#if DEF_SUBDIVISION == 8
-    static const float DECAY_THROUGH_SOLID = 0.92;
-    static const float DECAY_THROUGH_AIR = 0.975;
-#elif DEF_SUBDIVISION == 4
-    static const float DECAY_THROUGH_SOLID = 0.84;
-    static const float DECAY_THROUGH_AIR = 0.942;
-#else
-    static const float DECAY_THROUGH_SOLID = 0.56;
-    static const float DECAY_THROUGH_AIR = 0.91;
-#endif
-
 static const float LIGHT_EPSILON = 0.0185f;
 
 float get_decay(uint2 pos) {
     uint tile = TileTexture[pos / DEF_SUBDIVISION].r;
     if (tile == 1u) {
-        return DECAY_THROUGH_SOLID;
+        return DEF_SOLID_DECAY;
     } else {
-        return DECAY_THROUGH_AIR;
+        return DEF_AIR_DECAY;
     }
 }
 

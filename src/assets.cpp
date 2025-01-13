@@ -151,6 +151,7 @@ static const std::array BACKGROUND_ASSETS = {
 static const std::pair<uint16_t, std::string> ITEM_ASSETS[] = {
     { 2, "assets/sprites/items/Item_2.png" },
     { 3, "assets/sprites/items/Item_3.png" },
+    { 8, "assets/sprites/items/Item_8.png" },
     { 9, "assets/sprites/items/Item_9.png" },
     { 26, "assets/sprites/items/Item_26.png" },
     { 30, "assets/sprites/items/Item_30.png" },
@@ -678,9 +679,9 @@ const Font& Assets::GetFont(FontAsset key) {
     return entry->second;
 }
 
-const Texture& Assets::GetItemTexture(size_t index) {
+const Texture& Assets::GetItemTexture(uint16_t index) {
     const auto entry = std::as_const(state.items).find(index);
-    ASSERT(entry != state.items.cend(), "Item not found: %zu", index);
+    ASSERT(entry != state.items.cend(), "Item not found: %u", index);
     return entry->second;
 }
 

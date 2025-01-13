@@ -8,6 +8,7 @@
 #include "renderer/renderer.hpp"
 #include "defines.hpp"
 #include "constants.hpp"
+#include "utils.hpp"
 
 #ifdef PLATFORM_WINDOWS
 #include <corecrt_malloc.h>
@@ -199,20 +200,17 @@ void ParticleManager::Update(World& world) {
         const bool emits_light = state.emits_light[i];
         if (!emits_light) continue;
 
-        const glm::vec4 light_color = glm::vec4(
+        const glm::vec3 light_color = glm::vec3(
             state.light_color[i * 3 + 0],
             state.light_color[i * 3 + 1],
-            state.light_color[i * 3 + 2],
-            1.0f
+            state.light_color[i * 3 + 2]
         );
 
         const glm::vec2 position = glm::vec2(state.position[i * 2 + 0], state.position[i * 2 + 1]);
 
-        const glm::ivec2 lightmap_pos = glm::ivec2(position * static_cast<float>(Constants::SUBDIVISION) / Constants::TILE_SIZE);
-
         world.add_light(Light {
             .color = light_color,
-            .pos = lightmap_pos,
+            .pos = get_lightmap_pos(position),
             .size = glm::uvec2(Constants::SUBDIVISION / 2)
         });
     }

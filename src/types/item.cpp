@@ -1,91 +1,99 @@
 #include "item.hpp"
 
 Item ITEM_COPPER_AXE = {
-    .id = 3506,
+    .name = "Copper Axe",
+    .id = ItemId::CopperAxe,
     .max_stack = 1,
     .stack = 1,
+    .places_block = std::nullopt,
     .swing_speed = 30,
     .use_cooldown = 21,
     .power = 35,
     .consumable = false,
-    .is_axe = true,
-    .is_pickaxe = false,
-    .is_hammer = false,
-    .places_block = std::nullopt,
-    .name = "Copper Axe"
+    .hold_style = HoldStyle::None,
+    .tool_flags = ToolFlags::Axe
 };
 
 Item ITEM_COPPER_PICKAXE = {
-    .id = 3509,
+    .name = "Copper Pickaxe",
+    .id = ItemId::CopperPickaxe,
     .max_stack = 1,
     .stack = 1,
+    .places_block = std::nullopt,
     .swing_speed = 23,
     .use_cooldown = 15,
     .power = 35,
     .consumable = false,
-    .is_axe = false,
-    .is_pickaxe = true,
-    .is_hammer = false,
-    .places_block = std::nullopt,
-    .name = "Copper Pickaxe"
+    .hold_style = HoldStyle::None,
+    .tool_flags = ToolFlags::Pickaxe
 };
 
 Item ITEM_COPPER_HAMMER = {
-    .id = 3505,
+    .name = "Copper Hammer",
+    .id = ItemId::CopperHammer,
     .max_stack = 1,
     .stack = 1,
+    .places_block = std::nullopt,
     .swing_speed = 33,
     .use_cooldown = 23,
     .power = 35,
     .consumable = false,
-    .is_axe = false,
-    .is_pickaxe = false,
-    .is_hammer = true,
-    .places_block = std::nullopt,
-    .name = "Copper Hammer"
+    .hold_style = HoldStyle::None,
+    .tool_flags = ToolFlags::Hammer
 };
 
 Item ITEM_DIRT_BLOCK = {
-    .id = 2,
+    .name = "Dirt",
+    .id = ItemId::DirtBlock,
     .max_stack = 9999,
     .stack = 1,
+    .places_block = BlockType::Dirt,
     .swing_speed = 15,
     .use_cooldown = 0,
     .power = 0,
     .consumable = true,
-    .is_axe = false,
-    .is_pickaxe = false,
-    .is_hammer = false,
-    .places_block = BlockType::Dirt,
-    .name = "Dirt"
+    .hold_style = HoldStyle::None,
+    .tool_flags = ToolFlags::None
 };
 
 Item ITEM_STONE_BLOCK = {
-    .id = 3,
+    .name = "Stone",
+    .id = ItemId::StoneBlock,
     .max_stack = 9999,
     .stack = 1,
+    .places_block = BlockType::Stone,
     .swing_speed = 15,
     .use_cooldown = 0,
     .power = 0,
     .consumable = true,
-    .is_axe = false,
-    .is_pickaxe = false,
-    .is_hammer = false,
-    .places_block = BlockType::Stone,
-    .name = "Stone"
+    .hold_style = HoldStyle::None,
+    .tool_flags = ToolFlags::None
+};
+
+Item ITEM_TORCH = {
+    .name = "Torch",
+    .id = ItemId::Torch,
+    .max_stack = 9999,
+    .stack = 1,
+    .places_block = std::nullopt, // TODO: Should place a torch
+    .swing_speed = 15,
+    .use_cooldown = 0,
+    .power = 0,
+    .consumable = true,
+    .hold_style = HoldStyle::HoldFront,
+    .tool_flags = ToolFlags::None
 };
 
 Item ITEM_WOOD_BLOCK = {
-    .id = 9,
+    .name = "Wood",
+    .id = ItemId::WoodBlock,
     .max_stack = 9999,
     .stack = 1,
+    .places_block = BlockType::Wood,
     .swing_speed = 15,
     .use_cooldown = 0,
     .power = 0,
     .consumable = true,
-    .is_axe = false,
-    .is_pickaxe = false,
-    .is_hammer = false,
-    .places_block = BlockType::Wood,
-    .name = "Wood"
+    .hold_style = HoldStyle::None,
+    .tool_flags = ToolFlags::None
 };

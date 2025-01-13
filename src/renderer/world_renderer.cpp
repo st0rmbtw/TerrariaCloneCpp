@@ -6,6 +6,7 @@
 #include <LLGL/TextureFlags.h>
 #include <LLGL/Types.h>
 #include <LLGL/PipelineLayoutFlags.h>
+#include <LLGL/ResourceFlags.h>
 
 #include <cstddef>
 #include <glm/gtc/type_ptr.hpp>
@@ -16,7 +17,6 @@
 #include "../world/chunk.hpp"
 #include "../utils.hpp"
 
-#include "LLGL/ResourceFlags.h"
 #include "renderer.hpp"
 #include "macros.hpp"
 

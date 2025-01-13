@@ -121,7 +121,7 @@ namespace Assets {
     const Texture& GetTexture(TextureAsset key);
     const TextureAtlas& GetTextureAtlas(TextureAsset key);
     const Font& GetFont(FontAsset key);
-    const Texture& GetItemTexture(size_t index);
+    const Texture& GetItemTexture(uint16_t index);
     const ShaderPipeline& GetShader(ShaderAsset key);
     LLGL::Shader* GetComputeShader(ComputeShaderAsset key);
     const Sampler& GetSampler(size_t index);

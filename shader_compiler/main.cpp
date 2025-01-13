@@ -50,6 +50,8 @@ int main(int argc, const char** argv) {
 
     const std::vector<ShaderDef> shader_defs = {
         ShaderDef("DEF_SUBDIVISION", std::to_string(Constants::SUBDIVISION)),
+        ShaderDef("DEF_SOLID_DECAY", std::to_string(Constants::LightDecay(true))),
+        ShaderDef("DEF_AIR_DECAY", std::to_string(Constants::LightDecay(false))),
         ShaderDef("CHUNK_WIDTH", std::to_string(Constants::RENDER_CHUNK_SIZE_U)),
         ShaderDef("CHUNK_HEIGHT", std::to_string(Constants::RENDER_CHUNK_SIZE_U)),
 
