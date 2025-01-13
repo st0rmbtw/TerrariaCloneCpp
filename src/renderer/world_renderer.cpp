@@ -29,6 +29,7 @@ void WorldRenderer::init() {
     ZoneScopedN("WorldRenderer::init");
 
     const auto& context = Renderer::Context();
+    const RenderBackend backend = Renderer::Backend();
 
     auto depth_uniform = DepthUniformData {
         .tile_depth = 2,
@@ -59,6 +60,9 @@ void WorldRenderer::init() {
     };
     pipelineLayoutDesc.staticSamplers = {
         LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, 5, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
+    };
+    pipelineLayoutDesc.combinedTextureSamplers = {
+        LLGL::CombinedTextureSamplerDescriptor{ "u_texture_array", "u_texture_array", "u_sampler", 4 }
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
@@ -165,7 +169,7 @@ void WorldRenderer::init() {
             LLGL::BindingDescriptor(
                 "TileTexture",
                 LLGL::ResourceType::Texture,
-                LLGL::BindFlags::Storage,
+                backend.IsOpenGL() ? LLGL::BindFlags::Storage : LLGL::BindFlags::Sampled,
                 LLGL::StageFlags::ComputeStage,
                 LLGL::BindingSlot(5)
             ),
@@ -214,6 +218,7 @@ void WorldRenderer::init_textures(const WorldData& world) {
     using Constants::SUBDIVISION;
 
     auto& context = Renderer::Context();
+    const RenderBackend backend = Renderer::Backend();
 
     RESOURCE_RELEASE(m_lightmap_texture);
     RESOURCE_RELEASE(m_light_texture);
@@ -264,7 +269,7 @@ void WorldRenderer::init_textures(const WorldData& world) {
     tile_texture_desc.format    = LLGL::Format::R8UInt;
     tile_texture_desc.extent    = LLGL::Extent3D(world.area.width(), world.area.height(), 1);
     tile_texture_desc.miscFlags = 0;
-    tile_texture_desc.bindFlags = LLGL::BindFlags::Storage;
+    tile_texture_desc.bindFlags = backend.IsOpenGL() ? LLGL::BindFlags::Storage : LLGL::BindFlags::Sampled;
     tile_texture_desc.mipLevels = 1;
 
     {
