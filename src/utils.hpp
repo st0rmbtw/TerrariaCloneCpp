@@ -1,5 +1,5 @@
-#ifndef TERRARIA_UTILS_HPP
-#define TERRARIA_UTILS_HPP
+#ifndef UTILS_HPP
+#define UTILS_HPP
 
 #pragma once
 

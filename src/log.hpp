@@ -1,5 +1,5 @@
-#ifndef TERRARIA_LOG_HPP
-#define TERRARIA_LOG_HPP
+#ifndef LOG_HPP
+#define LOG_HPP
 
 #pragma once
 

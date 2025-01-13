@@ -1,5 +1,5 @@
-#ifndef TERRARIA_TIME_TIME_HPP
-#define TERRARIA_TIME_TIME_HPP
+#ifndef TIME_TIME_HPP
+#define TIME_TIME_HPP
 
 #pragma once
 

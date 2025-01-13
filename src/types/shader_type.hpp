@@ -1,5 +1,5 @@
-#ifndef TERRARIA_TYPES_SHADER_TYPE
-#define TERRARIA_TYPES_SHADER_TYPE
+#ifndef TYPES_SHADER_TYPE
+#define TYPES_SHADER_TYPE
 
 #pragma once
 

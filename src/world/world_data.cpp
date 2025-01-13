@@ -148,51 +148,45 @@ static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, co
             lightmap.set_mask(color_pos, world.block_exists(tile_pos));
 
             if (tile_offset.y * SUBDIVISION + y >= world.layers.underground * SUBDIVISION) {
-                lightmap.set_color(color_pos, glm::vec3(0.0f));
+                lightmap.set_color(color_pos, 0.0f);
                 continue;
             }
 
             if (tile_pos.x <= world.playable_area.min.x || tile_pos.x >= world.playable_area.max.x - 1 || world.block_exists(tile_pos) || world.wall_exists(tile_pos)) {
-                lightmap.set_color(color_pos, glm::vec3(0.0f));
+                lightmap.set_color(color_pos, 0.0f);
             } else {
-                lightmap.set_color(color_pos, glm::vec3(1.0f));
+                lightmap.set_color(color_pos, 1.0f);
             }
         }
     }
 }
 
-static void blur_line(LightMap& lightmap, int start, int end, int stride, glm::vec3& prev_light, float& prev_decay) {
+static void blur(LightMap& lightmap, int index, float& prev_light, float& prev_decay) {
     using Constants::LIGHT_EPSILON;
 
-    for (int index = start; index != end + stride; index += stride) {
-        glm::vec3 this_light = lightmap.get_color(index);
+    float this_light = lightmap.get_color(index);
 
-        prev_light.x = prev_light.x < LIGHT_EPSILON ? 0.0f : prev_light.x;
-        prev_light.y = prev_light.y < LIGHT_EPSILON ? 0.0f : prev_light.x;
-        prev_light.z = prev_light.z < LIGHT_EPSILON ? 0.0f : prev_light.x;
+    prev_light = prev_light < LIGHT_EPSILON ? 0.0f : prev_light;
 
-        if (prev_light.x < this_light.x) {
-            prev_light.x = this_light.x;
-        } else {
-            this_light.x = prev_light.x;
-        }
-        
-        if (prev_light.y < this_light.y) {
-            prev_light.y = this_light.y;
-        } else {
-            this_light.y = prev_light.y;
-        }
-        
-        if (prev_light.z < this_light.z) {
-            prev_light.z = this_light.z;
-        } else {
-            this_light.z = prev_light.z;
-        }
+    if (prev_light < this_light) {
+        prev_light = this_light;
+    } else {
+        this_light = prev_light;
+    }
 
-        lightmap.set_color(index, this_light);
+    lightmap.set_color(index, this_light);
 
-        prev_light = prev_light * prev_decay;
-        prev_decay = Constants::LightDecay(lightmap.get_mask(index));
+    prev_light = prev_light * prev_decay;
+    prev_decay = Constants::LightDecay(lightmap.get_mask(index));
+}
+
+inline static void blur_line(LightMap& lightmap, int start, int end, int stride, float& prev_light, float& prev_decay, float& prev_light2, float& prev_decay2) {
+    using Constants::LIGHT_EPSILON;
+
+    int length = end - start;
+    for (int index = 0; index < length; index += stride) {
+        blur(lightmap, start + index, prev_light, prev_decay);
+        blur(lightmap, end - index, prev_light2, prev_decay2);
     }
 }
 
@@ -208,41 +202,29 @@ static void internal_lightmap_blur_area(WorldData& world, LightMap& lightmap, co
 
     const TilePos offset = {tile_offset.x * SUBDIVISION, tile_offset.y * SUBDIVISION};
 
-    for (int i = 0; i < 3; ++i) {
-        // Left to right
+    for (int i = 0; i < 2; ++i) {
+        // Horizontal
         #pragma omp parallel for
         for (int y = min_y; y < max_y; ++y) {
-            glm::vec3 prev_light = world.lightmap.get_color({offset.x + min_x, offset.y + y});
+            float prev_light = world.lightmap.get_color({offset.x + min_x, offset.y + y});
             float prev_decay = Constants::LightDecay(world.lightmap.get_mask({(offset.x + min_x) - 1, (offset.y + y)}));
 
-            blur_line(lightmap, y * lightmap.width + min_x, y * lightmap.width + (max_x - 1), 1, prev_light, prev_decay);
+            float prev_light2 = world.lightmap.get_color({offset.x + max_x - 1, offset.y + y});
+            float prev_decay2 = Constants::LightDecay(world.lightmap.get_mask({(offset.x + max_x), (offset.y + y)}));
+
+            blur_line(lightmap, y * lightmap.width + min_x, y * lightmap.width + (max_x - 1), 1, prev_light, prev_decay, prev_light2, prev_decay2);
         }
 
-        // Top to bottom
+        // Vertical
         #pragma omp parallel for
         for (int x = min_x; x < max_x; ++x) {
-            glm::vec3 prev_light = world.lightmap.get_color({offset.x + x, offset.y + min_y});
+            float prev_light = world.lightmap.get_color({offset.x + x, offset.y + min_y});
             float prev_decay = Constants::LightDecay(world.lightmap.get_mask({(offset.x + x), (offset.y + min_y) - 1}));
 
-            blur_line(lightmap, min_y * lightmap.width + x, (max_y - 1) * lightmap.width + x, lightmap.width, prev_light, prev_decay);
-        }
+            float prev_light2 = world.lightmap.get_color({offset.x + x, offset.y + max_y - 1});
+            float prev_decay2 = Constants::LightDecay(world.lightmap.get_mask({(offset.x + x), (offset.y + max_y)}));
 
-        // Right to left
-        #pragma omp parallel for
-        for (int y = min_y; y < max_y; ++y) {
-            glm::vec3 prev_light = world.lightmap.get_color({offset.x + max_x - 1, offset.y + y});
-            float prev_decay = Constants::LightDecay(world.lightmap.get_mask({(offset.x + max_x), (offset.y + y)}));
-
-            blur_line(lightmap, y * lightmap.width + (max_x - 1), y * lightmap.width + min_x, -1, prev_light, prev_decay);
-        }
-
-        // Bottom to top
-        #pragma omp parallel for
-        for (int x = min_x; x < max_x; ++x) {
-            glm::vec3 prev_light = world.lightmap.get_color({offset.x + x, offset.y + max_y - 1});
-            float prev_decay = Constants::LightDecay(world.lightmap.get_mask({(offset.x + x), (offset.y + max_y)}));
-
-            blur_line(lightmap, (max_y - 1) * lightmap.width + x, min_y * lightmap.width + x, -lightmap.width, prev_light, prev_decay);
+            blur_line(lightmap, min_y * lightmap.width + x, (max_y - 1) * lightmap.width + x, lightmap.width, prev_light, prev_decay, prev_light2, prev_decay2);
         }
     }
 }

@@ -1,5 +1,5 @@
-#ifndef TERRARIA_ENGINE_HPP
-#define TERRARIA_ENGINE_HPP
+#ifndef ENGINE_HPP
+#define ENGINE_HPP
 
 #pragma once
 

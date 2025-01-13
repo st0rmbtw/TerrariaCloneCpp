@@ -1,5 +1,5 @@
-#ifndef TERRARIA_RENDER_BATCH_HPP
-#define TERRARIA_RENDER_BATCH_HPP
+#ifndef RENDERER_BATCH_HPP
+#define RENDERER_BATCH_HPP
 
 #pragma once
 

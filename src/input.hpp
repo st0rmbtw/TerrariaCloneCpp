@@ -1,5 +1,5 @@
-#ifndef TERRARIA_INPUT_HPP
-#define TERRARIA_INPUT_HPP
+#ifndef INPUT_HPP
+#define INPUT_HPP
 
 #pragma once
 

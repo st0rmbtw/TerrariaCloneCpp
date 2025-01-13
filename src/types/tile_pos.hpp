@@ -1,5 +1,5 @@
-#ifndef TERRARIA_TILE_POS_HPP
-#define TERRARIA_TILE_POS_HPP
+#ifndef TYPES_TILE_POS_HPP
+#define TYPES_TILE_POS_HPP
 
 #pragma once
 
@@ -67,6 +67,10 @@ struct TilePos {
 
     constexpr inline TilePos operator/(int d) const {
         return TilePos(x / d, y / d);
+    }
+
+    constexpr inline TilePos operator*(int d) const {
+        return TilePos(x * d, y * d);
     }
 
     constexpr inline TilePos operator+(TilePos rhs) const {

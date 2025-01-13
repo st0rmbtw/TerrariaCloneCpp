@@ -1,5 +1,5 @@
-#ifndef TERRARIA_SPRITE_HPP
-#define TERRARIA_SPRITE_HPP
+#ifndef TYPES_SPRITE_HPP
+#define TYPES_SPRITE_HPP
 
 #pragma once
 

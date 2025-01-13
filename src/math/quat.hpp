@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef TERRARIA_MATH_QUAT_HPP
-#define TERRARIA_MATH_QUAT_HPP
+#ifndef MATH_QUAT_HPP
+#define MATH_QUAT_HPP
 
 #include <glm/gtx/quaternion.hpp>
 

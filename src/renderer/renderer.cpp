@@ -21,6 +21,7 @@
 #include "../log.hpp"
 #include "../types/shader_type.hpp"
 #include "../utils.hpp"
+#include "../time/timer.hpp"
 
 #include "types.hpp"
 #include "utils.hpp"
@@ -28,6 +29,7 @@
 #include "world_renderer.hpp"
 #include "background_renderer.hpp"
 #include "particle_renderer.hpp"
+#include "macros.hpp"
 
 static struct RendererState {
     ParticleRenderer particle_renderer;
@@ -36,6 +38,8 @@ static struct RendererState {
     BackgroundRenderer background_renderer;
     WorldRenderer world_renderer;
 
+    Timer compute_light_timer;
+
     LLGL::RenderSystemPtr context = nullptr;
     std::shared_ptr<CustomSurface> surface = nullptr;
 
@@ -43,7 +47,6 @@ static struct RendererState {
     math::Rect nozoom_camera_frustum;
     math::Rect camera_frustum;
 
-    
     LLGL::SwapChain* swap_chain = nullptr;
     LLGL::CommandBuffer* command_buffer = nullptr;
     LLGL::CommandQueue* command_queue = nullptr;
@@ -97,22 +100,18 @@ LLGL::RenderingDebugger* Renderer::Debugger() { return state.debugger; }
 bool Renderer::InitEngine(RenderBackend backend) {
     LLGL::Report report;
 
-    void* configPtr = nullptr;
-    size_t configSize = 0;
-
-    if (backend.IsOpenGL()) {
-        LLGL::RendererConfigurationOpenGL config;
-        config.majorVersion = 4;
-        config.minorVersion = 3;
-        config.contextProfile = LLGL::OpenGLContextProfile::CoreProfile;
-        configPtr = &config;
-        configSize = sizeof(config);
-    }
-
     LLGL::RenderSystemDescriptor rendererDesc;
     rendererDesc.moduleName = backend.ToString();
-    rendererDesc.rendererConfig = configPtr;
-    rendererDesc.rendererConfigSize = configSize;
+
+    if (backend.IsOpenGL()) {
+        LLGL::RendererConfigurationOpenGL* config = new LLGL::RendererConfigurationOpenGL();
+        config->majorVersion = 4;
+        config->minorVersion = 3;
+        config->contextProfile = LLGL::OpenGLContextProfile::CoreProfile;
+
+        rendererDesc.rendererConfig = config;
+        rendererDesc.rendererConfigSize = sizeof(LLGL::RendererConfigurationOpenGL);
+    }
 
 #if DEBUG
     state.debugger = new LLGL::RenderingDebugger();
@@ -122,6 +121,10 @@ bool Renderer::InitEngine(RenderBackend backend) {
 
     state.context = LLGL::RenderSystem::Load(rendererDesc, &report);
     state.backend = backend;
+
+    if (backend.IsOpenGL()) {
+        delete (LLGL::OpenGLContextProfile*) rendererDesc.rendererConfig;
+    }
 
     if (report.HasErrors()) {
         LOG_ERROR("%s", report.GetText());
@@ -190,13 +193,15 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     pipelineLayoutDesc.staticSamplers = {   
         LLGL::StaticSamplerDescriptor("u_background_sampler", LLGL::StageFlags::FragmentStage, 4, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
         LLGL::StaticSamplerDescriptor("u_world_sampler", LLGL::StageFlags::FragmentStage, 6, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
-        LLGL::StaticSamplerDescriptor("u_light_sampler", LLGL::StageFlags::FragmentStage, 8, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("u_lightmap_sampler", LLGL::StageFlags::FragmentStage, 8, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("u_light_sampler", LLGL::StageFlags::FragmentStage, 10, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
     };
     pipelineLayoutDesc.combinedTextureSamplers =
     {
         LLGL::CombinedTextureSamplerDescriptor{ "u_background_texture", "u_background_texture", "u_background_sampler", 3 },
         LLGL::CombinedTextureSamplerDescriptor{ "u_world_texture", "u_world_texture", "u_world_sampler", 5 },
-        LLGL::CombinedTextureSamplerDescriptor{ "u_light_texture", "u_light_texture", "u_light_sampler", 7 },
+        LLGL::CombinedTextureSamplerDescriptor{ "u_lightmap_texture", "u_lightmap_texture", "u_lightmap_sampler", 7 },
+        LLGL::CombinedTextureSamplerDescriptor{ "u_light_texture", "u_light_texture", "u_light_sampler", 9 },
     };
     pipelineLayoutDesc.heapBindings = {
         LLGL::BindingDescriptor(
@@ -209,7 +214,8 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
         LLGL::BindingDescriptor("u_background_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 3),
         LLGL::BindingDescriptor("u_world_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 5),
-        LLGL::BindingDescriptor("u_light_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 7),
+        LLGL::BindingDescriptor("u_lightmap_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 7),
+        LLGL::BindingDescriptor("u_light_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 9),
     };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
@@ -218,7 +224,8 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
         state.constant_buffer,
         state.background_render_texture,
         state.world_render_texture,
-        Assets::GetTexture(TextureAsset::Stub)
+        nullptr,
+        nullptr,
     };
     state.resource_heap = context->CreateResourceHeap(LLGL::ResourceHeapDescriptor(pipelineLayout, ARRAY_LEN(resource_views)), resource_views);
 
@@ -235,6 +242,8 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
     state.postprocess_pipeline = context->CreatePipelineState(pipelineDesc);
 
+    state.compute_light_timer = Timer::from_seconds(Constants::FIXED_UPDATE_INTERVAL, TimerMode::Repeating);
+
     return true;
 }
 
@@ -242,17 +251,12 @@ void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
     const LLGL::RenderSystemPtr& context = state.context;
     const auto* swap_chain = state.swap_chain;
 
-    if (state.world_render_texture) context->Release(*state.world_render_texture);
-    if (state.world_depth_texture) context->Release(*state.world_depth_texture);
-    if (state.world_render_target) context->Release(*state.world_render_target);
+    RESOURCE_RELEASE(state.world_render_texture);
+    RESOURCE_RELEASE(state.world_depth_texture);
+    RESOURCE_RELEASE(state.world_render_target);
 
-    if (state.background_render_texture) context->Release(*state.background_render_texture);
-    if (state.background_render_target) context->Release(*state.background_render_target);
-
-    state.world_render_texture = nullptr;
-    state.world_render_target = nullptr;
-    state.background_render_texture = nullptr;
-    state.background_render_target = nullptr;
+    RESOURCE_RELEASE(state.background_render_texture);
+    RESOURCE_RELEASE(state.background_render_target);
 
     LLGL::TextureDescriptor texture_desc;
     texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
@@ -260,6 +264,7 @@ void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
     texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
     texture_desc.miscFlags = 0;
     texture_desc.cpuAccessFlags = 0;
+    texture_desc.mipLevels = 1;
 
     LLGL::TextureDescriptor depth_texture_desc;
     depth_texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
@@ -267,6 +272,7 @@ void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
     depth_texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::DepthStencilAttachment;
     depth_texture_desc.miscFlags = 0;
     depth_texture_desc.cpuAccessFlags = 0;
+    depth_texture_desc.mipLevels = 1;
 
     LLGL::Texture* world_depth_texture = context->CreateTexture(depth_texture_desc);
     LLGL::Texture* world_render_texture = context->CreateTexture(texture_desc);
@@ -301,7 +307,7 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
 
     const auto& context = state.context;
 
-    if (state.fullscreen_triangle_vertex_buffer) context->Release(*state.fullscreen_triangle_vertex_buffer);
+    RESOURCE_RELEASE(state.fullscreen_triangle_vertex_buffer);
 
     const glm::vec2 world_size = glm::vec2(world.area.size()) * TILE_SIZE;
 
@@ -312,27 +318,12 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
     };
     state.fullscreen_triangle_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::PostProcessVertex));
 
-    state.world_renderer.init_lightmap_texture(world);
-    context->WriteResourceHeap(*state.resource_heap, 3, {state.world_renderer.lightmap_texture()});
+    state.world_renderer.init_textures(world);
+    context->WriteResourceHeap(*state.resource_heap, 3, {state.world_renderer.lightmap_texture(), state.world_renderer.light_texture()});
 }
 
 void Renderer::Begin(const Camera& camera, WorldData& world) {
     ZoneScopedN("Renderer::Begin");
-
-    for (auto it = world.lightmap_tasks.cbegin(); it != world.lightmap_tasks.cend();) {
-        const LightMapTask& task = *it;
-        const LightMapTaskResult result = task.result->load();
-
-        if (result.is_complete) {
-            state.world_renderer.update_lightmap_texture(world, result);
-            delete[] result.data;
-            delete[] result.mask;
-            it = world.lightmap_tasks.erase(it);
-            continue;
-        }
-
-        ++it;
-    }
 
     auto* const commands = state.command_buffer;
 
@@ -350,6 +341,9 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
     state.nozoom_camera_frustum = nozoom_camera_frustum;
     state.ui_frustum = ui_frustum;
 
+    state.world_renderer.update_lightmap_texture(world);
+    state.world_renderer.update_tile_texture(world);
+
     commands->Begin();
     commands->SetViewport(state.swap_chain->GetResolution());
 
@@ -363,7 +357,7 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
     state.max_main_depth = 0;
 }
 
-void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
+void Renderer::Render(const Camera& camera, const World& world) {
     ZoneScopedN("Renderer::Render");
 
     auto* const commands = state.command_buffer;
@@ -388,6 +382,14 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
 
     LLGL::ClearValue clear_value = LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
+    if (state.compute_light_timer.tick(Time::delta()).finished()) {
+        commands->BeginRenderPass(*state.world_renderer.light_texture_target());
+            commands->Clear(LLGL::ClearFlags::Color, clear_value);
+        commands->EndRenderPass();
+
+        state.world_renderer.compute_light(camera, world);
+    }
+
     commands->BeginRenderPass(*state.background_render_target);
         commands->Clear(LLGL::ClearFlags::ColorDepth, clear_value);
         state.background_renderer.render();
@@ -396,7 +398,7 @@ void Renderer::Render(const Camera& camera, const ChunkManager& chunk_manager) {
     commands->BeginRenderPass(*state.world_render_target);
         commands->Clear(LLGL::ClearFlags::ColorDepth, clear_value);
         state.background_renderer.render_world();
-        state.world_renderer.render(chunk_manager);
+        state.world_renderer.render(world.chunk_manager());
         state.sprite_batch.render_world();
     commands->EndRenderPass();
 
@@ -717,10 +719,9 @@ void Renderer::Terminate() {
     state.background_renderer.terminate();
     state.particle_renderer.terminate();
 
-    if (state.constant_buffer) state.context->Release(*state.constant_buffer);
-
-    if (state.command_buffer) state.context->Release(*state.command_buffer);
-    if (state.swap_chain) state.context->Release(*state.swap_chain);
+    RESOURCE_RELEASE(state.constant_buffer);
+    RESOURCE_RELEASE(state.command_buffer);
+    RESOURCE_RELEASE(state.swap_chain);
 
     Assets::DestroyTextures();
     Assets::DestroySamplers();
@@ -1129,8 +1130,8 @@ void RenderBatchSprite::begin() {
 }
 
 void RenderBatchSprite::terminate() {
-    if (m_vertex_buffer) state.context->Release(*m_vertex_buffer);
-    if (m_pipeline) state.context->Release(*m_pipeline);
+    RESOURCE_RELEASE(m_vertex_buffer)
+    RESOURCE_RELEASE(m_pipeline)
 
     delete[] m_buffer;
     delete[] m_world_buffer;
@@ -1343,8 +1344,8 @@ void RenderBatchGlyph::begin() {
 }
 
 void RenderBatchGlyph::terminate() {
-    if (m_vertex_buffer) state.context->Release(*m_vertex_buffer);
-    if (m_pipeline) state.context->Release(*m_pipeline);
+    RESOURCE_RELEASE(m_vertex_buffer)
+    RESOURCE_RELEASE(m_pipeline)
 
     delete[] m_buffer;
 }

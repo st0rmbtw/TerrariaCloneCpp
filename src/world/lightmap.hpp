@@ -1,5 +1,5 @@
-#ifndef TERRARIA_WORLD_LIGHTMAP_HPP
-#define TERRARIA_WORLD_LIGHTMAP_HPP
+#ifndef WORLD_LIGHTMAP_HPP
+#define WORLD_LIGHTMAP_HPP
 
 #include <stdint.h>
 #include <thread>
@@ -9,13 +9,7 @@
 #include "../constants.hpp"
 #include "../defines.hpp"
 
-struct Color {
-    uint8_t r, g, b, a;
-
-    Color() : r(0), g(0), b(0), a(0xFF) {}
-
-    explicit Color(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b), a(0xFF) {}
-};
+using Color = uint8_t;
 
 using LightMask = bool;
 
@@ -32,6 +26,7 @@ struct LightMap {
         width = tiles_width * SUBDIVISION;
         height = tiles_height * SUBDIVISION;
         colors = new Color[width * height];
+        memset(colors, 0, width * height);
         masks = new LightMask[width * height];
     }
 
@@ -55,25 +50,24 @@ struct LightMap {
     }
 
     [[nodiscard]]
-    inline glm::vec3 get_color(int index) const {
+    inline float get_color(int index) const {
         if (!(index >= 0 && index < width * height)) {
-            return glm::vec3(0.0f);
+            return 0.0f;
         }
         
-        Color color = colors[index];
-        return glm::vec3(static_cast<float>(color.r) / 255.0f, static_cast<float>(color.g) / 255.0f, static_cast<float>(color.b / 255.0f));
+        return colors[index] / 255.0f;
     }
 
     [[nodiscard]]
-    inline glm::vec3 get_color(TilePos pos) const {
+    inline float get_color(TilePos pos) const {
         return get_color(pos.y * width + pos.x);
     }
 
-    inline void set_color(size_t index, const glm::vec3& color) {
-        colors[index] = Color(color.r * 255.0f, color.g * 255.0f, color.b * 255.0f);
+    inline void set_color(size_t index, float color) {
+        colors[index] = static_cast<uint8_t>(color * 255.0f);
     }
 
-    inline void set_color(TilePos pos, const glm::vec3& color) {
+    inline void set_color(TilePos pos, float color) {
         set_color(pos.y * width + pos.x, color);
     }
 

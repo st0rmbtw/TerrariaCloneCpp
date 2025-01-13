@@ -1,5 +1,5 @@
-#ifndef TERRARIA_MATH_MATH_HPP
-#define TERRARIA_MATH_MATH_HPP
+#ifndef MATH_MATH_HPP
+#define MATH_MATH_HPP
 
 #pragma once
 

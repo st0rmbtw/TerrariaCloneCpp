@@ -70,7 +70,10 @@ enum class ShaderAsset : uint8_t {
 };
 
 enum class ComputeShaderAsset : uint8_t {
-    ParticleComputeTransformShader = 0
+    ParticleComputeTransformShader = 0,
+    LightSetLightSources,
+    LightVertical,
+    LightHorizontal,
 };
 
 enum class FontAsset : uint8_t {

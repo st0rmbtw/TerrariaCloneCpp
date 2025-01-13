@@ -1,5 +1,5 @@
-#ifndef TERRARIA_TYPES_BACKEND
-#define TERRARIA_TYPES_BACKEND
+#ifndef TYPES_BACKEND
+#define TYPES_BACKEND
 
 #pragma once
 

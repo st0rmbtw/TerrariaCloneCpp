@@ -1,9 +1,10 @@
-#ifndef TERRARIA_WORLD_WORLD_DATA
-#define TERRARIA_WORLD_WORLD_DATA
+#ifndef WORLD_WORLD_DATA_HPP
+#define WORLD_WORLD_DATA_HPP
 
 #pragma once
 
 #include <vector>
+#include <deque>
 
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
@@ -30,6 +31,7 @@ struct WorldData {
     Layers layers;
     glm::uvec2 spawn_point;
     std::vector<LightMapTask> lightmap_tasks;
+    std::deque<std::pair<TilePos, int>> changed_tiles;
 
     [[nodiscard]]
     inline size_t get_tile_index(TilePos pos) const {

@@ -7,6 +7,7 @@
 #include "math/math.hpp"
 #include "renderer/renderer.hpp"
 #include "defines.hpp"
+#include "constants.hpp"
 
 #ifdef PLATFORM_WINDOWS
 #include <corecrt_malloc.h>
@@ -18,6 +19,8 @@
 #define ALIGNED_FREE(ptr) free((ptr))
 #endif
 
+using Constants::MAX_PARTICLES_COUNT;
+
 static struct ParticlesState {
     float* position;
     float* velocity;
@@ -27,6 +30,8 @@ static struct ParticlesState {
     float* scale;
     float* rotation;
     float* rotation_speed;
+    float* light_color;
+    bool* emits_light;
     bool* gravity;
     bool* active;
     Particle::Type* type;
@@ -56,8 +61,10 @@ void ParticleManager::Init() {
     state.rotation = (float*) malloc(MAX_PARTICLES_COUNT * 4 * sizeof(float));
     state.rotation_speed = (float*) malloc(MAX_PARTICLES_COUNT * 4 * sizeof(float));
 #endif
+    state.light_color = new float[MAX_PARTICLES_COUNT * 3];
     state.gravity = new bool[MAX_PARTICLES_COUNT];
     state.active = new bool[MAX_PARTICLES_COUNT](); // If it's not initilized with false, particles wouldn't spawn
+    state.emits_light = new bool[MAX_PARTICLES_COUNT]();
     state.type = new Particle::Type[MAX_PARTICLES_COUNT];
     state.variant = new uint8_t[MAX_PARTICLES_COUNT];
 }
@@ -89,6 +96,13 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
     state.rotation[index * 4 + 2] = particle_data.rotation.z;
     state.rotation[index * 4 + 3] = particle_data.rotation.w;
 
+    const bool emits_light = particle_data.light_color.has_value();
+
+    state.emits_light[index] = emits_light;
+    state.light_color[index * 3 + 0] = emits_light ? particle_data.light_color->x : 0.0f;
+    state.light_color[index * 3 + 1] = emits_light ? particle_data.light_color->y : 0.0f;
+    state.light_color[index * 3 + 2] = emits_light ? particle_data.light_color->z : 0.0f;
+
     state.gravity[index] = particle_data.gravity;
     state.active[index] = true;
     state.type[index] = particle_data.type;
@@ -115,7 +129,7 @@ void ParticleManager::Draw() {
     }
 }
 
-void ParticleManager::Update() {
+void ParticleManager::Update(World& world) {
     ZoneScopedN("ParticleManager::Update");
 
     for (size_t i = 0; i < state.active_count; ++i) {
@@ -180,6 +194,28 @@ void ParticleManager::Update() {
         rotation *= rotation_speed;
     }
 #endif
+
+    for (size_t i = 0; i < state.active_count; ++i) {
+        const bool emits_light = state.emits_light[i];
+        if (!emits_light) continue;
+
+        const glm::vec4 light_color = glm::vec4(
+            state.light_color[i * 3 + 0],
+            state.light_color[i * 3 + 1],
+            state.light_color[i * 3 + 2],
+            1.0f
+        );
+
+        const glm::vec2 position = glm::vec2(state.position[i * 2 + 0], state.position[i * 2 + 1]);
+
+        const glm::ivec2 lightmap_pos = glm::ivec2(position * static_cast<float>(Constants::SUBDIVISION) / Constants::TILE_SIZE);
+
+        world.add_light(Light {
+            .color = light_color,
+            .pos = lightmap_pos,
+            .size = glm::uvec2(Constants::SUBDIVISION / 2)
+        });
+    }
 }
 
 void ParticleManager::DeleteExpired() {
@@ -217,8 +253,13 @@ void ParticleManager::DeleteExpired() {
             std::swap(state.rotation_speed[i * 4 + 2], state.rotation_speed[state.active_count * 4 + 2]);
             std::swap(state.rotation_speed[i * 4 + 3], state.rotation_speed[state.active_count * 4 + 3]);
 
+            std::swap(state.light_color[i * 3 + 0], state.light_color[state.active_count * 3 + 0]);
+            std::swap(state.light_color[i * 3 + 1], state.light_color[state.active_count * 3 + 1]);
+            std::swap(state.light_color[i * 3 + 2], state.light_color[state.active_count * 3 + 2]);
+
             std::swap(state.gravity[i], state.gravity[state.active_count]);
             std::swap(state.active[i], state.active[state.active_count]);
+            std::swap(state.emits_light[i], state.emits_light[state.active_count]);
             std::swap(state.type[i], state.type[state.active_count]);
             std::swap(state.variant[i], state.variant[state.active_count]);
         }
@@ -258,6 +299,8 @@ void ParticleManager::Terminate() {
     free(state.rotation_speed);
 #endif
 
+    delete[] state.emits_light;
+    delete[] state.light_color;
     delete[] state.spawn_time;
     delete[] state.lifetime;
     delete[] state.custom_scale;

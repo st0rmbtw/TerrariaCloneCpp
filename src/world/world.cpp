@@ -49,6 +49,7 @@ void World::set_block(TilePos pos, BlockType block_type) {
     const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
         .clamp(m_data.playable_area);
     m_data.lightmap_update_area_async(light_area);
+    m_data.changed_tiles.emplace_back(pos, 1);
 
     m_chunk_manager.set_blocks_changed(pos);
 }
@@ -70,6 +71,7 @@ void World::remove_block(TilePos pos) {
     const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
         .clamp(m_data.playable_area);
     m_data.lightmap_update_area_async(light_area);
+    m_data.changed_tiles.emplace_back(pos, 0);
 
     reset_tiles(pos, *this);
 
@@ -110,6 +112,11 @@ void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
     ZoneScopedN("World::generate");
 
     world_generate(m_data, width, height, seed);
+
+    m_light_count = 0;
+    if (m_lights == nullptr) {
+        m_lights = new Light[WORLD_MAX_LIGHT_COUNT];
+    }
 }
 
 void World::update(const Camera& camera) {

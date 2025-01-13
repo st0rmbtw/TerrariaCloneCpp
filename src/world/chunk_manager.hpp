@@ -1,8 +1,7 @@
-#ifndef TERRARIA_WORLD_CHUNK_MANAGER
-#define TERRARIA_WORLD_CHUNK_MANAGER
+#ifndef WORLD_CHUNK_MANAGER_HPP
+#define WORLD_CHUNK_MANAGER_HPP
 
 #pragma once
-
 
 #include <unordered_map>
 #include <unordered_set>

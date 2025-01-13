@@ -1,9 +1,8 @@
-#ifndef TERRARIA_RENDERER_CAMERA_H
-#define TERRARIA_RENDERER_CAMERA_H
+#ifndef RENDERER_CAMERA_H
+#define RENDERER_CAMERA_H
 
 #pragma once
 
-#include <utility>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "../math/rect.hpp"
@@ -26,7 +25,7 @@ public:
         m_nozoom_projection_matrix(),
         m_view_matrix(),
         m_transform_matrix(),
-        m_viewport(std::move(viewport)),
+        m_viewport(viewport),
         m_position(0.0f)
     {
         update_projection_area();

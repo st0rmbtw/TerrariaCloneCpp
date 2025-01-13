@@ -1,14 +1,14 @@
 #version 330 core
 
+out vec4 frag_color;
+
+uniform sampler2D u_texture;
+
 in vec2 v_uv;
 flat in vec4 v_color;
 flat in vec4 v_outline_color;
 flat in float v_outline_thickness;
 flat in int v_has_texture;
-
-out vec4 frag_color;
-
-uniform sampler2D u_texture;
 
 void main() {
     vec4 color = v_color;

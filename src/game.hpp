@@ -1,5 +1,5 @@
-#ifndef TERRARIA_GAME_HPP
-#define TERRARIA_GAME_HPP
+#ifndef GAME_HPP
+#define GAME_HPP
 
 #pragma once
 

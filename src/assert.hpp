@@ -1,5 +1,5 @@
-#ifndef TERRARIA_ASSERT_H
-#define TERRARIA_ASSERT_H
+#ifndef ASSERT_HPP
+#define ASSERT_HPP
 
 #pragma once
 

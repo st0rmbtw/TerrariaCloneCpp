@@ -31,7 +31,7 @@ struct RenderChunk {
         const glm::vec2& world_pos,
         const WorldData& world
     ) : world_pos(world_pos.x * Constants::RENDER_CHUNK_SIZE, world_pos.y * Constants::RENDER_CHUNK_SIZE),
-        index(std::move(index))
+        index(index)
     {
         build_mesh(world);
     }

@@ -1,0 +1,41 @@
+#version 430 core
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(std140) uniform GlobalUniformBuffer {
+    mat4 screen_projection;
+    mat4 view_projection;
+    mat4 nonscale_view_projection;
+    mat4 nonscale_projection;
+    mat4 transform_matrix;
+    mat4 inv_view_proj;
+    vec2 camera_position;
+    vec2 window_size;
+    float max_depth;
+    float max_world_depth;
+} global_ubo;
+
+struct Light {
+    vec4 color;
+    ivec2 pos;
+    uvec2 size;
+};
+
+layout(std430) readonly buffer LightBuffer {
+    Light lights[];
+};
+
+layout(rgba8) uniform image2D LightTexture;
+
+void main() {
+    uint id = gl_GlobalInvocationID.x;
+    Light light = lights[id];
+    uint width = light.size.x;
+    uint height = light.size.y;
+
+    for (uint x = 0; x < width; ++x) {
+        for (uint y = 0; y < height; ++y) {
+            imageStore(LightTexture, light.pos + ivec2(x, y), vec4(light.color.rgb, 1.0));
+        }
+    }
+}

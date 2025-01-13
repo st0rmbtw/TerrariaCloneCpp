@@ -1,12 +1,12 @@
-#ifndef TERRARIA_RENDERER_HPP
-#define TERRARIA_RENDERER_HPP
+#ifndef RENDERER_HPP
+#define RENDERER_HPP
 
-#include "LLGL/Format.h"
 #pragma once
 
 #include <LLGL/SwapChain.h>
 #include <LLGL/RenderSystem.h>
 #include <LLGL/RenderingDebugger.h>
+#include <LLGL/Format.h>
 
 #include "../types/sprite.hpp"
 #include "../types/backend.hpp"
@@ -19,7 +19,7 @@
 #include "../particles.hpp"
 
 #include "../world/world_data.hpp"
-#include "../world/chunk_manager.hpp"
+#include "../world/world.hpp"
 
 #include "custom_surface.hpp"
 #include "camera.h"
@@ -44,7 +44,7 @@ namespace Renderer {
     void ResizeTextures(LLGL::Extent2D resolution);
 
     void Begin(const Camera& camera, WorldData& world);
-    void Render(const Camera& camera, const ChunkManager& chunk_manager);
+    void Render(const Camera& camera, const World& world);
 
     void DrawSprite(const Sprite& sprite, RenderLayer render_layer = RenderLayer::Main, Depth depth = {});
     inline void DrawSprite(const Sprite& sprite, Depth depth) {

@@ -11,6 +11,7 @@
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
 #include "../types/tile_pos.hpp"
+#include "../types/light.hpp"
 
 #include "chunk_manager.hpp"
 
@@ -26,6 +27,8 @@ struct TileCracks {
     TilePos tile_pos;
     uint8_t cracks_index;
 };
+
+static constexpr size_t WORLD_MAX_LIGHT_COUNT = 0xFFFF / sizeof(Light);
 
 class World {
 public:
@@ -99,6 +102,17 @@ public:
     [[nodiscard]] inline void remove_tile_cracks(TilePos pos) {
         m_tile_cracks.erase(pos);
     }
+
+    [[nodiscard]] inline const Light* lights() const { return m_lights; }
+    [[nodiscard]] inline uint32_t light_count() const { return m_light_count; }
+
+    inline void clear_lights() { m_light_count = 0; }
+
+    [[nodiscard]] inline void add_light(Light light) {
+        m_lights[m_light_count] = light;
+        m_light_count = (m_light_count + 1) % WORLD_MAX_LIGHT_COUNT;
+    }
+
 private:
     void update_neighbors(TilePos pos);
 
@@ -107,6 +121,8 @@ private:
     ChunkManager m_chunk_manager;
     std::vector<BlockDigAnimation> m_block_dig_animations;
     std::unordered_map<TilePos, TileCracks> m_tile_cracks;
+    Light* m_lights = nullptr;
+    uint32_t m_light_count = 0; 
     bool m_changed = false;
 };
 
