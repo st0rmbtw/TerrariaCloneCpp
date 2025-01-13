@@ -24,16 +24,16 @@ layout(std140) uniform GlobalUniformBuffer {
     float max_world_depth;
 } global_ubo;
 
+const int HAS_TEXTURE_FLAG = 1 << 0;
+const int IS_UI_FLAG = 1 << 1;
+const int IS_WORLD_FLAG = 1 << 2;
+const int IS_NONSCALE_FLAG = 1 << 3;
+
 out vec2 v_uv;
 flat out vec4 v_color;
 flat out vec4 v_outline_color;
 flat out float v_outline_thickness;
 flat out int v_has_texture;
-
-const int HAS_TEXTURE_FLAG = 1 << 0;
-const int IS_UI_FLAG = 1 << 1;
-const int IS_WORLD_FLAG = 1 << 2;
-const int IS_NONSCALE_FLAG = 1 << 3;
 
 void main() {
     float qxx = i_rotation.x * i_rotation.x;

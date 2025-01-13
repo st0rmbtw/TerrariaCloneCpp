@@ -2,10 +2,10 @@
 
 out vec4 frag_color;
 
+uniform sampler2DArray u_texture_array;
+
 in vec2 v_uv;
 flat in uint v_tile_id;
-
-uniform sampler2DArray u_texture_array;
 
 void main() {
     vec4 color = texture(u_texture_array, vec3(v_uv, float(v_tile_id)));

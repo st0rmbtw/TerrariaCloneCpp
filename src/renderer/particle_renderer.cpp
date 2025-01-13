@@ -124,6 +124,9 @@ void ParticleRenderer::init() {
     pipelineLayoutDesc.staticSamplers = {
         LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4), Assets::GetSampler(m_atlas.texture()).descriptor())
     };
+    pipelineLayoutDesc.combinedTextureSamplers = {
+        LLGL::CombinedTextureSamplerDescriptor{ "u_texture", "u_texture", "u_sampler", 3 }
+    };
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
     {

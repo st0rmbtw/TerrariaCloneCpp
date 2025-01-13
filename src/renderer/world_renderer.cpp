@@ -5,6 +5,7 @@
 #include <LLGL/ResourceHeapFlags.h>
 #include <LLGL/TextureFlags.h>
 #include <LLGL/Types.h>
+#include <LLGL/PipelineLayoutFlags.h>
 
 #include <cstddef>
 #include <glm/gtc/type_ptr.hpp>
@@ -15,7 +16,7 @@
 #include "../world/chunk.hpp"
 #include "../utils.hpp"
 
-#include "LLGL/PipelineLayoutFlags.h"
+#include "LLGL/ResourceFlags.h"
 #include "renderer.hpp"
 #include "macros.hpp"
 
@@ -164,7 +165,7 @@ void WorldRenderer::init() {
             LLGL::BindingDescriptor(
                 "TileTexture",
                 LLGL::ResourceType::Texture,
-                LLGL::BindFlags::Sampled,
+                LLGL::BindFlags::Storage,
                 LLGL::StageFlags::ComputeStage,
                 LLGL::BindingSlot(5)
             ),
@@ -226,6 +227,7 @@ void WorldRenderer::init_textures(const WorldData& world) {
         lightmap_texture_desc.extent    = LLGL::Extent3D(world.lightmap.width, world.lightmap.height, 1);
         lightmap_texture_desc.miscFlags = 0;
         lightmap_texture_desc.bindFlags = LLGL::BindFlags::Sampled;
+        lightmap_texture_desc.mipLevels = 1;
 
         LLGL::ImageView image_view;
         image_view.format   = LLGL::ImageFormat::R;
@@ -242,6 +244,7 @@ void WorldRenderer::init_textures(const WorldData& world) {
         light_texture_desc.extent    = LLGL::Extent3D(world.lightmap.width, world.lightmap.height, 1);
         light_texture_desc.miscFlags = 0;
         light_texture_desc.bindFlags = LLGL::BindFlags::Storage | LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
+        light_texture_desc.mipLevels = 1;
 
         const size_t size = world.lightmap.width * world.lightmap.height * 3;
         uint8_t* data = new uint8_t[size];
@@ -261,7 +264,8 @@ void WorldRenderer::init_textures(const WorldData& world) {
     tile_texture_desc.format    = LLGL::Format::R8UInt;
     tile_texture_desc.extent    = LLGL::Extent3D(world.area.width(), world.area.height(), 1);
     tile_texture_desc.miscFlags = 0;
-    tile_texture_desc.bindFlags = LLGL::BindFlags::Sampled;
+    tile_texture_desc.bindFlags = LLGL::BindFlags::Storage;
+    tile_texture_desc.mipLevels = 1;
 
     {
         const size_t size = world.area.width() * world.area.height();

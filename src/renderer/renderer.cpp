@@ -264,6 +264,7 @@ void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
     texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
     texture_desc.miscFlags = 0;
     texture_desc.cpuAccessFlags = 0;
+    texture_desc.mipLevels = 1;
 
     LLGL::TextureDescriptor depth_texture_desc;
     depth_texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
@@ -271,6 +272,7 @@ void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
     depth_texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::DepthStencilAttachment;
     depth_texture_desc.miscFlags = 0;
     depth_texture_desc.cpuAccessFlags = 0;
+    depth_texture_desc.mipLevels = 1;
 
     LLGL::Texture* world_depth_texture = context->CreateTexture(depth_texture_desc);
     LLGL::Texture* world_render_texture = context->CreateTexture(texture_desc);

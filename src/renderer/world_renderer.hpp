@@ -46,8 +46,6 @@ private:
     LLGL::PipelineState* m_light_set_light_sources_pipeline = nullptr;
     LLGL::PipelineState* m_light_vertical_pipeline = nullptr;
     LLGL::PipelineState* m_light_horizontal_pipeline = nullptr;
-
-    bool m_light_resource_heap_initialized = false;
 };
 
 #endif
