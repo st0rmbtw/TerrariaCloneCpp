@@ -22,6 +22,13 @@
 
 using Constants::MAX_PARTICLES_COUNT;
 
+namespace ParticleFlags {
+    constexpr uint8_t Active = 1 << 0;
+    constexpr uint8_t Gravity = 1 << 1;
+    constexpr uint8_t EmitsLight = 1 << 2;
+    constexpr uint8_t InWorldLayer = 1 << 3;
+}
+
 static struct ParticlesState {
     float* position;
     float* velocity;
@@ -31,10 +38,9 @@ static struct ParticlesState {
     float* scale;
     float* rotation;
     float* rotation_speed;
+    float* initial_light_color;
     float* light_color;
-    bool* emits_light;
-    bool* gravity;
-    bool* active;
+    uint8_t* flags;
     Particle::Type* type;
     uint8_t* variant;
 
@@ -62,10 +68,9 @@ void ParticleManager::Init() {
     state.rotation = (float*) malloc(MAX_PARTICLES_COUNT * 4 * sizeof(float));
     state.rotation_speed = (float*) malloc(MAX_PARTICLES_COUNT * 4 * sizeof(float));
 #endif
+    state.initial_light_color = new float[MAX_PARTICLES_COUNT * 3];
     state.light_color = new float[MAX_PARTICLES_COUNT * 3];
-    state.gravity = new bool[MAX_PARTICLES_COUNT];
-    state.active = new bool[MAX_PARTICLES_COUNT](); // If it's not initilized with false, particles wouldn't spawn
-    state.emits_light = new bool[MAX_PARTICLES_COUNT]();
+    state.flags = new uint8_t[MAX_PARTICLES_COUNT]();
     state.type = new Particle::Type[MAX_PARTICLES_COUNT];
     state.variant = new uint8_t[MAX_PARTICLES_COUNT];
 }
@@ -99,13 +104,21 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
 
     const bool emits_light = particle_data.light_color.has_value();
 
-    state.emits_light[index] = emits_light;
+    uint8_t flags = ParticleFlags::Active;
+    flags |= ParticleFlags::EmitsLight * emits_light;
+    flags |= ParticleFlags::Gravity * particle_data.gravity;
+    flags |= ParticleFlags::InWorldLayer * particle_data.is_world;
+
+    state.flags[index] = flags;
+
     state.light_color[index * 3 + 0] = emits_light ? particle_data.light_color->x : 0.0f;
     state.light_color[index * 3 + 1] = emits_light ? particle_data.light_color->y : 0.0f;
     state.light_color[index * 3 + 2] = emits_light ? particle_data.light_color->z : 0.0f;
 
-    state.gravity[index] = particle_data.gravity;
-    state.active[index] = true;
+    state.initial_light_color[index * 3 + 0] = emits_light ? particle_data.light_color->x : 0.0f;
+    state.initial_light_color[index * 3 + 1] = emits_light ? particle_data.light_color->y : 0.0f;
+    state.initial_light_color[index * 3 + 2] = emits_light ? particle_data.light_color->z : 0.0f;
+
     state.type[index] = particle_data.type;
     state.variant[index] = particle_data.variant;
 
@@ -115,7 +128,8 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
 void ParticleManager::Draw() {
     ZoneScopedN("ParticleManager::Draw");
 
-    const uint32_t depth = Renderer::GetMainDepthIndex();
+    const uint32_t main_depth = Renderer::GetMainDepthIndex();
+    const uint32_t world_depth = Renderer::GetWorldDepthIndex();
 
     for (size_t i = 0; i < state.active_count; ++i) {
         const glm::vec2 position(state.position[i * 2 + 0], state.position[i * 2 + 1]);
@@ -125,8 +139,9 @@ void ParticleManager::Draw() {
         const float scale = state.scale[i]; 
         const Particle::Type type = state.type[i];
         const uint8_t variant = state.variant[i];
+        const bool world = check_bitflag(state.flags[i], ParticleFlags::InWorldLayer);
 
-        Renderer::DrawParticle(position, rotation, scale, type, variant, depth);
+        Renderer::DrawParticle(position, rotation, scale, type, variant, world ? world_depth : main_depth, world);
     }
 }
 
@@ -134,7 +149,7 @@ void ParticleManager::Update(World& world) {
     ZoneScopedN("ParticleManager::Update");
 
     for (size_t i = 0; i < state.active_count; ++i) {
-        const bool gravity = state.gravity[i];
+        const bool gravity = check_bitflag(state.flags[i], ParticleFlags::Gravity);
         float& velocity_y = state.velocity[i * 2 + 1];
 
         if (gravity) {
@@ -197,7 +212,7 @@ void ParticleManager::Update(World& world) {
 #endif
 
     for (size_t i = 0; i < state.active_count; ++i) {
-        const bool emits_light = state.emits_light[i];
+        const bool emits_light = check_bitflag(state.flags[i], ParticleFlags::EmitsLight);
         if (!emits_light) continue;
 
         const glm::vec3 light_color = glm::vec3(
@@ -224,11 +239,11 @@ void ParticleManager::DeleteExpired() {
     while (state.active_count > 0) {
         const float spawn_time = state.spawn_time[i];
         const float lifetime = state.lifetime[i];
-        bool& active = state.active[i];
+        bool active = check_bitflag(state.flags[i], ParticleFlags::Active);
         if (!active) break;
 
         if (Time::elapsed_seconds() >= spawn_time + lifetime) {
-            active = false;
+            state.flags[i] = remove_bitflag(state.flags[i], ParticleFlags::Active);
             state.active_count--;
             std::swap(state.position[i * 2], state.position[state.active_count * 2]);
             std::swap(state.position[i * 2 + 1], state.position[state.active_count * 2 + 1]);
@@ -255,9 +270,11 @@ void ParticleManager::DeleteExpired() {
             std::swap(state.light_color[i * 3 + 1], state.light_color[state.active_count * 3 + 1]);
             std::swap(state.light_color[i * 3 + 2], state.light_color[state.active_count * 3 + 2]);
 
-            std::swap(state.gravity[i], state.gravity[state.active_count]);
-            std::swap(state.active[i], state.active[state.active_count]);
-            std::swap(state.emits_light[i], state.emits_light[state.active_count]);
+            std::swap(state.initial_light_color[i * 3 + 0], state.initial_light_color[state.active_count * 3 + 0]);
+            std::swap(state.initial_light_color[i * 3 + 1], state.initial_light_color[state.active_count * 3 + 1]);
+            std::swap(state.initial_light_color[i * 3 + 2], state.initial_light_color[state.active_count * 3 + 2]);
+
+            std::swap(state.flags[i], state.flags[state.active_count]);
             std::swap(state.type[i], state.type[state.active_count]);
             std::swap(state.variant[i], state.variant[state.active_count]);
         }
@@ -281,6 +298,11 @@ void ParticleManager::DeleteExpired() {
         );
 
         scale = custom_scale * s;
+
+        // Dim light
+        state.light_color[i * 3 + 0] = state.initial_light_color[i * 3 + 0] * s;
+        state.light_color[i * 3 + 1] = state.initial_light_color[i * 3 + 1] * s;
+        state.light_color[i * 3 + 2] = state.initial_light_color[i * 3 + 2] * s;
     }
 }
 
@@ -297,14 +319,12 @@ void ParticleManager::Terminate() {
     free(state.rotation_speed);
 #endif
 
-    delete[] state.emits_light;
     delete[] state.light_color;
     delete[] state.spawn_time;
     delete[] state.lifetime;
     delete[] state.custom_scale;
     delete[] state.scale;
-    delete[] state.gravity;
-    delete[] state.active;
+    delete[] state.flags;
     delete[] state.type;
     delete[] state.variant;
 }

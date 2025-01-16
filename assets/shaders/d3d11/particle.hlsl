@@ -19,7 +19,8 @@ struct VSInput
     float2 tex_size : TexSize;
     float2 i_uv : I_UV;
     float i_depth : I_Depth;
-    uint id : SV_InstanceID;
+    uint i_id : I_ID;
+    uint i_is_world : I_IsWorld;
 };
 
 struct VSOutput
@@ -37,19 +38,21 @@ Buffer<float> scales : register(t8);
 
 VSOutput VS(VSInput inp)
 {
-    float2 position = inp.position;
-    float4x4 mvp = float4x4(
-        transforms[inp.id * 4 + 0],
-        transforms[inp.id * 4 + 1],
-        transforms[inp.id * 4 + 2],
-        transforms[inp.id * 4 + 3]
+    const float2 position = inp.position;
+    const float4x4 mvp = float4x4(
+        transforms[inp.i_id * 4 + 0],
+        transforms[inp.i_id * 4 + 1],
+        transforms[inp.i_id * 4 + 2],
+        transforms[inp.i_id * 4 + 3]
     );
 
-    float2 uv = inp.i_uv / inp.tex_size;
+    const float2 uv = inp.i_uv / inp.tex_size;
+
+    const bool is_world = inp.i_is_world > 0;
 
     VSOutput output;
     output.position = mul(mvp, float4(position, 0.0, 1.0));
-    output.position.z = inp.i_depth / u_max_depth;
+    output.position.z = inp.i_depth / (is_world ? u_max_world_depth : u_max_depth);
     output.uv = uv + position * inp.inv_tex_size;
 
 	return output;

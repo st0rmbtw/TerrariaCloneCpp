@@ -38,6 +38,12 @@ static void handle_cursor_pos_events(GLFWwindow* window, double xpos, double ypo
 static void handle_window_resize_events(GLFWwindow* window, int width, int height);
 static void handle_window_iconify_callback(GLFWwindow* window, int iconified);
 
+static inline const char* glfwGetErrorString() {
+    const char* description = nullptr;
+    glfwGetError(&description);
+    return description;
+}
+
 static GLFWwindow* create_window(LLGL::Extent2D size, bool fullscreen, bool hidden) {
     glfwWindowHint(GLFW_FOCUSED, 1);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);

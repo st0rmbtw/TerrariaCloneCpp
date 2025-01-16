@@ -5,6 +5,8 @@ layout(location = 1) in vec2 a_inv_tex_size;
 layout(location = 2) in vec2 a_tex_size;
 layout(location = 3) in vec2 i_uv;
 layout(location = 4) in float i_depth;
+layout(location = 5) in uint i_id;
+layout(location = 6) in uint i_is_world;
 
 layout(binding = 2) uniform GlobalUniformBuffer {
     mat4 screen_projection;
@@ -27,18 +29,19 @@ layout(binding = 5) buffer TransformsBuffer
 layout(location = 0) out vec2 v_uv;
 
 void main() {
-    uint id = gl_InstanceIndex;
     mat4 mvp = mat4(
-        transforms[id * 4 + 0],
-        transforms[id * 4 + 1],
-        transforms[id * 4 + 2],
-        transforms[id * 4 + 3]
+        transforms[i_id * 4 + 0],
+        transforms[i_id * 4 + 1],
+        transforms[i_id * 4 + 2],
+        transforms[i_id * 4 + 3]
     );
 
     vec2 uv = i_uv / a_tex_size;
 
     v_uv = uv + a_position * a_inv_tex_size;
+
+    bool is_world = i_is_world > 0;
     
     gl_Position = mvp * vec4(a_position, 0.0, 1.0);
-    gl_Position.z = i_depth / global_ubo.max_depth;
+    gl_Position.z = i_depth / (is_world ? global_ubo.max_world_depth : global_ubo.max_depth);
 }

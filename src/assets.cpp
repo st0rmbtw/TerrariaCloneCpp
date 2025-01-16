@@ -45,12 +45,10 @@ struct AssetTexture {
 };
 
 namespace ShaderStages {
-    enum : uint8_t {
-        Vertex = 1 << 0,
-        Fragment = 1 << 1,
-        Geometry = 1 << 2,
-        Compute = 1 << 3
-    };
+    static constexpr uint8_t Vertex = 1 << 0;
+    static constexpr uint8_t Fragment = 1 << 1;
+    static constexpr uint8_t Geometry = 1 << 2;
+    static constexpr uint8_t Compute = 1 << 3;
 }
 
 struct AssetShader {
@@ -268,17 +266,17 @@ bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
             attributes.insert(attributes.end(), vertex_format.attributes.begin(), vertex_format.attributes.end());
         }
 
-        if ((asset.stages & ShaderStages::Vertex) == ShaderStages::Vertex) {
+        if (check_bitflag(asset.stages, ShaderStages::Vertex)) {
             if (!(shader_pipeline.vs = Renderer::LoadShader(ShaderPath(ShaderType::Vertex, asset.file_name), shader_defs, attributes)))
                 return false;
         }
         
-        if ((asset.stages & ShaderStages::Fragment) == ShaderStages::Fragment) {
+        if (check_bitflag(asset.stages, ShaderStages::Fragment)) {
             if (!(shader_pipeline.ps = Renderer::LoadShader(ShaderPath(ShaderType::Fragment, asset.file_name), shader_defs)))
                 return false;
         }
 
-        if ((asset.stages & ShaderStages::Geometry) == ShaderStages::Geometry) {
+        if (check_bitflag(asset.stages, ShaderStages::Geometry)) {
             if (!(shader_pipeline.gs = Renderer::LoadShader(ShaderPath(ShaderType::Geometry, asset.file_name), shader_defs)))
                 return false;
         }
@@ -601,18 +599,24 @@ void Assets::InitVertexFormats() {
 
     if (backend.IsGLSL()) {
         particle_instance_format.attributes = {
-            { "i_uv",    LLGL::Format::RG32Float, 3, offsetof(ParticleInstance, uv),    sizeof(ParticleInstance), 1, 1},
-            { "i_depth", LLGL::Format::R32Float,  4, offsetof(ParticleInstance, depth), sizeof(ParticleInstance), 1, 1}
+            { "i_uv",       LLGL::Format::RG32Float, 3, offsetof(ParticleInstance, uv),       sizeof(ParticleInstance), 1, 1},
+            { "i_depth",    LLGL::Format::R32Float,  4, offsetof(ParticleInstance, depth),    sizeof(ParticleInstance), 1, 1},
+            { "i_id",       LLGL::Format::R32UInt,   5, offsetof(ParticleInstance, id),       sizeof(ParticleInstance), 1, 1 },
+            { "I_is_world", LLGL::Format::R32UInt,   6, offsetof(ParticleInstance, is_world), sizeof(ParticleInstance), 1, 1 }
         };
     } else if (backend.IsHLSL()) {
         particle_instance_format.attributes = {
-            { "I_UV",    LLGL::Format::RG32Float, 3, offsetof(ParticleInstance, uv),    sizeof(ParticleInstance), 1, 1 },
-            { "I_Depth", LLGL::Format::R32Float,  4, offsetof(ParticleInstance, depth), sizeof(ParticleInstance), 1, 1 }
+            { "I_UV",      LLGL::Format::RG32Float, 3, offsetof(ParticleInstance, uv),       sizeof(ParticleInstance), 1, 1 },
+            { "I_Depth",   LLGL::Format::R32Float,  4, offsetof(ParticleInstance, depth),    sizeof(ParticleInstance), 1, 1 },
+            { "I_ID",      LLGL::Format::R32UInt,   5, offsetof(ParticleInstance, id),       sizeof(ParticleInstance), 1, 1 },
+            { "I_IsWorld", LLGL::Format::R32UInt,   6, offsetof(ParticleInstance, is_world), sizeof(ParticleInstance), 1, 1 }
         };
     } else {
         particle_instance_format.attributes = {
-            { "i_uv",    LLGL::Format::RG32Float, 3, offsetof(ParticleInstance, uv),    sizeof(ParticleInstance), 1, 1 },
-            { "i_depth", LLGL::Format::R32Float,  4, offsetof(ParticleInstance, depth), sizeof(ParticleInstance), 1, 1 },
+            { "i_uv",       LLGL::Format::RG32Float, 3, offsetof(ParticleInstance, uv),       sizeof(ParticleInstance), 1, 1 },
+            { "i_depth",    LLGL::Format::R32Float,  4, offsetof(ParticleInstance, depth),    sizeof(ParticleInstance), 1, 1 },
+            { "i_id",       LLGL::Format::R32UInt,   5, offsetof(ParticleInstance, id),       sizeof(ParticleInstance), 1, 1 },
+            { "I_is_world", LLGL::Format::R32UInt,   6, offsetof(ParticleInstance, is_world), sizeof(ParticleInstance), 1, 1 }
         };
     }
 

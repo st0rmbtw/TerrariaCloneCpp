@@ -17,10 +17,14 @@ class ParticleRenderer {
 public:
     void init();
     void render();
+    void render_world();
     void compute();
     void terminate();
+    void prepare();
+    void reset();
 
     void draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth);
+    void draw_particle_world(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth);
 
 private:
     LLGL::PipelineState* m_pipeline = nullptr;
@@ -41,6 +45,9 @@ private:
     ParticleInstance* m_instance_buffer_data = nullptr;
     ParticleInstance* m_instance_buffer_data_ptr = nullptr;
 
+    ParticleInstance* m_instance_buffer_data_world = nullptr;
+    ParticleInstance* m_instance_buffer_data_world_ptr = nullptr;
+
     glm::vec2* m_position_buffer_data = nullptr;
     glm::vec2* m_position_buffer_data_ptr = nullptr;
 
@@ -53,6 +60,8 @@ private:
     TextureAtlas m_atlas;
 
     uint32_t m_particle_count;
+    uint32_t m_world_particle_count;
+    uint32_t m_particle_id;
     bool m_is_metal;
 };
 

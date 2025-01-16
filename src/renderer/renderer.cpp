@@ -30,6 +30,7 @@
 #include "background_renderer.hpp"
 #include "particle_renderer.hpp"
 #include "macros.hpp"
+#include "../ui/utils.hpp"
 
 static struct RendererState {
     ParticleRenderer particle_renderer;
@@ -379,6 +380,7 @@ void Renderer::Render(const Camera& camera, const World& world) {
     commands->UpdateBuffer(*state.constant_buffer, 0, &projections_uniform, sizeof(projections_uniform));
 
     state.particle_renderer.compute();
+    state.particle_renderer.prepare();
 
     LLGL::ClearValue clear_value = LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
@@ -400,6 +402,7 @@ void Renderer::Render(const Camera& camera, const World& world) {
         state.background_renderer.render_world();
         state.world_renderer.render(world.chunk_manager());
         state.sprite_batch.render_world();
+        state.particle_renderer.render_world();
     commands->EndRenderPass();
 
     commands->BeginRenderPass(*state.swap_chain);
@@ -420,6 +423,8 @@ void Renderer::Render(const Camera& camera, const World& world) {
     queue->Submit(*commands);
 
     state.swap_chain->Present();
+
+    state.particle_renderer.reset();
 }
 
 #if DEBUG
@@ -594,10 +599,13 @@ void Renderer::DrawBackground(const BackgroundLayer& layer) {
     }
 }
 
-void Renderer::DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth) {
+void Renderer::DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth, bool world) {
     ZoneScopedN("Renderer::DrawParticle");
 
-    state.particle_renderer.draw_particle(position, rotation, scale, type, variant, depth);
+    if (world)
+        state.particle_renderer.draw_particle_world(position, rotation, scale, type, variant, depth);
+    else
+        state.particle_renderer.draw_particle(position, rotation, scale, type, variant, depth);
 }
 
 Texture Renderer::CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, LLGL::DataType data_type, uint32_t width, uint32_t height, uint32_t layers, int sampler, const void* data, bool generate_mip_maps) {

@@ -12,7 +12,7 @@
 #include "assets.hpp"
 #include "input.hpp"
 #include "types/window_settings.hpp"
-#include "ui.hpp"
+#include "ui/ui.hpp"
 #include "world/autotile.hpp"
 #include "player/player.hpp"
 #include "particles.hpp"

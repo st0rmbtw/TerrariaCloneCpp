@@ -3,9 +3,9 @@
 
 #pragma once
 
-#include "renderer/camera.h"
-#include "player/inventory.hpp"
-#include "player/player.hpp"
+#include "../renderer/camera.h"
+#include "../player/inventory.hpp"
+#include "../player/player.hpp"
 
 namespace UI {
     void Init();

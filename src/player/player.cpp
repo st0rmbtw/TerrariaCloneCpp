@@ -57,6 +57,7 @@ void spawn_particles_on_dig(const glm::vec2& position, BlockType type) {
 
         ParticleManager::SpawnParticle(
             ParticleBuilder::create(particle, position, velocity, 0.75)
+                .in_world_layer()
                 .with_gravity(true)
                 .with_rotation_speed(rotation_speed)
                 .with_scale(scale)
@@ -498,6 +499,7 @@ void Player::spawn_particles_on_walk() const {
 
     ParticleManager::SpawnParticle(
         ParticleBuilder::create(Particle::get_by_block(block), position, velocity, 0.3f)
+            .in_world_layer()
             .with_scale(scale)
             .with_rotation_speed(rotation_speed)
     );
@@ -525,6 +527,7 @@ void Player::spawn_particles_grounded() const {
 
             ParticleManager::SpawnParticle(
                 ParticleBuilder::create(particle, position, velocity, 0.3f)
+                    .in_world_layer()
                     .with_scale(scale)
                     .with_rotation_speed(rotation_speed)
             );

@@ -83,7 +83,7 @@ namespace Renderer {
     }
 
     void DrawBackground(const BackgroundLayer& layer);
-    void DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth = -1);
+    void DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth = -1, bool world = false);
 
 #if DEBUG
     void PrintDebugInfo();

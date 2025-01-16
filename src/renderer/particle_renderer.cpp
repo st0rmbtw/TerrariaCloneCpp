@@ -7,6 +7,7 @@
 #include <tracy/Tracy.hpp>
 
 #include "renderer.hpp"
+#include "types.hpp"
 #include "utils.hpp"
 #include "macros.hpp"
 
@@ -35,16 +36,10 @@ void ParticleRenderer::init() {
     m_atlas = Assets::GetTextureAtlas(TextureAsset::Particles);
 
     m_instance_buffer_data = new ParticleInstance[MAX_PARTICLES_COUNT];
-    m_instance_buffer_data_ptr = m_instance_buffer_data;
-
+    m_instance_buffer_data_world = new ParticleInstance[MAX_PARTICLES_COUNT];
     m_position_buffer_data = new glm::vec2[MAX_PARTICLES_COUNT];
-    m_position_buffer_data_ptr = m_position_buffer_data;
-
     m_rotation_buffer_data = new glm::quat[MAX_PARTICLES_COUNT];
-    m_rotation_buffer_data_ptr = m_rotation_buffer_data;
-
     m_scale_buffer_data = new float[MAX_PARTICLES_COUNT];
-    m_scale_buffer_data_ptr = m_scale_buffer_data;
 
     const ParticleVertex vertices[] = {
         ParticleVertex(0.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size()), glm::vec2(m_atlas.texture().size())),
@@ -230,6 +225,8 @@ void ParticleRenderer::init() {
     }
 
     m_is_metal = backend.IsMetal();
+
+    reset();
 }
 
 void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth) {
@@ -248,13 +245,38 @@ void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat&
 
     m_instance_buffer_data_ptr->uv = rect.min;
     m_instance_buffer_data_ptr->depth = static_cast<float>(depth.value);
+    m_instance_buffer_data_ptr->id = m_particle_id++;
+    m_instance_buffer_data_ptr->is_world = false;
     m_instance_buffer_data_ptr++;
 
     m_particle_count++;
 }
 
+void ParticleRenderer::draw_particle_world(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth) {
+    ZoneScopedN("ParticleRenderer::draw_particle");
+
+    const math::Rect& rect = m_atlas.get_rect(get_particle_index(type, variant));
+
+    *m_position_buffer_data_ptr = position;
+    m_position_buffer_data_ptr++;
+
+    *m_rotation_buffer_data_ptr = rotation;
+    m_rotation_buffer_data_ptr++;
+
+    *m_scale_buffer_data_ptr = scale;
+    m_scale_buffer_data_ptr++;
+
+    m_instance_buffer_data_world_ptr->uv = rect.min;
+    m_instance_buffer_data_world_ptr->depth = static_cast<float>(depth.value);
+    m_instance_buffer_data_world_ptr->id = m_particle_id++;
+    m_instance_buffer_data_world_ptr->is_world = true;
+    m_instance_buffer_data_world_ptr++;
+
+    m_world_particle_count++;
+}
+
 void ParticleRenderer::compute() {
-    if (m_particle_count == 0) return;
+    if (m_particle_count + m_world_particle_count == 0) return;
 
     ZoneScopedN("ParticleRenderer::compute");
 
@@ -287,16 +309,43 @@ void ParticleRenderer::compute() {
         commands->SetPipelineState(*m_compute_pipeline);
         commands->SetResourceHeap(*m_compute_resource_heap);
 
+        const size_t particle_count = m_particle_count + m_world_particle_count;
+
         if (m_is_metal) {
-            uint32_t y = (m_particle_count + 512 - 1) / 512;
+            uint32_t y = (particle_count + 512 - 1) / 512;
             commands->Dispatch(512, y, 1);
         } else {
-            // m_particles_count < 1_000_000, 1_000_000 / 64 = 15625 < 65535
-            const uint32_t x = (m_particle_count + 64 - 1) / 64;
+            // particles_count < 1_000_000, 1_000_000 / 64 = 15625 < 65535
+            const uint32_t x = (particle_count + 64 - 1) / 64;
             commands->Dispatch(x, 1, 1);
         }
     }
     commands->PopDebugGroup();
+}
+
+void ParticleRenderer::prepare() {
+    ZoneScopedN("ParticleRenderer::prepare");
+
+    const auto& context = Renderer::Context();
+    auto* const commands = Renderer::CommandBuffer();
+
+    if (m_particle_count > 0) {
+        const ptrdiff_t size = (uint8_t*) m_instance_buffer_data_ptr - (uint8_t*) m_instance_buffer_data;
+        if (size < (1 << 16)) {
+            commands->UpdateBuffer(*m_instance_buffer, 0, m_instance_buffer_data, size);
+        } else {
+            context->WriteBuffer(*m_instance_buffer, 0, m_instance_buffer_data, size);
+        }
+    }
+
+    if (m_world_particle_count > 0) {
+        const ptrdiff_t size = (uint8_t*) m_instance_buffer_data_world_ptr - (uint8_t*) m_instance_buffer_data_world;
+        if (size < (1 << 16)) {
+            commands->UpdateBuffer(*m_instance_buffer, m_particle_count * sizeof(ParticleInstance), m_instance_buffer_data_world, size);
+        } else {
+            context->WriteBuffer(*m_instance_buffer, m_particle_count * sizeof(ParticleInstance), m_instance_buffer_data_world, size);
+        }
+    }
 }
 
 void ParticleRenderer::render() {
@@ -304,15 +353,7 @@ void ParticleRenderer::render() {
     
     ZoneScopedN("ParticleRenderer::render");
 
-    const auto& context = Renderer::Context();
     auto* const commands = Renderer::CommandBuffer();
-
-    const ptrdiff_t size = (uint8_t*) m_instance_buffer_data_ptr - (uint8_t*) m_instance_buffer_data;
-    if (size < (1 << 16)) {
-        commands->UpdateBuffer(*m_instance_buffer, 0, m_instance_buffer_data, size);
-    } else {
-        context->WriteBuffer(*m_instance_buffer, 0, m_instance_buffer_data, size);
-    }
 
     commands->SetVertexBufferArray(*m_buffer_array);
     commands->SetPipelineState(*m_pipeline);
@@ -320,13 +361,32 @@ void ParticleRenderer::render() {
     commands->SetResourceHeap(*m_resource_heap);
 
     commands->DrawInstanced(4, 0, m_particle_count, 0);
+}
 
+void ParticleRenderer::render_world() {
+    if (m_world_particle_count == 0) return;
+    
+    ZoneScopedN("ParticleRenderer::render_world");
+
+    auto* const commands = Renderer::CommandBuffer();
+
+    commands->SetVertexBufferArray(*m_buffer_array);
+    commands->SetPipelineState(*m_pipeline);
+
+    commands->SetResourceHeap(*m_resource_heap);
+
+    commands->DrawInstanced(4, 0, m_world_particle_count, m_particle_count);
+}
+
+void ParticleRenderer::reset() {
     m_instance_buffer_data_ptr = m_instance_buffer_data;
+    m_instance_buffer_data_world_ptr = m_instance_buffer_data_world;
     m_rotation_buffer_data_ptr = m_rotation_buffer_data;
     m_position_buffer_data_ptr = m_position_buffer_data;
     m_scale_buffer_data_ptr = m_scale_buffer_data;
-    
     m_particle_count = 0;
+    m_world_particle_count = 0;
+    m_particle_id = 0;
 }
 
 void ParticleRenderer::terminate() {

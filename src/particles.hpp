@@ -43,6 +43,7 @@ struct ParticleData {
     float custom_scale;
     float scale;
     bool gravity;
+    bool is_world;
     Particle::Type type;
     uint8_t variant;
 };
@@ -72,6 +73,7 @@ public:
     ParticleBuilder& with_rotation_speed(float speed) { m_rotation_speed = speed; return *this; }
     ParticleBuilder& with_scale(float scale) { m_scale = scale; return *this; }
     ParticleBuilder& with_light(glm::vec3 light_color) { m_light_color = light_color; return *this; }
+    ParticleBuilder& in_world_layer() { m_is_world = true; return *this; }
 
     [[nodiscard]] 
     ParticleData build() const {
@@ -86,6 +88,7 @@ public:
             .custom_scale   = m_scale,
             .scale          = m_scale,
             .gravity        = m_gravity,
+            .is_world       = m_is_world,
             .type           = m_type,
             .variant        = m_variant
         };
@@ -99,6 +102,7 @@ private:
     float m_lifetime = 0.0f;
     float m_rotation_speed = 0.0f;
     bool m_gravity = false;
+    bool m_is_world = false;
     uint8_t m_variant = 0;
     Particle::Type m_type;
 };

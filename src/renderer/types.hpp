@@ -48,6 +48,8 @@ struct ParticleVertex {
 struct ParticleInstance {
     glm::vec2 uv;
     float depth;
+    uint32_t id;
+    uint32_t is_world;
 };
 
 struct ChunkInstance {
