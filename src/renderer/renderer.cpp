@@ -547,11 +547,12 @@ void Renderer::DrawText(const RichTextSection* sections, size_t size, const glm:
 
     for (size_t i = 0; i < size; ++i) {
         const RichTextSection section = sections[i];
-        const char* str = section.text.c_str();
+        const char* str = section.text.data();
+        const size_t length = section.text.size();
         const float scale = section.size / font.font_size;
 
-        for (; *str != '\0';) {
-            const uint32_t c = next_utf8_codepoint(&str);
+        for (size_t i = 0; i < length;) {
+            const uint32_t c = next_utf8_codepoint(str, i);
 
             if (c == '\n') {
                 y += section.size;

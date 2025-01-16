@@ -42,11 +42,11 @@ static const T& list_at(const std::list<T>& list, int index) {
     return *it;
 }
 
-uint32_t next_utf8_codepoint(const char** p_text);
-glm::vec2 calculate_text_bounds(const char* text, float size, FontAsset key);
+uint32_t next_utf8_codepoint(const char* text, size_t& index);
+glm::vec2 calculate_text_bounds(const char* text, size_t length, float size, FontAsset key);
 
-inline glm::vec2 calculate_text_bounds(const std::string& text, float size, FontAsset key) {
-    return calculate_text_bounds(text.c_str(), size, key);
+inline glm::vec2 calculate_text_bounds(std::string_view text, float size, FontAsset key) {
+    return calculate_text_bounds(text.data(), text.size(), size, key);
 }
 
 inline glm::vec2 calculate_text_bounds(const RichText<1>& text, FontAsset key) {

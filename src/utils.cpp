@@ -23,9 +23,8 @@ bool FileExists(const char *path) {
     return exists;
 }
 
-uint32_t next_utf8_codepoint(const char** p_text) {
-    const char* text = *p_text;
-    uint32_t c = (uint8_t) text[0];
+uint32_t next_utf8_codepoint(const char* text, size_t& index) {
+    uint32_t c = (uint8_t) text[index];
 
     int cplen = 1;
     if ((text[0] & 0xf8) == 0xf0) {
@@ -70,12 +69,12 @@ uint32_t next_utf8_codepoint(const char** p_text) {
         c = (x << 8) | (y << 4) | z;
     }
 
-    *p_text += cplen;
+    index += cplen;
 
     return c;
 }
 
-glm::vec2 calculate_text_bounds(const char* text, float size, FontAsset key) {
+glm::vec2 calculate_text_bounds(const char* text, size_t length, float size, FontAsset key) {
     ZoneScopedN("Utils::calculate_text_bounds");
 
     const Font& font = Assets::GetFont(key);
@@ -85,8 +84,8 @@ glm::vec2 calculate_text_bounds(const char* text, float size, FontAsset key) {
 
     const float scale = size / font.font_size;
 
-    for (; *text != '\0';) {
-        const uint32_t ch = next_utf8_codepoint(&text);
+    for (size_t i = 0; i < length;) {
+        const uint32_t ch = next_utf8_codepoint(text, i);
 
         if (ch == '\n') {
             bounds.y += size;

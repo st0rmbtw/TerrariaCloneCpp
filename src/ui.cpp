@@ -219,7 +219,8 @@ static inline void draw_item_with_stack(Sprite& item_sprite, const glm::vec2& it
     draw_item(item_sprite, item_size, position, item, item_depth);
 
     if (item.stack > 1) {
-        const RichText text = rich_text(std::to_string(item.stack), stack_size, glm::vec3(0.9f));
+        const std::string stack_string = std::to_string(item.stack);
+        const RichText text = rich_text(stack_string, stack_size, glm::vec3(0.9f));
         const glm::vec2 stack_position = glm::vec2(position.x - 15.0f, position.y + 2.5f);
         Renderer::DrawTextUI(text, stack_position, FontAsset::AndyBold, stack_depth);
     }
@@ -385,7 +386,7 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
         Renderer::DrawTextUI(text, position, FontAsset::AndyBold, inventory_index);
     } else {
         const ItemSlot& item_slot = inventory.get_item(inventory.selected_slot());
-        const std::string& title = item_slot.has_item() ? item_slot.item->name : "Items";
+        const std::string_view& title = item_slot.has_item() ? item_slot.item->name : "Items";
         const RichText text = rich_text(title, INVENTORY_TITLE_SIZE, glm::vec3(0.8f));
 
         const glm::vec2 bounds = calculate_text_bounds(text, FontAsset::AndyBold);

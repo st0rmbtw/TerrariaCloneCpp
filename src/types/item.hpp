@@ -4,7 +4,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <string>
+#include <string_view>
 
 #include <optional>
 
@@ -49,7 +49,7 @@ namespace ToolFlags {
 }
 
 struct Item {
-    std::string name;
+    std::string_view name;
     ItemId id;
     ItemStack max_stack;
     ItemStack stack;

@@ -591,7 +591,7 @@ void Player::update(const Camera& camera, World& world) {
     const std::optional<Item>& selected_item = m_inventory.get_selected_item().item;
     if (selected_item.has_value() && selected_item->id == ItemId::Torch) {
         const float direction = m_direction == Direction::Right ? 1.0f : -1.0f;
-        const glm::vec2 size = m_using_item.size() - glm::vec2(2.0f * direction, 2.0f) * m_using_item.scale();
+        const glm::vec2 size = m_using_item.size() - glm::vec2(2.0f * direction, 4.0f) * m_using_item.scale();
 
         world.add_light(Light {
             .color = glm::vec3(1.0f, 0.95f, 0.8f),
