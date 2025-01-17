@@ -26,10 +26,10 @@ struct VSOutput {
 };
 
 inline float2 project_point2(float4x4 mat, float2 p) {
-    float4 res = float4(mat[0][0], mat[1][0], mat[2][0], mat[3][0]) * p.x;
-    res = float4(mat[0][1], mat[1][1], mat[2][1], mat[3][1]) * p.y + res;
-    res = float4(mat[0][3], mat[1][3], mat[2][3], mat[3][3]) + res;
-    return res.xy;
+    float2 res = float2(mat[0][0], mat[1][0]) * p.x;
+    res = float2(mat[0][1], mat[1][1]) * p.y + res;
+    res = float2(mat[0][3], mat[1][3]) + res;
+    return res;
 }
 
 inline float2 screen_to_world(float2 ndc) {

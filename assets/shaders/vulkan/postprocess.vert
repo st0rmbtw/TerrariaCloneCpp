@@ -18,10 +18,10 @@ layout(binding = 2) uniform GlobalUniformBuffer {
 } global_ubo;
 
 vec2 project_point2(mat4 mat, vec2 p) {
-    vec4 res = mat[0] * p.x;
-    res = mat[1] * p.y + res;
-    res = mat[3] + res;
-    return res.xy;
+    vec2 res = mat[0].xy * p.x;
+    res = mat[1].xy * p.y + res;
+    res = mat[3].xy + res;
+    return res;
 }
 
 vec2 screen_to_world(vec2 ndc) {
