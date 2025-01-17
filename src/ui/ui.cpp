@@ -13,16 +13,16 @@
 #include "../types/rich_text.hpp"
 #include "utils.hpp"
 
-constexpr float INVENTORY_TITLE_SIZE = 22.0f;
-constexpr float MIN_CURSOR_SCALE = 1.2;
-constexpr float MAX_CURSOR_SCALE = MIN_CURSOR_SCALE + 0.1;
-constexpr float INVENTORY_PADDING = 10;
-constexpr float HOTBAR_SLOT_SIZE = 40;
-constexpr float INVENTORY_SLOT_SIZE = HOTBAR_SLOT_SIZE * 1.15;
-constexpr float HOTBAR_SLOT_SIZE_SELECTED = HOTBAR_SLOT_SIZE * 1.3;
-constexpr float INVENTORY_CELL_MARGIN = 4;
+static constexpr float INVENTORY_TITLE_SIZE = 22.0f;
+static constexpr float MIN_CURSOR_SCALE = 1.2;
+static constexpr float MAX_CURSOR_SCALE = MIN_CURSOR_SCALE + 0.1;
+static constexpr float INVENTORY_PADDING = 10;
+static constexpr float HOTBAR_SLOT_SIZE = 40;
+static constexpr float INVENTORY_SLOT_SIZE = HOTBAR_SLOT_SIZE * 1.15;
+static constexpr float HOTBAR_SLOT_SIZE_SELECTED = HOTBAR_SLOT_SIZE * 1.3;
+static constexpr float INVENTORY_CELL_MARGIN = 4;
 
-constexpr uint16_t FRAMETIME_RECORD_MAX_COUNT = 120;
+static constexpr uint16_t FRAMETIME_RECORD_MAX_COUNT = 120;
 
 enum class AnimationDirection: uint8_t {
     Backward = 0,
@@ -92,6 +92,10 @@ static struct UiState {
 
     float cursor_anim_progress;
     float cursor_scale = 1.0f;
+
+    float hotbar_slot_anim = 1.0f;
+
+    uint8_t previous_selected_slot = 0;
 
     bool show_extra_ui = false;
     bool show_fps = false;
@@ -169,6 +173,8 @@ void UI::Update(Inventory& inventory) {
         state.show_fps = !state.show_fps;
     }
 
+    const uint8_t current_selected_slot = inventory.selected_slot();
+
     if (Input::JustPressed(Key::Digit1)) inventory.set_selected_slot(0);
     if (Input::JustPressed(Key::Digit2)) inventory.set_selected_slot(1);
     if (Input::JustPressed(Key::Digit3)) inventory.set_selected_slot(2);
@@ -186,6 +192,11 @@ void UI::Update(Inventory& inventory) {
         inventory.set_selected_slot(static_cast<uint8_t>(new_index));
     }
 
+    if (current_selected_slot != inventory.selected_slot()) {
+        state.hotbar_slot_anim = 0.0f;
+        state.previous_selected_slot = current_selected_slot;
+    }
+
     const float frametime = Time::delta_seconds();
     state.frametime_record_sum -= state.frametime_records[state.frametime_record_index];
     state.frametime_record_sum += frametime;
@@ -197,6 +208,11 @@ void UI::Update(Inventory& inventory) {
             const int fps = (int) (1.0f / (state.frametime_record_sum / FRAMETIME_RECORD_MAX_COUNT));
             state.fps_text = std::to_string(fps);
         }
+    }
+
+    if (state.hotbar_slot_anim < 1.0f) {
+        state.hotbar_slot_anim += Time::delta_seconds() * 8.0f;
+        if (state.hotbar_slot_anim > 1.0f) state.hotbar_slot_anim = 1.0f;
     }
 }
 
@@ -221,7 +237,8 @@ static inline void draw_item_with_stack(Sprite& item_sprite, const glm::vec2& it
     if (item.stack > 1) {
         const std::string stack_string = std::to_string(item.stack);
         const RichText text = rich_text(stack_string, stack_size, glm::vec3(0.9f));
-        const glm::vec2 stack_position = glm::vec2(position.x - 15.0f, position.y + 2.5f);
+        const float a = stack_size / 14.0f;
+        const glm::vec2 stack_position = glm::vec2(position.x - 15.0f * a, position.y + 2.5f * a);
         Renderer::DrawTextUI(text, stack_position, FontAsset::AndyBold, stack_depth);
     }
 }
@@ -313,6 +330,7 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
     ZoneScopedN("UI::render_inventory");
 
     static constexpr float TITLE_OFFSET = 4.0f;
+    static constexpr float DEFAULT_TEXT_SIZE = 14.0f;
 
     const uint32_t inventory_index = Renderer::GetMainDepthIndex();
     const uint32_t item_index = inventory_index + 1;
@@ -325,11 +343,14 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
     const ItemSlot& taken_item = inventory.taken_item();
     bool item_is_taken = taken_item.has_item();
 
+    const float hotbar_slot_size_selected = glm::mix(HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE_SELECTED, state.hotbar_slot_anim);
+    const float hotbat_slot_size_previously_selected = glm::mix(HOTBAR_SLOT_SIZE_SELECTED, HOTBAR_SLOT_SIZE, state.hotbar_slot_anim);
+
     Sprite sprite;
     for (uint8_t i = 0; i < CELLS_IN_ROW; ++i) {
         TextureAsset texture;
         glm::vec2 padding = glm::vec2(0.0f);
-        float text_size = 14.0f;
+        float text_size = DEFAULT_TEXT_SIZE;
 
         const ItemSlot& item_slot = inventory.get_item(i);
         const bool item_selected = inventory.selected_slot() == i;
@@ -346,12 +367,16 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
             text_size *= 1.15f;
         } else if (item_selected) {
             texture = TextureAsset::UiInventorySelected;
-            cell_size = glm::vec2(HOTBAR_SLOT_SIZE_SELECTED);
-            text_size *= 1.3f;
+            cell_size = glm::vec2(hotbar_slot_size_selected);
+            text_size = glm::mix(text_size, text_size * 1.3f, state.hotbar_slot_anim);
+            padding.y = (HOTBAR_SLOT_SIZE_SELECTED - hotbar_slot_size_selected) * 0.5f;
         } else {
+            const float size = state.previous_selected_slot == i ? hotbat_slot_size_previously_selected : HOTBAR_SLOT_SIZE;
+
             texture = TextureAsset::UiInventoryBackground;
             item_size *= 0.9f;
-            cell_size = glm::vec2(HOTBAR_SLOT_SIZE);
+            cell_size = glm::vec2(size);
+            text_size = state.previous_selected_slot == i ? glm::mix(text_size * 1.3f, text_size, state.hotbar_slot_anim) : text_size;
             padding.y = (HOTBAR_SLOT_SIZE_SELECTED - cell_size.y) * 0.5f;
         }
 
@@ -371,9 +396,10 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
                 index_color = 1.0f;
             }
 
-            const char index = '0' + (i + 1) % 10;
-            const glm::vec2 position = offset + padding + glm::vec2(6.0f, 6.0f);
+            const float a = text_size / 14.0f;
+            const glm::vec2 position = offset + padding + glm::vec2(6.0f, 6.0f) * a;
 
+            const char index = '0' + (i + 1) % 10;
             Renderer::DrawCharUI(index, position, index_size, glm::vec3(index_color), FontAsset::AndyBold, text_index);
         }
 
