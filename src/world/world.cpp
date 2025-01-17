@@ -12,6 +12,8 @@
 #include "../time/time.hpp"
 #include "../renderer/renderer.hpp"
 
+using Constants::LIGHT_DECAY_STEPS;
+
 void World::set_block(TilePos pos, const Block& block) {
     ZoneScopedN("World::set_block");
 
@@ -22,7 +24,7 @@ void World::set_block(TilePos pos, const Block& block) {
     m_data.blocks[index] = block;
     m_changed = true;
 
-    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
         .clamp(m_data.playable_area);
     m_data.lightmap_update_area_async(light_area);
 
@@ -46,7 +48,7 @@ void World::set_block(TilePos pos, BlockType block_type) {
     
     m_changed = true;
 
-    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
         .clamp(m_data.playable_area);
     m_data.lightmap_update_area_async(light_area);
     m_data.changed_tiles.emplace_back(pos, 1);
@@ -68,7 +70,7 @@ void World::remove_block(TilePos pos) {
     m_data.blocks[index] = std::nullopt;
     m_changed = true;
 
-    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
         .clamp(m_data.playable_area);
     m_data.lightmap_update_area_async(light_area);
     m_data.changed_tiles.emplace_back(pos, 0);
@@ -99,7 +101,7 @@ void World::set_wall(TilePos pos, WallType wall_type) {
     m_data.walls[index] = Wall(wall_type);
     m_changed = true;
 
-    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {Constants::LightDecaySteps(), Constants::LightDecaySteps()})
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
         .clamp(m_data.playable_area);
     m_data.lightmap_update_area_async(light_area);
 

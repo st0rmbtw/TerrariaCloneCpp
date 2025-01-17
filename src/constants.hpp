@@ -4,6 +4,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "math/constexpr_math.hpp"
 
 namespace Constants {
     constexpr double FIXED_UPDATE_INTERVAL = 1.0 / 60.0;
@@ -37,15 +38,13 @@ namespace Constants {
         }
     }
 
-    constexpr int LightDecaySteps() {
-        if constexpr (SUBDIVISION == 8) {
-            return 24;
-        } else if constexpr (SUBDIVISION == 4) {
-            return 12;
-        } else {
-            return 7;
+    namespace internal {
+        constexpr int LightDecaySteps() {
+            return gcem::ceil(gcem::log(LIGHT_EPSILON) / gcem::log(LightDecay(true)));
         }
     }
+
+    constexpr int LIGHT_DECAY_STEPS = internal::LightDecaySteps();
 };
 
 #endif

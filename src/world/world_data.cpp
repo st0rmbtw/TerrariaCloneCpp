@@ -180,7 +180,7 @@ static void blur(LightMap& lightmap, int index, float& prev_light, float& prev_d
     prev_decay = Constants::LightDecay(lightmap.get_mask(index));
 }
 
-inline static void blur_line(LightMap& lightmap, int start, int end, int stride, float& prev_light, float& prev_decay, float& prev_light2, float& prev_decay2) {
+FORCE_INLINE static void blur_line(LightMap& lightmap, int start, int end, int stride, float& prev_light, float& prev_decay, float& prev_light2, float& prev_decay2) {
     using Constants::LIGHT_EPSILON;
 
     int length = end - start;
@@ -190,43 +190,45 @@ inline static void blur_line(LightMap& lightmap, int start, int end, int stride,
     }
 }
 
+FORCE_INLINE static void blur_horizontal(WorldData& world, LightMap& lightmap, const math::IRect& area, TilePos offset) {
+    #pragma omp parallel for
+    for (int y = area.min.y; y < area.max.y; ++y) {
+        float prev_light = world.lightmap.get_color({offset.x + area.min.x, offset.y + y});
+        float prev_decay = Constants::LightDecay(world.lightmap.get_mask({(offset.x + area.min.x) - 1, (offset.y + y)}));
+
+        float prev_light2 = world.lightmap.get_color({offset.x + area.max.x - 1, offset.y + y});
+        float prev_decay2 = Constants::LightDecay(world.lightmap.get_mask({(offset.x + area.max.x), (offset.y + y)}));
+
+        blur_line(lightmap, y * lightmap.width + area.min.x, y * lightmap.width + (area.max.x - 1), 1, prev_light, prev_decay, prev_light2, prev_decay2);
+    }
+}
+
+FORCE_INLINE static void blur_vertical(WorldData& world, LightMap& lightmap, const math::IRect& area, TilePos offset) {
+    #pragma omp parallel for
+    for (int x = area.min.x; x < area.max.x; ++x) {
+        float prev_light = world.lightmap.get_color({offset.x + x, offset.y + area.min.y});
+        float prev_decay = Constants::LightDecay(world.lightmap.get_mask({(offset.x + x), (offset.y + area.min.y) - 1}));
+
+        float prev_light2 = world.lightmap.get_color({offset.x + x, offset.y + area.max.y - 1});
+        float prev_decay2 = Constants::LightDecay(world.lightmap.get_mask({(offset.x + x), (offset.y + area.max.y)}));
+
+        blur_line(lightmap, area.min.y * lightmap.width + x, (area.max.y - 1) * lightmap.width + x, lightmap.width, prev_light, prev_decay, prev_light2, prev_decay2);
+    }
+}
+
 static void internal_lightmap_blur_area(WorldData& world, LightMap& lightmap, const math::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
     ZoneScopedN("LightMap::blur_area");
 
     const math::IRect lightmap_area = area * SUBDIVISION;
-
-    const int min_x = lightmap_area.min.x;
-    const int min_y = lightmap_area.min.y;
-    const int max_x = lightmap_area.max.x;
-    const int max_y = lightmap_area.max.y;
-
     const TilePos offset = {tile_offset.x * SUBDIVISION, tile_offset.y * SUBDIVISION};
 
-    for (int i = 0; i < 2; ++i) {
-        // Horizontal
-        #pragma omp parallel for
-        for (int y = min_y; y < max_y; ++y) {
-            float prev_light = world.lightmap.get_color({offset.x + min_x, offset.y + y});
-            float prev_decay = Constants::LightDecay(world.lightmap.get_mask({(offset.x + min_x) - 1, (offset.y + y)}));
+    blur_horizontal(world, lightmap, lightmap_area, offset);
+    blur_vertical(world, lightmap, lightmap_area, offset);
 
-            float prev_light2 = world.lightmap.get_color({offset.x + max_x - 1, offset.y + y});
-            float prev_decay2 = Constants::LightDecay(world.lightmap.get_mask({(offset.x + max_x), (offset.y + y)}));
+    blur_horizontal(world, lightmap, lightmap_area, offset);
+    blur_vertical(world, lightmap, lightmap_area, offset);
 
-            blur_line(lightmap, y * lightmap.width + min_x, y * lightmap.width + (max_x - 1), 1, prev_light, prev_decay, prev_light2, prev_decay2);
-        }
-
-        // Vertical
-        #pragma omp parallel for
-        for (int x = min_x; x < max_x; ++x) {
-            float prev_light = world.lightmap.get_color({offset.x + x, offset.y + min_y});
-            float prev_decay = Constants::LightDecay(world.lightmap.get_mask({(offset.x + x), (offset.y + min_y) - 1}));
-
-            float prev_light2 = world.lightmap.get_color({offset.x + x, offset.y + max_y - 1});
-            float prev_decay2 = Constants::LightDecay(world.lightmap.get_mask({(offset.x + x), (offset.y + max_y)}));
-
-            blur_line(lightmap, min_y * lightmap.width + x, (max_y - 1) * lightmap.width + x, lightmap.width, prev_light, prev_decay, prev_light2, prev_decay2);
-        }
-    }
+    blur_horizontal(world, lightmap, lightmap_area, offset);
 }
 
 static void internal_lightmap_update_area_async(const std::shared_ptr<std::atomic<LightMapTaskResult>>& result, WorldData* world, const math::IRect& area) {

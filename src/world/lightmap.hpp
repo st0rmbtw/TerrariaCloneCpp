@@ -25,9 +25,8 @@ struct LightMap {
         using Constants::SUBDIVISION;
         width = tiles_width * SUBDIVISION;
         height = tiles_height * SUBDIVISION;
-        colors = new Color[width * height];
-        memset(colors, 0, width * height);
-        masks = new LightMask[width * height];
+        colors = new Color[width * height]();
+        masks = new LightMask[width * height]();
     }
 
     LightMap(LightMap& other) {
