@@ -228,14 +228,14 @@ void WorldRenderer::init_textures(const WorldData& world) {
     {
         LLGL::TextureDescriptor lightmap_texture_desc;
         lightmap_texture_desc.type      = LLGL::TextureType::Texture2D;
-        lightmap_texture_desc.format    = LLGL::Format::R8UNorm;
+        lightmap_texture_desc.format    = LLGL::Format::RGBA8UNorm;
         lightmap_texture_desc.extent    = LLGL::Extent3D(world.lightmap.width, world.lightmap.height, 1);
         lightmap_texture_desc.miscFlags = 0;
         lightmap_texture_desc.bindFlags = LLGL::BindFlags::Sampled;
         lightmap_texture_desc.mipLevels = 1;
 
         LLGL::ImageView image_view;
-        image_view.format   = LLGL::ImageFormat::R;
+        image_view.format   = LLGL::ImageFormat::RGB;
         image_view.dataType = LLGL::DataType::UInt8;
         image_view.data     = world.lightmap.colors;
         image_view.dataSize = world.lightmap.width * world.lightmap.height * sizeof(Color);
@@ -316,7 +316,7 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
     ZoneScopedN("WorldRenderer::update_lightmap_texture");
 
     LLGL::ImageView image_view;
-    image_view.format   = LLGL::ImageFormat::R;
+    image_view.format   = LLGL::ImageFormat::RGB;
     image_view.dataType = LLGL::DataType::UInt8;
 
     for (auto it = world.lightmap_tasks.cbegin(); it != world.lightmap_tasks.cend();) {

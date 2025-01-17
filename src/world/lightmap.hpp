@@ -9,7 +9,11 @@
 #include "../constants.hpp"
 #include "../defines.hpp"
 
-using Color = uint8_t;
+struct Color {
+    uint8_t r = 0;
+    uint8_t g = 0;
+    uint8_t b = 0;
+};
 
 using LightMask = bool;
 
@@ -49,24 +53,28 @@ struct LightMap {
     }
 
     [[nodiscard]]
-    inline float get_color(int index) const {
+    inline glm::vec3 get_color(int index) const {
         if (!(index >= 0 && index < width * height)) {
-            return 0.0f;
+            return glm::vec3(0.0f);
         }
         
-        return colors[index] / 255.0f;
+        const Color color = colors[index];
+
+        return glm::vec3(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f);
     }
 
     [[nodiscard]]
-    inline float get_color(TilePos pos) const {
+    inline glm::vec3 get_color(TilePos pos) const {
         return get_color(pos.y * width + pos.x);
     }
 
-    inline void set_color(size_t index, float color) {
-        colors[index] = static_cast<uint8_t>(color * 255.0f);
+    inline void set_color(size_t index, const glm::vec3& color) {
+        colors[index].r = static_cast<uint8_t>(color.r * 255.0f);
+        colors[index].g = static_cast<uint8_t>(color.g * 255.0f);
+        colors[index].b = static_cast<uint8_t>(color.b * 255.0f);
     }
 
-    inline void set_color(TilePos pos, float color) {
+    inline void set_color(TilePos pos, const glm::vec3& color) {
         set_color(pos.y * width + pos.x, color);
     }
 
