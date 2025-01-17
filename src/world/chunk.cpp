@@ -55,8 +55,8 @@ void RenderChunk::build_mesh(const WorldData& world) {
                     this->index.y * RENDER_CHUNK_SIZE_U + y
                 );
 
-                const Block* block = world.get_block(map_pos);
-                if (block != nullptr) {
+                const std::optional<Block> block = world.get_block(map_pos);
+                if (block.has_value()) {
                     blocks_count += 1;
 
                     const glm::vec2 atlas_pos = glm::vec2(block->atlas_pos.x, block->atlas_pos.y);
@@ -81,8 +81,8 @@ void RenderChunk::build_mesh(const WorldData& world) {
                     this->index.y * RENDER_CHUNK_SIZE_U + y
                 );
 
-                const Wall* wall = world.get_wall(map_pos);
-                if (wall != nullptr) {
+                const std::optional<Wall> wall = world.get_wall(map_pos);
+                if (wall.has_value()) {
                     walls_count += 1;
 
                     const glm::vec2 atlas_pos = glm::vec2(wall->atlas_pos.x, wall->atlas_pos.y);

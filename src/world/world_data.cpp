@@ -11,24 +11,24 @@
 
 using Constants::SUBDIVISION;
 
-const Block* WorldData::get_block(TilePos pos) const {
-    if (!is_tilepos_valid(pos)) return nullptr;
+std::optional<Block> WorldData::get_block(TilePos pos) const {
+    if (!is_tilepos_valid(pos)) return std::nullopt;
 
     const size_t index = this->get_tile_index(pos);
 
-    if (!this->blocks[index].has_value()) return nullptr;
+    if (!this->blocks[index].has_value()) return std::nullopt;
 
-    return &this->blocks[index].value();
+    return this->blocks[index];
 }
 
-const Wall* WorldData::get_wall(TilePos pos) const {
-    if (!is_tilepos_valid(pos)) return nullptr;
+std::optional<Wall> WorldData::get_wall(TilePos pos) const {
+    if (!is_tilepos_valid(pos)) return std::nullopt;
 
     const size_t index = this->get_tile_index(pos);
 
-    if (!this->walls[index].has_value()) return nullptr;
+    if (!this->walls[index].has_value()) return std::nullopt;
     
-    return &this->walls[index].value();
+    return this->walls[index];
 }
 
 Block* WorldData::get_block_mut(TilePos pos) {
@@ -54,31 +54,22 @@ Wall* WorldData::get_wall_mut(TilePos pos) {
 std::optional<BlockType> WorldData::get_block_type(TilePos pos) const {
     if (!is_tilepos_valid(pos)) return std::nullopt;
 
-    const Block* block = get_block(pos);
-    if (!block) return std::nullopt;
+    const std::optional<Block> block = get_block(pos);
+    if (!block.has_value()) return std::nullopt;
 
     return block->type;
 }
 
 Neighbors<Block> WorldData::get_block_neighbors(TilePos pos) const {
-    const Block* top = get_block(pos.offset(TileOffset::Top));
-    const Block* bottom = get_block(pos.offset(TileOffset::Bottom));
-    const Block* left = get_block(pos.offset(TileOffset::Left));
-    const Block* right = get_block(pos.offset(TileOffset::Right));
-    const Block* top_left = get_block(pos.offset(TileOffset::TopLeft));
-    const Block* top_right = get_block(pos.offset(TileOffset::TopRight));
-    const Block* bottom_left = get_block(pos.offset(TileOffset::BottomLeft));
-    const Block* bottom_right = get_block(pos.offset(TileOffset::BottomRight));
-
     return Neighbors<Block> {
-        .top = top ? std::optional(*top) : std::nullopt,
-        .bottom = bottom ? std::optional(*bottom) : std::nullopt,
-        .left = left ? std::optional(*left) : std::nullopt,
-        .right = right ? std::optional(*right) : std::nullopt,
-        .top_left = top_left ? std::optional(*top_left) : std::nullopt,
-        .top_right = top_right ? std::optional(*top_right) : std::nullopt,
-        .bottom_left = bottom_left ? std::optional(*bottom_left) : std::nullopt,
-        .bottom_right = bottom_right ? std::optional(*bottom_right) : std::nullopt,
+        .top = get_block(pos.offset(TileOffset::Top)),
+        .bottom = get_block(pos.offset(TileOffset::Bottom)),
+        .left = get_block(pos.offset(TileOffset::Left)),
+        .right = get_block(pos.offset(TileOffset::Right)),
+        .top_left = get_block(pos.offset(TileOffset::TopLeft)),
+        .top_right = get_block(pos.offset(TileOffset::TopRight)),
+        .bottom_left = get_block(pos.offset(TileOffset::BottomLeft)),
+        .bottom_right = get_block(pos.offset(TileOffset::BottomRight)),
     };
 }
 
@@ -96,24 +87,15 @@ Neighbors<Block*> WorldData::get_block_neighbors_mut(TilePos pos) {
 }
 
 Neighbors<Wall> WorldData::get_wall_neighbors(TilePos pos) const {
-    const Wall* top = get_wall(pos.offset(TileOffset::Top));
-    const Wall* bottom = get_wall(pos.offset(TileOffset::Bottom));
-    const Wall* left = get_wall(pos.offset(TileOffset::Left));
-    const Wall* right = get_wall(pos.offset(TileOffset::Right));
-    const Wall* top_left = get_wall(pos.offset(TileOffset::TopLeft));
-    const Wall* top_right = get_wall(pos.offset(TileOffset::TopRight));
-    const Wall* bottom_left = get_wall(pos.offset(TileOffset::BottomLeft));
-    const Wall* bottom_right = get_wall(pos.offset(TileOffset::BottomRight));
-
     return Neighbors<Wall> {
-        .top = top ? std::optional(*top) : std::nullopt,
-        .bottom = bottom ? std::optional(*bottom) : std::nullopt,
-        .left = left ? std::optional(*left) : std::nullopt,
-        .right = right ? std::optional(*right) : std::nullopt,
-        .top_left = top_left ? std::optional(*top_left) : std::nullopt,
-        .top_right = top_right ? std::optional(*top_right) : std::nullopt,
-        .bottom_left = bottom_left ? std::optional(*bottom_left) : std::nullopt,
-        .bottom_right = bottom_right ? std::optional(*bottom_right) : std::nullopt,
+        .top = get_wall(pos.offset(TileOffset::Top)),
+        .bottom = get_wall(pos.offset(TileOffset::Bottom)),
+        .left = get_wall(pos.offset(TileOffset::Left)),
+        .right = get_wall(pos.offset(TileOffset::Right)),
+        .top_left = get_wall(pos.offset(TileOffset::TopLeft)),
+        .top_right = get_wall(pos.offset(TileOffset::TopRight)),
+        .bottom_left = get_wall(pos.offset(TileOffset::BottomLeft)),
+        .bottom_right = get_wall(pos.offset(TileOffset::BottomRight)),
     };
 }
 

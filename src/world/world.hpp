@@ -50,7 +50,7 @@ public:
     
     void draw() const;
 
-    [[nodiscard]] inline const Block* get_block(TilePos pos) const { return m_data.get_block(pos); }
+    [[nodiscard]] inline std::optional<Block> get_block(TilePos pos) const { return m_data.get_block(pos); }
     [[nodiscard]] inline Block* get_block_mut(TilePos pos) { return m_data.get_block_mut(pos); }
 
     [[nodiscard]] inline std::optional<BlockType> get_block_type(TilePos pos) const { return m_data.get_block_type(pos); }
@@ -61,7 +61,7 @@ public:
     [[nodiscard]] inline Neighbors<Block> get_block_neighbors(TilePos pos) const { return m_data.get_block_neighbors(pos); }
     [[nodiscard]] inline Neighbors<Block*> get_block_neighbors_mut(TilePos pos) { return m_data.get_block_neighbors_mut(pos); }
 
-    [[nodiscard]] inline const Wall* get_wall(TilePos pos) const { return m_data.get_wall(pos); }
+    [[nodiscard]] inline std::optional<Wall> get_wall(TilePos pos) const { return m_data.get_wall(pos); }
     [[nodiscard]] inline Wall* get_wall_mut(TilePos pos) { return m_data.get_wall_mut(pos); }
 
     [[nodiscard]] inline bool wall_exists(TilePos pos) const { return m_data.wall_exists(pos); }

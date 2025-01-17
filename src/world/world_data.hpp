@@ -44,10 +44,10 @@ struct WorldData {
     }
 
     [[nodiscard]]
-    const Block* get_block(TilePos pos) const;
+    std::optional<Block> get_block(TilePos pos) const;
 
     [[nodiscard]]
-    const Wall* get_wall(TilePos pos) const;
+    std::optional<Wall> get_wall(TilePos pos) const;
 
     [[nodiscard]]
     Block* get_block_mut(TilePos pos);
