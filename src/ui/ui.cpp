@@ -258,13 +258,18 @@ void UI::Draw(const Camera& camera, const Player& player) {
 
     uint32_t depth = Renderer::GetMainDepthIndex();
 
-    const ItemSlot& taken_item = inventory.taken_item();
-    const ItemSlot& selected_item = inventory.get_selected_item();
-
-    const glm::vec2 position = state.cursor_background.position() + state.cursor_background.size();
+    NinePatch ninepatch(Assets::GetTexture(TextureAsset::UiInventoryBackground), glm::uvec4(10));
+    ninepatch.set_position(glm::vec2(camera.viewport()) / 2.0f - glm::vec2(400.0f, 0.0f));
+    ninepatch.set_size(glm::vec2(800.0f));
+    ninepatch.set_color(glm::vec4(1.0f, 1.0f, 1.0f, 0.8f));
+    Renderer::DrawNinePatchUI(ninepatch, ++depth);
     
     Renderer::DrawSpriteUI(state.cursor_background, ++depth);
     Renderer::DrawSpriteUI(state.cursor_foreground, ++depth);
+
+    const ItemSlot& taken_item = inventory.taken_item();
+    const ItemSlot& selected_item = inventory.get_selected_item();
+    const glm::vec2 position = state.cursor_background.position() + state.cursor_background.size();
 
     if (state.show_extra_ui && taken_item.has_item()) {
         const Texture& texture = Assets::GetItemTexture(taken_item.item->id);

@@ -26,6 +26,19 @@ struct SpriteInstance {
     int flags;
 };
 
+struct NinePatchInstance {
+    glm::vec3 position;
+    glm::quat rotation;
+    glm::vec2 size;
+    glm::vec2 offset;
+    glm::vec2 source_size;
+    glm::vec2 output_size;
+    glm::uvec4 margin;
+    glm::vec4 uv_offset_scale;
+    glm::vec4 color;
+    int flags;
+};
+
 struct GlyphInstance {
     glm::vec3 color;
     glm::vec3 pos;

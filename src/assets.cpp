@@ -167,10 +167,11 @@ static const std::array FONT_ASSETS = {
 const std::pair<ShaderAsset, AssetShader> SHADER_ASSETS[] = {
     { ShaderAsset::BackgroundShader, AssetShader("background", ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::BackgroundVertex, VertexFormatAsset::BackgroundInstance }) },
     { ShaderAsset::PostProcessShader,AssetShader("postprocess",ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::PostProcessVertex) },
-    { ShaderAsset::TilemapShader,    AssetShader("tilemap",    ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::TilemapVertex,  VertexFormatAsset::TilemapInstance  }) },
-    { ShaderAsset::FontShader,       AssetShader("font",       ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::FontVertex,     VertexFormatAsset::FontInstance     }) },
-    { ShaderAsset::SpriteShader,     AssetShader("sprite",     ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::SpriteVertex,   VertexFormatAsset::SpriteInstance   }) },
-    { ShaderAsset::ParticleShader,   AssetShader("particle",   ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::ParticleVertex, VertexFormatAsset::ParticleInstance }) },
+    { ShaderAsset::TilemapShader,    AssetShader("tilemap",    ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::TilemapVertex,   VertexFormatAsset::TilemapInstance   }) },
+    { ShaderAsset::FontShader,       AssetShader("font",       ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::FontVertex,      VertexFormatAsset::FontInstance      }) },
+    { ShaderAsset::SpriteShader,     AssetShader("sprite",     ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::SpriteVertex,    VertexFormatAsset::SpriteInstance    }) },
+    { ShaderAsset::ParticleShader,   AssetShader("particle",   ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::ParticleVertex,  VertexFormatAsset::ParticleInstance  }) },
+    { ShaderAsset::NinePatchShader,  AssetShader("ninepatch",  ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::NinePatchVertex, VertexFormatAsset::NinePatchInstance }) },
 };
 
 const std::pair<ComputeShaderAsset, AssetComputeShader> COMPUTE_SHADER_ASSETS[] = {
@@ -389,6 +390,8 @@ void Assets::InitVertexFormats() {
 
     LLGL::VertexFormat sprite_vertex_format;
     LLGL::VertexFormat sprite_instance_format;
+    LLGL::VertexFormat ninepatch_vertex_format;
+    LLGL::VertexFormat ninepatch_instance_format;
     LLGL::VertexFormat tilemap_vertex_format;
     LLGL::VertexFormat tilemap_instance_format;
     LLGL::VertexFormat font_vertex_format;
@@ -442,6 +445,55 @@ void Assets::InitVertexFormats() {
             {"i_outline_color",      LLGL::Format::RGBA32Float, 7,  offsetof(SpriteInstance,outline_color),     sizeof(SpriteInstance), 1, 1 },
             {"i_outline_thickness",  LLGL::Format::R32Float,    8,  offsetof(SpriteInstance,outline_thickness), sizeof(SpriteInstance), 1, 1 },
             {"i_flags",              LLGL::Format::R32SInt,     9,  offsetof(SpriteInstance,flags),             sizeof(SpriteInstance), 1, 1 },
+        };
+    }
+
+    if (backend.IsGLSL()) {
+        ninepatch_vertex_format.AppendAttribute({ "a_position", LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 });
+    } else if (backend.IsHLSL()) {
+        ninepatch_vertex_format.AppendAttribute({ "Position",   LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 });
+    } else {
+        ninepatch_vertex_format.AppendAttribute({ "position",   LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 });
+    }
+
+    if (backend.IsGLSL()) {
+        ninepatch_instance_format.attributes = {
+            {"i_position",         LLGL::Format::RGB32Float,  1,  offsetof(NinePatchInstance,position),          sizeof(NinePatchInstance), 1, 1 },
+            {"i_rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(NinePatchInstance,rotation),          sizeof(NinePatchInstance), 1, 1 },
+            {"i_size",             LLGL::Format::RG32Float,   3,  offsetof(NinePatchInstance,size),              sizeof(NinePatchInstance), 1, 1 },
+            {"i_offset",           LLGL::Format::RG32Float,   4,  offsetof(NinePatchInstance,offset),            sizeof(NinePatchInstance), 1, 1 },
+            {"i_source_size",      LLGL::Format::RG32Float,   5,  offsetof(NinePatchInstance,source_size),       sizeof(NinePatchInstance), 1, 1 },
+            {"i_output_size",      LLGL::Format::RG32Float,   6,  offsetof(NinePatchInstance,output_size),       sizeof(NinePatchInstance), 1, 1 },
+            {"i_margin",           LLGL::Format::RGBA32UInt,  7,  offsetof(NinePatchInstance,margin),            sizeof(NinePatchInstance), 1, 1 },
+            {"i_uv_offset_scale",  LLGL::Format::RGBA32Float, 8,  offsetof(NinePatchInstance,uv_offset_scale),   sizeof(NinePatchInstance), 1, 1 },
+            {"i_color",            LLGL::Format::RGBA32Float, 9,  offsetof(NinePatchInstance,color),             sizeof(NinePatchInstance), 1, 1 },
+            {"i_flags",            LLGL::Format::R32SInt,     10, offsetof(NinePatchInstance,flags),             sizeof(NinePatchInstance), 1, 1 },
+        };
+    } else if (backend.IsHLSL()) {
+        ninepatch_instance_format.attributes = {
+            {"I_Position",         LLGL::Format::RGB32Float,  1,  offsetof(NinePatchInstance,position),          sizeof(NinePatchInstance), 1, 1 },
+            {"I_Rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(NinePatchInstance,rotation),          sizeof(NinePatchInstance), 1, 1 },
+            {"I_Size",             LLGL::Format::RG32Float,   3,  offsetof(NinePatchInstance,size),              sizeof(NinePatchInstance), 1, 1 },
+            {"I_Offset",           LLGL::Format::RG32Float,   4,  offsetof(NinePatchInstance,offset),            sizeof(NinePatchInstance), 1, 1 },
+            {"I_SourceSize",       LLGL::Format::RG32Float,   5,  offsetof(NinePatchInstance,source_size),       sizeof(NinePatchInstance), 1, 1 },
+            {"I_OutputSize",       LLGL::Format::RG32Float,   6,  offsetof(NinePatchInstance,output_size),       sizeof(NinePatchInstance), 1, 1 },
+            {"I_Margin",           LLGL::Format::RGBA32UInt,  7,  offsetof(NinePatchInstance,margin),            sizeof(NinePatchInstance), 1, 1 },
+            {"I_UvOffsetScale",    LLGL::Format::RGBA32Float, 8,  offsetof(NinePatchInstance,uv_offset_scale),   sizeof(NinePatchInstance), 1, 1 },
+            {"I_Color",            LLGL::Format::RGBA32Float, 9,  offsetof(NinePatchInstance,color),             sizeof(NinePatchInstance), 1, 1 },
+            {"I_Flags",            LLGL::Format::R32SInt,     10, offsetof(NinePatchInstance,flags),             sizeof(NinePatchInstance), 1, 1 },
+        };
+    } else {
+        ninepatch_instance_format.attributes = {
+            {"i_position",         LLGL::Format::RGB32Float,  1,  offsetof(NinePatchInstance,position),          sizeof(NinePatchInstance), 1, 1 },
+            {"i_rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(NinePatchInstance,rotation),          sizeof(NinePatchInstance), 1, 1 },
+            {"i_size",             LLGL::Format::RG32Float,   3,  offsetof(NinePatchInstance,size),              sizeof(NinePatchInstance), 1, 1 },
+            {"i_offset",           LLGL::Format::RG32Float,   4,  offsetof(NinePatchInstance,offset),            sizeof(NinePatchInstance), 1, 1 },
+            {"i_source_size",      LLGL::Format::RG32Float,   5,  offsetof(NinePatchInstance,source_size),       sizeof(NinePatchInstance), 1, 1 },
+            {"i_output_size",      LLGL::Format::RG32Float,   6,  offsetof(NinePatchInstance,output_size),       sizeof(NinePatchInstance), 1, 1 },
+            {"i_margin",           LLGL::Format::RGBA32UInt,  7,  offsetof(NinePatchInstance,margin),            sizeof(NinePatchInstance), 1, 1 },
+            {"i_uv_offset_scale",  LLGL::Format::RGBA32Float, 8,  offsetof(NinePatchInstance,uv_offset_scale),   sizeof(NinePatchInstance), 1, 1 },
+            {"i_color",            LLGL::Format::RGBA32Float, 9,  offsetof(NinePatchInstance,color),             sizeof(NinePatchInstance), 1, 1 },
+            {"i_flags",            LLGL::Format::R32SInt,     10, offsetof(NinePatchInstance,flags),             sizeof(NinePatchInstance), 1, 1 },
         };
     }
 
@@ -636,6 +688,8 @@ void Assets::InitVertexFormats() {
 
     state.vertex_formats[VertexFormatAsset::SpriteVertex] = sprite_vertex_format;
     state.vertex_formats[VertexFormatAsset::SpriteInstance] = sprite_instance_format;
+    state.vertex_formats[VertexFormatAsset::NinePatchVertex] = ninepatch_vertex_format;
+    state.vertex_formats[VertexFormatAsset::NinePatchInstance] = ninepatch_instance_format;
     state.vertex_formats[VertexFormatAsset::TilemapVertex] = tilemap_vertex_format;
     state.vertex_formats[VertexFormatAsset::TilemapInstance] = tilemap_instance_format;
     state.vertex_formats[VertexFormatAsset::FontVertex] = font_vertex_format;

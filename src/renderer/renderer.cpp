@@ -36,6 +36,7 @@ static struct RendererState {
     ParticleRenderer particle_renderer;
     RenderBatchSprite sprite_batch;
     RenderBatchGlyph glyph_batch;
+    RenderBatchNinePatch ninepatch_batch;
     BackgroundRenderer background_renderer;
     WorldRenderer world_renderer;
 
@@ -171,6 +172,7 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
     state.sprite_batch.init();
     state.glyph_batch.init();
+    state.ninepatch_batch.init();
     state.world_renderer.init();
     state.background_renderer.init();
     state.particle_renderer.init();
@@ -350,6 +352,7 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
 
     state.sprite_batch.begin();
     state.glyph_batch.begin();
+    state.ninepatch_batch.begin();
 
     state.main_depth_index = 0;
     // The first three are reserved for background, walls and tiles
@@ -416,6 +419,7 @@ void Renderer::Render(const Camera& camera, const World& world) {
 
         state.particle_renderer.render();
         state.sprite_batch.render();
+        state.ninepatch_batch.render();
         state.glyph_batch.render();
     commands->EndRenderPass();
 
@@ -446,7 +450,7 @@ void Renderer::EndDepth() {
     state.depth_mode = false;
 }
 
-inline void add_sprite_to_batch(const Sprite& sprite, RenderLayer layer, bool is_ui, Depth depth) {
+inline static void add_sprite_to_batch(const Sprite& sprite, RenderLayer layer, bool is_ui, Depth depth) {
     glm::vec4 uv_offset_scale = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
 
     if (sprite.flip_x()) {
@@ -466,7 +470,7 @@ inline void add_sprite_to_batch(const Sprite& sprite, RenderLayer layer, bool is
     }
 }
 
-inline void add_atlas_sprite_to_batch(const TextureAtlasSprite& sprite, RenderLayer layer, bool is_ui, Depth depth) {
+inline static void add_atlas_sprite_to_batch(const TextureAtlasSprite& sprite, RenderLayer layer, bool is_ui, Depth depth) {
     const math::Rect& rect = sprite.atlas().get_rect(sprite.index());
 
     glm::vec4 uv_offset_scale = glm::vec4(
@@ -491,6 +495,22 @@ inline void add_atlas_sprite_to_batch(const TextureAtlasSprite& sprite, RenderLa
     } else {
         state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), is_ui, depth);
     }
+}
+
+inline static void add_ninepatch_to_batch(const NinePatch& ninepatch, RenderLayer, bool is_ui, Depth depth) {
+    glm::vec4 uv_offset_scale = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
+
+    if (ninepatch.flip_x()) {
+        uv_offset_scale.x += uv_offset_scale.z;
+        uv_offset_scale.z *= -1.0f;
+    }
+
+    if (ninepatch.flip_y()) {
+        uv_offset_scale.y += uv_offset_scale.w;
+        uv_offset_scale.w *= -1.0f;
+    }
+    
+    state.ninepatch_batch.draw_ninepatch(ninepatch, uv_offset_scale, ninepatch.texture(), is_ui, depth);
 }
 
 void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer, Depth depth) {
@@ -531,6 +551,15 @@ void Renderer::DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, Depth depth) 
     if (!state.ui_frustum.intersects(aabb)) return;
 
     add_atlas_sprite_to_batch(sprite, RenderLayer::Main, true, depth);
+}
+
+void Renderer::DrawNinePatchUI(const NinePatch& ninepatch, Depth depth) {
+    ZoneScopedN("Renderer::DrawNinePatchUI");
+
+    const math::Rect aabb = ninepatch.calculate_aabb();
+    if (!state.ui_frustum.intersects(aabb)) return;
+
+    add_ninepatch_to_batch(ninepatch, RenderLayer::Main, true, depth);
 }
 
 void Renderer::DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset key, bool is_ui, Depth depth) {
@@ -724,6 +753,8 @@ void Renderer::Terminate() {
     Assets::DestroyShaders();
 
     state.sprite_batch.terminate();
+    state.glyph_batch.terminate();
+    state.ninepatch_batch.terminate();
     state.world_renderer.terminate();
     state.background_renderer.terminate();
     state.particle_renderer.terminate();
@@ -1140,12 +1171,260 @@ void RenderBatchSprite::begin() {
 
 void RenderBatchSprite::terminate() {
     RESOURCE_RELEASE(m_vertex_buffer)
+    RESOURCE_RELEASE(m_instance_buffer)
+    RESOURCE_RELEASE(m_world_instance_buffer)
+    RESOURCE_RELEASE(m_buffer_array)
+    RESOURCE_RELEASE(m_world_buffer_array)
     RESOURCE_RELEASE(m_pipeline)
 
     delete[] m_buffer;
     delete[] m_world_buffer;
 }
 
+
+void RenderBatchNinePatch::init() {
+    ZoneScopedN("RenderBatchNinePatch::init");
+
+    const RenderBackend backend = state.backend;
+    const auto& context = state.context;
+
+    m_buffer = new NinePatchInstance[MAX_QUADS];
+
+    const Vertex vertices[] = {
+        Vertex(0.0f, 0.0f),
+        Vertex(0.0f, 1.0f),
+        Vertex(1.0f, 0.0f),
+        Vertex(1.0f, 1.0f),
+    };
+
+    m_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::NinePatchVertex), "NinePatchBatch VertexBuffer");
+
+    m_instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(NinePatchInstance), Assets::GetVertexFormat(VertexFormatAsset::NinePatchInstance), "NinePatchBatch InstanceBuffer");
+
+    {
+        LLGL::Buffer* buffers[] = { m_vertex_buffer, m_instance_buffer };
+        m_buffer_array = context->CreateBufferArray(2, buffers);
+    }
+
+    LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
+    pipelineLayoutDesc.bindings = {
+        LLGL::BindingDescriptor(
+            "GlobalUniformBuffer",
+            LLGL::ResourceType::Buffer,
+            LLGL::BindFlags::ConstantBuffer,
+            LLGL::StageFlags::VertexStage,
+            LLGL::BindingSlot(2)
+        ),
+        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
+        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
+    };
+
+    LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
+
+    const ShaderPipeline& ninepatch_shader = Assets::GetShader(ShaderAsset::NinePatchShader);
+
+    LLGL::GraphicsPipelineDescriptor pipelineDesc;
+    pipelineLayoutDesc.debugName = "NinePatchBatch Pipeline";
+    pipelineDesc.vertexShader = ninepatch_shader.vs;
+    pipelineDesc.fragmentShader = ninepatch_shader.ps;
+    pipelineDesc.geometryShader = ninepatch_shader.gs;
+    pipelineDesc.pipelineLayout = pipelineLayout;
+    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
+    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
+    pipelineDesc.renderPass = state.swap_chain->GetRenderPass();
+    pipelineDesc.rasterizer.frontCCW = true;
+    pipelineDesc.depth = LLGL::DepthDescriptor {
+        .testEnabled = true,
+        .writeEnabled = true,
+        .compareOp = LLGL::CompareOp::GreaterEqual
+    };
+    pipelineDesc.blend = LLGL::BlendDescriptor {
+        .targets = {
+            LLGL::BlendTargetDescriptor {
+                .blendEnabled = true,
+                .srcColor = LLGL::BlendOp::SrcAlpha,
+                .dstColor = LLGL::BlendOp::InvSrcAlpha,
+                .srcAlpha = LLGL::BlendOp::Zero,
+                .dstAlpha = LLGL::BlendOp::One,
+                .alphaArithmetic = LLGL::BlendArithmetic::Max
+            }
+        }
+    };
+
+    m_pipeline = context->CreatePipelineState(pipelineDesc);
+
+    if (const LLGL::Report* report = m_pipeline->GetReport()) {
+        if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
+    }
+}
+
+void RenderBatchNinePatch::draw_ninepatch(const NinePatch& ninepatch, const glm::vec4& uv_offset_scale, const Texture& texture, bool is_ui, Depth depth) {
+    ZoneScopedN("RenderBatchNinePatch::draw_nine_patch");
+
+    if (m_ninepatches.size() >= MAX_QUADS) {
+        render();
+        begin();
+    }
+
+    if (state.depth_mode) depth = state.depth;
+
+    uint32_t& depth_index = state.main_depth_index;
+    uint32_t& max_depth = state.max_main_depth;
+
+    const int order = depth.value < 0 ? depth_index : depth.value;
+    const uint32_t new_index = depth.value < 0 ? depth_index + 1 : depth.value;
+
+    if (depth.advance) depth_index = std::max(depth_index, static_cast<uint32_t>(new_index));
+    if (static_cast<uint32_t>(order) > max_depth) max_depth = order;
+
+    m_ninepatches.push_back(NinePatchData {
+        .texture = texture,
+        .rotation = ninepatch.rotation(),
+        .uv_offset_scale = uv_offset_scale,
+        .margin = ninepatch.margin(),
+        .color = ninepatch.color(),
+        .position = ninepatch.position(),
+        .size = ninepatch.size(),
+        .offset = ninepatch.anchor().to_vec2(),
+        .source_size = ninepatch.texture().size(),
+        .output_size = ninepatch.size(),
+        .order = static_cast<uint32_t>(order),
+        .is_ui = is_ui,
+    });
+}
+
+void RenderBatchNinePatch::render() {
+    ZoneScopedN("RenderBatchNinePatch::render");
+
+    std::vector<NinePatchData>& ninepatches = m_ninepatches;
+
+    if (ninepatches.empty()) return;
+
+    std::sort(
+        ninepatches.begin(),
+        ninepatches.end(),
+        [](const NinePatchData& a, const NinePatchData& b) {
+            if (!a.is_ui && b.is_ui) return true;
+            if (a.is_ui && !b.is_ui) return false;
+
+            return a.texture.id() < b.texture.id();
+        }
+    );
+    
+    Texture prev_texture = ninepatches[0].texture;
+    uint32_t sprite_count = 0;
+    uint32_t total_sprite_count = 0;
+    int vertex_offset = 0;
+
+    for (const NinePatchData& ninepatch_data : ninepatches) {
+        const uint32_t prev_texture_id = prev_texture.id();
+        const uint32_t curr_texture_id = ninepatch_data.texture.id();
+
+        if (prev_texture_id != curr_texture_id) {
+            m_ninepatch_flush_queue.push_back(FlushData {
+                .texture = prev_texture,
+                .offset = vertex_offset,
+                .count = sprite_count
+            });
+            sprite_count = 0;
+            vertex_offset = total_sprite_count;
+        }
+
+        const float order = static_cast<float>(ninepatch_data.order);
+
+        int flags = ninepatch_data.is_ui << SpriteFlags::UI;
+
+        m_buffer_ptr->position = glm::vec3(ninepatch_data.position, order);
+        m_buffer_ptr->rotation = ninepatch_data.rotation;
+        m_buffer_ptr->margin = ninepatch_data.margin;
+        m_buffer_ptr->size = ninepatch_data.size;
+        m_buffer_ptr->offset = ninepatch_data.offset;
+        m_buffer_ptr->source_size = ninepatch_data.source_size;
+        m_buffer_ptr->output_size = ninepatch_data.output_size;
+        m_buffer_ptr->uv_offset_scale = ninepatch_data.uv_offset_scale;
+        m_buffer_ptr->color = ninepatch_data.color;
+        m_buffer_ptr->flags = flags;
+        m_buffer_ptr++;
+
+        sprite_count += 1;
+        total_sprite_count += 1;
+
+        prev_texture = ninepatch_data.texture;
+    }
+
+    m_ninepatch_flush_queue.push_back(FlushData {
+        .texture = prev_texture,
+        .offset = vertex_offset,
+        .count = sprite_count
+    });
+
+    flush();
+}
+
+void RenderBatchNinePatch::flush() {
+    ZoneScopedN("RenderBatchNinePatch::flush");
+
+    auto* const commands = state.command_buffer;
+
+    // ptrdiff_t remaining = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
+    // size_t offset = 0;
+    // while (remaining > 0) {
+    //     const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
+    //     commands->UpdateBuffer(*m_instance_buffer, offset, m_buffer, size);
+    //     remaining -= size;
+    //     offset += size;
+    // }
+
+    const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
+    if (size < (1 << 16)) {
+        commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, size);
+    } else {
+        state.context->WriteBuffer(*m_instance_buffer, 0, m_buffer, size);
+    }
+
+    // ptrdiff_t remaining = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
+    // if (remaining <= (1 << 16) - 1) {
+    //     commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, remaining);
+    // } else {
+    //     // Renderer::Context()->WriteBuffer(*m_instance_buffer, 0, m_buffer, remaining);
+    //     size_t offset = 0;
+    //     while (remaining > 0) {
+    //         const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
+    //         commands->UpdateBuffer(*m_instance_buffer, offset, m_buffer, size);
+    //         remaining -= size;
+    //         offset += size;
+    //     }
+    // }
+    
+    commands->SetVertexBufferArray(*m_buffer_array);
+
+    commands->SetPipelineState(*m_pipeline);
+    commands->SetResource(0, *state.constant_buffer);
+
+    for (const FlushData& flush_data : m_ninepatch_flush_queue) {
+        commands->SetResource(1, flush_data.texture);
+        commands->SetResource(2, Assets::GetSampler(flush_data.texture));
+        commands->DrawInstanced(4, 0, flush_data.count, flush_data.offset);
+    }
+}
+
+void RenderBatchNinePatch::begin() {
+    ZoneScopedN("RenderBatchNinePatch::begin");
+
+    m_buffer_ptr = m_buffer;
+
+    m_ninepatch_flush_queue.clear();
+    m_ninepatches.clear();
+}
+
+void RenderBatchNinePatch::terminate() {
+    RESOURCE_RELEASE(m_vertex_buffer)
+    RESOURCE_RELEASE(m_instance_buffer)
+    RESOURCE_RELEASE(m_buffer_array)
+    RESOURCE_RELEASE(m_pipeline)
+
+    delete[] m_buffer;
+}
 
 void RenderBatchGlyph::init() {
     ZoneScopedN("RenderBatchGlyph::init");
@@ -1207,7 +1486,8 @@ void RenderBatchGlyph::init() {
                 .srcColor = LLGL::BlendOp::SrcAlpha,
                 .dstColor = LLGL::BlendOp::InvSrcAlpha,
                 .srcAlpha = LLGL::BlendOp::Zero,
-                .dstAlpha = LLGL::BlendOp::One
+                .dstAlpha = LLGL::BlendOp::One,
+                .alphaArithmetic = LLGL::BlendArithmetic::Max
             }
         }
     };
@@ -1354,6 +1634,8 @@ void RenderBatchGlyph::begin() {
 
 void RenderBatchGlyph::terminate() {
     RESOURCE_RELEASE(m_vertex_buffer)
+    RESOURCE_RELEASE(m_instance_buffer)
+    RESOURCE_RELEASE(m_buffer_array)
     RESOURCE_RELEASE(m_pipeline)
 
     delete[] m_buffer;

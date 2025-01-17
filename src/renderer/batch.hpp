@@ -12,6 +12,7 @@
 #include "types.hpp"
 
 #include "../types/sprite.hpp"
+#include "../types/nine_patch.hpp"
 #include "../types/depth.hpp"
 
 constexpr size_t MAX_QUADS = 5000 / 2;
@@ -38,6 +39,21 @@ struct SpriteData {
     uint32_t order;
     bool is_ui;
     bool ignore_camera_zoom;
+};
+
+struct NinePatchData {
+    Texture texture;
+    glm::quat rotation;
+    glm::vec4 uv_offset_scale;
+    glm::uvec4 margin;
+    glm::vec4 color;
+    glm::vec2 position;
+    glm::vec2 size;
+    glm::vec2 offset;
+    glm::vec2 source_size;
+    glm::vec2 output_size;
+    uint32_t order;
+    bool is_ui;
 };
 
 struct FlushData {
@@ -120,6 +136,24 @@ private:
 
     GlyphInstance* m_buffer = nullptr;
     GlyphInstance* m_buffer_ptr = nullptr;
+};
+
+class RenderBatchNinePatch : public RenderBatch {
+public:
+    void draw_ninepatch(const NinePatch& sprite, const glm::vec4& uv_offset_scale, const Texture& texture, bool is_ui, Depth depth);
+
+    void init() override;
+    void render() override;
+    void begin() override;
+    void terminate() override;
+private:
+    void flush();
+private:
+    std::vector<NinePatchData> m_ninepatches;
+    std::vector<FlushData> m_ninepatch_flush_queue;
+
+    NinePatchInstance* m_buffer = nullptr;
+    NinePatchInstance* m_buffer_ptr = nullptr;
 };
 
 #endif

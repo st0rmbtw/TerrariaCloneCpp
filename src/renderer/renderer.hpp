@@ -9,6 +9,7 @@
 #include <LLGL/Format.h>
 
 #include "../types/sprite.hpp"
+#include "../types/nine_patch.hpp"
 #include "../types/backend.hpp"
 #include "../types/background_layer.hpp"
 #include "../types/render_layer.hpp"
@@ -58,6 +59,8 @@ namespace Renderer {
 
     void DrawSpriteUI(const Sprite& sprite, Depth depth = -1);
     void DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, Depth depth = -1);
+
+    void DrawNinePatchUI(const NinePatch& ninepatch, Depth depth = -1);
 
     void DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, bool is_ui = false, Depth depth = -1);
 

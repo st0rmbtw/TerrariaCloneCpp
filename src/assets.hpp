@@ -62,7 +62,7 @@ enum class BackgroundAsset : uint16_t {
 enum class ShaderAsset : uint8_t {
     TilemapShader = 0,
     SpriteShader,
-    NinepatchShader,
+    NinePatchShader,
     PostProcessShader,
     FontShader,
     BackgroundShader,
@@ -84,6 +84,8 @@ enum class FontAsset : uint8_t {
 enum class VertexFormatAsset : uint8_t {
     SpriteVertex = 0,
     SpriteInstance,
+    NinePatchVertex,
+    NinePatchInstance,
     TilemapVertex,
     TilemapInstance,
     FontVertex,
