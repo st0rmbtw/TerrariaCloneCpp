@@ -15,7 +15,7 @@ struct Vertex {
 };
 
 struct SpriteInstance {
-    glm::vec3 position;
+    glm::vec2 position;
     glm::quat rotation;
     glm::vec2 size;
     glm::vec2 offset;
@@ -27,8 +27,8 @@ struct SpriteInstance {
 };
 
 struct NinePatchInstance {
-    glm::vec3 position;
     glm::quat rotation;
+    glm::vec2 position;
     glm::vec2 size;
     glm::vec2 offset;
     glm::vec2 source_size;
@@ -41,7 +41,7 @@ struct NinePatchInstance {
 
 struct GlyphInstance {
     glm::vec3 color;
-    glm::vec3 pos;
+    glm::vec2 pos;
     glm::vec2 size;
     glm::vec2 tex_size;
     glm::vec2 uv;

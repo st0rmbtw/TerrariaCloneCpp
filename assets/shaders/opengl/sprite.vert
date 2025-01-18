@@ -1,7 +1,7 @@
 #version 330 core
 
 layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec3 i_position;
+layout(location = 1) in vec2 i_position;
 layout(location = 2) in vec4 i_rotation;
 layout(location = 3) in vec2 i_size;
 layout(location = 4) in vec2 i_offset;
@@ -78,9 +78,6 @@ void main() {
 
     mat4 mvp = (is_ui ? global_ubo.screen_projection : is_nonscale ? global_ubo.nonscale_view_projection : global_ubo.view_projection) * transform;
     
-    float max_depth = is_world ? global_ubo.max_world_depth : global_ubo.max_depth;
-    float order = i_position.z / max_depth;
-
     v_uv = a_position * i_uv_offset_scale.zw + i_uv_offset_scale.xy;
     v_color = i_color;
     v_outline_color = i_outline_color;
@@ -88,5 +85,5 @@ void main() {
     v_has_texture = has_texture ? 1 : 0;
     
     gl_Position = mvp * vec4(a_position, 0, 1);
-    gl_Position.z = order;
+    gl_Position.z = 1.0;
 }

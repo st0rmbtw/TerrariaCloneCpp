@@ -92,15 +92,11 @@ VSOutput VS(VSInput inp)
 
     const float4x4 mvp = mul(is_ui ? u_screen_projection : u_view_projection, transform);
     const float4 uv_offset_scale = inp.i_uv_offset_scale;
-    const float2 position = inp.position;
-    // const float max_depth = is_world ? u_max_world_depth : u_max_depth;
-    const float max_depth = u_max_depth;
-    const float order = inp.i_position.z / max_depth;
 
     VSOutput outp;
-    outp.position = mul(mvp, float4(position, 0.0, 1.0));
-    outp.position.z = order;
-    outp.uv = position * uv_offset_scale.zw + uv_offset_scale.xy;
+    outp.position = mul(mvp, float4(inp.position, 0.0, 1.0));
+    outp.position.z = 1.0f;
+    outp.uv = inp.position * uv_offset_scale.zw + uv_offset_scale.xy;
     outp.color = inp.i_color;
     outp.margin = inp.i_margin;
     outp.source_size = inp.i_source_size;

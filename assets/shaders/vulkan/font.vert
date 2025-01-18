@@ -2,7 +2,7 @@
 
 layout(location = 0) in vec2 a_position;
 layout(location = 1) in vec3 i_color;
-layout(location = 2) in vec3 i_position;
+layout(location = 2) in vec2 i_position;
 layout(location = 3) in vec2 i_size;
 layout(location = 4) in vec2 i_tex_size;
 layout(location = 5) in vec2 i_uv;
@@ -33,5 +33,5 @@ void main() {
     v_uv = uv;
     v_color = i_color;
     gl_Position = mvp * vec4(position, 0.0, 1.0);
-    gl_Position.z = i_position.z / global_ubo.max_depth;
+    gl_Position.z = 1.0;
 }

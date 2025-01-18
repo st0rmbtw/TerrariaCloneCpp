@@ -26,7 +26,7 @@ public:
         m_size(size),
         m_internal(internal) {}
 
-    [[nodiscard]] inline uint32_t id() const { return m_id; }
+    [[nodiscard]] inline int id() const { return m_id; }
     [[nodiscard]] inline int sampler() const { return m_sampler; }
     [[nodiscard]] inline glm::uvec2 size() const { return m_size; }
     [[nodiscard]] inline uint32_t width() const { return m_size.x; }
@@ -39,7 +39,7 @@ public:
     inline operator LLGL::ResourceViewDescriptor() const { return m_internal; }
 
 private:
-    uint32_t m_id = -1;
+    int m_id = -1;
     int m_sampler = 0;
     glm::uvec2 m_size = glm::uvec2(0, 0);
     LLGL::Texture* m_internal = nullptr;

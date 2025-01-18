@@ -1,6 +1,7 @@
 #include "renderer.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <sstream>
 #include <fstream>
@@ -25,20 +26,205 @@
 
 #include "types.hpp"
 #include "utils.hpp"
-#include "batch.hpp"
 #include "world_renderer.hpp"
 #include "background_renderer.hpp"
 #include "particle_renderer.hpp"
 #include "macros.hpp"
 #include "../ui/utils.hpp"
 
+struct DrawCommandSprite {
+    Texture texture;
+    glm::quat rotation;
+    glm::vec4 uv_offset_scale;
+    glm::vec4 color;
+    glm::vec4 outline_color;
+    glm::vec2 position;
+    glm::vec2 size;
+    glm::vec2 offset;
+    uint32_t order;
+    float outline_thickness;
+    bool is_ui;
+    bool ignore_camera_zoom;
+};
+
+struct DrawCommandNinePatch {
+    Texture texture;
+    glm::quat rotation;
+    glm::vec4 uv_offset_scale;
+    glm::vec4 color;
+    glm::uvec4 margin;
+    glm::vec2 position;
+    glm::vec2 size;
+    glm::vec2 offset;
+    glm::vec2 source_size;
+    glm::vec2 output_size;
+    uint32_t order;
+    bool is_ui;
+};
+
+struct DrawCommandGlyph {
+    Texture texture;
+    glm::vec3 color;
+    glm::vec2 pos;
+    glm::vec2 size;
+    glm::vec2 tex_size;
+    glm::vec2 tex_uv;
+    uint32_t order;
+    bool is_ui;
+};
+
+class DrawCommand {
+public:
+    enum Type : uint8_t {
+        DrawSprite = 0,
+        DrawGlyph,
+        DrawNinePatch
+    };
+
+    DrawCommand(DrawCommandSprite sprite_data) :
+        m_sprite_data(sprite_data),
+        m_type(Type::DrawSprite) {}
+
+    DrawCommand(DrawCommandGlyph glyph_data) :
+        m_glyph_data(glyph_data),
+        m_type(Type::DrawGlyph) {}
+
+    DrawCommand(DrawCommandNinePatch ninepatch_data) :
+        m_ninepatch_data(ninepatch_data),
+        m_type(Type::DrawNinePatch) {}
+
+    [[nodiscard]] inline Type type() const { return m_type; }
+
+    [[nodiscard]] inline uint32_t order() const {
+        switch (m_type) {
+        case DrawSprite: return m_sprite_data.order;
+        case DrawGlyph: return m_glyph_data.order;
+        case DrawNinePatch: return m_ninepatch_data.order;
+        }
+    }
+
+    [[nodiscard]] inline const Texture& texture() const {
+        switch (m_type) {
+        case DrawSprite: return m_sprite_data.texture;
+        case DrawGlyph: return m_glyph_data.texture;
+        case DrawNinePatch: return m_ninepatch_data.texture;
+        }
+    }
+
+    [[nodiscard]] inline const DrawCommandSprite& sprite_data() const { return m_sprite_data; }
+    [[nodiscard]] inline const DrawCommandGlyph& glyph_data() const { return m_glyph_data; }
+    [[nodiscard]] inline const DrawCommandNinePatch& ninepatch_data() const { return m_ninepatch_data; }
+
+private:
+    union {
+        DrawCommandNinePatch m_ninepatch_data;
+        DrawCommandSprite m_sprite_data;
+        DrawCommandGlyph m_glyph_data;
+    };
+
+    Type m_type;
+};
+
+enum class FlushDataType : uint8_t {
+    Sprite = 0,
+    Glyph,
+    NinePatch,
+};
+
+struct FlushData {
+    Texture texture;
+    uint32_t offset;
+    uint32_t count;
+    FlushDataType type;
+};
+
+constexpr size_t MAX_QUADS = 5000 / 2;
+
+namespace SpriteFlags {
+    enum : uint8_t {
+        HasTexture = 0,
+        UI,
+        World,
+        IgnoreCameraZoom,
+    };
+};
+
+struct SpriteBatchData {
+    LLGL::PipelineState* pipeline = nullptr;
+
+    LLGL::Buffer* vertex_buffer = nullptr;
+    LLGL::Buffer* instance_buffer = nullptr;
+    LLGL::Buffer* world_instance_buffer = nullptr;
+
+    LLGL::BufferArray* buffer_array = nullptr;
+    LLGL::BufferArray* world_buffer_array = nullptr;
+    
+    SpriteInstance* buffer = nullptr;
+    SpriteInstance* buffer_ptr = nullptr;
+    SpriteInstance* world_buffer = nullptr;
+    SpriteInstance* world_buffer_ptr = nullptr;
+
+    uint32_t count = 0;
+    uint32_t world_count = 0;
+
+    inline void reset() {
+        buffer_ptr = buffer;
+        world_buffer_ptr = world_buffer;
+        count = 0;
+        world_count = 0;
+    }
+};
+
+struct GlyphBatchData {
+    LLGL::PipelineState* pipeline = nullptr;
+
+    LLGL::Buffer* vertex_buffer = nullptr;
+    LLGL::Buffer* instance_buffer = nullptr;
+    LLGL::BufferArray* buffer_array = nullptr;
+
+    GlyphInstance* buffer = nullptr;
+    GlyphInstance* buffer_ptr = nullptr;
+
+    uint32_t count = 0;
+
+    inline void reset() {
+        buffer_ptr = buffer;
+        count = 0;
+    }
+};
+
+struct NinePatchBatchData {
+    LLGL::Buffer* vertex_buffer = nullptr;
+    LLGL::Buffer* instance_buffer = nullptr;
+    LLGL::BufferArray* buffer_array = nullptr;
+
+    LLGL::PipelineState* pipeline = nullptr;
+
+    NinePatchInstance* buffer = nullptr;
+    NinePatchInstance* buffer_ptr = nullptr;
+
+    uint32_t count = 0;
+
+    inline void reset() {
+        buffer_ptr = buffer;
+        count = 0;
+    }
+};
+
 static struct RendererState {
     ParticleRenderer particle_renderer;
-    RenderBatchSprite sprite_batch;
-    RenderBatchGlyph glyph_batch;
-    RenderBatchNinePatch ninepatch_batch;
     BackgroundRenderer background_renderer;
     WorldRenderer world_renderer;
+
+    std::vector<DrawCommand> draw_commands;
+    std::vector<DrawCommand> world_draw_commands;
+
+    std::vector<FlushData> flush_queue;
+    std::vector<FlushData> world_flush_queue;
+
+    SpriteBatchData sprite_batch_data;
+    GlyphBatchData glyph_batch_data;
+    NinePatchBatchData ninepatch_batch_data;
 
     Timer compute_light_timer;
 
@@ -71,7 +257,7 @@ static struct RendererState {
     LLGL::Buffer* fullscreen_triangle_vertex_buffer = nullptr;
     
     Depth depth;
-    
+
     uint32_t main_depth_index = 0;
     uint32_t world_depth_index = 0;
 
@@ -98,6 +284,343 @@ LLGL::Buffer* Renderer::ChunkVertexBuffer() { return state.chunk_vertex_buffer; 
 #if DEBUG
 LLGL::RenderingDebugger* Renderer::Debugger() { return state.debugger; }
 #endif
+
+static void init_sprite_batch() {
+    ZoneScopedN("RenderBatchSprite::init");
+
+    const RenderBackend backend = state.backend;
+    const auto& context = state.context;
+
+    state.sprite_batch_data.buffer = new SpriteInstance[MAX_QUADS];
+    state.sprite_batch_data.world_buffer = new SpriteInstance[MAX_QUADS];
+
+    const Vertex vertices[] = {
+        Vertex(0.0f, 0.0f),
+        Vertex(0.0f, 1.0f),
+        Vertex(1.0f, 0.0f),
+        Vertex(1.0f, 1.0f),
+    };
+
+    state.sprite_batch_data.vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::SpriteVertex), "SpriteBatch VertexBuffer");
+
+    state.sprite_batch_data.instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(SpriteInstance), Assets::GetVertexFormat(VertexFormatAsset::SpriteInstance), "SpriteBatch InstanceBuffer");
+    state.sprite_batch_data.world_instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(SpriteInstance), Assets::GetVertexFormat(VertexFormatAsset::SpriteInstance), "SpriteBatchWorld InstanceBuffer");
+
+    {
+        LLGL::Buffer* buffers[] = { state.sprite_batch_data.vertex_buffer, state.sprite_batch_data.instance_buffer };
+        state.sprite_batch_data.buffer_array = context->CreateBufferArray(2, buffers);
+    }
+    {
+        LLGL::Buffer* buffers[] = { state.sprite_batch_data.vertex_buffer, state.sprite_batch_data.world_instance_buffer };
+        state.sprite_batch_data.world_buffer_array = context->CreateBufferArray(2, buffers);
+    }
+
+    LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
+    pipelineLayoutDesc.bindings = {
+        LLGL::BindingDescriptor(
+            "GlobalUniformBuffer",
+            LLGL::ResourceType::Buffer,
+            LLGL::BindFlags::ConstantBuffer,
+            LLGL::StageFlags::VertexStage,
+            LLGL::BindingSlot(2)
+        ),
+        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
+        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
+    };
+
+    LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
+
+    const ShaderPipeline& sprite_shader = Assets::GetShader(ShaderAsset::SpriteShader);
+
+    LLGL::GraphicsPipelineDescriptor pipelineDesc;
+    pipelineDesc.debugName = "SpriteBatch Pipeline";
+    pipelineDesc.vertexShader = sprite_shader.vs;
+    pipelineDesc.fragmentShader = sprite_shader.ps;
+    pipelineDesc.geometryShader = sprite_shader.gs;
+    pipelineDesc.pipelineLayout = pipelineLayout;
+    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
+    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
+    pipelineDesc.renderPass = state.swap_chain->GetRenderPass();
+    pipelineDesc.rasterizer.frontCCW = true;
+    pipelineDesc.blend = LLGL::BlendDescriptor {
+        .targets = {
+            LLGL::BlendTargetDescriptor {
+                .blendEnabled = true,
+                .srcColor = LLGL::BlendOp::SrcAlpha,
+                .dstColor = LLGL::BlendOp::InvSrcAlpha,
+                .srcAlpha = LLGL::BlendOp::Zero,
+                .dstAlpha = LLGL::BlendOp::One,
+                .alphaArithmetic = LLGL::BlendArithmetic::Max
+            }
+        }
+    };
+
+   state.sprite_batch_data.pipeline = context->CreatePipelineState(pipelineDesc);
+
+    if (const LLGL::Report* report = state.sprite_batch_data.pipeline->GetReport()) {
+        if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
+    }
+}
+
+static void draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const std::optional<Texture>& sprite_texture, bool is_ui, Depth depth) {
+    ZoneScopedN("RenderBatchSprite::draw_sprite");
+
+    if (state.depth_mode) depth = state.depth;
+
+    uint32_t& depth_index = state.main_depth_index;
+    uint32_t& max_depth = state.max_main_depth;
+
+    const int order = depth.value < 0 ? depth_index : depth.value;
+    const uint32_t new_index = depth.value < 0 ? depth_index + 1 : depth.value;
+
+    if (depth.advance) depth_index = std::max(depth_index, static_cast<uint32_t>(new_index));
+    if (static_cast<uint32_t>(order) > max_depth) max_depth = order;
+
+    DrawCommandSprite sprite_data = DrawCommandSprite {
+        .texture = sprite_texture.has_value() ? sprite_texture.value() : Assets::GetTexture(TextureAsset::Stub),
+        .rotation = sprite.rotation(),
+        .uv_offset_scale = uv_offset_scale,
+        .color = sprite.color(),
+        .outline_color = sprite.outline_color(),
+        .position = sprite.position(),
+        .size = sprite.size(),
+        .offset = sprite.anchor().to_vec2(),
+        .order = static_cast<uint32_t>(order),
+        .outline_thickness = sprite.outline_thickness(),
+        .is_ui = is_ui,
+        .ignore_camera_zoom = sprite.ignore_camera_zoom()
+    };
+
+    state.draw_commands.emplace_back(sprite_data);
+    ++state.sprite_batch_data.count;
+}
+
+static void draw_world_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const std::optional<Texture>& sprite_texture, Depth depth) {
+    ZoneScopedN("RenderBatchSprite::draw_world_sprite");
+
+    // if (m_world_sprites.size() >= MAX_QUADS) {
+    //     render();
+    //     begin();
+    // }
+
+    if (state.depth_mode) depth = state.depth;
+
+    uint32_t& depth_index = state.world_depth_index;
+    uint32_t& max_depth = state.max_world_depth;
+
+    const int order = depth.value < 0 ? depth_index : depth.value;
+    const uint32_t new_index = depth.value < 0 ? depth_index + 1 : depth.value;
+
+    if (depth.advance) depth_index = std::max(depth_index, static_cast<uint32_t>(new_index));
+    if (static_cast<uint32_t>(order) > max_depth) max_depth = order;
+
+    DrawCommandSprite sprite_data = DrawCommandSprite {
+        .texture = sprite_texture.has_value() ? sprite_texture.value() : Assets::GetTexture(TextureAsset::Stub),
+        .rotation = sprite.rotation(),
+        .uv_offset_scale = uv_offset_scale,
+        .color = sprite.color(),
+        .outline_color = sprite.outline_color(),
+        .position = sprite.position(),
+        .size = sprite.size(),
+        .offset = sprite.anchor().to_vec2(),
+        .order = static_cast<uint32_t>(order),
+        .outline_thickness = sprite.outline_thickness(),
+        .is_ui = false,
+        .ignore_camera_zoom = sprite.ignore_camera_zoom()
+    };
+
+    state.world_draw_commands.emplace_back(sprite_data);
+    ++state.sprite_batch_data.world_count;
+}
+
+static void init_ninepatch_batch() {
+    ZoneScopedN("RenderBatchNinePatch::init");
+
+    const RenderBackend backend = state.backend;
+    const auto& context = state.context;
+
+    state.ninepatch_batch_data.buffer = new NinePatchInstance[MAX_QUADS];
+
+    const Vertex vertices[] = {
+        Vertex(0.0f, 0.0f),
+        Vertex(0.0f, 1.0f),
+        Vertex(1.0f, 0.0f),
+        Vertex(1.0f, 1.0f),
+    };
+
+    state.ninepatch_batch_data.vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::NinePatchVertex), "NinePatchBatch VertexBuffer");
+    state.ninepatch_batch_data.instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(NinePatchInstance), Assets::GetVertexFormat(VertexFormatAsset::NinePatchInstance), "NinePatchBatch InstanceBuffer");
+
+    {
+        LLGL::Buffer* buffers[] = { state.ninepatch_batch_data.vertex_buffer, state.ninepatch_batch_data.instance_buffer };
+        state.ninepatch_batch_data.buffer_array = context->CreateBufferArray(2, buffers);
+    }
+
+    LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
+    pipelineLayoutDesc.bindings = {
+        LLGL::BindingDescriptor(
+            "GlobalUniformBuffer",
+            LLGL::ResourceType::Buffer,
+            LLGL::BindFlags::ConstantBuffer,
+            LLGL::StageFlags::VertexStage,
+            LLGL::BindingSlot(2)
+        ),
+        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
+        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
+    };
+
+    LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
+
+    const ShaderPipeline& ninepatch_shader = Assets::GetShader(ShaderAsset::NinePatchShader);
+
+    LLGL::GraphicsPipelineDescriptor pipelineDesc;
+    pipelineDesc.debugName = "NinePatchBatch Pipeline";
+    pipelineDesc.vertexShader = ninepatch_shader.vs;
+    pipelineDesc.fragmentShader = ninepatch_shader.ps;
+    pipelineDesc.geometryShader = ninepatch_shader.gs;
+    pipelineDesc.pipelineLayout = pipelineLayout;
+    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
+    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
+    pipelineDesc.renderPass = state.swap_chain->GetRenderPass();
+    pipelineDesc.rasterizer.frontCCW = true;
+    pipelineDesc.blend = LLGL::BlendDescriptor {
+        .targets = {
+            LLGL::BlendTargetDescriptor {
+                .blendEnabled = true,
+                .srcColor = LLGL::BlendOp::SrcAlpha,
+                .dstColor = LLGL::BlendOp::InvSrcAlpha,
+                .srcAlpha = LLGL::BlendOp::Zero,
+                .dstAlpha = LLGL::BlendOp::One,
+                .alphaArithmetic = LLGL::BlendArithmetic::Max
+            }
+        }
+    };
+
+    state.ninepatch_batch_data.pipeline = context->CreatePipelineState(pipelineDesc);
+
+    if (const LLGL::Report* report = state.ninepatch_batch_data.pipeline->GetReport()) {
+        if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
+    }
+}
+
+static void draw_ninepatch(const NinePatch& ninepatch, const glm::vec4& uv_offset_scale, const Texture& texture, bool is_ui, Depth depth) {
+    ZoneScopedN("RenderBatchNinePatch::draw_nine_patch");
+
+    if (state.depth_mode) depth = state.depth;
+
+    uint32_t& depth_index = state.main_depth_index;
+    uint32_t& max_depth = state.max_main_depth;
+
+    const int order = depth.value < 0 ? depth_index : depth.value;
+    const uint32_t new_index = depth.value < 0 ? depth_index + 1 : depth.value;
+
+    if (depth.advance) depth_index = std::max(depth_index, static_cast<uint32_t>(new_index));
+    if (static_cast<uint32_t>(order) > max_depth) max_depth = order;
+
+    DrawCommandNinePatch ninepatch_data = DrawCommandNinePatch {
+        .texture = texture,
+        .rotation = ninepatch.rotation(),
+        .uv_offset_scale = uv_offset_scale,
+        .color = ninepatch.color(),
+        .margin = ninepatch.margin(),
+        .position = ninepatch.position(),
+        .size = ninepatch.size(),
+        .offset = ninepatch.anchor().to_vec2(),
+        .source_size = ninepatch.texture().size(),
+        .output_size = ninepatch.size(),
+        .order = static_cast<uint32_t>(order),
+        .is_ui = is_ui,
+    };
+
+    state.draw_commands.emplace_back(ninepatch_data);
+    ++state.ninepatch_batch_data.count;
+}
+
+static void init_glyph_batch() {
+    ZoneScopedN("RenderBatchGlyph::init");
+
+    const RenderBackend backend = state.backend;
+    const auto& context = state.context;
+
+    state.glyph_batch_data.buffer = new GlyphInstance[MAX_QUADS];
+
+    const Vertex vertices[] = {
+        Vertex(0.0f, 0.0f),
+        Vertex(0.0f, 1.0f),
+        Vertex(1.0f, 0.0f),
+        Vertex(1.0f, 1.0f),
+    };
+
+    state.glyph_batch_data.vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::FontVertex), "GlyphBatch VertexBuffer");
+    state.glyph_batch_data.instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(GlyphInstance), Assets::GetVertexFormat(VertexFormatAsset::FontInstance), "GlyphBatch InstanceBuffer");
+
+    LLGL::Buffer* buffers[] = { state.glyph_batch_data.vertex_buffer, state.glyph_batch_data.instance_buffer };
+    state.glyph_batch_data.buffer_array = context->CreateBufferArray(2, buffers);
+
+    LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
+    pipelineLayoutDesc.bindings = {
+        LLGL::BindingDescriptor(
+            "GlobalUniformBuffer",
+            LLGL::ResourceType::Buffer,
+            LLGL::BindFlags::ConstantBuffer,
+            LLGL::StageFlags::VertexStage,
+            LLGL::BindingSlot(2)
+        ),
+        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
+        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
+    };
+
+    LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
+
+    const ShaderPipeline& font_shader = Assets::GetShader(ShaderAsset::FontShader);
+
+    LLGL::GraphicsPipelineDescriptor pipelineDesc;
+    pipelineDesc.debugName = "GlyphBatch Pipeline";
+    pipelineDesc.vertexShader = font_shader.vs;
+    pipelineDesc.fragmentShader = font_shader.ps;
+    pipelineDesc.geometryShader = font_shader.gs;
+    pipelineDesc.pipelineLayout = pipelineLayout;
+    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
+    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
+    pipelineDesc.renderPass = state.swap_chain->GetRenderPass();
+    pipelineDesc.rasterizer.frontCCW = true;
+    pipelineDesc.blend = LLGL::BlendDescriptor {
+        .targets = {
+            LLGL::BlendTargetDescriptor {
+                .blendEnabled = true,
+                .srcColor = LLGL::BlendOp::SrcAlpha,
+                .dstColor = LLGL::BlendOp::InvSrcAlpha,
+                .srcAlpha = LLGL::BlendOp::Zero,
+                .dstAlpha = LLGL::BlendOp::One,
+                .alphaArithmetic = LLGL::BlendArithmetic::Max
+            }
+        }
+    };
+
+    state.glyph_batch_data.pipeline = context->CreatePipelineState(pipelineDesc);
+
+    if (const LLGL::Report* report = state.glyph_batch_data.pipeline->GetReport()) {
+        if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
+    }
+}
+
+static void draw_glyph(const glm::vec2& pos, const glm::vec2& size, const glm::vec3& color, const Texture& font_texture, const glm::vec2& tex_uv, const glm::vec2& tex_size, bool ui, uint32_t depth) {
+    ZoneScopedN("RenderBatchGlyph::draw_glyph");
+
+    DrawCommandGlyph glyph_data = DrawCommandGlyph {
+        .texture = font_texture,
+        .color = color,
+        .pos = pos,
+        .size = size,
+        .tex_size = tex_size,
+        .tex_uv = tex_uv,
+        .order = depth,
+        .is_ui = ui
+    };
+
+    state.draw_commands.emplace_back(glyph_data);
+    ++state.glyph_batch_data.count;
+}
 
 bool Renderer::InitEngine(RenderBackend backend) {
     LLGL::Report report;
@@ -170,9 +693,10 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
     ResizeTextures(resolution);
 
-    state.sprite_batch.init();
-    state.glyph_batch.init();
-    state.ninepatch_batch.init();
+    init_sprite_batch();
+    init_glyph_batch();
+    init_ninepatch_batch();
+
     state.world_renderer.init();
     state.background_renderer.init();
     state.particle_renderer.init();
@@ -350,15 +874,405 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
     commands->Begin();
     commands->SetViewport(state.swap_chain->GetResolution());
 
-    state.sprite_batch.begin();
-    state.glyph_batch.begin();
-    state.ninepatch_batch.begin();
+    state.sprite_batch_data.reset();
+    state.glyph_batch_data.reset();
+    state.ninepatch_batch_data.reset();
 
     state.main_depth_index = 0;
     // The first three are reserved for background, walls and tiles
     state.world_depth_index = 3;
     state.max_world_depth = 3;
     state.max_main_depth = 0;
+
+    state.draw_commands.clear();
+    state.world_draw_commands.clear();
+    state.flush_queue.clear();
+    state.world_flush_queue.clear();
+}
+
+static inline void SortDrawCommands() {
+    std::sort(
+        state.draw_commands.begin(),
+        state.draw_commands.end(),
+        [](const DrawCommand& a, const DrawCommand& b) {
+            const uint32_t a_order = a.order();
+            const uint32_t b_order = b.order();
+
+            if (a_order < b_order) return true;
+            if (a_order > b_order) return false;
+
+            return a.texture().id() < b.texture().id();
+        }
+    );
+
+    Texture sprite_prev_texture;
+    uint32_t sprite_count = 0;
+    uint32_t sprite_total_count = 0;
+    uint32_t sprite_vertex_offset = 0;
+    uint32_t sprite_remaining = state.sprite_batch_data.count;
+
+    Texture glyph_prev_texture;
+    uint32_t glyph_count = 0;
+    uint32_t glyph_total_count = 0;
+    uint32_t glyph_vertex_offset = 0;
+    uint32_t glyph_remaining = state.glyph_batch_data.count;
+
+    Texture ninepatch_prev_texture;
+    uint32_t ninepatch_count = 0;
+    uint32_t ninepatch_total_count = 0;
+    uint32_t ninepatch_vertex_offset = 0;
+    uint32_t ninepatch_remaining = state.ninepatch_batch_data.count;
+
+    uint32_t prev_order = state.draw_commands[0].order();
+
+    for (const DrawCommand& draw_command : state.draw_commands) {
+        uint32_t new_order = prev_order;
+
+        switch (draw_command.type()) {
+        case DrawCommand::DrawSprite: {
+            const DrawCommandSprite& sprite_data = draw_command.sprite_data();
+
+            if (sprite_total_count == 0) {
+                sprite_prev_texture = sprite_data.texture;
+            }
+
+            const uint32_t prev_texture_id = sprite_prev_texture.id();
+            const uint32_t curr_texture_id = sprite_data.texture.id();
+
+            if (sprite_count > 0 && prev_texture_id != curr_texture_id) {
+                state.flush_queue.push_back(FlushData {
+                    .texture = sprite_prev_texture,
+                    .offset = sprite_vertex_offset,
+                    .count = sprite_count,
+                    .type = FlushDataType::Sprite
+                });
+                sprite_count = 0;
+                sprite_vertex_offset = sprite_total_count;
+            }
+
+            int flags = 0;
+            flags |= sprite_data.ignore_camera_zoom << SpriteFlags::IgnoreCameraZoom;
+            flags |= sprite_data.is_ui << SpriteFlags::UI;
+            flags |= (curr_texture_id >= 0) << SpriteFlags::HasTexture;
+
+            state.sprite_batch_data.buffer_ptr->position = sprite_data.position;
+            state.sprite_batch_data.buffer_ptr->rotation = sprite_data.rotation;
+            state.sprite_batch_data.buffer_ptr->size = sprite_data.size;
+            state.sprite_batch_data.buffer_ptr->offset = sprite_data.offset;
+            state.sprite_batch_data.buffer_ptr->uv_offset_scale = sprite_data.uv_offset_scale;
+            state.sprite_batch_data.buffer_ptr->color = sprite_data.color;
+            state.sprite_batch_data.buffer_ptr->outline_color = sprite_data.outline_color;
+            state.sprite_batch_data.buffer_ptr->outline_thickness = sprite_data.outline_thickness;
+            state.sprite_batch_data.buffer_ptr->flags = flags;
+            state.sprite_batch_data.buffer_ptr++;
+
+            ++sprite_count;
+            ++sprite_total_count;
+            --sprite_remaining;
+
+            if (sprite_remaining == 0) {
+                state.flush_queue.push_back(FlushData {
+                    .texture = sprite_data.texture,
+                    .offset = sprite_vertex_offset,
+                    .count = sprite_count,
+                    .type = FlushDataType::Sprite
+                });
+                sprite_count = 0;
+            }
+
+            sprite_prev_texture = sprite_data.texture;
+            new_order = sprite_data.order;
+        } break;
+        case DrawCommand::DrawGlyph: {
+            const DrawCommandGlyph& glyph_data = draw_command.glyph_data();
+
+            if (glyph_total_count == 0) {
+                glyph_prev_texture = glyph_data.texture;
+            }
+
+            if (glyph_count > 0 && glyph_prev_texture.id() != glyph_data.texture.id()) {
+                state.flush_queue.push_back(FlushData {
+                    .texture = glyph_prev_texture,
+                    .offset = glyph_vertex_offset,
+                    .count = glyph_count,
+                    .type = FlushDataType::Glyph
+                });
+                glyph_count = 0;
+                glyph_vertex_offset = glyph_total_count;
+            }
+
+            state.glyph_batch_data.buffer_ptr->color = glyph_data.color;
+            state.glyph_batch_data.buffer_ptr->pos = glyph_data.pos;
+            state.glyph_batch_data.buffer_ptr->size = glyph_data.size;
+            state.glyph_batch_data.buffer_ptr->tex_size = glyph_data.tex_size;
+            state.glyph_batch_data.buffer_ptr->uv = glyph_data.tex_uv;
+            state.glyph_batch_data.buffer_ptr->is_ui = glyph_data.is_ui;
+            state.glyph_batch_data.buffer_ptr++;
+
+            ++glyph_count;
+            ++glyph_total_count;
+            --glyph_remaining;
+
+            if (glyph_remaining == 0) {
+                state.flush_queue.push_back(FlushData {
+                    .texture = glyph_data.texture,
+                    .offset = glyph_vertex_offset,
+                    .count = glyph_count,
+                    .type = FlushDataType::Glyph
+                });
+                glyph_count = 0;
+            }
+
+            glyph_prev_texture = glyph_data.texture;
+            new_order = glyph_data.order;
+        } break;
+        case DrawCommand::DrawNinePatch: {
+            const DrawCommandNinePatch& ninepatch_data = draw_command.ninepatch_data();
+
+            if (ninepatch_total_count == 0) {
+                ninepatch_prev_texture = ninepatch_data.texture;
+            }
+
+            const uint32_t prev_texture_id = ninepatch_prev_texture.id();
+            const uint32_t curr_texture_id = ninepatch_data.texture.id();
+
+            if (ninepatch_count > 0 && prev_texture_id != curr_texture_id) {
+                state.flush_queue.push_back(FlushData {
+                    .texture = ninepatch_prev_texture,
+                    .offset = ninepatch_vertex_offset,
+                    .count = ninepatch_count,
+                    .type = FlushDataType::NinePatch
+                });
+                ninepatch_count = 0;
+                ninepatch_vertex_offset = ninepatch_total_count;
+            }
+
+            int flags = ninepatch_data.is_ui << SpriteFlags::UI;
+
+            state.ninepatch_batch_data.buffer_ptr->position = ninepatch_data.position;
+            state.ninepatch_batch_data.buffer_ptr->rotation = ninepatch_data.rotation;
+            state.ninepatch_batch_data.buffer_ptr->margin = ninepatch_data.margin;
+            state.ninepatch_batch_data.buffer_ptr->size = ninepatch_data.size;
+            state.ninepatch_batch_data.buffer_ptr->offset = ninepatch_data.offset;
+            state.ninepatch_batch_data.buffer_ptr->source_size = ninepatch_data.source_size;
+            state.ninepatch_batch_data.buffer_ptr->output_size = ninepatch_data.output_size;
+            state.ninepatch_batch_data.buffer_ptr->uv_offset_scale = ninepatch_data.uv_offset_scale;
+            state.ninepatch_batch_data.buffer_ptr->color = ninepatch_data.color;
+            state.ninepatch_batch_data.buffer_ptr->flags = flags;
+            state.ninepatch_batch_data.buffer_ptr++;
+
+            ++ninepatch_count;
+            ++ninepatch_total_count;
+            --ninepatch_remaining;
+
+            if (ninepatch_remaining == 0) {
+                state.flush_queue.push_back(FlushData {
+                    .texture = ninepatch_data.texture,
+                    .offset = ninepatch_vertex_offset,
+                    .count = ninepatch_count,
+                    .type = FlushDataType::NinePatch
+                });
+                ninepatch_count = 0;
+            }
+
+            ninepatch_prev_texture = ninepatch_data.texture;
+            new_order = ninepatch_data.order;
+        } break;
+        }
+
+        if (prev_order != new_order) {
+            if (sprite_count > 0) {
+                state.flush_queue.push_back(FlushData {
+                    .texture = sprite_prev_texture,
+                    .offset = sprite_vertex_offset,
+                    .count = sprite_count,
+                    .type = FlushDataType::Sprite
+                });
+                sprite_count = 0;
+                sprite_vertex_offset = sprite_total_count;
+            }
+
+            if (glyph_count > 0) {
+                state.flush_queue.push_back(FlushData {
+                    .texture = glyph_prev_texture,
+                    .offset = glyph_vertex_offset,
+                    .count = glyph_count,
+                    .type = FlushDataType::Glyph
+                });
+                glyph_count = 0;
+                glyph_vertex_offset = glyph_total_count;
+            }
+
+            if (ninepatch_count > 0) {
+                state.flush_queue.push_back(FlushData {
+                    .texture = ninepatch_prev_texture,
+                    .offset = ninepatch_vertex_offset,
+                    .count = ninepatch_count,
+                    .type = FlushDataType::NinePatch
+                });
+                ninepatch_count = 0;
+                ninepatch_vertex_offset = ninepatch_total_count;
+            }
+        }
+
+        prev_order = new_order;
+    }
+
+    auto* const commands = state.command_buffer;
+    
+    if (sprite_total_count > 0) {
+        const ptrdiff_t size = (uint8_t*) state.sprite_batch_data.buffer_ptr - (uint8_t*) state.sprite_batch_data.buffer;
+        if (size < (1 << 16)) {
+            commands->UpdateBuffer(*state.sprite_batch_data.instance_buffer, 0, state.sprite_batch_data.buffer, size);
+        } else {
+            state.context->WriteBuffer(*state.sprite_batch_data.instance_buffer, 0, state.sprite_batch_data.buffer, size);
+        }
+    }
+
+    if (glyph_total_count > 0) {
+        const ptrdiff_t size = (uint8_t*) state.glyph_batch_data.buffer_ptr - (uint8_t*) state.glyph_batch_data.buffer;
+        if (size < (1 << 16)) {
+            commands->UpdateBuffer(*state.glyph_batch_data.instance_buffer, 0, state.glyph_batch_data.buffer, size);
+        } else {
+            state.context->WriteBuffer(*state.glyph_batch_data.instance_buffer, 0, state.glyph_batch_data.buffer, size);
+        }
+    }
+
+    if (ninepatch_total_count > 0) {
+        const ptrdiff_t size = (uint8_t*) state.ninepatch_batch_data.buffer_ptr - (uint8_t*) state.ninepatch_batch_data.buffer;
+        if (size < (1 << 16)) {
+            commands->UpdateBuffer(*state.ninepatch_batch_data.instance_buffer, 0, state.ninepatch_batch_data.buffer, size);
+        } else {
+            state.context->WriteBuffer(*state.ninepatch_batch_data.instance_buffer, 0, state.ninepatch_batch_data.buffer, size);
+        }
+    }
+}
+
+static inline void SortWorldDrawCommands() {
+    std::sort(
+        state.world_draw_commands.begin(),
+        state.world_draw_commands.end(),
+        [](const DrawCommand& a, const DrawCommand& b) {
+            return a.order() < b.order();
+        }
+    );
+
+    Texture sprite_prev_texture;
+    uint32_t sprite_count = 0;
+    uint32_t sprite_total_count = 0;
+    uint32_t sprite_vertex_offset = 0;
+
+    for (const DrawCommand& draw_command : state.world_draw_commands) {
+        if (draw_command.type() == DrawCommand::DrawSprite) {
+            const DrawCommandSprite& sprite_data = draw_command.sprite_data();
+
+            if (sprite_prev_texture.id() < 0) {
+                sprite_prev_texture = sprite_data.texture;
+            }
+
+            const uint32_t prev_texture_id = sprite_prev_texture.id();
+            const uint32_t curr_texture_id = sprite_data.texture.id();
+
+            if (prev_texture_id != curr_texture_id) {
+                state.world_flush_queue.push_back(FlushData {
+                    .texture = sprite_prev_texture,
+                    .offset = sprite_vertex_offset,
+                    .count = sprite_count,
+                    .type = FlushDataType::Sprite
+                });
+                sprite_count = 0;
+                sprite_vertex_offset = sprite_total_count;
+            }
+
+            const float order = static_cast<float>(sprite_data.order);
+
+            int flags = 0;
+            flags |= sprite_data.ignore_camera_zoom << SpriteFlags::IgnoreCameraZoom;
+            flags |= sprite_data.is_ui << SpriteFlags::UI;
+            flags |= (curr_texture_id >= 0) << SpriteFlags::HasTexture;
+
+            state.sprite_batch_data.world_buffer_ptr->position = glm::vec3(sprite_data.position, order);
+            state.sprite_batch_data.world_buffer_ptr->rotation = sprite_data.rotation;
+            state.sprite_batch_data.world_buffer_ptr->size = sprite_data.size;
+            state.sprite_batch_data.world_buffer_ptr->offset = sprite_data.offset;
+            state.sprite_batch_data.world_buffer_ptr->uv_offset_scale = sprite_data.uv_offset_scale;
+            state.sprite_batch_data.world_buffer_ptr->color = sprite_data.color;
+            state.sprite_batch_data.world_buffer_ptr->outline_color = sprite_data.outline_color;
+            state.sprite_batch_data.world_buffer_ptr->outline_thickness = sprite_data.outline_thickness;
+            state.sprite_batch_data.world_buffer_ptr->flags = flags;
+            state.sprite_batch_data.world_buffer_ptr++;
+
+            sprite_count += 1;
+            sprite_total_count += 1;
+
+            sprite_prev_texture = sprite_data.texture;
+        }
+    }
+
+    if (sprite_count > 0) {
+        state.world_flush_queue.push_back(FlushData {
+            .texture = sprite_prev_texture,
+            .offset = sprite_vertex_offset,
+            .count = sprite_count,
+            .type = FlushDataType::Sprite
+        });
+    }
+
+    auto* const commands = state.command_buffer;
+
+    if (sprite_total_count > 0) {
+        const ptrdiff_t size = (uint8_t*) state.sprite_batch_data.world_buffer_ptr - (uint8_t*) state.sprite_batch_data.world_buffer;
+        if (size < (1 << 16)) {
+            commands->UpdateBuffer(*state.sprite_batch_data.world_instance_buffer, 0, state.sprite_batch_data.world_buffer, size);
+        } else {
+            state.context->WriteBuffer(*state.sprite_batch_data.world_instance_buffer, 0, state.sprite_batch_data.world_buffer, size);
+        }
+    }
+}
+
+static void ApplyDrawCommands() {
+    auto* const commands = state.command_buffer;
+
+    for (const FlushData& flush_data : state.flush_queue) {
+        switch (flush_data.type) {
+
+        case FlushDataType::Sprite:
+            commands->SetVertexBufferArray(*state.sprite_batch_data.buffer_array);
+            commands->SetPipelineState(*state.sprite_batch_data.pipeline);
+        break;
+
+        case FlushDataType::Glyph:
+            commands->SetVertexBufferArray(*state.glyph_batch_data.buffer_array);
+            commands->SetPipelineState(*state.glyph_batch_data.pipeline);
+        break;
+
+        case FlushDataType::NinePatch:
+            commands->SetVertexBufferArray(*state.ninepatch_batch_data.buffer_array);
+            commands->SetPipelineState(*state.ninepatch_batch_data.pipeline);
+        break;
+        }
+
+        commands->SetResource(0, *state.constant_buffer);
+        commands->SetResource(1, flush_data.texture);
+        commands->SetResource(2, Assets::GetSampler(flush_data.texture));
+        commands->DrawInstanced(4, 0, flush_data.count, flush_data.offset);
+    }
+}
+
+static void ApplyWorldDrawCommands() {
+    auto* const commands = state.command_buffer;
+
+    for (const FlushData& flush_data : state.world_flush_queue) {
+        if (flush_data.type != FlushDataType::Sprite) continue;
+
+        commands->SetVertexBufferArray(*state.sprite_batch_data.world_buffer_array);
+        commands->SetPipelineState(*state.sprite_batch_data.pipeline);
+
+        commands->SetResource(0, *state.constant_buffer);
+        commands->SetResource(1, flush_data.texture);
+        commands->SetResource(2, Assets::GetSampler(flush_data.texture));
+        commands->DrawInstanced(4, 0, flush_data.count, flush_data.offset);
+    }
 }
 
 void Renderer::Render(const Camera& camera, const World& world) {
@@ -382,6 +1296,9 @@ void Renderer::Render(const Camera& camera, const World& world) {
 
     commands->UpdateBuffer(*state.constant_buffer, 0, &projections_uniform, sizeof(projections_uniform));
 
+    SortDrawCommands();
+    SortWorldDrawCommands();
+
     state.particle_renderer.compute();
     state.particle_renderer.prepare();
 
@@ -404,8 +1321,9 @@ void Renderer::Render(const Camera& camera, const World& world) {
         commands->Clear(LLGL::ClearFlags::ColorDepth, clear_value);
         state.background_renderer.render_world();
         state.world_renderer.render(world.chunk_manager());
-        state.sprite_batch.render_world();
-        state.particle_renderer.render_world();
+
+        ApplyWorldDrawCommands();
+
     commands->EndRenderPass();
 
     commands->BeginRenderPass(*state.swap_chain);
@@ -418,9 +1336,8 @@ void Renderer::Render(const Camera& camera, const World& world) {
         commands->Draw(3, 0);
 
         state.particle_renderer.render();
-        state.sprite_batch.render();
-        state.ninepatch_batch.render();
-        state.glyph_batch.render();
+
+        ApplyDrawCommands();
     commands->EndRenderPass();
 
     commands->End();
@@ -464,9 +1381,9 @@ inline static void add_sprite_to_batch(const Sprite& sprite, RenderLayer layer, 
     }
 
     if (layer == RenderLayer::World) {
-        state.sprite_batch.draw_world_sprite(sprite, uv_offset_scale, sprite.texture(), depth);
+        draw_world_sprite(sprite, uv_offset_scale, sprite.texture(), depth);
     } else {
-        state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.texture(), is_ui, depth);
+        draw_sprite(sprite, uv_offset_scale, sprite.texture(), is_ui, depth);
     }
 }
 
@@ -491,9 +1408,9 @@ inline static void add_atlas_sprite_to_batch(const TextureAtlasSprite& sprite, R
     }
 
     if (layer == RenderLayer::World) {
-        state.sprite_batch.draw_world_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), depth);
+        draw_world_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), depth);
     } else {
-        state.sprite_batch.draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), is_ui, depth);
+        draw_sprite(sprite, uv_offset_scale, sprite.atlas().texture(), is_ui, depth);
     }
 }
 
@@ -510,7 +1427,7 @@ inline static void add_ninepatch_to_batch(const NinePatch& ninepatch, RenderLaye
         uv_offset_scale.w *= -1.0f;
     }
     
-    state.ninepatch_batch.draw_ninepatch(ninepatch, uv_offset_scale, ninepatch.texture(), is_ui, depth);
+    draw_ninepatch(ninepatch, uv_offset_scale, ninepatch.texture(), is_ui, depth);
 }
 
 void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer, Depth depth) {
@@ -606,7 +1523,7 @@ void Renderer::DrawText(const RichTextSection* sections, size_t size, const glm:
             const glm::vec2 pos = glm::vec2(xpos, ypos);
             const glm::vec2 size = glm::vec2(ch.size) * scale;
 
-            state.glyph_batch.draw_glyph(pos, size, section.color, font.texture, ch.texture_coords, ch.tex_size, is_ui, order);
+            draw_glyph(pos, size, section.color, font.texture, ch.texture_coords, ch.tex_size, is_ui, order);
 
             x += (ch.advance >> 6) * scale;
         }
@@ -752,9 +1669,27 @@ LLGL::Shader* Renderer::LoadShader(const ShaderPath& shader_path, const std::vec
 void Renderer::Terminate() {
     Assets::DestroyShaders();
 
-    state.sprite_batch.terminate();
-    state.glyph_batch.terminate();
-    state.ninepatch_batch.terminate();
+    RESOURCE_RELEASE(state.sprite_batch_data.vertex_buffer)
+    RESOURCE_RELEASE(state.sprite_batch_data.instance_buffer)
+    RESOURCE_RELEASE(state.sprite_batch_data.buffer_array)
+    RESOURCE_RELEASE(state.sprite_batch_data.pipeline)
+    RESOURCE_RELEASE(state.sprite_batch_data.world_instance_buffer)
+    RESOURCE_RELEASE(state.sprite_batch_data.world_buffer_array)
+    delete[] state.sprite_batch_data.buffer;
+    delete[] state.sprite_batch_data.world_buffer;
+
+    RESOURCE_RELEASE(state.glyph_batch_data.vertex_buffer)
+    RESOURCE_RELEASE(state.glyph_batch_data.instance_buffer)
+    RESOURCE_RELEASE(state.glyph_batch_data.buffer_array)
+    RESOURCE_RELEASE(state.glyph_batch_data.pipeline)
+    delete[] state.glyph_batch_data.buffer;
+
+    RESOURCE_RELEASE(state.ninepatch_batch_data.vertex_buffer)
+    RESOURCE_RELEASE(state.ninepatch_batch_data.instance_buffer)
+    RESOURCE_RELEASE(state.ninepatch_batch_data.buffer_array)
+    RESOURCE_RELEASE(state.ninepatch_batch_data.pipeline)
+    delete[] state.ninepatch_batch_data.buffer;
+
     state.world_renderer.terminate();
     state.background_renderer.terminate();
     state.particle_renderer.terminate();
@@ -767,876 +1702,4 @@ void Renderer::Terminate() {
     Assets::DestroySamplers();
 
     LLGL::RenderSystem::Unload(std::move(state.context));
-}
-
-//
-// ------------------ Batch ---------------------
-//
-
-void RenderBatchSprite::init() {
-    ZoneScopedN("RenderBatchSprite::init");
-
-    const RenderBackend backend = state.backend;
-    const auto& context = state.context;
-
-    m_buffer = new SpriteInstance[MAX_QUADS];
-    m_world_buffer = new SpriteInstance[MAX_QUADS];
-
-    const Vertex vertices[] = {
-        Vertex(0.0f, 0.0f),
-        Vertex(0.0f, 1.0f),
-        Vertex(1.0f, 0.0f),
-        Vertex(1.0f, 1.0f),
-    };
-
-    m_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::SpriteVertex), "SpriteBatch VertexBuffer");
-
-    m_instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(SpriteInstance), Assets::GetVertexFormat(VertexFormatAsset::SpriteInstance), "SpriteBatch InstanceBuffer");
-    m_world_instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(SpriteInstance), Assets::GetVertexFormat(VertexFormatAsset::SpriteInstance), "SpriteBatchWorld InstanceBuffer");
-
-    {
-        LLGL::Buffer* buffers[] = { m_vertex_buffer, m_instance_buffer };
-        m_buffer_array = context->CreateBufferArray(2, buffers);
-    }
-    {
-        LLGL::Buffer* buffers[] = { m_vertex_buffer, m_world_instance_buffer };
-        m_world_buffer_array = context->CreateBufferArray(2, buffers);
-    }
-
-    LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
-    pipelineLayoutDesc.bindings = {
-        LLGL::BindingDescriptor(
-            "GlobalUniformBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::ConstantBuffer,
-            LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(2)
-        ),
-        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
-        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
-    };
-
-    LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
-
-    const ShaderPipeline& sprite_shader = Assets::GetShader(ShaderAsset::SpriteShader);
-
-    LLGL::GraphicsPipelineDescriptor pipelineDesc;
-    pipelineLayoutDesc.debugName = "SpriteBatch Pipeline";
-    pipelineDesc.vertexShader = sprite_shader.vs;
-    pipelineDesc.fragmentShader = sprite_shader.ps;
-    pipelineDesc.geometryShader = sprite_shader.gs;
-    pipelineDesc.pipelineLayout = pipelineLayout;
-    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
-    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
-    pipelineDesc.renderPass = state.swap_chain->GetRenderPass();
-    pipelineDesc.rasterizer.frontCCW = true;
-    pipelineDesc.depth = LLGL::DepthDescriptor {
-        .testEnabled = true,
-        .writeEnabled = true,
-        .compareOp = LLGL::CompareOp::GreaterEqual
-    };
-    pipelineDesc.blend = LLGL::BlendDescriptor {
-        .targets = {
-            LLGL::BlendTargetDescriptor {
-                .blendEnabled = true,
-                .srcColor = LLGL::BlendOp::SrcAlpha,
-                .dstColor = LLGL::BlendOp::InvSrcAlpha,
-                .srcAlpha = LLGL::BlendOp::Zero,
-                .dstAlpha = LLGL::BlendOp::One,
-                .alphaArithmetic = LLGL::BlendArithmetic::Max
-            }
-        }
-    };
-
-    m_pipeline = context->CreatePipelineState(pipelineDesc);
-
-    if (const LLGL::Report* report = m_pipeline->GetReport()) {
-        if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
-    }
-}
-
-void RenderBatchSprite::draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const std::optional<Texture>& sprite_texture, bool is_ui, Depth depth) {
-    ZoneScopedN("RenderBatchSprite::draw_sprite");
-
-    if (m_sprites.size() >= MAX_QUADS) {
-        render();
-        begin();
-    }
-
-    if (state.depth_mode) depth = state.depth;
-
-    uint32_t& depth_index = state.main_depth_index;
-    uint32_t& max_depth = state.max_main_depth;
-
-    const int order = depth.value < 0 ? depth_index : depth.value;
-    const uint32_t new_index = depth.value < 0 ? depth_index + 1 : depth.value;
-
-    if (depth.advance) depth_index = std::max(depth_index, static_cast<uint32_t>(new_index));
-    if (static_cast<uint32_t>(order) > max_depth) max_depth = order;
-
-    m_sprites.push_back(SpriteData {
-        .position = sprite.position(),
-        .rotation = sprite.rotation(),
-        .size = sprite.size(),
-        .offset = sprite.anchor().to_vec2(),
-        .uv_offset_scale = uv_offset_scale,
-        .color = sprite.color(),
-        .outline_color = sprite.outline_color(),
-        .outline_thickness = sprite.outline_thickness(),
-        .texture = sprite_texture.has_value() ? sprite_texture.value() : Assets::GetTexture(TextureAsset::Stub),
-        .order = static_cast<uint32_t>(order),
-        .is_ui = is_ui,
-        .ignore_camera_zoom = sprite.ignore_camera_zoom()
-    });
-}
-
-void RenderBatchSprite::draw_world_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const std::optional<Texture>& sprite_texture, Depth depth) {
-    ZoneScopedN("RenderBatchSprite::draw_world_sprite");
-
-    if (m_world_sprites.size() >= MAX_QUADS) {
-        render();
-        begin();
-    }
-
-    if (state.depth_mode) depth = state.depth;
-
-    uint32_t& depth_index = state.world_depth_index;
-    uint32_t& max_depth = state.max_world_depth;
-
-    const int order = depth.value < 0 ? depth_index : depth.value;
-    const uint32_t new_index = depth.value < 0 ? depth_index + 1 : depth.value;
-
-    if (depth.advance) depth_index = std::max(depth_index, static_cast<uint32_t>(new_index));
-    if (static_cast<uint32_t>(order) > max_depth) max_depth = order;
-
-    m_world_sprites.push_back(SpriteData {
-        .position = sprite.position(),
-        .rotation = sprite.rotation(),
-        .size = sprite.size(),
-        .offset = sprite.anchor().to_vec2(),
-        .uv_offset_scale = uv_offset_scale,
-        .color = sprite.color(),
-        .outline_color = sprite.outline_color(),
-        .outline_thickness = sprite.outline_thickness(),
-        .texture = sprite_texture.has_value() ? sprite_texture.value() : Assets::GetTexture(TextureAsset::Stub),
-        .order = static_cast<uint32_t>(order),
-        .is_ui = false,
-        .ignore_camera_zoom = sprite.ignore_camera_zoom()
-    });
-}
-
-void RenderBatchSprite::render() {
-    ZoneScopedN("RenderBatchSprite::render");
-
-    std::vector<SpriteData>& sprites = m_sprites;
-
-    if (sprites.empty()) return;
-
-    std::sort(
-        sprites.begin(),
-        sprites.end(),
-        [](const SpriteData& a, const SpriteData& b) {
-            if (!a.is_ui && b.is_ui) return true;
-            if (a.is_ui && !b.is_ui) return false;
-
-            return a.texture.id() < b.texture.id();
-        }
-    );
-    
-    Texture prev_texture = sprites[0].texture;
-    uint32_t sprite_count = 0;
-    uint32_t total_sprite_count = 0;
-    int vertex_offset = 0;
-
-    for (const SpriteData& sprite_data : sprites) {
-        const uint32_t prev_texture_id = prev_texture.id();
-        const uint32_t curr_texture_id = sprite_data.texture.id();
-
-        if (prev_texture_id != curr_texture_id) {
-            m_sprite_flush_queue.push_back(FlushData {
-                .texture = prev_texture,
-                .offset = vertex_offset,
-                .count = sprite_count
-            });
-            sprite_count = 0;
-            vertex_offset = total_sprite_count;
-        }
-
-        const float order = static_cast<float>(sprite_data.order);
-
-        int flags = 0;
-        flags |= sprite_data.ignore_camera_zoom << SpriteFlags::IgnoreCameraZoom;
-        flags |= sprite_data.is_ui << SpriteFlags::UI;
-        flags |= (curr_texture_id >= 0) << SpriteFlags::HasTexture;
-
-        m_buffer_ptr->position = glm::vec3(sprite_data.position, order);
-        m_buffer_ptr->rotation = sprite_data.rotation;
-        m_buffer_ptr->size = sprite_data.size;
-        m_buffer_ptr->offset = sprite_data.offset;
-        m_buffer_ptr->uv_offset_scale = sprite_data.uv_offset_scale;
-        m_buffer_ptr->color = sprite_data.color;
-        m_buffer_ptr->outline_color = sprite_data.outline_color;
-        m_buffer_ptr->outline_thickness = sprite_data.outline_thickness;
-        m_buffer_ptr->flags = flags;
-        m_buffer_ptr++;
-
-        sprite_count += 1;
-        total_sprite_count += 1;
-
-        prev_texture = sprite_data.texture;
-    }
-
-    m_sprite_flush_queue.push_back(FlushData {
-        .texture = prev_texture,
-        .offset = vertex_offset,
-        .count = sprite_count
-    });
-
-    flush();
-}
-
-void RenderBatchSprite::render_world() {
-    ZoneScopedN("RenderBatchSprite::render_world");
-
-    std::vector<SpriteData>& sprites = m_world_sprites;
-
-    if (sprites.empty()) return;
-
-    std::sort(
-        sprites.begin(),
-        sprites.end(),
-        [](const SpriteData& a, const SpriteData& b) {
-            return a.texture.id() < b.texture.id();
-        }
-    );
-    
-    Texture prev_texture = sprites[0].texture;
-    uint32_t sprite_count = 0;
-    uint32_t total_sprite_count = 0;
-    int vertex_offset = 0;
-
-    for (const SpriteData& sprite_data : sprites) {
-        const uint32_t prev_texture_id = prev_texture.id();
-        const uint32_t curr_texture_id = sprite_data.texture.id();
-
-        if (prev_texture_id != curr_texture_id) {
-            m_world_sprite_flush_queue.push_back(FlushData {
-                .texture = prev_texture,
-                .offset = vertex_offset,
-                .count = sprite_count
-            });
-            sprite_count = 0;
-            vertex_offset = total_sprite_count;
-        }
-
-        const float order = static_cast<float>(sprite_data.order);
-
-        int flags = 1 << SpriteFlags::World;
-        flags |= sprite_data.ignore_camera_zoom << SpriteFlags::IgnoreCameraZoom;
-        flags |= (curr_texture_id >= 0) << SpriteFlags::HasTexture;
-
-        m_world_buffer_ptr->position = glm::vec3(sprite_data.position, order);
-        m_world_buffer_ptr->rotation = sprite_data.rotation;
-        m_world_buffer_ptr->size = sprite_data.size;
-        m_world_buffer_ptr->offset = sprite_data.offset;
-        m_world_buffer_ptr->uv_offset_scale = sprite_data.uv_offset_scale;
-        m_world_buffer_ptr->color = sprite_data.color;
-        m_world_buffer_ptr->outline_color = sprite_data.outline_color;
-        m_world_buffer_ptr->outline_thickness = sprite_data.outline_thickness;
-        m_world_buffer_ptr->flags = flags;
-        m_world_buffer_ptr++;
-
-        sprite_count += 1;
-        total_sprite_count += 1;
-
-        prev_texture = sprite_data.texture;
-    }
-
-    m_world_sprite_flush_queue.push_back(FlushData {
-        .texture = prev_texture,
-        .offset = vertex_offset,
-        .count = sprite_count
-    });
-
-    flush_world();
-}
-
-void RenderBatchSprite::flush() {
-    ZoneScopedN("RenderBatchSprite::flush");
-
-    auto* const commands = state.command_buffer;
-
-    // ptrdiff_t remaining = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    // size_t offset = 0;
-    // while (remaining > 0) {
-    //     const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
-    //     commands->UpdateBuffer(*m_instance_buffer, offset, m_buffer, size);
-    //     remaining -= size;
-    //     offset += size;
-    // }
-
-    const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    if (size < (1 << 16)) {
-        commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, size);
-    } else {
-        state.context->WriteBuffer(*m_instance_buffer, 0, m_buffer, size);
-    }
-
-    // ptrdiff_t remaining = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    // if (remaining <= (1 << 16) - 1) {
-    //     commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, remaining);
-    // } else {
-    //     // Renderer::Context()->WriteBuffer(*m_instance_buffer, 0, m_buffer, remaining);
-    //     size_t offset = 0;
-    //     while (remaining > 0) {
-    //         const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
-    //         commands->UpdateBuffer(*m_instance_buffer, offset, m_buffer, size);
-    //         remaining -= size;
-    //         offset += size;
-    //     }
-    // }
-    
-    commands->SetVertexBufferArray(*m_buffer_array);
-
-    commands->SetPipelineState(*m_pipeline);
-    commands->SetResource(0, *state.constant_buffer);
-
-    for (const FlushData& flush_data : m_sprite_flush_queue) {
-        commands->SetResource(1, flush_data.texture);
-        commands->SetResource(2, Assets::GetSampler(flush_data.texture));
-        commands->DrawInstanced(4, 0, flush_data.count, flush_data.offset);
-    }
-}
-
-void RenderBatchSprite::flush_world() {
-    ZoneScopedN("RenderBatchSprite::flush_world");
-
-    auto* const commands = state.command_buffer;
-
-    // ptrdiff_t remaining = (uint8_t*) m_world_buffer_ptr - (uint8_t*) m_world_buffer;
-    // size_t offset = 0;
-    // while (remaining > 0) {
-    //     const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
-    //     commands->UpdateBuffer(*m_world_instance_buffer, offset, m_world_buffer, size);
-    //     remaining -= size;
-    //     offset += size;
-    // }
-
-    const ptrdiff_t size = (uint8_t*) m_world_buffer_ptr - (uint8_t*) m_world_buffer;
-    if (size < (1 << 16)) {
-        commands->UpdateBuffer(*m_world_instance_buffer, 0, m_world_buffer, size);
-    } else {
-        state.context->WriteBuffer(*m_world_instance_buffer, 0, m_world_buffer, size);
-    }
-
-    // ptrdiff_t remaining = (uint8_t*) m_world_buffer_ptr - (uint8_t*) m_world_buffer;
-    // if (remaining <= (1 << 16) - 1) {
-    //     commands->UpdateBuffer(*m_world_instance_buffer, 0, m_world_buffer, remaining);
-    // } else {
-    //     Renderer::Context()->WriteBuffer(*m_world_instance_buffer, 0, m_world_buffer, remaining);
-
-    //     size_t offset = 0;
-    //     while (remaining > 0) {
-    //         const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
-    //         commands->UpdateBuffer(*m_world_instance_buffer, offset, m_world_buffer, size);
-    //         remaining -= size;
-    //         offset += size;
-    //     }
-    // }
-    
-    commands->SetVertexBufferArray(*m_world_buffer_array);
-
-    commands->SetPipelineState(*m_pipeline);
-    commands->SetResource(0, *state.constant_buffer);
-
-    for (const FlushData& flush_data : m_world_sprite_flush_queue) {
-        commands->SetResource(1, flush_data.texture);
-        commands->SetResource(2, Assets::GetSampler(flush_data.texture));
-        commands->DrawInstanced(4, 0, flush_data.count, flush_data.offset);
-    }
-}
-
-void RenderBatchSprite::begin() {
-    ZoneScopedN("RenderBatchSprite::begin");
-
-    m_buffer_ptr = m_buffer;
-    m_world_buffer_ptr = m_world_buffer;
-
-    m_sprite_flush_queue.clear();
-    m_sprites.clear();
-
-    m_world_sprite_flush_queue.clear();
-    m_world_sprites.clear();
-}
-
-void RenderBatchSprite::terminate() {
-    RESOURCE_RELEASE(m_vertex_buffer)
-    RESOURCE_RELEASE(m_instance_buffer)
-    RESOURCE_RELEASE(m_world_instance_buffer)
-    RESOURCE_RELEASE(m_buffer_array)
-    RESOURCE_RELEASE(m_world_buffer_array)
-    RESOURCE_RELEASE(m_pipeline)
-
-    delete[] m_buffer;
-    delete[] m_world_buffer;
-}
-
-
-void RenderBatchNinePatch::init() {
-    ZoneScopedN("RenderBatchNinePatch::init");
-
-    const RenderBackend backend = state.backend;
-    const auto& context = state.context;
-
-    m_buffer = new NinePatchInstance[MAX_QUADS];
-
-    const Vertex vertices[] = {
-        Vertex(0.0f, 0.0f),
-        Vertex(0.0f, 1.0f),
-        Vertex(1.0f, 0.0f),
-        Vertex(1.0f, 1.0f),
-    };
-
-    m_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::NinePatchVertex), "NinePatchBatch VertexBuffer");
-
-    m_instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(NinePatchInstance), Assets::GetVertexFormat(VertexFormatAsset::NinePatchInstance), "NinePatchBatch InstanceBuffer");
-
-    {
-        LLGL::Buffer* buffers[] = { m_vertex_buffer, m_instance_buffer };
-        m_buffer_array = context->CreateBufferArray(2, buffers);
-    }
-
-    LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
-    pipelineLayoutDesc.bindings = {
-        LLGL::BindingDescriptor(
-            "GlobalUniformBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::ConstantBuffer,
-            LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(2)
-        ),
-        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
-        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
-    };
-
-    LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
-
-    const ShaderPipeline& ninepatch_shader = Assets::GetShader(ShaderAsset::NinePatchShader);
-
-    LLGL::GraphicsPipelineDescriptor pipelineDesc;
-    pipelineLayoutDesc.debugName = "NinePatchBatch Pipeline";
-    pipelineDesc.vertexShader = ninepatch_shader.vs;
-    pipelineDesc.fragmentShader = ninepatch_shader.ps;
-    pipelineDesc.geometryShader = ninepatch_shader.gs;
-    pipelineDesc.pipelineLayout = pipelineLayout;
-    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
-    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
-    pipelineDesc.renderPass = state.swap_chain->GetRenderPass();
-    pipelineDesc.rasterizer.frontCCW = true;
-    pipelineDesc.depth = LLGL::DepthDescriptor {
-        .testEnabled = true,
-        .writeEnabled = true,
-        .compareOp = LLGL::CompareOp::GreaterEqual
-    };
-    pipelineDesc.blend = LLGL::BlendDescriptor {
-        .targets = {
-            LLGL::BlendTargetDescriptor {
-                .blendEnabled = true,
-                .srcColor = LLGL::BlendOp::SrcAlpha,
-                .dstColor = LLGL::BlendOp::InvSrcAlpha,
-                .srcAlpha = LLGL::BlendOp::Zero,
-                .dstAlpha = LLGL::BlendOp::One,
-                .alphaArithmetic = LLGL::BlendArithmetic::Max
-            }
-        }
-    };
-
-    m_pipeline = context->CreatePipelineState(pipelineDesc);
-
-    if (const LLGL::Report* report = m_pipeline->GetReport()) {
-        if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
-    }
-}
-
-void RenderBatchNinePatch::draw_ninepatch(const NinePatch& ninepatch, const glm::vec4& uv_offset_scale, const Texture& texture, bool is_ui, Depth depth) {
-    ZoneScopedN("RenderBatchNinePatch::draw_nine_patch");
-
-    if (m_ninepatches.size() >= MAX_QUADS) {
-        render();
-        begin();
-    }
-
-    if (state.depth_mode) depth = state.depth;
-
-    uint32_t& depth_index = state.main_depth_index;
-    uint32_t& max_depth = state.max_main_depth;
-
-    const int order = depth.value < 0 ? depth_index : depth.value;
-    const uint32_t new_index = depth.value < 0 ? depth_index + 1 : depth.value;
-
-    if (depth.advance) depth_index = std::max(depth_index, static_cast<uint32_t>(new_index));
-    if (static_cast<uint32_t>(order) > max_depth) max_depth = order;
-
-    m_ninepatches.push_back(NinePatchData {
-        .texture = texture,
-        .rotation = ninepatch.rotation(),
-        .uv_offset_scale = uv_offset_scale,
-        .margin = ninepatch.margin(),
-        .color = ninepatch.color(),
-        .position = ninepatch.position(),
-        .size = ninepatch.size(),
-        .offset = ninepatch.anchor().to_vec2(),
-        .source_size = ninepatch.texture().size(),
-        .output_size = ninepatch.size(),
-        .order = static_cast<uint32_t>(order),
-        .is_ui = is_ui,
-    });
-}
-
-void RenderBatchNinePatch::render() {
-    ZoneScopedN("RenderBatchNinePatch::render");
-
-    std::vector<NinePatchData>& ninepatches = m_ninepatches;
-
-    if (ninepatches.empty()) return;
-
-    std::sort(
-        ninepatches.begin(),
-        ninepatches.end(),
-        [](const NinePatchData& a, const NinePatchData& b) {
-            if (!a.is_ui && b.is_ui) return true;
-            if (a.is_ui && !b.is_ui) return false;
-
-            return a.texture.id() < b.texture.id();
-        }
-    );
-    
-    Texture prev_texture = ninepatches[0].texture;
-    uint32_t sprite_count = 0;
-    uint32_t total_sprite_count = 0;
-    int vertex_offset = 0;
-
-    for (const NinePatchData& ninepatch_data : ninepatches) {
-        const uint32_t prev_texture_id = prev_texture.id();
-        const uint32_t curr_texture_id = ninepatch_data.texture.id();
-
-        if (prev_texture_id != curr_texture_id) {
-            m_ninepatch_flush_queue.push_back(FlushData {
-                .texture = prev_texture,
-                .offset = vertex_offset,
-                .count = sprite_count
-            });
-            sprite_count = 0;
-            vertex_offset = total_sprite_count;
-        }
-
-        const float order = static_cast<float>(ninepatch_data.order);
-
-        int flags = ninepatch_data.is_ui << SpriteFlags::UI;
-
-        m_buffer_ptr->position = glm::vec3(ninepatch_data.position, order);
-        m_buffer_ptr->rotation = ninepatch_data.rotation;
-        m_buffer_ptr->margin = ninepatch_data.margin;
-        m_buffer_ptr->size = ninepatch_data.size;
-        m_buffer_ptr->offset = ninepatch_data.offset;
-        m_buffer_ptr->source_size = ninepatch_data.source_size;
-        m_buffer_ptr->output_size = ninepatch_data.output_size;
-        m_buffer_ptr->uv_offset_scale = ninepatch_data.uv_offset_scale;
-        m_buffer_ptr->color = ninepatch_data.color;
-        m_buffer_ptr->flags = flags;
-        m_buffer_ptr++;
-
-        sprite_count += 1;
-        total_sprite_count += 1;
-
-        prev_texture = ninepatch_data.texture;
-    }
-
-    m_ninepatch_flush_queue.push_back(FlushData {
-        .texture = prev_texture,
-        .offset = vertex_offset,
-        .count = sprite_count
-    });
-
-    flush();
-}
-
-void RenderBatchNinePatch::flush() {
-    ZoneScopedN("RenderBatchNinePatch::flush");
-
-    auto* const commands = state.command_buffer;
-
-    // ptrdiff_t remaining = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    // size_t offset = 0;
-    // while (remaining > 0) {
-    //     const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
-    //     commands->UpdateBuffer(*m_instance_buffer, offset, m_buffer, size);
-    //     remaining -= size;
-    //     offset += size;
-    // }
-
-    const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    if (size < (1 << 16)) {
-        commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, size);
-    } else {
-        state.context->WriteBuffer(*m_instance_buffer, 0, m_buffer, size);
-    }
-
-    // ptrdiff_t remaining = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    // if (remaining <= (1 << 16) - 1) {
-    //     commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, remaining);
-    // } else {
-    //     // Renderer::Context()->WriteBuffer(*m_instance_buffer, 0, m_buffer, remaining);
-    //     size_t offset = 0;
-    //     while (remaining > 0) {
-    //         const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
-    //         commands->UpdateBuffer(*m_instance_buffer, offset, m_buffer, size);
-    //         remaining -= size;
-    //         offset += size;
-    //     }
-    // }
-    
-    commands->SetVertexBufferArray(*m_buffer_array);
-
-    commands->SetPipelineState(*m_pipeline);
-    commands->SetResource(0, *state.constant_buffer);
-
-    for (const FlushData& flush_data : m_ninepatch_flush_queue) {
-        commands->SetResource(1, flush_data.texture);
-        commands->SetResource(2, Assets::GetSampler(flush_data.texture));
-        commands->DrawInstanced(4, 0, flush_data.count, flush_data.offset);
-    }
-}
-
-void RenderBatchNinePatch::begin() {
-    ZoneScopedN("RenderBatchNinePatch::begin");
-
-    m_buffer_ptr = m_buffer;
-
-    m_ninepatch_flush_queue.clear();
-    m_ninepatches.clear();
-}
-
-void RenderBatchNinePatch::terminate() {
-    RESOURCE_RELEASE(m_vertex_buffer)
-    RESOURCE_RELEASE(m_instance_buffer)
-    RESOURCE_RELEASE(m_buffer_array)
-    RESOURCE_RELEASE(m_pipeline)
-
-    delete[] m_buffer;
-}
-
-void RenderBatchGlyph::init() {
-    ZoneScopedN("RenderBatchGlyph::init");
-
-    const RenderBackend backend = state.backend;
-    const auto& context = state.context;
-
-    m_buffer = new GlyphInstance[MAX_QUADS];
-
-    const Vertex vertices[] = {
-        Vertex(0.0f, 0.0f),
-        Vertex(0.0f, 1.0f),
-        Vertex(1.0f, 0.0f),
-        Vertex(1.0f, 1.0f),
-    };
-
-    m_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::FontVertex), "GlyphBatch VertexBuffer");
-    m_instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(GlyphInstance), Assets::GetVertexFormat(VertexFormatAsset::FontInstance), "GlyphBatch InstanceBuffer");
-
-    LLGL::Buffer* buffers[] = { m_vertex_buffer, m_instance_buffer };
-    m_buffer_array = context->CreateBufferArray(2, buffers);
-
-    LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
-    pipelineLayoutDesc.bindings = {
-        LLGL::BindingDescriptor(
-            "GlobalUniformBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::ConstantBuffer,
-            LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(2)
-        ),
-        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
-        LLGL::BindingDescriptor("u_sampler", LLGL::ResourceType::Sampler, 0, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4)),
-    };
-
-    LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
-
-    const ShaderPipeline& font_shader = Assets::GetShader(ShaderAsset::FontShader);
-
-    LLGL::GraphicsPipelineDescriptor pipelineDesc;
-    pipelineLayoutDesc.debugName = "GlyphBatch Pipeline";
-    pipelineDesc.vertexShader = font_shader.vs;
-    pipelineDesc.fragmentShader = font_shader.ps;
-    pipelineDesc.geometryShader = font_shader.gs;
-    pipelineDesc.pipelineLayout = pipelineLayout;
-    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
-    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
-    pipelineDesc.renderPass = state.swap_chain->GetRenderPass();
-    pipelineDesc.rasterizer.frontCCW = true;
-    pipelineDesc.depth = LLGL::DepthDescriptor {
-        .testEnabled = true,
-        .writeEnabled = true,
-        .compareOp = LLGL::CompareOp::GreaterEqual
-    };
-    pipelineDesc.blend = LLGL::BlendDescriptor {
-        .targets = {
-            LLGL::BlendTargetDescriptor {
-                .blendEnabled = true,
-                .srcColor = LLGL::BlendOp::SrcAlpha,
-                .dstColor = LLGL::BlendOp::InvSrcAlpha,
-                .srcAlpha = LLGL::BlendOp::Zero,
-                .dstAlpha = LLGL::BlendOp::One,
-                .alphaArithmetic = LLGL::BlendArithmetic::Max
-            }
-        }
-    };
-
-    m_pipeline = context->CreatePipelineState(pipelineDesc);
-
-    if (const LLGL::Report* report = m_pipeline->GetReport()) {
-        if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
-    }
-}
-
-void RenderBatchGlyph::draw_glyph(const glm::vec2& pos, const glm::vec2& size, const glm::vec3& color, const Texture& font_texture, const glm::vec2& tex_uv, const glm::vec2& tex_size, bool ui, uint32_t depth) {
-    ZoneScopedN("RenderBatchGlyph::draw_glyph");
-
-    if (m_glyphs.size() >= MAX_QUADS) {
-        render();
-        begin();
-    }
-
-    m_glyphs.push_back(GlyphData {
-        .texture = font_texture,
-        .color = color,
-        .pos = pos,
-        .size = size,
-        .tex_size = tex_size,
-        .tex_uv = tex_uv,
-        .order = depth,
-        .is_ui = ui
-    });
-}
-
-void RenderBatchGlyph::render() {
-    ZoneScopedN("RenderBatchGlyph::render");
-
-    if (is_empty()) return;
-
-    std::vector<GlyphData> sorted_glyphs = m_glyphs;
-    std::sort(
-        sorted_glyphs.begin(),
-        sorted_glyphs.end(),
-        [](const GlyphData& a, const GlyphData& b) {
-            return a.texture.id() < b.texture.id();
-        }
-    );
-    
-    Texture prev_texture = sorted_glyphs[0].texture;
-    uint32_t sprite_count = 0;
-    uint32_t total_sprite_count = 0;
-    int vertex_offset = 0;
-
-    for (const GlyphData& glyph_data : sorted_glyphs) {
-        if (prev_texture.id() != glyph_data.texture.id()) {
-            m_glyphs_flush_queue.push_back(FlushData {
-                .texture = prev_texture,
-                .offset = vertex_offset,
-                .count = sprite_count
-            });
-            sprite_count = 0;
-            vertex_offset = total_sprite_count;
-        }
-
-        const float order = glyph_data.order;
-
-        m_buffer_ptr->color = glyph_data.color;
-        m_buffer_ptr->pos = glm::vec3(glyph_data.pos, static_cast<float>(order));
-        m_buffer_ptr->size = glyph_data.size;
-        m_buffer_ptr->tex_size = glyph_data.tex_size;
-        m_buffer_ptr->uv = glyph_data.tex_uv;
-        m_buffer_ptr->is_ui = glyph_data.is_ui;
-        m_buffer_ptr++;
-
-        sprite_count += 1;
-        total_sprite_count += 1;
-
-        prev_texture = glyph_data.texture;
-    }
-
-    m_glyphs_flush_queue.push_back(FlushData {
-        .texture = prev_texture,
-        .offset = vertex_offset,
-        .count = sprite_count
-    });
-
-    flush();
-}
-
-void RenderBatchGlyph::flush() {
-    ZoneScopedN("RenderBatchGlyph::flush");
-
-    auto* const commands = state.command_buffer;
-
-    // ptrdiff_t remaining = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    // size_t offset = 0;
-    // while (remaining > 0) {
-    //     const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
-    //     commands->UpdateBuffer(*m_instance_buffer, offset, m_buffer, size);
-    //     remaining -= size;
-    //     offset += size;
-    // }
-
-    const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    if (size < (1 << 16)) {
-        commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, size);
-    } else {
-        state.context->WriteBuffer(*m_instance_buffer, 0, m_buffer, size);
-    }
-
-    // ptrdiff_t remaining = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    // if (remaining <= (1 << 16) - 1) {
-    //     commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, remaining);
-    // } else {
-    //     Renderer::Context()->WriteBuffer(*m_instance_buffer, 0, m_buffer, remaining);
-
-    //     size_t offset = 0;
-    //     while (remaining > 0) {
-    //         const uint16_t size = std::min(static_cast<uint16_t>(remaining), static_cast<uint16_t>((1u << 16u) - 1u));
-    //         commands->UpdateBuffer(*m_instance_buffer, offset, m_buffer, size);
-    //         remaining -= size;
-    //         offset += size;
-    //     }
-    // }
-    
-    commands->SetVertexBufferArray(*m_buffer_array);
-
-    commands->SetPipelineState(*m_pipeline);
-    commands->SetResource(0, *state.constant_buffer);
-
-    for (const FlushData& flush_data : m_glyphs_flush_queue) {
-        const Texture& t = flush_data.texture;
-
-        commands->SetResource(1, t);
-        commands->SetResource(2, Assets::GetSampler(t));
-        commands->DrawInstanced(4, 0, flush_data.count, flush_data.offset);
-    }
-}
-
-void RenderBatchGlyph::begin() {
-    ZoneScopedN("RenderBatchGlyph::begin");
-
-    m_buffer_ptr = m_buffer;
-    m_glyphs_flush_queue.clear();
-    m_glyphs.clear();
-}
-
-void RenderBatchGlyph::terminate() {
-    RESOURCE_RELEASE(m_vertex_buffer)
-    RESOURCE_RELEASE(m_instance_buffer)
-    RESOURCE_RELEASE(m_buffer_array)
-    RESOURCE_RELEASE(m_pipeline)
-
-    delete[] m_buffer;
 }

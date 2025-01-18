@@ -17,7 +17,7 @@ struct VSInput
     float2 position : Position;
     
     float3 i_color : I_Color;
-    float3 i_position : I_Position;
+    float2 i_position : I_Position;
     float2 i_size : I_Size;
     float2 i_tex_size : I_TexSize;
     float2 i_uv : I_UV;
@@ -36,7 +36,7 @@ VSOutput VS(VSInput inp)
 {
     const float4x4 mvp = inp.i_is_ui > 0 ? u_screen_projection : u_view_projection;
 
-    const float2 position = inp.i_position.xy + inp.position * inp.i_size;
+    const float2 position = inp.i_position + inp.position * inp.i_size;
     const float2 uv = inp.i_uv + inp.position * inp.i_tex_size;
 
     VSOutput outp;
@@ -44,7 +44,7 @@ VSOutput VS(VSInput inp)
     outp.uv = uv;
     outp.tex_size = inp.i_tex_size;
     outp.position = mul(mvp, float4(position, 0.0, 1.0));
-    outp.position.z = inp.i_position.z / u_max_depth;
+    outp.position.z = 1.0f;
 
 	return outp;
 }

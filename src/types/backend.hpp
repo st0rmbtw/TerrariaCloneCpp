@@ -46,7 +46,7 @@ public:
             break;
             case Value::D3D11: return "assets/shaders/d3d11/";
             break;
-            case Value::D3D12: return "assets/shaders/d3d12/";
+            case Value::D3D12: return "assets/shaders/d3d11/";
             break;
             case Value::Metal: return "assets/shaders/metal/";
             break;

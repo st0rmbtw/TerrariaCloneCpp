@@ -412,7 +412,7 @@ void Assets::InitVertexFormats() {
 
     if (backend.IsGLSL()) {
         sprite_instance_format.attributes = {
-            {"i_position",           LLGL::Format::RGB32Float,  1,  offsetof(SpriteInstance,position),          sizeof(SpriteInstance), 1, 1 },
+            {"i_position",           LLGL::Format::RG32Float,   1,  offsetof(SpriteInstance,position),          sizeof(SpriteInstance), 1, 1 },
             {"i_rotation",           LLGL::Format::RGBA32Float, 2,  offsetof(SpriteInstance,rotation),          sizeof(SpriteInstance), 1, 1 },
             {"i_size",               LLGL::Format::RG32Float,   3,  offsetof(SpriteInstance,size),              sizeof(SpriteInstance), 1, 1 },
             {"i_offset",             LLGL::Format::RG32Float,   4,  offsetof(SpriteInstance,offset),            sizeof(SpriteInstance), 1, 1 },
@@ -424,7 +424,7 @@ void Assets::InitVertexFormats() {
         };
     } else if (backend.IsHLSL()) {
         sprite_instance_format.attributes = {
-            {"I_Position",         LLGL::Format::RGB32Float,  1,  offsetof(SpriteInstance,position),          sizeof(SpriteInstance), 1, 1 },
+            {"I_Position",         LLGL::Format::RG32Float,   1,  offsetof(SpriteInstance,position),          sizeof(SpriteInstance), 1, 1 },
             {"I_Rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(SpriteInstance,rotation),          sizeof(SpriteInstance), 1, 1 },
             {"I_Size",             LLGL::Format::RG32Float,   3,  offsetof(SpriteInstance,size),              sizeof(SpriteInstance), 1, 1 },
             {"I_Offset",           LLGL::Format::RG32Float,   4,  offsetof(SpriteInstance,offset),            sizeof(SpriteInstance), 1, 1 },
@@ -436,7 +436,7 @@ void Assets::InitVertexFormats() {
         };
     } else {
         sprite_instance_format.attributes = {
-            {"i_position",           LLGL::Format::RGB32Float,  1,  offsetof(SpriteInstance,position),          sizeof(SpriteInstance), 1, 1 },
+            {"i_position",           LLGL::Format::RG32Float,   1,  offsetof(SpriteInstance,position),          sizeof(SpriteInstance), 1, 1 },
             {"i_rotation",           LLGL::Format::RGBA32Float, 2,  offsetof(SpriteInstance,rotation),          sizeof(SpriteInstance), 1, 1 },
             {"i_size",               LLGL::Format::RG32Float,   3,  offsetof(SpriteInstance,size),              sizeof(SpriteInstance), 1, 1 },
             {"i_offset",             LLGL::Format::RG32Float,   4,  offsetof(SpriteInstance,offset),            sizeof(SpriteInstance), 1, 1 },
@@ -458,7 +458,7 @@ void Assets::InitVertexFormats() {
 
     if (backend.IsGLSL()) {
         ninepatch_instance_format.attributes = {
-            {"i_position",         LLGL::Format::RGB32Float,  1,  offsetof(NinePatchInstance,position),          sizeof(NinePatchInstance), 1, 1 },
+            {"i_position",         LLGL::Format::RG32Float,   1,  offsetof(NinePatchInstance,position),          sizeof(NinePatchInstance), 1, 1 },
             {"i_rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(NinePatchInstance,rotation),          sizeof(NinePatchInstance), 1, 1 },
             {"i_size",             LLGL::Format::RG32Float,   3,  offsetof(NinePatchInstance,size),              sizeof(NinePatchInstance), 1, 1 },
             {"i_offset",           LLGL::Format::RG32Float,   4,  offsetof(NinePatchInstance,offset),            sizeof(NinePatchInstance), 1, 1 },
@@ -471,7 +471,7 @@ void Assets::InitVertexFormats() {
         };
     } else if (backend.IsHLSL()) {
         ninepatch_instance_format.attributes = {
-            {"I_Position",         LLGL::Format::RGB32Float,  1,  offsetof(NinePatchInstance,position),          sizeof(NinePatchInstance), 1, 1 },
+            {"I_Position",         LLGL::Format::RG32Float,   1,  offsetof(NinePatchInstance,position),          sizeof(NinePatchInstance), 1, 1 },
             {"I_Rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(NinePatchInstance,rotation),          sizeof(NinePatchInstance), 1, 1 },
             {"I_Size",             LLGL::Format::RG32Float,   3,  offsetof(NinePatchInstance,size),              sizeof(NinePatchInstance), 1, 1 },
             {"I_Offset",           LLGL::Format::RG32Float,   4,  offsetof(NinePatchInstance,offset),            sizeof(NinePatchInstance), 1, 1 },
@@ -484,7 +484,7 @@ void Assets::InitVertexFormats() {
         };
     } else {
         ninepatch_instance_format.attributes = {
-            {"i_position",         LLGL::Format::RGB32Float,  1,  offsetof(NinePatchInstance,position),          sizeof(NinePatchInstance), 1, 1 },
+            {"i_position",         LLGL::Format::RG32Float,   1,  offsetof(NinePatchInstance,position),          sizeof(NinePatchInstance), 1, 1 },
             {"i_rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(NinePatchInstance,rotation),          sizeof(NinePatchInstance), 1, 1 },
             {"i_size",             LLGL::Format::RG32Float,   3,  offsetof(NinePatchInstance,size),              sizeof(NinePatchInstance), 1, 1 },
             {"i_offset",           LLGL::Format::RG32Float,   4,  offsetof(NinePatchInstance,offset),            sizeof(NinePatchInstance), 1, 1 },
@@ -566,7 +566,7 @@ void Assets::InitVertexFormats() {
     } else if (backend.IsHLSL()) {
         font_instance_format.attributes = {
             {"I_Color",    LLGL::Format::RGB32Float, 1, offsetof(GlyphInstance,color),    sizeof(GlyphInstance), 1, 1},
-            {"I_Position", LLGL::Format::RGB32Float, 2, offsetof(GlyphInstance,pos),      sizeof(GlyphInstance), 1, 1},
+            {"I_Position", LLGL::Format::RG32Float,  2, offsetof(GlyphInstance,pos),      sizeof(GlyphInstance), 1, 1},
             {"I_Size",     LLGL::Format::RG32Float,  3, offsetof(GlyphInstance,size),     sizeof(GlyphInstance), 1, 1},
             {"I_TexSize",  LLGL::Format::RG32Float,  4, offsetof(GlyphInstance,tex_size), sizeof(GlyphInstance), 1, 1},
             {"I_UV",       LLGL::Format::RG32Float,  5, offsetof(GlyphInstance,uv),       sizeof(GlyphInstance), 1, 1},

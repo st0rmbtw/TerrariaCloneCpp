@@ -77,9 +77,6 @@ void main() {
     bool has_texture = (i_flags & HAS_TEXTURE_FLAG) == HAS_TEXTURE_FLAG;
 
     mat4 mvp = (is_ui ? global_ubo.screen_projection : is_nonscale ? global_ubo.nonscale_view_projection : global_ubo.view_projection) * transform;
-    
-    float max_depth = is_world ? global_ubo.max_world_depth : global_ubo.max_depth;
-    float order = i_position.z / max_depth;
 
     v_uv = a_position * i_uv_offset_scale.zw + i_uv_offset_scale.xy;
     v_color = i_color;
@@ -88,5 +85,5 @@ void main() {
     v_has_texture = has_texture ? 1 : 0;
     
     gl_Position = mvp * vec4(a_position, 0, 1);
-    gl_Position.z = order;
+    gl_Position.z = 1.0;
 }

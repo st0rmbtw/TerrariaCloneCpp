@@ -2,7 +2,7 @@
 
 layout(location = 0) in vec2 a_position;
 layout(location = 1) in vec3 i_color;
-layout(location = 2) in vec3 i_position;
+layout(location = 2) in vec2 i_position;
 layout(location = 3) in vec2 i_size;
 layout(location = 4) in vec2 i_tex_size;
 layout(location = 5) in vec2 i_uv;
@@ -27,11 +27,11 @@ flat out vec3 v_color;
 void main() {
     mat4 mvp = i_ui > 0 ? global_ubo.screen_projection : global_ubo.view_projection;
 
-    vec2 position = i_position.xy + a_position * i_size;
+    vec2 position = i_position + a_position * i_size;
     vec2 uv = i_uv + a_position * i_tex_size;
 
     v_uv = uv;
     v_color = i_color;
     gl_Position = mvp * vec4(position, 0.0, 1.0);
-    gl_Position.z = i_position.z / global_ubo.max_depth;
+    gl_Position.z = 1.0;
 }
