@@ -891,6 +891,8 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
 }
 
 static inline void SortDrawCommands() {
+    ZoneScopedN("Renderer::SortDrawCommands");
+
     std::sort(
         state.draw_commands.begin(),
         state.draw_commands.end(),
@@ -1149,6 +1151,8 @@ static inline void SortDrawCommands() {
 }
 
 static inline void SortWorldDrawCommands() {
+    ZoneScopedN("Renderer::SortWorldDrawCommands");
+
     std::sort(
         state.world_draw_commands.begin(),
         state.world_draw_commands.end(),
@@ -1231,6 +1235,8 @@ static inline void SortWorldDrawCommands() {
 }
 
 static void ApplyDrawCommands() {
+    ZoneScopedN("Renderer::ApplyDrawCommands");
+
     auto* const commands = state.command_buffer;
 
     for (const FlushData& flush_data : state.flush_queue) {
@@ -1260,6 +1266,8 @@ static void ApplyDrawCommands() {
 }
 
 static void ApplyWorldDrawCommands() {
+    ZoneScopedN("Renderer::ApplyWorldDrawCommands");
+
     auto* const commands = state.command_buffer;
 
     for (const FlushData& flush_data : state.world_flush_queue) {
