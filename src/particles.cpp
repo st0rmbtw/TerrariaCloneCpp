@@ -5,7 +5,6 @@
 
 #include <tracy/Tracy.hpp>
 
-#include "math/math.hpp"
 #include "renderer/renderer.hpp"
 #include "defines.hpp"
 #include "constants.hpp"
@@ -56,21 +55,18 @@ void ParticleManager::Init() {
     state.position = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 2 * sizeof(float), sizeof(__m256));
     state.velocity = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 2 * sizeof(float), sizeof(__m256));
     state.lifetime = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * sizeof(float), sizeof(__m256));
+    state.rotation = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), sizeof(__m256));
+    state.rotation_speed = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), sizeof(__m256));
 #else
     state.position = (float*) malloc(MAX_PARTICLES_COUNT * 2 * sizeof(float));
     state.velocity = (float*) malloc(MAX_PARTICLES_COUNT * 2 * sizeof(float));
     state.lifetime = (float*) malloc(MAX_PARTICLES_COUNT * sizeof(float));
+    state.rotation = (float*) malloc(MAX_PARTICLES_COUNT * 4 * sizeof(float));
+    state.rotation_speed = (float*) malloc(MAX_PARTICLES_COUNT * 4 * sizeof(float));
 #endif
     state.max_lifetime = new float[MAX_PARTICLES_COUNT];
     state.custom_scale = new float[MAX_PARTICLES_COUNT];
     state.scale = new float[MAX_PARTICLES_COUNT];
-#if defined(__AVX__)
-    state.rotation = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), sizeof(__m256));
-    state.rotation_speed = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), sizeof(__m256));
-#else
-    state.rotation = (float*) malloc(MAX_PARTICLES_COUNT * 4 * sizeof(float));
-    state.rotation_speed = (float*) malloc(MAX_PARTICLES_COUNT * 4 * sizeof(float));
-#endif
     state.initial_light_color = new float[MAX_PARTICLES_COUNT * 3];
     state.light_color = new float[MAX_PARTICLES_COUNT * 3];
     state.flags = new uint8_t[MAX_PARTICLES_COUNT]();
@@ -302,14 +298,7 @@ void ParticleManager::DeleteExpired() {
         const float custom_scale = state.custom_scale[i];
         float& scale = state.scale[i];
 
-        const float s = glm::clamp(
-            0.0f, 1.0f, 
-            map_range(
-                max_lifetime * 0.5f, 0.0f,
-                1.0f, 0.0f,
-                lifetime
-            )
-        );
+        const float s = std::clamp(lifetime / (max_lifetime * 0.5f), 0.0f, 1.0f);
 
         scale = custom_scale * s;
 
@@ -326,15 +315,17 @@ void ParticleManager::Terminate() {
     ALIGNED_FREE(state.velocity);
     ALIGNED_FREE(state.rotation);
     ALIGNED_FREE(state.rotation_speed);
+    ALIGNED_FREE(state.lifetime);
 #else
     free(state.position);
     free(state.velocity);
     free(state.rotation);
     free(state.rotation_speed);
+    free(state.lifetime);
 #endif
 
     delete[] state.light_color;
-    delete[] state.lifetime;
+    delete[] state.max_lifetime;
     delete[] state.custom_scale;
     delete[] state.scale;
     delete[] state.flags;

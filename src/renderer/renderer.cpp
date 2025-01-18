@@ -891,6 +891,14 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
     state.world_flush_queue.clear();
 }
 
+static FORCE_INLINE void UpdateBuffer(LLGL::Buffer* buffer, void* data, size_t length) {
+    if (length < (1 << 16)) {
+        state.command_buffer->UpdateBuffer(*buffer, 0, data, length);
+    } else {
+        state.context->WriteBuffer(*buffer, 0, data, length);
+    }
+}
+
 static inline void SortDrawCommands() {
     ZoneScopedN("Renderer::SortDrawCommands");
 
@@ -1084,7 +1092,7 @@ static inline void SortDrawCommands() {
         }
 
         if (prev_order != new_order) {
-            if (sprite_count > 0) {
+            if (sprite_count > 1) {
                 state.flush_queue.push_back(FlushData {
                     .texture = sprite_prev_texture,
                     .offset = sprite_vertex_offset,
@@ -1095,7 +1103,7 @@ static inline void SortDrawCommands() {
                 sprite_vertex_offset = sprite_total_count;
             }
 
-            if (glyph_count > 0) {
+            if (glyph_count > 1) {
                 state.flush_queue.push_back(FlushData {
                     .texture = glyph_prev_texture,
                     .offset = glyph_vertex_offset,
@@ -1106,7 +1114,7 @@ static inline void SortDrawCommands() {
                 glyph_vertex_offset = glyph_total_count;
             }
 
-            if (ninepatch_count > 0) {
+            if (ninepatch_count > 1) {
                 state.flush_queue.push_back(FlushData {
                     .texture = ninepatch_prev_texture,
                     .offset = ninepatch_vertex_offset,
@@ -1120,34 +1128,20 @@ static inline void SortDrawCommands() {
 
         prev_order = new_order;
     }
-
-    auto* const commands = state.command_buffer;
     
     if (sprite_total_count > 0) {
-        const ptrdiff_t size = (uint8_t*) state.sprite_batch_data.buffer_ptr - (uint8_t*) state.sprite_batch_data.buffer;
-        if (size < (1 << 16)) {
-            commands->UpdateBuffer(*state.sprite_batch_data.instance_buffer, 0, state.sprite_batch_data.buffer, size);
-        } else {
-            state.context->WriteBuffer(*state.sprite_batch_data.instance_buffer, 0, state.sprite_batch_data.buffer, size);
-        }
+        const size_t size = (size_t) state.sprite_batch_data.buffer_ptr - (size_t) state.sprite_batch_data.buffer;
+        UpdateBuffer(state.sprite_batch_data.instance_buffer, state.sprite_batch_data.buffer, size);
     }
 
     if (glyph_total_count > 0) {
-        const ptrdiff_t size = (uint8_t*) state.glyph_batch_data.buffer_ptr - (uint8_t*) state.glyph_batch_data.buffer;
-        if (size < (1 << 16)) {
-            commands->UpdateBuffer(*state.glyph_batch_data.instance_buffer, 0, state.glyph_batch_data.buffer, size);
-        } else {
-            state.context->WriteBuffer(*state.glyph_batch_data.instance_buffer, 0, state.glyph_batch_data.buffer, size);
-        }
+        const size_t size = (size_t) state.glyph_batch_data.buffer_ptr - (size_t) state.glyph_batch_data.buffer;
+        UpdateBuffer(state.glyph_batch_data.instance_buffer, state.glyph_batch_data.buffer, size);
     }
 
     if (ninepatch_total_count > 0) {
-        const ptrdiff_t size = (uint8_t*) state.ninepatch_batch_data.buffer_ptr - (uint8_t*) state.ninepatch_batch_data.buffer;
-        if (size < (1 << 16)) {
-            commands->UpdateBuffer(*state.ninepatch_batch_data.instance_buffer, 0, state.ninepatch_batch_data.buffer, size);
-        } else {
-            state.context->WriteBuffer(*state.ninepatch_batch_data.instance_buffer, 0, state.ninepatch_batch_data.buffer, size);
-        }
+        const size_t size = (size_t) state.ninepatch_batch_data.buffer_ptr - (size_t) state.ninepatch_batch_data.buffer;
+        UpdateBuffer(state.ninepatch_batch_data.instance_buffer, state.ninepatch_batch_data.buffer, size);
     }
 }
 
@@ -1207,8 +1201,8 @@ static inline void SortWorldDrawCommands() {
             state.sprite_batch_data.world_buffer_ptr->flags = flags;
             state.sprite_batch_data.world_buffer_ptr++;
 
-            sprite_count += 1;
-            sprite_total_count += 1;
+            ++sprite_count;
+            ++sprite_total_count;
 
             sprite_prev_texture = sprite_data.texture;
         }
@@ -1223,15 +1217,9 @@ static inline void SortWorldDrawCommands() {
         });
     }
 
-    auto* const commands = state.command_buffer;
-
     if (sprite_total_count > 0) {
-        const ptrdiff_t size = (uint8_t*) state.sprite_batch_data.world_buffer_ptr - (uint8_t*) state.sprite_batch_data.world_buffer;
-        if (size < (1 << 16)) {
-            commands->UpdateBuffer(*state.sprite_batch_data.world_instance_buffer, 0, state.sprite_batch_data.world_buffer, size);
-        } else {
-            state.context->WriteBuffer(*state.sprite_batch_data.world_instance_buffer, 0, state.sprite_batch_data.world_buffer, size);
-        }
+        const size_t size = (size_t) state.sprite_batch_data.world_buffer_ptr - (size_t) state.sprite_batch_data.world_buffer;
+        UpdateBuffer(state.sprite_batch_data.world_instance_buffer, state.sprite_batch_data.world_buffer, size);
     }
 }
 
@@ -1240,29 +1228,40 @@ static void ApplyDrawCommands() {
 
     auto* const commands = state.command_buffer;
 
+    int prev_flush_data_type = -1;
+    int prev_texture_id = -1;
+
     for (const FlushData& flush_data : state.flush_queue) {
-        switch (flush_data.type) {
+        if (prev_flush_data_type != static_cast<int>(flush_data.type)) {
+            switch (flush_data.type) {
+            case FlushDataType::Sprite:
+                commands->SetVertexBufferArray(*state.sprite_batch_data.buffer_array);
+                commands->SetPipelineState(*state.sprite_batch_data.pipeline);
+            break;
 
-        case FlushDataType::Sprite:
-            commands->SetVertexBufferArray(*state.sprite_batch_data.buffer_array);
-            commands->SetPipelineState(*state.sprite_batch_data.pipeline);
-        break;
+            case FlushDataType::Glyph:
+                commands->SetVertexBufferArray(*state.glyph_batch_data.buffer_array);
+                commands->SetPipelineState(*state.glyph_batch_data.pipeline);
+            break;
 
-        case FlushDataType::Glyph:
-            commands->SetVertexBufferArray(*state.glyph_batch_data.buffer_array);
-            commands->SetPipelineState(*state.glyph_batch_data.pipeline);
-        break;
+            case FlushDataType::NinePatch:
+                commands->SetVertexBufferArray(*state.ninepatch_batch_data.buffer_array);
+                commands->SetPipelineState(*state.ninepatch_batch_data.pipeline);
+            break;
+            }
 
-        case FlushDataType::NinePatch:
-            commands->SetVertexBufferArray(*state.ninepatch_batch_data.buffer_array);
-            commands->SetPipelineState(*state.ninepatch_batch_data.pipeline);
-        break;
+            commands->SetResource(0, *state.constant_buffer);
         }
 
-        commands->SetResource(0, *state.constant_buffer);
-        commands->SetResource(1, flush_data.texture);
-        commands->SetResource(2, Assets::GetSampler(flush_data.texture));
+        if (prev_texture_id != flush_data.texture.id()) {
+            commands->SetResource(1, flush_data.texture);
+            commands->SetResource(2, Assets::GetSampler(flush_data.texture));
+        }
+        
         commands->DrawInstanced(4, 0, flush_data.count, flush_data.offset);
+
+        prev_flush_data_type = static_cast<int>(flush_data.type);
+        prev_texture_id = flush_data.texture.id();
     }
 }
 
@@ -1271,16 +1270,23 @@ static void ApplyWorldDrawCommands() {
 
     auto* const commands = state.command_buffer;
 
+    commands->SetVertexBufferArray(*state.sprite_batch_data.world_buffer_array);
+    commands->SetPipelineState(*state.sprite_batch_data.pipeline);
+    commands->SetResource(0, *state.constant_buffer);
+
+    int prev_texture_id = -1;
+
     for (const FlushData& flush_data : state.world_flush_queue) {
         if (flush_data.type != FlushDataType::Sprite) continue;
 
-        commands->SetVertexBufferArray(*state.sprite_batch_data.world_buffer_array);
-        commands->SetPipelineState(*state.sprite_batch_data.pipeline);
-
-        commands->SetResource(0, *state.constant_buffer);
-        commands->SetResource(1, flush_data.texture);
-        commands->SetResource(2, Assets::GetSampler(flush_data.texture));
+        if (prev_texture_id != flush_data.texture.id()) {
+            commands->SetResource(1, flush_data.texture);
+            commands->SetResource(2, Assets::GetSampler(flush_data.texture));
+        }
+        
         commands->DrawInstanced(4, 0, flush_data.count, flush_data.offset);
+
+        prev_texture_id = flush_data.texture.id();
     }
 }
 

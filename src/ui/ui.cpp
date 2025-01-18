@@ -408,7 +408,7 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
     if (state.show_extra_ui) {
         const RichText text = rich_text("Inventory", INVENTORY_TITLE_SIZE, glm::vec3(0.8f));
         const glm::vec2 position = glm::vec2(INVENTORY_PADDING + INVENTORY_SLOT_SIZE * 0.5f, TITLE_OFFSET);
-        Renderer::DrawTextUI(text, position, FontAsset::AndyBold, inventory_index);
+        Renderer::DrawTextUI(text, position, FontAsset::AndyBold, text_index);
     } else {
         const ItemSlot& item_slot = inventory.get_item(inventory.selected_slot());
         const std::string_view& title = item_slot.has_item() ? item_slot.item->name : "Items";
@@ -416,7 +416,7 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
 
         const glm::vec2 bounds = calculate_text_bounds(text, FontAsset::AndyBold);
         const glm::vec2 position = glm::vec2((offset.x - bounds.x) * 0.5f, TITLE_OFFSET);
-        Renderer::DrawTextUI(text, position, FontAsset::AndyBold, inventory_index);
+        Renderer::DrawTextUI(text, position, FontAsset::AndyBold, text_index);
     }
 
     if (state.show_extra_ui) {
