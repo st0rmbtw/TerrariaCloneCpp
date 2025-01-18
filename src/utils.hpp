@@ -37,11 +37,13 @@ static inline TilePos get_lightmap_pos(glm::vec2 pos) {
     return glm::ivec2(pos * static_cast<float>(Constants::SUBDIVISION) / Constants::TILE_SIZE);
 }
 
-static inline constexpr bool check_bitflag(uint8_t data, uint8_t flag) {
+template <typename T>
+static inline constexpr bool check_bitflag(T data, T flag) {
     return (data & flag) == flag;
 }
 
-static inline constexpr bool remove_bitflag(uint8_t data, uint8_t flag) {
+template <typename T>
+static inline constexpr T remove_bitflag(T data, T flag) {
     return data & ~flag;
 }
 
