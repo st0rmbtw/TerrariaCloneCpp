@@ -37,6 +37,7 @@ void ParticleRenderer::init() {
 
     m_instance_buffer_data = new ParticleInstance[MAX_PARTICLES_COUNT];
     m_instance_buffer_data_world = new ParticleInstance[MAX_PARTICLES_COUNT];
+    
     m_position_buffer_data = new glm::vec2[MAX_PARTICLES_COUNT];
     m_rotation_buffer_data = new glm::quat[MAX_PARTICLES_COUNT];
     m_scale_buffer_data = new float[MAX_PARTICLES_COUNT];
@@ -156,7 +157,8 @@ void ParticleRenderer::init() {
                 .srcColor = LLGL::BlendOp::SrcAlpha,
                 .dstColor = LLGL::BlendOp::InvSrcAlpha,
                 .srcAlpha = LLGL::BlendOp::Zero,
-                .dstAlpha = LLGL::BlendOp::One
+                .dstAlpha = LLGL::BlendOp::One,
+                .alphaArithmetic = LLGL::BlendArithmetic::Max
             }
         }
     };
@@ -276,7 +278,7 @@ void ParticleRenderer::draw_particle_world(const glm::vec2& position, const glm:
 }
 
 void ParticleRenderer::compute() {
-    if (m_particle_count + m_world_particle_count == 0) return;
+    if (m_particle_id == 0) return;
 
     ZoneScopedN("ParticleRenderer::compute");
 
@@ -309,7 +311,7 @@ void ParticleRenderer::compute() {
         commands->SetPipelineState(*m_compute_pipeline);
         commands->SetResourceHeap(*m_compute_resource_heap);
 
-        const size_t particle_count = m_particle_count + m_world_particle_count;
+        const size_t particle_count = m_particle_id;
 
         if (m_is_metal) {
             uint32_t y = (particle_count + 512 - 1) / 512;

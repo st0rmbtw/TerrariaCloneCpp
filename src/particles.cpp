@@ -1,5 +1,6 @@
 #include "particles.hpp"
 
+#include <immintrin.h>
 #include <xmmintrin.h>
 
 #include <tracy/Tracy.hpp>
@@ -8,6 +9,7 @@
 #include "renderer/renderer.hpp"
 #include "defines.hpp"
 #include "constants.hpp"
+#include "time/time.hpp"
 #include "utils.hpp"
 
 #ifdef PLATFORM_WINDOWS
@@ -32,8 +34,8 @@ namespace ParticleFlags {
 static struct ParticlesState {
     float* position;
     float* velocity;
-    float* spawn_time;
     float* lifetime;
+    float* max_lifetime;
     float* custom_scale;
     float* scale;
     float* rotation;
@@ -53,12 +55,13 @@ void ParticleManager::Init() {
 #if defined(__AVX__)
     state.position = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 2 * sizeof(float), sizeof(__m256));
     state.velocity = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 2 * sizeof(float), sizeof(__m256));
+    state.lifetime = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * sizeof(float), sizeof(__m256));
 #else
     state.position = (float*) malloc(MAX_PARTICLES_COUNT * 2 * sizeof(float));
     state.velocity = (float*) malloc(MAX_PARTICLES_COUNT * 2 * sizeof(float));
+    state.lifetime = (float*) malloc(MAX_PARTICLES_COUNT * sizeof(float));
 #endif
-    state.spawn_time = new float[MAX_PARTICLES_COUNT];
-    state.lifetime = new float[MAX_PARTICLES_COUNT];
+    state.max_lifetime = new float[MAX_PARTICLES_COUNT];
     state.custom_scale = new float[MAX_PARTICLES_COUNT];
     state.scale = new float[MAX_PARTICLES_COUNT];
 #if defined(__AVX__)
@@ -87,8 +90,8 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
     state.velocity[index * 2 + 0] = particle_data.velocity.x;
     state.velocity[index * 2 + 1] = particle_data.velocity.y;
 
-    state.spawn_time[index] = particle_data.spawn_time;
     state.lifetime[index] = particle_data.lifetime;
+    state.max_lifetime[index] = particle_data.lifetime;
     state.custom_scale[index] = particle_data.custom_scale;
     state.scale[index] = particle_data.scale;
 
@@ -105,9 +108,9 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
     const bool emits_light = particle_data.light_color.has_value();
 
     uint8_t flags = ParticleFlags::Active;
-    flags |= ParticleFlags::EmitsLight * emits_light;
     flags |= ParticleFlags::Gravity * particle_data.gravity;
     flags |= ParticleFlags::InWorldLayer * particle_data.is_world;
+    flags |= ParticleFlags::EmitsLight * emits_light;
 
     state.flags[index] = flags;
 
@@ -158,6 +161,14 @@ void ParticleManager::Update(World& world) {
     }
     
 #if defined(__AVX__)
+    // The size of a float type is 32 bit, so it can be packed as 8 into 256 bit vector.
+    for (size_t i = 0; i < state.active_count; i += 8) {
+        const __m256 lifetime = _mm256_load_ps(&state.lifetime[i]);
+        const __m256 delta = _mm256_set1_ps(Time::fixed_delta_seconds());
+        const __m256 new_lifetime = _mm256_sub_ps(lifetime, delta);
+        _mm256_store_ps(&state.lifetime[i], new_lifetime);
+    }
+
     // The size of a vec2 type is 64 bit, so it can be packed as 4 into 256 bit vector.
     for (size_t i = 0; i < state.active_count * 2; i += 8) {
         const __m256 positionVector = _mm256_load_ps(&state.position[i]);
@@ -199,6 +210,10 @@ void ParticleManager::Update(World& world) {
 		_mm256_store_ps(&state.rotation[i], _mm256_shuffle_ps(XZWY, XZWY, _MM_SHUFFLE(2,1,3,0)));
     }
 #else
+    for (size_t i = 0; i < state.active_count; i += 1) {
+        state.lifetime[i] -= Time::fixed_delta_seconds();
+    }
+
     for (size_t i = 0; i < state.active_count * 2; i += 2) {
         state.position[i + 0] += state.velocity[i + 0];
         state.position[i + 1] += state.velocity[i + 1];
@@ -237,12 +252,11 @@ void ParticleManager::DeleteExpired() {
     size_t i = 0;
 
     while (state.active_count > 0) {
-        const float spawn_time = state.spawn_time[i];
         const float lifetime = state.lifetime[i];
         bool active = check_bitflag(state.flags[i], ParticleFlags::Active);
         if (!active) break;
 
-        if (Time::elapsed_seconds() >= spawn_time + lifetime) {
+        if (lifetime <= 0.0f) {
             state.flags[i] = remove_bitflag(state.flags[i], ParticleFlags::Active);
             state.active_count--;
             std::swap(state.position[i * 2], state.position[state.active_count * 2]);
@@ -251,8 +265,8 @@ void ParticleManager::DeleteExpired() {
             std::swap(state.velocity[i * 2], state.velocity[state.active_count * 2]);
             std::swap(state.velocity[i * 2 + 1], state.velocity[state.active_count * 2 + 1]);
 
-            std::swap(state.spawn_time[i], state.spawn_time[state.active_count]);
             std::swap(state.lifetime[i], state.lifetime[state.active_count]);
+            std::swap(state.max_lifetime[i], state.max_lifetime[state.active_count]);
             std::swap(state.custom_scale[i], state.custom_scale[state.active_count]);
             std::swap(state.scale[i], state.scale[state.active_count]);
 
@@ -283,17 +297,17 @@ void ParticleManager::DeleteExpired() {
     }
 
     for (size_t i = 0; i < state.active_count; ++i) {
-        const float spawn_time = state.spawn_time[i];
         const float lifetime = state.lifetime[i];
+        const float max_lifetime = state.max_lifetime[i];
         const float custom_scale = state.custom_scale[i];
         float& scale = state.scale[i];
 
         const float s = glm::clamp(
             0.0f, 1.0f, 
             map_range(
-                spawn_time + lifetime * 0.5f, spawn_time + lifetime,
+                max_lifetime * 0.5f, 0.0f,
                 1.0f, 0.0f,
-                Time::elapsed_seconds()
+                lifetime
             )
         );
 
@@ -320,7 +334,6 @@ void ParticleManager::Terminate() {
 #endif
 
     delete[] state.light_color;
-    delete[] state.spawn_time;
     delete[] state.lifetime;
     delete[] state.custom_scale;
     delete[] state.scale;

@@ -23,6 +23,7 @@
 #include "../types/shader_type.hpp"
 #include "../utils.hpp"
 #include "../time/timer.hpp"
+#include "../time/time.hpp"
 
 #include "types.hpp"
 #include "utils.hpp"

@@ -14,6 +14,7 @@
 #include "../renderer/renderer.hpp"
 #include "../math/math.hpp"
 #include "../math/rect.hpp"
+#include "../time/time.hpp"
 #include "../time/timer.hpp"
 #include "../utils.hpp"
 #include "../particles.hpp"

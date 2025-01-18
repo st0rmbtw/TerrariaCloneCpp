@@ -8,7 +8,6 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "math/quat.hpp"
-#include "time/time.hpp"
 #include "world/world.hpp"
 #include "types/block.hpp"
 
@@ -38,7 +37,6 @@ struct ParticleData {
     std::optional<glm::vec3> light_color;
     glm::vec2 position;
     glm::vec2 velocity;
-    float spawn_time;
     float lifetime;
     float custom_scale;
     float scale;
@@ -83,7 +81,6 @@ public:
             .light_color    = m_light_color,
             .position       = m_position,
             .velocity       = m_velocity,
-            .spawn_time     = Time::elapsed_seconds(),
             .lifetime       = m_lifetime,
             .custom_scale   = m_scale,
             .scale          = m_scale,
