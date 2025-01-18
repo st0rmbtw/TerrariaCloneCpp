@@ -1329,6 +1329,7 @@ void Renderer::Render(const Camera& camera, const World& world) {
         commands->Clear(LLGL::ClearFlags::ColorDepth, clear_value);
         state.background_renderer.render_world();
         state.world_renderer.render(world.chunk_manager());
+        state.particle_renderer.render_world();
 
         ApplyWorldDrawCommands();
 
