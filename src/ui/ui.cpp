@@ -257,12 +257,6 @@ void UI::Draw(const Camera& camera, const Player& player) {
     }
 
     uint32_t depth = Renderer::GetMainDepthIndex();
-
-    NinePatch ninepatch(Assets::GetTexture(TextureAsset::UiInventoryBackground), glm::uvec4(10));
-    ninepatch.set_position(glm::vec2(camera.viewport()) / 2.0f - glm::vec2(400.0f, 0.0f));
-    ninepatch.set_size(glm::vec2(800.0f));
-    ninepatch.set_color(glm::vec4(1.0f, 1.0f, 1.0f, 0.8f));
-    Renderer::DrawNinePatchUI(ninepatch, ++depth);
     
     Renderer::DrawSpriteUI(state.cursor_background, ++depth);
     Renderer::DrawSpriteUI(state.cursor_foreground, ++depth);
