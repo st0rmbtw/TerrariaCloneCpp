@@ -13,7 +13,7 @@
 using Constants::TILE_SIZE;
 
 void setup_cavern_background(const World& world);
-void setup_sky_background();
+void setup_sky_background(float y, bool fill_screen_height);
 
 static struct BackgroundState {
     std::vector<BackgroundLayer> layers;
@@ -22,7 +22,7 @@ static struct BackgroundState {
 void Background::SetupMenuBackground() {
     const float pos = 150.0f;
 
-    setup_sky_background();
+    setup_sky_background(0.0f, true);
 
     state.layers.push_back(
         BackgroundLayer(BackgroundAsset::Background7, 1.5f)
@@ -54,43 +54,53 @@ void Background::SetupMenuBackground() {
 void Background::SetupWorldBackground(const World& world) {
     state.layers.clear();
 
-    setup_sky_background();
+    const Layers world_layers = world.layers();
+
+    setup_sky_background(world_layers.underground * TILE_SIZE - 1000.0f, false);
 
     state.layers.push_back(
         BackgroundLayer(BackgroundAsset::Background93, 2.0f)
-            .set_speed(0.1f, 0.4f)
-            .set_y(world.layers().underground * TILE_SIZE)
+            .set_speed(0.05f, 0.1f)
+            .set_y(world_layers.underground * TILE_SIZE + 600.0f)
             .set_anchor(Anchor::BottomCenter)
-            .set_fill_screen_width()
+            .set_fill_screen_width(true)
+            .set_surface_layer(true)
     );
 
     state.layers.push_back(
         BackgroundLayer(BackgroundAsset::Background114, 2.0f)
-            .set_speed(0.15f, 0.5f)
-            .set_y((world.layers().underground + world.layers().dirt_height * 0.5f) * TILE_SIZE)
+            .set_speed(0.1f, 0.15f)
+            .set_y(world_layers.underground * TILE_SIZE + 600.0f)
             .set_anchor(Anchor::BottomCenter)
-            .set_fill_screen_width()
+            .set_fill_screen_width(true)
+            .set_surface_layer(true)
     );
 
     state.layers.push_back(
-        BackgroundLayer(BackgroundAsset::Background55, 2.0f)
-            .set_speed(0.2f, 0.6f)
-            .set_y((world.layers().underground + world.layers().dirt_height * 0.5f) * TILE_SIZE)
+        BackgroundLayer(BackgroundAsset::Background55, 2.3f)
+            .set_speed(0.15f, 0.3f)
+            .set_y(world_layers.underground * TILE_SIZE + 300.0f)
             .set_anchor(Anchor::BottomCenter)
-            .set_fill_screen_width()
+            .set_fill_screen_width(true)
+            .set_surface_layer(true)
     );
 
     setup_cavern_background(world);
 }
 
-void Background::Update(const Camera &camera) {
+void Background::Update(const Camera &camera, const World& world) {
     ZoneScopedN("Background::Update");
+
+    const float offset = (camera.viewport().y - 600.0f) * 0.5f;
 
     for (BackgroundLayer& layer : state.layers) {
         glm::vec2 new_position = layer.position();
 
+        const float layer_y = layer.is_surface_layer() ? layer.y() + offset : layer.y();
+        const float off = (camera.position().y - world.layers().underground * TILE_SIZE) * (1.0f - layer.speed().y);
+
         new_position.x = layer.follow_camera() ? camera.position().x : layer.x();
-        new_position.y = camera.position().y + (layer.y() - camera.position().y) * layer.speed().y;
+        new_position.y = layer_y + off;
 
         layer.set_position(new_position);
 
@@ -111,16 +121,17 @@ void Background::Draw() {
     }
 }
 
-static void setup_sky_background() {
+static void setup_sky_background(float y, bool fill_screen_height) {
     state.layers.push_back(
-        BackgroundLayer(BackgroundAsset::Background0, 1.0f)
-            .set_anchor(Anchor::Center)
-            .set_speed(0.0f, 0.0f)
-            .set_y(0.0f)
-            .set_fill_screen_height()
-            .set_fill_screen_width()
+        BackgroundLayer(BackgroundAsset::Background0, 2.0f)
+            .set_anchor(Anchor::TopCenter)
+            .set_speed(0.0f, 0.08f)
+            .set_y(y)
+            .set_fill_screen_height(fill_screen_height)
+            .set_fill_screen_width(true)
             .set_nonscale(true)
             .set_follow_camera(true)
+            .set_surface_layer(true)
     );
 }
 

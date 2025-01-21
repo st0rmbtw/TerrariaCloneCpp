@@ -139,7 +139,7 @@ void update() {
     g.camera.update();
     g.world.update(g.camera);
 
-    Background::Update(g.camera);
+    Background::Update(g.camera, g.world);
     
     UI::Update(g.player.inventory());
     
@@ -206,7 +206,7 @@ void window_resized(uint32_t width, uint32_t height, uint32_t scaled_width, uint
 
     g.world.chunk_manager().manage_chunks(g.world.data(), g.camera);
 
-    Background::Update(g.camera);
+    Background::Update(g.camera, g.world);
 }
 
 bool load_assets() {
@@ -263,17 +263,19 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
 
     g.world.generate(200, 500, 0);
 
+    g.camera.set_viewport(resolution);
+    g.camera.set_zoom(1.0f);
+
     Renderer::InitWorldRenderer(g.world.data());
 
     ParticleManager::Init();
     UI::Init();
-    Background::SetupWorldBackground(g.world);
-
-    g.camera.set_viewport(resolution);
-    g.camera.set_zoom(1.0f);
 
     g.player.init();
     g.player.set_position(g.world, glm::vec2(g.world.spawn_point()) * Constants::TILE_SIZE);
+    g.camera.set_position(g.player.draw_position());
+
+    Background::SetupWorldBackground(g.world);
 
     Inventory& inventory = g.player.inventory();
     inventory.set_item(0, ITEM_COPPER_AXE);

@@ -10,7 +10,7 @@ namespace Background {
     void SetupWorldBackground(const World& world);
     void SetupMenuBackground();
     
-    void Update(const Camera& camera);
+    void Update(const Camera& camera, const World& world);
     void Draw();
 };
 

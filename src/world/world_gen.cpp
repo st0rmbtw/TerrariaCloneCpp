@@ -13,6 +13,8 @@
 
 using Constants::SUBDIVISION;
 
+static constexpr int DIRT_HILL_HEIGHT = 100;
+
 static inline void set_block(WorldData& world, TilePos pos, BlockType block) {
     const size_t index = world.get_tile_index(pos);
     world.blocks[index] = Block(block);
@@ -89,11 +91,6 @@ static int get_surface_wall(const WorldData &world, int x) {
 }
 
 static void world_generate_terrain(WorldData& world) {
-    LOG_DEBUG("World Layers:");
-    LOG_DEBUG("  Surface: %u", world.layers.surface);
-    LOG_DEBUG("  Underground: %u", world.layers.underground);
-    LOG_DEBUG("  Cavern: %u", world.layers.cavern);
-
     for (int y = world.playable_area.min.y; y < world.playable_area.max.y; ++y) {
         for (int x = world.playable_area.min.x; x < world.playable_area.max.x; ++x) {
             if (y >= world.layers.underground) {
@@ -591,16 +588,23 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
     const math::IRect area = math::IRect::from_corners(glm::vec2(0), glm::ivec2(width, height) + glm::ivec2(16));
     const math::IRect playable_area = area.inset(-8);
 
-    const int surface_level = (playable_area.min.y + playable_area.height() / 10);
-    const int underground_level = (playable_area.min.y + playable_area.height() / 3);
-    const int cavern_level = (playable_area.min.y + playable_area.height() / 2);
+    const int surface_level = playable_area.min.y;
+    const int underground_level = surface_level + 350;
+    const int cavern_level = underground_level + 130;
+    const int dirt_height = 50;
 
     const Layers layers = {
         .surface = surface_level,
         .underground = underground_level,
         .cavern = cavern_level,
-        .dirt_height = (underground_level - surface_level) / 4
+        .dirt_height = dirt_height
     };
+
+    LOG_DEBUG("World Layers:");
+    LOG_DEBUG("  Surface: %u", layers.surface);
+    LOG_DEBUG("  Underground: %u", layers.underground);
+    LOG_DEBUG("  Cavern: %u", layers.cavern);
+    LOG_DEBUG("  Dirt Height: %u", layers.dirt_height);
 
     world.blocks = new std::optional<Block>[area.width() * area.height()];
     world.walls = new std::optional<Wall>[area.width() * area.height()];

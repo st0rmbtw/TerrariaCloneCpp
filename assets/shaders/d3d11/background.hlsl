@@ -58,11 +58,15 @@ float2 scroll(
 ) {
     const float2 new_offset = float2(-offset.x, offset.y);
 
-    const float tex_aspect = tex_size.x / tex_size.y;
-    const float frame_aspect = size.x / size.y;
-    const float aspect = tex_aspect / frame_aspect;
+    float2 scale = float2(1.0, 1.0);
 
-    const float2 scale = float2(1.0 / aspect, 1.0);
+    if (nonscale) {
+        const float tex_aspect = tex_size.x / tex_size.y;
+        const float frame_aspect = size.x / size.y;
+        const float aspect = tex_aspect / frame_aspect;
+
+        scale.x = 1.0 / aspect;
+    }
 
     if (!nonscale) {
         speed.x = speed.x / (size.x / tex_size.x);
@@ -105,6 +109,11 @@ VSOutput VS(VSInput inp)
     outp.nonscale = ignore_camera_zoom;
     outp.id = inp.i_id;
     outp.offset = offset;
+
+    if (inp.i_id == 0) {
+        outp.texture_size.x = inp.texture_size.y;
+        outp.texture_size.y = inp.texture_size.x;
+    }
 
 	return outp;
 }

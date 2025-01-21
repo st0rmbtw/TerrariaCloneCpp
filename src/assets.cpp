@@ -228,7 +228,7 @@ bool Assets::Load() {
 
         background_rects[id] = math::URect::from_top_left(glm::uvec2(0), glm::uvec2(width, height));
     }
-    state.textures_atlases[TextureAsset::Backgrounds] = TextureAtlas(Assets::GetTexture(TextureAsset::Stub), background_rects, glm::vec2(0.0f), 0, 0);
+    state.textures_atlases[TextureAsset::Backgrounds] = TextureAtlas(Assets::GetTexture(TextureAsset::Stub), std::move(background_rects), glm::vec2(0.0f), 0, 0);
 
     for (const auto& [key, asset] : TEXTURE_ATLAS_ASSETS) {
         state.textures_atlases[key] = TextureAtlas::from_grid(Assets::GetTexture(key), asset.tile_size, asset.columns, asset.rows, asset.padding, asset.offset);
