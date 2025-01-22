@@ -130,6 +130,12 @@ void UI::Init() {
     state.frametime_records = new float[FRAMETIME_RECORD_MAX_COUNT]();
 }
 
+static FORCE_INLINE void select_hotbar_slot(Inventory& inventory, uint8_t slot) {
+    state.hotbar_slot_anim = 0.0f;
+    state.previous_selected_slot = inventory.selected_slot();
+    inventory.set_selected_slot(slot);
+}
+
 void UI::FixedUpdate() {}
 
 void UI::PreUpdate(Inventory& inventory) {
@@ -145,7 +151,7 @@ void UI::PreUpdate(Inventory& inventory) {
                     if (state.show_extra_ui) {
                         inventory.take_or_put_item(element.data());
                     } else {
-                        inventory.set_selected_slot(element.data());
+                        select_hotbar_slot(inventory, element.data());
                     }
                     break;
                 case UiElement::InventoryCell:
@@ -173,28 +179,21 @@ void UI::Update(Inventory& inventory) {
         state.show_fps = !state.show_fps;
     }
 
-    const uint8_t current_selected_slot = inventory.selected_slot();
-
-    if (Input::JustPressed(Key::Digit1)) inventory.set_selected_slot(0);
-    if (Input::JustPressed(Key::Digit2)) inventory.set_selected_slot(1);
-    if (Input::JustPressed(Key::Digit3)) inventory.set_selected_slot(2);
-    if (Input::JustPressed(Key::Digit4)) inventory.set_selected_slot(3);
-    if (Input::JustPressed(Key::Digit5)) inventory.set_selected_slot(4);
-    if (Input::JustPressed(Key::Digit6)) inventory.set_selected_slot(5);
-    if (Input::JustPressed(Key::Digit7)) inventory.set_selected_slot(6);
-    if (Input::JustPressed(Key::Digit8)) inventory.set_selected_slot(7);
-    if (Input::JustPressed(Key::Digit9)) inventory.set_selected_slot(8);
-    if (Input::JustPressed(Key::Digit0)) inventory.set_selected_slot(9);
+    if (Input::JustPressed(Key::Digit1)) select_hotbar_slot(inventory, 0);
+    if (Input::JustPressed(Key::Digit2)) select_hotbar_slot(inventory, 1);
+    if (Input::JustPressed(Key::Digit3)) select_hotbar_slot(inventory, 2);
+    if (Input::JustPressed(Key::Digit4)) select_hotbar_slot(inventory, 3);
+    if (Input::JustPressed(Key::Digit5)) select_hotbar_slot(inventory, 4);
+    if (Input::JustPressed(Key::Digit6)) select_hotbar_slot(inventory, 5);
+    if (Input::JustPressed(Key::Digit7)) select_hotbar_slot(inventory, 6);
+    if (Input::JustPressed(Key::Digit8)) select_hotbar_slot(inventory, 7);
+    if (Input::JustPressed(Key::Digit9)) select_hotbar_slot(inventory, 8);
+    if (Input::JustPressed(Key::Digit0)) select_hotbar_slot(inventory, 9);
 
     for (const float scroll : Input::ScrollEvents()) {
         const int next_index = static_cast<int>(inventory.selected_slot()) - static_cast<int>(glm::sign(scroll));
         const int new_index = (next_index % CELLS_IN_ROW + CELLS_IN_ROW) % CELLS_IN_ROW;
-        inventory.set_selected_slot(static_cast<uint8_t>(new_index));
-    }
-
-    if (current_selected_slot != inventory.selected_slot()) {
-        state.hotbar_slot_anim = 0.0f;
-        state.previous_selected_slot = current_selected_slot;
+        select_hotbar_slot(inventory, static_cast<uint8_t>(new_index));
     }
 
     const float frametime = Time::delta_seconds();
