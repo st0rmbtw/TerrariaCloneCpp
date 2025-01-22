@@ -15,7 +15,7 @@ vec4 blend(vec4 foreground, vec4 background) {
 }
 
 void main() {
-    float lightmap = texture(u_lightmap_texture, v_light_uv).r;
+    float lightmap = texture(u_lightmap_texture, v_uv).r;
     vec4 light = vec4(texture(u_light_texture, v_light_uv).rgb, 1);
 
     vec4 final_light = max(light, vec4(lightmap, lightmap, lightmap, 1.0));

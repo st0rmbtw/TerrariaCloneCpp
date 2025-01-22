@@ -7,6 +7,7 @@
 #include <LLGL/Types.h>
 #include <LLGL/PipelineLayoutFlags.h>
 #include <LLGL/ResourceFlags.h>
+#include <LLGL/ShaderFlags.h>
 
 #include <cstddef>
 #include <glm/gtc/type_ptr.hpp>
@@ -227,18 +228,24 @@ void WorldRenderer::init() {
                 "GlobalUniformBuffer",
                 LLGL::ResourceType::Buffer,
                 LLGL::BindFlags::ConstantBuffer,
-                LLGL::StageFlags::ComputeStage,
+                LLGL::StageFlags::VertexStage,
                 LLGL::BindingSlot(2)
             ),
         };
         lightmapPipelineLayoutDesc.bindings = {
             LLGL::BindingDescriptor(
-                "StaticLightmapChunk",
+                "u_texture",
                 LLGL::ResourceType::Texture,
                 LLGL::BindFlags::Sampled,
                 LLGL::StageFlags::FragmentStage,
                 LLGL::BindingSlot(3)
             ),
+        };
+        lightmapPipelineLayoutDesc.staticSamplers = {
+            LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4), Assets::GetSampler(TextureSampler::Nearest).descriptor())
+        };
+        lightmapPipelineLayoutDesc.combinedTextureSamplers = {
+            LLGL::CombinedTextureSamplerDescriptor{ "u_texture", "u_texture", "u_sampler", 3 }
         };
 
         LLGL::PipelineLayout* lightmapPipelineLayout = context->CreatePipelineLayout(lightmapPipelineLayoutDesc);

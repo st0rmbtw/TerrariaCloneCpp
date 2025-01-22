@@ -24,11 +24,14 @@ void main() {
     bool nonscale = v_nonscale > 0;
     vec2 speed = v_speed;
 
-    float tex_aspect = v_tex_size.x / v_tex_size.y;
-    float frame_aspect = v_size.x / v_size.y;
-    float aspect = tex_aspect / frame_aspect;
+    vec2 scale = vec2(1.0, 1.0);
 
-    vec2 scale = vec2(1.0 / aspect, 1.0);
+    if (nonscale) {
+        float tex_aspect = v_tex_size.x / v_tex_size.y;
+        float frame_aspect = v_size.x / v_size.y;
+        float aspect = tex_aspect / frame_aspect;
+        scale.x = 1.0 / aspect;
+    }
 
     if (!nonscale) {
         speed.x = speed.x / (v_size.x / v_tex_size.x);
@@ -42,13 +45,13 @@ void main() {
     uv.x = fmodb(uv.x, 1.0);
     uv.y = fmodb(uv.y, 1.0);
 
+    uv = uv * v_tex_size / v_texture_size;
+
     if (v_id == 0) {
         float x = uv.x;
         uv.x = uv.y;
         uv.y = x;
     }
-
-    uv = uv * v_tex_size / v_texture_size;
 
     vec4 color = texture(u_texture, vec3(uv, float(v_id)));
 

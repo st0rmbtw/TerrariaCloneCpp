@@ -22,13 +22,13 @@ vec4 blend(vec4 foreground, vec4 background) {
 }
 
 void main() {
-    float lightmap = texture(sampler2D(u_lightmap_texture, u_light_sampler), v_light_uv).r;
-    vec4 light = vec4(texture(sampler2D(u_light_texture, u_light_sampler), v_light_uv).rgb, 1);
+    const float lightmap = texture(sampler2D(u_lightmap_texture, u_light_sampler), v_uv).r;
+    const vec4 light = vec4(texture(sampler2D(u_light_texture, u_light_sampler), v_light_uv).rgb, 1);
 
-    vec4 final_light = max(light, vec4(lightmap, lightmap, lightmap, 1.0));
+    const vec4 final_light = max(light, vec4(lightmap, lightmap, lightmap, 1.0));
 
-    vec4 background = texture(sampler2D(u_background_texture, u_background_sampler), v_uv);
-    vec4 world = texture(sampler2D(u_world_texture, u_world_sampler), v_uv) * final_light;
+    const vec4 background = texture(sampler2D(u_background_texture, u_background_sampler), v_uv);
+    const vec4 world = texture(sampler2D(u_world_texture, u_world_sampler), v_uv) * final_light;
 
     frag_color = blend(world, background);
 }

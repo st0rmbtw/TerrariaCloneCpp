@@ -54,4 +54,9 @@ void main() {
     v_offset = offset;
     v_id = i_id;
     v_nonscale = flags & IGNORE_CAMERA_ZOOM_FLAG;
+
+    if (i_id == 0) {
+        v_texture_size.x = a_texture_size.y;
+        v_texture_size.y = a_texture_size.x;
+    }
 }
