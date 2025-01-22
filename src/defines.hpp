@@ -17,3 +17,9 @@
 #endif
 
 #define FORCE_INLINE inline __attribute__((always_inline))
+
+#if defined(TRACY_ENABLE)
+    #define INLINE
+#else
+    #define INLINE inline
+#endif

@@ -100,6 +100,15 @@ struct BackgroundVertex {
     glm::vec2 texture_size;
 };
 
+struct StaticLightMapChunkVertex {
+    explicit StaticLightMapChunkVertex(glm::vec2 position, glm::vec2 uv) :
+        position(position),
+        uv(uv) {}
+
+    glm::vec2 position;
+    glm::vec2 uv;
+};
+
 struct BackgroundInstance {
     glm::vec2 position;
     glm::vec2 size;

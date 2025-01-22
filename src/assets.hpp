@@ -67,6 +67,7 @@ enum class ShaderAsset : uint8_t {
     FontShader,
     BackgroundShader,
     ParticleShader,
+    StaticLightMapShader
 };
 
 enum class ComputeShaderAsset : uint8_t {
@@ -95,6 +96,7 @@ enum class VertexFormatAsset : uint8_t {
     ParticleVertex,
     ParticleInstance,
     PostProcessVertex,
+    StaticLightMapVertex,
 };
 
 struct ShaderDef {

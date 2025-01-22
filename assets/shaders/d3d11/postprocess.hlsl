@@ -45,7 +45,6 @@ VSOutput VS(VSInput inp)
     output.uv = inp.uv;
     output.light_uv = light_uv;
     output.position = float4(inp.position, 0.0, 1.0);
-    output.position.z = 0.0f;
 
 	return output;
 }
@@ -68,8 +67,8 @@ float4 blend(float4 foreground, float4 background) {
 
 float4 PS(VSOutput inp) : SV_Target
 {
-    const float3 lightmap = LightMap.Sample(LightMapSampler, inp.light_uv).rgb;
     const float3 light = Light.Sample(LightSampler, inp.light_uv).rgb;
+    const float3 lightmap = LightMap.Sample(LightMapSampler, inp.uv).rgb;
 
     const float4 final_light = float4(max(lightmap, light), 1.0f);
 

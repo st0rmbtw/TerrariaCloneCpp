@@ -165,13 +165,14 @@ static const std::array FONT_ASSETS = {
 };
 
 const std::pair<ShaderAsset, AssetShader> SHADER_ASSETS[] = {
-    { ShaderAsset::BackgroundShader, AssetShader("background", ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::BackgroundVertex, VertexFormatAsset::BackgroundInstance }) },
-    { ShaderAsset::PostProcessShader,AssetShader("postprocess",ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::PostProcessVertex) },
-    { ShaderAsset::TilemapShader,    AssetShader("tilemap",    ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::TilemapVertex,   VertexFormatAsset::TilemapInstance   }) },
-    { ShaderAsset::FontShader,       AssetShader("font",       ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::FontVertex,      VertexFormatAsset::FontInstance      }) },
-    { ShaderAsset::SpriteShader,     AssetShader("sprite",     ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::SpriteVertex,    VertexFormatAsset::SpriteInstance    }) },
-    { ShaderAsset::ParticleShader,   AssetShader("particle",   ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::ParticleVertex,  VertexFormatAsset::ParticleInstance  }) },
-    { ShaderAsset::NinePatchShader,  AssetShader("ninepatch",  ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::NinePatchVertex, VertexFormatAsset::NinePatchInstance }) },
+    { ShaderAsset::BackgroundShader,     AssetShader("background", ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::BackgroundVertex, VertexFormatAsset::BackgroundInstance }) },
+    { ShaderAsset::PostProcessShader,    AssetShader("postprocess",ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::PostProcessVertex) },
+    { ShaderAsset::TilemapShader,        AssetShader("tilemap",    ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::TilemapVertex,   VertexFormatAsset::TilemapInstance   }) },
+    { ShaderAsset::FontShader,           AssetShader("font",       ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::FontVertex,      VertexFormatAsset::FontInstance      }) },
+    { ShaderAsset::SpriteShader,         AssetShader("sprite",     ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::SpriteVertex,    VertexFormatAsset::SpriteInstance    }) },
+    { ShaderAsset::ParticleShader,       AssetShader("particle",   ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::ParticleVertex,  VertexFormatAsset::ParticleInstance  }) },
+    { ShaderAsset::NinePatchShader,      AssetShader("ninepatch",  ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::NinePatchVertex, VertexFormatAsset::NinePatchInstance }) },
+    { ShaderAsset::StaticLightMapShader, AssetShader("lightmap",   ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::StaticLightMapVertex ) },
 };
 
 const std::pair<ComputeShaderAsset, AssetComputeShader> COMPUTE_SHADER_ASSETS[] = {
@@ -400,7 +401,8 @@ void Assets::InitVertexFormats() {
     LLGL::VertexFormat background_instance_format;
     LLGL::VertexFormat particle_vertex_format;
     LLGL::VertexFormat particle_instance_format;
-    LLGL::VertexFormat lightmap_vertex_format;
+    LLGL::VertexFormat postprocess_vertex_format;
+    LLGL::VertexFormat static_lightmap_vertex_format;
 
     if (backend.IsGLSL()) {
         sprite_vertex_format.AppendAttribute({ "a_position", LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 });
@@ -673,17 +675,34 @@ void Assets::InitVertexFormats() {
     }
 
     if (backend.IsGLSL()) {
-        lightmap_vertex_format.AppendAttribute({ "a_position",   LLGL::Format::RG32Float });
-        lightmap_vertex_format.AppendAttribute({ "a_uv",         LLGL::Format::RG32Float });
-        lightmap_vertex_format.AppendAttribute({ "a_world_size", LLGL::Format::RG32Float });
+        postprocess_vertex_format.AppendAttribute({ "a_position",   LLGL::Format::RG32Float });
+        postprocess_vertex_format.AppendAttribute({ "a_uv",         LLGL::Format::RG32Float });
+        postprocess_vertex_format.AppendAttribute({ "a_world_size", LLGL::Format::RG32Float });
     } else if (backend.IsHLSL()) {
-        lightmap_vertex_format.AppendAttribute({ "Position",  LLGL::Format::RG32Float });
-        lightmap_vertex_format.AppendAttribute({ "UV",        LLGL::Format::RG32Float });
-        lightmap_vertex_format.AppendAttribute({ "WorldSize", LLGL::Format::RG32Float });
+        postprocess_vertex_format.AppendAttribute({ "Position",  LLGL::Format::RG32Float });
+        postprocess_vertex_format.AppendAttribute({ "UV",        LLGL::Format::RG32Float });
+        postprocess_vertex_format.AppendAttribute({ "WorldSize", LLGL::Format::RG32Float });
     } else {
-        lightmap_vertex_format.AppendAttribute({ "position",  LLGL::Format::RG32Float });
-        lightmap_vertex_format.AppendAttribute({ "uv",        LLGL::Format::RG32Float });
-        lightmap_vertex_format.AppendAttribute({ "world_size", LLGL::Format::RG32Float });
+        postprocess_vertex_format.AppendAttribute({ "position",  LLGL::Format::RG32Float });
+        postprocess_vertex_format.AppendAttribute({ "uv",        LLGL::Format::RG32Float });
+        postprocess_vertex_format.AppendAttribute({ "world_size", LLGL::Format::RG32Float });
+    }
+
+    if (backend.IsGLSL()) {
+        static_lightmap_vertex_format.attributes = {
+            { "a_position", LLGL::Format::RG32Float, 0, offsetof(StaticLightMapChunkVertex, position), sizeof(StaticLightMapChunkVertex), 0 },
+            { "a_uv",       LLGL::Format::RG32Float, 1, offsetof(StaticLightMapChunkVertex, uv),       sizeof(StaticLightMapChunkVertex), 0 },
+        };
+    } else if (backend.IsHLSL()) {
+        static_lightmap_vertex_format.attributes = {
+            { "Position", LLGL::Format::RG32Float, 0, offsetof(StaticLightMapChunkVertex, position), sizeof(StaticLightMapChunkVertex), 0 },
+            { "UV",       LLGL::Format::RG32Float, 1, offsetof(StaticLightMapChunkVertex, uv),       sizeof(StaticLightMapChunkVertex), 0 },
+        };
+    } else {
+        static_lightmap_vertex_format.attributes = {
+            { "position", LLGL::Format::RG32Float, 0, offsetof(StaticLightMapChunkVertex, position), sizeof(StaticLightMapChunkVertex), 0 },
+            { "uv",       LLGL::Format::RG32Float, 1, offsetof(StaticLightMapChunkVertex, uv),       sizeof(StaticLightMapChunkVertex), 0 },
+        };
     }
 
     state.vertex_formats[VertexFormatAsset::SpriteVertex] = sprite_vertex_format;
@@ -698,7 +717,8 @@ void Assets::InitVertexFormats() {
     state.vertex_formats[VertexFormatAsset::BackgroundInstance] = background_instance_format;
     state.vertex_formats[VertexFormatAsset::ParticleVertex] = particle_vertex_format;
     state.vertex_formats[VertexFormatAsset::ParticleInstance] = particle_instance_format;
-    state.vertex_formats[VertexFormatAsset::PostProcessVertex] = lightmap_vertex_format;
+    state.vertex_formats[VertexFormatAsset::PostProcessVertex] = postprocess_vertex_format;
+    state.vertex_formats[VertexFormatAsset::StaticLightMapVertex] = static_lightmap_vertex_format;
 }
 
 void Assets::DestroyTextures() {

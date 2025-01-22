@@ -75,6 +75,7 @@ public:
     [[nodiscard]] inline const Layers& layers() const { return m_data.layers; }
 
     [[nodiscard]] inline bool is_changed() const { return m_changed; }
+    [[nodiscard]] inline bool is_lightmap_changed() const { return m_lightmap_changed; }
 
     [[nodiscard]] inline const ChunkManager& chunk_manager() const { return m_chunk_manager; }
     [[nodiscard]] inline ChunkManager& chunk_manager() { return m_chunk_manager; }
@@ -124,6 +125,7 @@ private:
     Light* m_lights = nullptr;
     uint32_t m_light_count = 0; 
     bool m_changed = false;
+    bool m_lightmap_changed = false;
 };
 
 #endif

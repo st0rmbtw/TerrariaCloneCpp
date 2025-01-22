@@ -16,9 +16,17 @@
 #include "../assets.hpp"
 #include "../world/chunk.hpp"
 #include "../utils.hpp"
+#include "../world/utils.hpp"
 
 #include "renderer.hpp"
 #include "macros.hpp"
+#include "types.hpp"
+#include "utils.hpp"
+
+static constexpr uint32_t LIGHTMAP_CHUNK_TILE_SIZE = 500;
+static constexpr uint32_t LIGHTMAP_CHUNK_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::SUBDIVISION;
+static constexpr float LIGHTMAP_CHUNK_WORLD_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::TILE_SIZE;
+static constexpr float LIGHTMAP_TO_WORLD = Constants::TILE_SIZE / Constants::SUBDIVISION;
 
 struct __attribute__((aligned(16))) DepthUniformData {
     float tile_depth;
@@ -38,70 +46,72 @@ void WorldRenderer::init() {
 
     m_depth_buffer = context->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(DepthUniformData)), &depth_uniform);
 
-    LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
-    pipelineLayoutDesc.heapBindings = {
-        LLGL::BindingDescriptor(
-            "GlobalUniformBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::ConstantBuffer,
-            LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(2)
-        ),
-        LLGL::BindingDescriptor(
-            "DepthBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::ConstantBuffer,
-            LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(3)
-        ),
-    };
-    pipelineLayoutDesc.bindings = {
-        LLGL::BindingDescriptor("u_texture_array", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4)),
-    };
-    pipelineLayoutDesc.staticSamplers = {
-        LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, 5, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
-    };
-    pipelineLayoutDesc.combinedTextureSamplers = {
-        LLGL::CombinedTextureSamplerDescriptor{ "u_texture_array", "u_texture_array", "u_sampler", 4 }
-    };
+    {
+        LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
+        pipelineLayoutDesc.heapBindings = {
+            LLGL::BindingDescriptor(
+                "GlobalUniformBuffer",
+                LLGL::ResourceType::Buffer,
+                LLGL::BindFlags::ConstantBuffer,
+                LLGL::StageFlags::VertexStage,
+                LLGL::BindingSlot(2)
+            ),
+            LLGL::BindingDescriptor(
+                "DepthBuffer",
+                LLGL::ResourceType::Buffer,
+                LLGL::BindFlags::ConstantBuffer,
+                LLGL::StageFlags::VertexStage,
+                LLGL::BindingSlot(3)
+            ),
+        };
+        pipelineLayoutDesc.bindings = {
+            LLGL::BindingDescriptor("u_texture_array", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4)),
+        };
+        pipelineLayoutDesc.staticSamplers = {
+            LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, 5, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
+        };
+        pipelineLayoutDesc.combinedTextureSamplers = {
+            LLGL::CombinedTextureSamplerDescriptor{ "u_texture_array", "u_texture_array", "u_sampler", 4 }
+        };
 
-    LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
+        LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
-    const LLGL::ResourceViewDescriptor resource_views[] = {
-        Renderer::GlobalUniformBuffer(), m_depth_buffer
-    };
+        const LLGL::ResourceViewDescriptor resource_views[] = {
+            Renderer::GlobalUniformBuffer(), m_depth_buffer
+        };
 
-    m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
+        m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
 
-    const ShaderPipeline& tilemap_shader = Assets::GetShader(ShaderAsset::TilemapShader);
+        const ShaderPipeline& tilemap_shader = Assets::GetShader(ShaderAsset::TilemapShader);
 
-    LLGL::GraphicsPipelineDescriptor pipelineDesc;
-    pipelineDesc.debugName = "World Pipeline";
-    pipelineDesc.vertexShader = tilemap_shader.vs;
-    pipelineDesc.fragmentShader = tilemap_shader.ps;
-    pipelineDesc.geometryShader = tilemap_shader.gs;
-    pipelineDesc.pipelineLayout = pipelineLayout;
-    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
-    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
-    pipelineDesc.rasterizer.frontCCW = true;
-    pipelineDesc.depth = LLGL::DepthDescriptor {
-        .testEnabled = true,
-        .writeEnabled = true,
-        .compareOp = LLGL::CompareOp::GreaterEqual
-    };
-    pipelineDesc.blend = LLGL::BlendDescriptor {
-        .targets = {
-            LLGL::BlendTargetDescriptor {
-                .blendEnabled = true,
-                .srcColor = LLGL::BlendOp::SrcAlpha,
-                .dstColor = LLGL::BlendOp::InvSrcAlpha,
-                .srcAlpha = LLGL::BlendOp::SrcAlpha,
-                .dstAlpha = LLGL::BlendOp::InvSrcAlpha
+        LLGL::GraphicsPipelineDescriptor pipelineDesc;
+        pipelineDesc.debugName = "World Pipeline";
+        pipelineDesc.vertexShader = tilemap_shader.vs;
+        pipelineDesc.fragmentShader = tilemap_shader.ps;
+        pipelineDesc.geometryShader = tilemap_shader.gs;
+        pipelineDesc.pipelineLayout = pipelineLayout;
+        pipelineDesc.indexFormat = LLGL::Format::R16UInt;
+        pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
+        pipelineDesc.rasterizer.frontCCW = true;
+        pipelineDesc.depth = LLGL::DepthDescriptor {
+            .testEnabled = true,
+            .writeEnabled = true,
+            .compareOp = LLGL::CompareOp::GreaterEqual
+        };
+        pipelineDesc.blend = LLGL::BlendDescriptor {
+            .targets = {
+                LLGL::BlendTargetDescriptor {
+                    .blendEnabled = true,
+                    .srcColor = LLGL::BlendOp::SrcAlpha,
+                    .dstColor = LLGL::BlendOp::InvSrcAlpha,
+                    .srcAlpha = LLGL::BlendOp::SrcAlpha,
+                    .dstAlpha = LLGL::BlendOp::InvSrcAlpha
+                }
             }
-        }
-    };
+        };
 
-    m_pipeline = context->CreatePipelineState(pipelineDesc);
+        m_pipeline = context->CreatePipelineState(pipelineDesc);
+    }
 
     // =======================================================
 
@@ -210,6 +220,55 @@ void WorldRenderer::init() {
         lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightHorizontal);
         m_light_horizontal_pipeline = context->CreatePipelineState(lightPipelineDesc);
     }
+    {
+        LLGL::PipelineLayoutDescriptor lightmapPipelineLayoutDesc;
+        lightmapPipelineLayoutDesc.heapBindings = {
+            LLGL::BindingDescriptor(
+                "GlobalUniformBuffer",
+                LLGL::ResourceType::Buffer,
+                LLGL::BindFlags::ConstantBuffer,
+                LLGL::StageFlags::ComputeStage,
+                LLGL::BindingSlot(2)
+            ),
+        };
+        lightmapPipelineLayoutDesc.bindings = {
+            LLGL::BindingDescriptor(
+                "StaticLightmapChunk",
+                LLGL::ResourceType::Texture,
+                LLGL::BindFlags::Sampled,
+                LLGL::StageFlags::FragmentStage,
+                LLGL::BindingSlot(3)
+            ),
+        };
+
+        LLGL::PipelineLayout* lightmapPipelineLayout = context->CreatePipelineLayout(lightmapPipelineLayoutDesc);
+
+        const LLGL::ResourceViewDescriptor lightmapResourceViews[] = {
+            Renderer::GlobalUniformBuffer()
+        };
+
+        m_lightmap_resource_heap = context->CreateResourceHeap(lightmapPipelineLayout, lightmapResourceViews);
+
+        const ShaderPipeline lightmap_shader = Assets::GetShader(ShaderAsset::StaticLightMapShader);
+
+        LLGL::GraphicsPipelineDescriptor lightPipelineDesc;
+        lightPipelineDesc.debugName = "WorldStaticLightMapPipeline";
+        lightPipelineDesc.vertexShader = lightmap_shader.vs;
+        lightPipelineDesc.fragmentShader = lightmap_shader.ps;
+        lightPipelineDesc.pipelineLayout = lightmapPipelineLayout;
+        lightPipelineDesc.indexFormat = LLGL::Format::R16UInt;
+        lightPipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
+        lightPipelineDesc.rasterizer.frontCCW = true;
+        lightPipelineDesc.blend = LLGL::BlendDescriptor {
+            .targets = {
+                LLGL::BlendTargetDescriptor {
+                    .blendEnabled = false,
+                }
+            }
+        };
+
+        m_lightmap_pipeline = context->CreatePipelineState(lightPipelineDesc);
+    }
 }
 
 void WorldRenderer::init_textures(const WorldData& world) {
@@ -220,28 +279,10 @@ void WorldRenderer::init_textures(const WorldData& world) {
     auto& context = Renderer::Context();
     const RenderBackend backend = Renderer::Backend();
 
-    RESOURCE_RELEASE(m_lightmap_texture);
     RESOURCE_RELEASE(m_light_texture);
     RESOURCE_RELEASE(m_tile_texture);
     RESOURCE_RELEASE(m_light_texture_target);
 
-    {
-        LLGL::TextureDescriptor lightmap_texture_desc;
-        lightmap_texture_desc.type      = LLGL::TextureType::Texture2D;
-        lightmap_texture_desc.format    = LLGL::Format::RGBA8UNorm;
-        lightmap_texture_desc.extent    = LLGL::Extent3D(world.lightmap.width, world.lightmap.height, 1);
-        lightmap_texture_desc.miscFlags = 0;
-        lightmap_texture_desc.bindFlags = LLGL::BindFlags::Sampled;
-        lightmap_texture_desc.mipLevels = 1;
-
-        LLGL::ImageView image_view;
-        image_view.format   = LLGL::ImageFormat::RGB;
-        image_view.dataType = LLGL::DataType::UInt8;
-        image_view.data     = world.lightmap.colors;
-        image_view.dataSize = world.lightmap.width * world.lightmap.height * sizeof(Color);
-
-        m_lightmap_texture = context->CreateTexture(lightmap_texture_desc, &image_view);
-    }
     {
         LLGL::TextureDescriptor light_texture_desc;
         light_texture_desc.type      = LLGL::TextureType::Texture2D;
@@ -301,15 +342,91 @@ void WorldRenderer::init_textures(const WorldData& world) {
     m_light_texture_target = context->CreateRenderTarget(lightTextureRenderTarget);
 }
 
-inline static void internal_update_lightmap_texture(const WorldData& world, const LightMapTaskResult& result, LLGL::Texture* lightmap_texture, LLGL::ImageView& image_view) {
+void WorldRenderer::init_lightmap_chunks(const WorldData& world) {
+    using Constants::TILE_SIZE;
+
+    const LightMap& lightmap = world.lightmap;
+
+    m_lightmap_width = lightmap.width;
+    m_lightmap_height = lightmap.height;
+
+    const uint32_t cols = (lightmap.width + LIGHTMAP_CHUNK_SIZE - 1u) / LIGHTMAP_CHUNK_SIZE;
+    const uint32_t rows = (lightmap.height + LIGHTMAP_CHUNK_SIZE - 1u) / LIGHTMAP_CHUNK_SIZE;
+
+    for (uint32_t j = 0; j < rows; ++j) {
+        for (uint32_t i = 0; i < cols; ++i) {
+            LLGL::TextureDescriptor texture_desc;
+            
+            glm::uvec2 chunk_size = glm::uvec2(LIGHTMAP_CHUNK_SIZE, LIGHTMAP_CHUNK_SIZE);
+
+            if (chunk_size.x > m_lightmap_width - i * LIGHTMAP_CHUNK_SIZE) {
+                chunk_size.x = m_lightmap_width - i * LIGHTMAP_CHUNK_SIZE;
+            }
+
+            if (chunk_size.y > m_lightmap_height - j * LIGHTMAP_CHUNK_SIZE) {
+                chunk_size.y = m_lightmap_height - j * LIGHTMAP_CHUNK_SIZE;
+            }
+
+            texture_desc.extent = LLGL::Extent3D(chunk_size.x, chunk_size.y, 1);
+            texture_desc.bindFlags = LLGL::BindFlags::Sampled;
+            texture_desc.mipLevels = 1;
+            texture_desc.miscFlags = 0;
+
+            Color* buffer = (Color*) malloc(chunk_size.x * chunk_size.y * sizeof(Color));
+            for (uint32_t y = 0; y < chunk_size.y; ++y) {
+                memcpy(&buffer[y * chunk_size.x], &lightmap.colors[(j * LIGHTMAP_CHUNK_SIZE + y) * m_lightmap_width + i * LIGHTMAP_CHUNK_SIZE], chunk_size.x * sizeof(Color));
+            }
+
+            LLGL::ImageView image_view;
+            image_view.format = LLGL::ImageFormat::RGB;
+            image_view.dataType = LLGL::DataType::UInt8;
+            image_view.data = buffer;
+            image_view.dataSize = chunk_size.x * chunk_size.y * sizeof(Color);
+
+            LLGL::Texture* texture = Renderer::Context()->CreateTexture(texture_desc, &image_view);
+            free(buffer);
+
+            const StaticLightMapChunkVertex vertices[] = {
+                StaticLightMapChunkVertex(
+                    glm::vec2(i, j) * LIGHTMAP_CHUNK_WORLD_SIZE,
+                    glm::vec2(0.0f, 0.0f)
+                ),
+
+                StaticLightMapChunkVertex(
+                    glm::vec2(i, j) * LIGHTMAP_CHUNK_WORLD_SIZE + glm::vec2(0.0f, chunk_size.y * LIGHTMAP_TO_WORLD),
+                    glm::vec2(0.0f, 1.0f)
+                ),
+
+                StaticLightMapChunkVertex(
+                    glm::vec2(i, j) * LIGHTMAP_CHUNK_WORLD_SIZE + glm::vec2(chunk_size.x * LIGHTMAP_TO_WORLD, 0.0f),
+                    glm::vec2(1.0f, 0.0f)
+                ),
+                
+                StaticLightMapChunkVertex(
+                    glm::vec2(i, j) * LIGHTMAP_CHUNK_WORLD_SIZE + glm::vec2(chunk_size) * LIGHTMAP_TO_WORLD,
+                    glm::vec2(1.0f, 1.0f)
+                )
+            };
+
+            m_lightmap_chunks[glm::uvec2(i, j)] = LightMapChunk {
+                .texture = texture,
+                .vertex_buffer = CreateVertexBuffer(vertices, Assets::GetVertexFormat(VertexFormatAsset::StaticLightMapVertex), "StaticLightMap VertexBuffer")
+            };
+        }
+    }
+}
+
+FORCE_INLINE static void internal_update_world_lightmap(const WorldData& world, const LightMapTaskResult& result) {
     for (int y = 0; y < result.height; ++y) {
         memcpy(&world.lightmap.colors[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.data[y * result.width], result.width * sizeof(Color));
         memcpy(&world.lightmap.masks[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.mask[y * result.width], result.width * sizeof(LightMask));
     }
+}
 
-    image_view.data     = result.data;
-    image_view.dataSize = result.width * result.height * sizeof(Color);
-    Renderer::Context()->WriteTexture(*lightmap_texture, LLGL::TextureRegion(LLGL::Offset3D(result.offset_x, result.offset_y, 0), LLGL::Extent3D(result.width, result.height, 1)), image_view);
+FORCE_INLINE static void internal_update_lightmap_texture(glm::uvec2 offset, glm::uvec2 size, void* data, LLGL::Texture* lightmap_texture, LLGL::ImageView& image_view) {
+    image_view.data     = data;
+    image_view.dataSize = size.x * size.y * sizeof(Color);
+    Renderer::Context()->WriteTexture(*lightmap_texture, LLGL::TextureRegion(LLGL::Offset3D(offset.x, offset.y, 0), LLGL::Extent3D(size.x, size.y, 1)), image_view);
 }
 
 void WorldRenderer::update_lightmap_texture(WorldData& world) {
@@ -324,7 +441,48 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
         const LightMapTaskResult result = task.result->load();
 
         if (result.is_complete) {
-            internal_update_lightmap_texture(world, result, m_lightmap_texture, image_view);
+            ZoneScopedN("WorldRenderer::process_lightmap_task_result");
+
+            internal_update_world_lightmap(world, result);
+
+            glm::uvec2 offset = glm::uvec2(result.offset_x, result.offset_y);
+            const glm::uvec2 size = glm::uvec2(result.width, result.height);
+
+            const glm::uvec2 start_chunk_pos = offset / LIGHTMAP_CHUNK_SIZE;
+
+            glm::uvec2 remaining_size = size;
+            glm::uvec2 chunk_pos = start_chunk_pos;
+
+            while (remaining_size.y > 0) {
+                glm::uvec2 write_size;
+
+                while (remaining_size.x > 0) {
+                    write_size = glm::min(glm::uvec2(offset + remaining_size), chunk_pos * LIGHTMAP_CHUNK_SIZE + LIGHTMAP_CHUNK_SIZE) - offset;
+
+                    const glm::uvec2 write_offset = size - remaining_size;
+                    const LightMapChunk& lightmap_chunk = m_lightmap_chunks[chunk_pos];
+
+                    Color* buffer = (Color*) malloc(write_size.y * write_size.x * sizeof(Color));
+                    for (uint32_t y = 0; y < write_size.y; ++y) {
+                        memcpy(&buffer[y * write_size.x], &result.data[(write_offset.y + y) * result.width + write_offset.x], write_size.x * sizeof(Color));
+                    }
+
+                    internal_update_lightmap_texture(offset % LIGHTMAP_CHUNK_SIZE, write_size, buffer, lightmap_chunk.texture, image_view);
+                    
+                    free(buffer);
+
+                    offset.x = 0;
+                    remaining_size.x -= write_size.x;
+                    chunk_pos.x += 1;
+                }
+
+                remaining_size.y -= write_size.y;
+                remaining_size.x = size.x;
+                offset.x = result.offset_x;
+                offset.y = 0;
+                chunk_pos.x = start_chunk_pos.x;
+                chunk_pos.y += 1;
+            }
 
             delete[] result.data;
             delete[] result.mask;
@@ -379,6 +537,58 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
             commands->SetResourceHeap(*m_resource_heap);
 
             commands->DrawInstanced(4, 0, chunk.blocks_count);
+        }
+    }
+}
+
+static math::URect get_chunk_range(const math::Rect& camera_fov, glm::uvec2 lightmap_size) {
+    using Constants::SUBDIVISION;
+    using Constants::TILE_SIZE;
+
+    uint32_t left = 0;
+    uint32_t right = 0;
+    uint32_t bottom = 0;
+    uint32_t top = 0;
+
+    if (camera_fov.min.x > 0.0f) {
+        left = (camera_fov.min.x * (SUBDIVISION / TILE_SIZE)) / LIGHTMAP_CHUNK_SIZE;
+    }
+    if (camera_fov.max.x > 0.0f) {
+        right = (camera_fov.max.x * (SUBDIVISION / TILE_SIZE) + LIGHTMAP_CHUNK_SIZE - 1) / LIGHTMAP_CHUNK_SIZE;
+    }
+    if (camera_fov.min.y > 0.0f) {
+        top = (camera_fov.min.y * (SUBDIVISION / TILE_SIZE)) / LIGHTMAP_CHUNK_SIZE;
+    }
+    if (camera_fov.max.y > 0.0f) {
+        bottom = (camera_fov.max.y * (SUBDIVISION / TILE_SIZE) + LIGHTMAP_CHUNK_SIZE - 1) / LIGHTMAP_CHUNK_SIZE;
+    }
+
+    const glm::uvec2 chunk_max_pos = (lightmap_size + LIGHTMAP_CHUNK_SIZE - 1u) / LIGHTMAP_CHUNK_SIZE;
+
+    if (right > chunk_max_pos.x) right = chunk_max_pos.x;
+    if (bottom > chunk_max_pos.y) bottom = chunk_max_pos.y;
+
+    return {glm::uvec2(left, top), glm::uvec2(right, bottom)};
+}
+
+void WorldRenderer::render_lightmap(const Camera& camera) {
+    const math::Rect camera_fov = utils::get_camera_fov(camera);
+    const math::URect chunk_range = get_chunk_range(camera_fov, glm::uvec2(m_lightmap_width, m_lightmap_height));
+
+    auto* const commands = Renderer::CommandBuffer();
+
+    commands->SetPipelineState(*m_lightmap_pipeline);
+    commands->SetResourceHeap(*m_lightmap_resource_heap);
+
+    for (uint32_t y = chunk_range.min.y; y < chunk_range.max.y; ++y) {
+        for (uint32_t x = chunk_range.min.x; x < chunk_range.max.x; ++x) {
+            const glm::uvec2 chunk_pos = glm::uvec2(x, y);
+
+            const LightMapChunk& lightmap_chunk = m_lightmap_chunks.find(chunk_pos)->second;
+
+            commands->SetVertexBuffer(*lightmap_chunk.vertex_buffer);
+            commands->SetResource(0, *lightmap_chunk.texture);
+            commands->Draw(4, 0);
         }
     }
 }
@@ -458,7 +668,6 @@ void WorldRenderer::terminate() {
     RESOURCE_RELEASE(m_light_blur_resource_heap);
     RESOURCE_RELEASE(m_resource_heap);
     RESOURCE_RELEASE(m_depth_buffer);
-    RESOURCE_RELEASE(m_lightmap_texture);
     RESOURCE_RELEASE(m_light_texture);
     RESOURCE_RELEASE(m_light_texture_target);
     RESOURCE_RELEASE(m_tile_texture);

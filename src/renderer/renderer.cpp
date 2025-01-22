@@ -254,6 +254,9 @@ static struct RendererState {
     LLGL::Texture* background_render_texture = nullptr;
     LLGL::RenderTarget* background_render_target = nullptr;
 
+    LLGL::Texture* static_lightmap_texture = nullptr;
+    LLGL::RenderTarget* static_lightmap_target = nullptr;
+
     LLGL::PipelineState* postprocess_pipeline = nullptr;
     LLGL::Buffer* fullscreen_triangle_vertex_buffer = nullptr;
     
@@ -717,6 +720,23 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
     state.chunk_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex), "WorldRenderer VertexBuffer");
 
+    {
+        LLGL::TextureDescriptor lightmap_texture_desc;
+        lightmap_texture_desc.type      = LLGL::TextureType::Texture2D;
+        lightmap_texture_desc.format    = LLGL::Format::RGBA8UNorm;
+        lightmap_texture_desc.extent    = LLGL::Extent3D(resolution.width, resolution.height, 1);
+        lightmap_texture_desc.miscFlags = 0;
+        lightmap_texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
+        lightmap_texture_desc.mipLevels = 1;
+
+        state.static_lightmap_texture = context->CreateTexture(lightmap_texture_desc);
+
+        LLGL::RenderTargetDescriptor render_target;
+        render_target.resolution = LLGL::Extent2D(resolution.width, resolution.height);
+        render_target.colorAttachments[0].texture = state.static_lightmap_texture;
+        state.static_lightmap_target = context->CreateRenderTarget(render_target);
+    }
+
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.staticSamplers = {   
         LLGL::StaticSamplerDescriptor("u_background_sampler", LLGL::StageFlags::FragmentStage, 4, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
@@ -752,7 +772,7 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
         state.constant_buffer,
         state.background_render_texture,
         state.world_render_texture,
-        nullptr,
+        state.static_lightmap_texture,
         nullptr,
     };
     state.resource_heap = context->CreateResourceHeap(LLGL::ResourceHeapDescriptor(pipelineLayout, ARRAY_LEN(resource_views)), resource_views);
@@ -786,6 +806,9 @@ void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
     RESOURCE_RELEASE(state.background_render_texture);
     RESOURCE_RELEASE(state.background_render_target);
 
+    RESOURCE_RELEASE(state.static_lightmap_texture);
+    RESOURCE_RELEASE(state.static_lightmap_target);
+
     LLGL::TextureDescriptor texture_desc;
     texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
     texture_desc.format = swap_chain->GetColorFormat();
@@ -805,10 +828,12 @@ void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
     LLGL::Texture* world_depth_texture = context->CreateTexture(depth_texture_desc);
     LLGL::Texture* world_render_texture = context->CreateTexture(texture_desc);
     LLGL::Texture* background_render_texture = context->CreateTexture(texture_desc);
+    LLGL::Texture* static_lightmap_texture = context->CreateTexture(texture_desc);
 
     state.world_depth_texture = world_depth_texture;
     state.world_render_texture = world_render_texture;
     state.background_render_texture = background_render_texture;
+    state.static_lightmap_texture = static_lightmap_texture;
     
     LLGL::RenderTargetDescriptor render_target_desc;
     render_target_desc.resolution = resolution;
@@ -823,9 +848,15 @@ void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
     background_target_desc.depthStencilAttachment.format = swap_chain->GetDepthStencilFormat();
     state.background_render_target = context->CreateRenderTarget(background_target_desc);
 
+    LLGL::RenderTargetDescriptor static_lightmap_target_desc;
+    static_lightmap_target_desc.resolution = resolution;
+    static_lightmap_target_desc.colorAttachments[0] = static_lightmap_texture;
+    state.static_lightmap_target = context->CreateRenderTarget(static_lightmap_target_desc);
+
     if (state.resource_heap != nullptr) {
         context->WriteResourceHeap(*state.resource_heap, 1, {background_render_texture});
         context->WriteResourceHeap(*state.resource_heap, 2, {world_render_texture});
+        context->WriteResourceHeap(*state.resource_heap, 3, {static_lightmap_texture});
     }
 }
 
@@ -847,7 +878,9 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
     state.fullscreen_triangle_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::PostProcessVertex));
 
     state.world_renderer.init_textures(world);
-    context->WriteResourceHeap(*state.resource_heap, 3, {state.world_renderer.lightmap_texture(), state.world_renderer.light_texture()});
+    context->WriteResourceHeap(*state.resource_heap, 4, {state.world_renderer.light_texture()});
+
+    state.world_renderer.init_lightmap_chunks(world);
 }
 
 void Renderer::Begin(const Camera& camera, WorldData& world) {
@@ -899,7 +932,7 @@ static FORCE_INLINE void UpdateBuffer(LLGL::Buffer* buffer, void* data, size_t l
     }
 }
 
-static inline void SortDrawCommands() {
+static INLINE void SortDrawCommands() {
     ZoneScopedN("Renderer::SortDrawCommands");
 
     std::sort(
@@ -1145,7 +1178,7 @@ static inline void SortDrawCommands() {
     }
 }
 
-static inline void SortWorldDrawCommands() {
+static INLINE void SortWorldDrawCommands() {
     ZoneScopedN("Renderer::SortWorldDrawCommands");
 
     std::sort(
@@ -1319,12 +1352,21 @@ void Renderer::Render(const Camera& camera, const World& world) {
 
     LLGL::ClearValue clear_value = LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
-    if (state.compute_light_timer.tick(Time::delta()).finished()) {
+    state.compute_light_timer.tick(Time::delta());
+
+    if (state.compute_light_timer.finished()) {
         commands->BeginRenderPass(*state.world_renderer.light_texture_target());
             commands->Clear(LLGL::ClearFlags::Color, clear_value);
         commands->EndRenderPass();
 
         state.world_renderer.compute_light(camera, world);
+    }
+
+    if (state.compute_light_timer.finished() || world.is_lightmap_changed()) {
+        commands->BeginRenderPass(*state.static_lightmap_target);
+            commands->Clear(LLGL::ClearFlags::Color, clear_value);
+            state.world_renderer.render_lightmap(camera);
+        commands->EndRenderPass();
     }
 
     commands->BeginRenderPass(*state.background_render_target);
@@ -1343,7 +1385,7 @@ void Renderer::Render(const Camera& camera, const World& world) {
     commands->EndRenderPass();
 
     commands->BeginRenderPass(*state.swap_chain);
-        commands->Clear(LLGL::ClearFlags::ColorDepth, LLGL::ClearValue(1.0f, 0.0f, 0.0f, 1.0f, 0.0f));
+        commands->Clear(LLGL::ClearFlags::Color, LLGL::ClearValue(1.0f, 0.0f, 0.0f, 1.0f, 0.0f));
 
         commands->SetVertexBuffer(*state.fullscreen_triangle_vertex_buffer);
         commands->SetPipelineState(*state.postprocess_pipeline);

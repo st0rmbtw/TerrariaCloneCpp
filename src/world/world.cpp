@@ -23,6 +23,7 @@ void World::set_block(TilePos pos, const Block& block) {
 
     m_data.blocks[index] = block;
     m_changed = true;
+    m_lightmap_changed = true;
 
     const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
         .clamp(m_data.playable_area);
@@ -47,6 +48,7 @@ void World::set_block(TilePos pos, BlockType block_type) {
     update_neighbors(pos);
     
     m_changed = true;
+    m_lightmap_changed = true;
 
     const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
         .clamp(m_data.playable_area);
@@ -69,6 +71,7 @@ void World::remove_block(TilePos pos) {
 
     m_data.blocks[index] = std::nullopt;
     m_changed = true;
+    m_lightmap_changed = true;
 
     const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
         .clamp(m_data.playable_area);
@@ -100,6 +103,7 @@ void World::set_wall(TilePos pos, WallType wall_type) {
 
     m_data.walls[index] = Wall(wall_type);
     m_changed = true;
+    m_lightmap_changed = true;
 
     const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
         .clamp(m_data.playable_area);
@@ -125,6 +129,7 @@ void World::update(const Camera& camera) {
     ZoneScopedN("World::update");
 
     m_changed = false;
+    m_lightmap_changed = false;
     m_chunk_manager.manage_chunks(m_data, camera);
 
     for (auto it = m_block_dig_animations.begin(); it != m_block_dig_animations.end();) {
