@@ -695,6 +695,10 @@ void Player::use_item(const Camera& camera, World& world) {
     const std::optional<Item>& item = item_slot.item;
     if (!item) return;
 
+    const glm::vec2& screen_pos = Input::MouseScreenPosition();
+    
+    m_direction = screen_pos.x < camera.viewport().x * 0.5f ? Direction::Left : Direction::Right;
+
     if (m_swing_counter <= 0) {
         m_swing_counter = item->swing_speed;
         m_swing_counter_max = item->swing_speed;
@@ -706,7 +710,6 @@ void Player::use_item(const Camera& camera, World& world) {
     if (m_use_cooldown > 0) return;
     m_use_cooldown = item->use_cooldown;
 
-    const glm::vec2& screen_pos = Input::MouseScreenPosition();
     const glm::vec2 world_pos = camera.screen_to_world(screen_pos);
 
     const TilePos tile_pos = TilePos::from_world_pos(world_pos);
