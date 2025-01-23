@@ -9,6 +9,7 @@
 #include <glm/vec2.hpp>
 
 #include "../renderer/camera.h"
+#include "../renderer/types.hpp"
 #include "../types/tile_pos.hpp"
 
 #include "chunk.hpp"
@@ -16,6 +17,12 @@
 
 class ChunkManager {
 public:
+    ChunkManager() {
+        using Constants::RENDER_CHUNK_SIZE_U;
+        m_block_data_arena = (ChunkInstance*) malloc(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U * sizeof(ChunkInstance));
+        m_wall_data_arena = (ChunkInstance*) malloc(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U * sizeof(ChunkInstance));
+    }
+
     void manage_chunks(const WorldData& world, const Camera& camera);
 
     void set_blocks_changed(TilePos tile_pos);
@@ -39,10 +46,18 @@ public:
     [[nodiscard]] inline const std::unordered_set<glm::uvec2>& visible_chunks() const { return m_visible_chunks; }
     [[nodiscard]] inline std::deque<RenderChunk>& chunks_to_destroy() { return m_chunks_to_destroy; }
     [[nodiscard]] inline bool any_chunks_to_destroy() { return !m_chunks_to_destroy.empty(); }
+
+    ~ChunkManager() {
+        free(m_block_data_arena);
+        free(m_wall_data_arena);
+    }
 private:
     std::unordered_map<glm::uvec2, RenderChunk> m_render_chunks;
     std::unordered_set<glm::uvec2> m_visible_chunks;
     std::deque<RenderChunk> m_chunks_to_destroy;
+
+    ChunkInstance* m_block_data_arena = nullptr;
+    ChunkInstance* m_wall_data_arena = nullptr;
 };
 
 #endif

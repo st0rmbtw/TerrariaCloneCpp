@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include <cstdint>
 #include <glm/glm.hpp>
 #include <glm/gtx/hash.hpp>
 #include <LLGL/Buffer.h>
@@ -11,6 +10,7 @@
 #include <LLGL/Texture.h>
 
 #include "../constants.hpp"
+#include "../renderer/types.hpp"
 
 #include "world_data.hpp"
 
@@ -21,28 +21,38 @@ struct RenderChunk {
     LLGL::BufferArray* wall_buffer_array = nullptr;
     LLGL::Buffer* wall_instance_buffer = nullptr;
     LLGL::Buffer* block_instance_buffer = nullptr;
-    uint16_t blocks_count = 0;
-    uint16_t walls_count = 0;
-    bool blocks_dirty = true;
-    bool walls_dirty = true;
+    uint16_t block_count = 0;
+    uint16_t wall_count = 0;
+    bool blocks_dirty = false;
+    bool walls_dirty = false;
 
     RenderChunk(
         glm::uvec2 index,
         const glm::vec2& world_pos,
-        const WorldData& world
+        const WorldData& world,
+        ChunkInstance* block_data_arena,
+        ChunkInstance* wall_data_arena
     ) : world_pos(world_pos.x * Constants::RENDER_CHUNK_SIZE, world_pos.y * Constants::RENDER_CHUNK_SIZE),
         index(index)
     {
-        build_mesh(world);
+        build_mesh(world, block_data_arena, wall_data_arena);
     }
 
-    void build_mesh(const WorldData& world);
+    void build_mesh(
+        const WorldData& world,
+        ChunkInstance* block_data_arena,
+        ChunkInstance* wall_data_arena
+    );
+
+    void rebuild_mesh(
+        const WorldData& world,
+        ChunkInstance* block_data_arena,
+        ChunkInstance* wall_data_arena
+    );
+
     void destroy();
 
     [[nodiscard]] inline bool dirty() const { return blocks_dirty || walls_dirty; }
-
-    [[nodiscard]] inline bool blocks_empty() const { return blocks_count == 0; }
-    [[nodiscard]] inline bool walls_empty() const { return walls_count == 0; }
 };
 
 #endif

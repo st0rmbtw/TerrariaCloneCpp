@@ -52,7 +52,7 @@ void ChunkManager::manage_chunks(const WorldData& world, const Camera& camera) {
         }
 
         if (it->second.dirty()) {
-            it->second.build_mesh(world);
+            it->second.rebuild_mesh(world, m_block_data_arena, m_wall_data_arena);
         }
 
         it++;
@@ -68,7 +68,7 @@ void ChunkManager::manage_chunks(const WorldData& world, const Camera& camera) {
 
             if (m_render_chunks.find(chunk_pos) == m_render_chunks.end()) {
                 const glm::vec2 world_pos = glm::vec2(x * TILE_SIZE, y * TILE_SIZE);
-                m_render_chunks.emplace(chunk_pos, RenderChunk(chunk_pos, world_pos, world));
+                m_render_chunks.emplace(chunk_pos, RenderChunk(chunk_pos, world_pos, world, m_block_data_arena, m_wall_data_arena));
             }
         }
     }
