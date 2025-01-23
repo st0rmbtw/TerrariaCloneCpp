@@ -377,7 +377,7 @@ void WorldRenderer::init_lightmap_chunks(const WorldData& world) {
             texture_desc.extent = LLGL::Extent3D(chunk_size.x, chunk_size.y, 1);
             texture_desc.bindFlags = LLGL::BindFlags::Sampled;
             texture_desc.mipLevels = 1;
-            texture_desc.miscFlags = 0;
+            texture_desc.miscFlags = LLGL::MiscFlags::DynamicUsage;
 
             Color* buffer = (Color*) malloc(chunk_size.x * chunk_size.y * sizeof(Color));
             for (uint32_t y = 0; y < chunk_size.y; ++y) {
@@ -385,7 +385,7 @@ void WorldRenderer::init_lightmap_chunks(const WorldData& world) {
             }
 
             LLGL::ImageView image_view;
-            image_view.format = LLGL::ImageFormat::RGB;
+            image_view.format = LLGL::ImageFormat::RGBA;
             image_view.dataType = LLGL::DataType::UInt8;
             image_view.data = buffer;
             image_view.dataSize = chunk_size.x * chunk_size.y * sizeof(Color);
@@ -430,17 +430,11 @@ FORCE_INLINE static void internal_update_world_lightmap(const WorldData& world, 
     }
 }
 
-FORCE_INLINE static void internal_update_lightmap_texture(glm::uvec2 offset, glm::uvec2 size, void* data, LLGL::Texture* lightmap_texture, LLGL::ImageView& image_view) {
-    image_view.data     = data;
-    image_view.dataSize = size.x * size.y * sizeof(Color);
-    Renderer::Context()->WriteTexture(*lightmap_texture, LLGL::TextureRegion(LLGL::Offset3D(offset.x, offset.y, 0), LLGL::Extent3D(size.x, size.y, 1)), image_view);
-}
-
 void WorldRenderer::update_lightmap_texture(WorldData& world) {
     ZoneScopedN("WorldRenderer::update_lightmap_texture");
 
     LLGL::ImageView image_view;
-    image_view.format   = LLGL::ImageFormat::RGB;
+    image_view.format   = LLGL::ImageFormat::RGBA;
     image_view.dataType = LLGL::DataType::UInt8;
 
     for (auto it = world.lightmap_tasks.cbegin(); it != world.lightmap_tasks.cend();) {
@@ -459,32 +453,33 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
 
             glm::uvec2 remaining_size = size;
             glm::uvec2 chunk_pos = start_chunk_pos;
+            glm::uvec2 write_offset = glm::uvec2(0);
 
             while (remaining_size.y > 0) {
-                glm::uvec2 write_size;
+                const uint32_t write_height = glm::min(offset.y + remaining_size.y, chunk_pos.y * LIGHTMAP_CHUNK_SIZE + LIGHTMAP_CHUNK_SIZE) - offset.y;
 
                 while (remaining_size.x > 0) {
-                    write_size = glm::min(glm::uvec2(offset + remaining_size), chunk_pos * LIGHTMAP_CHUNK_SIZE + LIGHTMAP_CHUNK_SIZE) - offset;
+                    const uint32_t write_width = glm::min(offset.x + remaining_size.x, chunk_pos.x * LIGHTMAP_CHUNK_SIZE + LIGHTMAP_CHUNK_SIZE) - offset.x;
 
-                    const glm::uvec2 write_offset = size - remaining_size;
-                    const LightMapChunk& lightmap_chunk = m_lightmap_chunks[chunk_pos];
+                    const LightMapChunk& lightmap_chunk = m_lightmap_chunks.find(chunk_pos)->second;
 
-                    Color* buffer = (Color*) malloc(write_size.y * write_size.x * sizeof(Color));
-                    for (uint32_t y = 0; y < write_size.y; ++y) {
-                        memcpy(&buffer[y * write_size.x], &result.data[(write_offset.y + y) * result.width + write_offset.x], write_size.x * sizeof(Color));
-                    }
+                    const glm::uvec2 texture_offset = offset % LIGHTMAP_CHUNK_SIZE;
 
-                    internal_update_lightmap_texture(offset % LIGHTMAP_CHUNK_SIZE, write_size, buffer, lightmap_chunk.texture, image_view);
-                    
-                    free(buffer);
+                    image_view.data     = &result.data[write_offset.y * result.width + write_offset.x];
+                    image_view.dataSize = write_width * write_height * sizeof(Color);
+                    image_view.stride = result.width;
+                    Renderer::Context()->WriteTexture(*lightmap_chunk.texture, LLGL::TextureRegion(LLGL::Offset3D(texture_offset.x, texture_offset.y, 0), LLGL::Extent3D(write_width, write_height, 1)), image_view);
 
                     offset.x = 0;
-                    remaining_size.x -= write_size.x;
+                    remaining_size.x -= write_width;
+                    write_offset.x += write_width;
                     chunk_pos.x += 1;
                 }
 
-                remaining_size.y -= write_size.y;
+                remaining_size.y -= write_height;
+                write_offset.y += write_height;
                 remaining_size.x = size.x;
+                write_offset.x = 0;
                 offset.x = result.offset_x;
                 offset.y = 0;
                 chunk_pos.x = start_chunk_pos.x;

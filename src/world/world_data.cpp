@@ -213,8 +213,6 @@ FORCE_INLINE static void blur_vertical(WorldData& world, LightMap& lightmap, con
 }
 
 static void internal_lightmap_blur_area(WorldData& world, LightMap& lightmap, const math::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
-    ZoneScopedN("LightMap::blur_area");
-
     const math::IRect lightmap_area = area * SUBDIVISION;
     const TilePos offset = {tile_offset.x * SUBDIVISION, tile_offset.y * SUBDIVISION};
 
