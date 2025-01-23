@@ -11,6 +11,7 @@
 #include <LLGL/PipelineStateFlags.h>
 #include <LLGL/RendererConfiguration.h>
 #include <LLGL/Format.h>
+#include <LLGL/RenderPassFlags.h>
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -256,6 +257,7 @@ static struct RendererState {
 
     LLGL::Texture* static_lightmap_texture = nullptr;
     LLGL::RenderTarget* static_lightmap_target = nullptr;
+    LLGL::RenderPass* static_lightmap_render_pass = nullptr;
 
     LLGL::PipelineState* postprocess_pipeline = nullptr;
     LLGL::Buffer* fullscreen_triangle_vertex_buffer = nullptr;
@@ -701,10 +703,6 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     init_glyph_batch();
     init_ninepatch_batch();
 
-    state.world_renderer.init();
-    state.background_renderer.init();
-    state.particle_renderer.init();
-
     const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Tiles).size());
     const glm::vec2 wall_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Walls).size());
 
@@ -735,6 +733,12 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
         render_target.resolution = LLGL::Extent2D(resolution.width, resolution.height);
         render_target.colorAttachments[0].texture = state.static_lightmap_texture;
         state.static_lightmap_target = context->CreateRenderTarget(render_target);
+
+        LLGL::RenderPassDescriptor static_lightmap_render_pass_desc;
+        static_lightmap_render_pass_desc.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Undefined;
+        static_lightmap_render_pass_desc.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
+        static_lightmap_render_pass_desc.colorAttachments[0].format = lightmap_texture_desc.format;
+        state.static_lightmap_render_pass = context->CreateRenderPass(static_lightmap_render_pass_desc);
     }
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
@@ -791,6 +795,10 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     state.postprocess_pipeline = context->CreatePipelineState(pipelineDesc);
 
     state.compute_light_timer = Timer::from_seconds(Constants::FIXED_UPDATE_INTERVAL, TimerMode::Repeating);
+
+    state.world_renderer.init(state.static_lightmap_render_pass);
+    state.background_renderer.init();
+    state.particle_renderer.init();
 
     return true;
 }
@@ -849,6 +857,7 @@ void Renderer::ResizeTextures(LLGL::Extent2D resolution) {
     state.background_render_target = context->CreateRenderTarget(background_target_desc);
 
     LLGL::RenderTargetDescriptor static_lightmap_target_desc;
+    static_lightmap_target_desc.renderPass = state.static_lightmap_render_pass;
     static_lightmap_target_desc.resolution = resolution;
     static_lightmap_target_desc.colorAttachments[0] = static_lightmap_texture;
     state.static_lightmap_target = context->CreateRenderTarget(static_lightmap_target_desc);

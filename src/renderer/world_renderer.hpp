@@ -17,7 +17,7 @@ class WorldRenderer {
 public:
     WorldRenderer() = default;
 
-    void init();
+    void init(const LLGL::RenderPass* static_lightmap_render_pass);
     void init_textures(const WorldData& world);
     void init_lightmap_chunks(const WorldData& world);
 

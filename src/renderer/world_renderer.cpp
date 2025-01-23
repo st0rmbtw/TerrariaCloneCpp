@@ -34,7 +34,7 @@ struct __attribute__((aligned(16))) DepthUniformData {
     float wall_depth;
 };
 
-void WorldRenderer::init() {
+void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
     ZoneScopedN("WorldRenderer::init");
 
     const auto& context = Renderer::Context();
@@ -266,6 +266,7 @@ void WorldRenderer::init() {
         lightPipelineDesc.indexFormat = LLGL::Format::R16UInt;
         lightPipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
         lightPipelineDesc.rasterizer.frontCCW = true;
+        lightPipelineDesc.renderPass = static_lightmap_render_pass;
         lightPipelineDesc.blend = LLGL::BlendDescriptor {
             .targets = {
                 LLGL::BlendTargetDescriptor {
@@ -467,7 +468,7 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
 
                     image_view.data     = &result.data[write_offset.y * result.width + write_offset.x];
                     image_view.dataSize = write_width * write_height * sizeof(Color);
-                    image_view.stride = result.width;
+                    image_view.rowStride = result.width;
                     Renderer::Context()->WriteTexture(*lightmap_chunk.texture, LLGL::TextureRegion(LLGL::Offset3D(texture_offset.x, texture_offset.y, 0), LLGL::Extent3D(write_width, write_height, 1)), image_view);
 
                     offset.x = 0;
