@@ -140,9 +140,7 @@ void World::update(const Camera& camera) {
             continue;
         }
 
-        float step = 8.0f * Time::delta_seconds();
-
-        anim.progress += step;
+        anim.progress += 9.0f * Time::delta_seconds();
 
         if (anim.progress >= 0.5f) {
             anim.scale = 1.0f - anim.progress;

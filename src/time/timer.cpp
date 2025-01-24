@@ -1,8 +1,7 @@
 #include "timer.hpp"
+#include "stopwatch.hpp"
 
-#include <chrono>
-
-void Timer::tick_impl(const Duration& delta) {
+void Timer::tick_impl(const duration_t& delta) {
     if (paused()) {
         m_times_finished_this_tick = 0;
         if (m_mode == TimerMode::Repeating) {
@@ -21,12 +20,12 @@ void Timer::tick_impl(const Duration& delta) {
 
     if (finished()) {
         if (m_mode == TimerMode::Repeating) {
-            const std::chrono::nanoseconds e = std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed());
-            std::chrono::nanoseconds d = std::chrono::duration_cast<std::chrono::nanoseconds>(duration());
+            const Duration::Nanos e = Duration::Cast<Duration::Nanos>(elapsed());
+            const Duration::Nanos d = Duration::Cast<Duration::Nanos>(duration());
 
             if (d.count() == 0) {
                 m_times_finished_this_tick = UINT32_MAX;
-                set_elapsed(Timer::Duration::zero());
+                set_elapsed(Timer::duration_t::zero());
             } else {
                 m_times_finished_this_tick = e / d;
                 set_elapsed(e % d);

@@ -27,20 +27,20 @@ enum class MovementState : uint8_t {
 };
 
 struct WalkAnimation {
-    unsigned char offset = 0;
-    unsigned char length = WALK_ANIMATION_LENGTH;
+    uint8_t offset = 0;
+    uint8_t length = WALK_ANIMATION_LENGTH;
 };
 
 struct FlyAnimation {
-    unsigned char index = 0;
+    uint8_t index = 0;
 };
 
 struct IdleAnimation {
-    unsigned char index = 0;
+    uint8_t index = 0;
 };
 
 struct UseItemAnimation {
-    unsigned char offset = 0;
+    uint8_t offset = 0;
 };
 
 struct PlayerSprite {

@@ -16,29 +16,33 @@ enum class TimerMode : uint8_t {
 
 class Timer {
 public:
-    using Duration = Stopwatch::Duration;
+    using duration_t = Stopwatch::duration_t;
 
     Timer() :
-        m_duration(Duration::zero()),
+        m_duration(duration_t::zero()),
         m_times_finished_this_tick(0),
         m_mode(TimerMode::Once),
         m_finished(false) {}
 
     template <class Rep, class Period>
     Timer(const std::chrono::duration<Rep, Period>& duration, TimerMode mode) : 
-        m_duration(std::chrono::duration_cast<Duration>(duration)),
+        m_duration(Duration::Cast<duration_t>(duration)),
         m_times_finished_this_tick(0),
         m_mode(mode),
         m_finished(false) {}
 
+    inline static Timer zero(TimerMode mode) {
+        return Timer(duration_t::zero(), mode);
+    }
+
     inline static Timer from_seconds(float seconds, TimerMode mode) {
-        return Timer(std::chrono::duration<float>(seconds), mode);
+        return Timer(Duration::SecondsFloat(seconds), mode);
     }
 
     [[nodiscard]] inline bool finished() const { return m_finished; }
     [[nodiscard]] inline bool just_finished() const { return m_times_finished_this_tick > 0; }
-    [[nodiscard]] inline Duration duration() const { return m_duration; }
-    [[nodiscard]] inline Duration elapsed() const { return m_stopwatch.elapsed(); }
+    [[nodiscard]] inline duration_t duration() const { return m_duration; }
+    [[nodiscard]] inline duration_t elapsed() const { return m_stopwatch.elapsed(); }
     [[nodiscard]] inline float elapsed_secs() const { return m_stopwatch.elapsed_secs(); }
     [[nodiscard]] inline bool paused() const { return m_stopwatch.paused(); }
     [[nodiscard]] inline uint32_t times_finished_this_tick() const { return m_times_finished_this_tick; }
@@ -58,12 +62,12 @@ public:
 
     template <class Rep, class Period>
     inline void set_duration(const std::chrono::duration<Rep, Period>& duration) {
-        m_duration = std::chrono::duration_cast<Duration>(duration);
+        m_duration = std::chrono::duration_cast<duration_t>(duration);
     }
 
     template <class Rep, class Period>
     const Timer& tick(const std::chrono::duration<Rep, Period>& delta) {
-        const auto d = std::chrono::duration_cast<Duration>(delta);
+        const auto d = std::chrono::duration_cast<duration_t>(delta);
         tick_impl(d);
         return *this;
     }
@@ -71,11 +75,11 @@ public:
     constexpr void set_finished() { set_elapsed(m_duration); }
 
 private:
-    void tick_impl(const Duration& delta);
+    void tick_impl(const duration_t& delta);
 
 private:
     Stopwatch m_stopwatch;
-    Duration m_duration;
+    duration_t m_duration;
     uint32_t m_times_finished_this_tick;
     TimerMode m_mode;
     bool m_finished;

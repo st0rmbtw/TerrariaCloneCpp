@@ -122,10 +122,10 @@ public:
         m_texture_atlas = texture_atlas;
     }
 
-    inline void set_index(size_t index) { m_index = index; }
+    inline void set_index(uint32_t index) { m_index = index; }
     inline void set_index(uint16_t x, uint16_t y) { m_index = y * m_texture_atlas.columns() + x; }
 
-    [[nodiscard]] inline size_t index() const { return m_index; }
+    [[nodiscard]] inline uint32_t index() const { return m_index; }
     [[nodiscard]] inline const TextureAtlas& atlas() const { return m_texture_atlas; }
 
     [[nodiscard]] glm::vec2 size() const override {
@@ -136,7 +136,7 @@ public:
 
 private:
     TextureAtlas m_texture_atlas;
-    size_t m_index = 0;
+    uint32_t m_index = 0;
 };
 
 #endif

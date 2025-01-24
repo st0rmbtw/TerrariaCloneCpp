@@ -11,6 +11,7 @@ namespace Constants {
     constexpr float TILE_SIZE = 16.0f;
     constexpr float WALL_SIZE = 32.0f;
     constexpr float PARTICLE_SIZE = 8.0f;
+    constexpr float WORLD_BOUNDARY_OFFSET = 4.0f;
     constexpr size_t MAX_PARTICLES_COUNT = 10 * 100000;
 
     constexpr float CAMERA_MAX_ZOOM = 0.2f;

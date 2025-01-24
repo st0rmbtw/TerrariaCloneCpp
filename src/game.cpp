@@ -30,7 +30,7 @@ static struct GameState {
 } g;
 
 static glm::vec2 camera_follow_player() {
-    static constexpr float OFFSET = 2.0f;
+    static constexpr float OFFSET = Constants::WORLD_BOUNDARY_OFFSET;
 
     glm::vec2 position = g.player.draw_position();
 

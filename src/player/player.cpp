@@ -78,7 +78,7 @@ void Player::init() {
     m_right_arm = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerRightArm));
     m_left_eye = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerLeftEye));
     m_right_eye = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerRightEye));
-    m_walk_anim_timer = Timer(Timer::Duration::zero(), TimerMode::Repeating);
+    m_walk_anim_timer = Timer::zero(TimerMode::Repeating);
     m_walk_particles_timer = Timer::from_seconds(1.0f / 20.0f, TimerMode::Repeating);
     m_walk_animation_index = 0;
 
@@ -332,8 +332,8 @@ void Player::update_walk_anim_timer() {
     ZoneScopedN("Player::update_walk_anim_timer");
 
     if (m_velocity.x != 0.0) {
-        const long long time = glm::abs(100.0 / glm::abs(m_velocity.x));
-        m_walk_anim_timer.set_duration(Timer::Duration(glm::max(time, 1LL)));
+        const uint32_t time = glm::abs(100.0 / glm::abs(m_velocity.x));
+        m_walk_anim_timer.set_duration(Duration::Millis(glm::max(time, 1u)));
     }
 }
 
@@ -422,6 +422,12 @@ void Player::update_sprites_index() {
                     sprite->sprite.set_index(index);
                 }
             } else {
+                m_body.sprite.set_index(m_body.idle_animation.index);
+                m_hair.sprite.set_index(m_hair.idle_animation.index);
+                m_head.sprite.set_index(m_head.idle_animation.index);
+                m_left_eye.sprite.set_index(m_left_eye.idle_animation.index);
+                m_right_eye.sprite.set_index(m_right_eye.idle_animation.index);
+
                 const int index = m_legs.walk_animation.offset + map_range(
                     0, WALK_ANIMATION_LENGTH,
                     0, m_legs.walk_animation.length,
@@ -610,7 +616,7 @@ void Player::update(const Camera& camera, World& world) {
 void Player::keep_in_world_bounds(const World& world) {
     ZoneScopedN("Player::keep_in_world_bounds");
 
-    static constexpr float OFFSET = 2.0f;
+    static constexpr float OFFSET = Constants::WORLD_BOUNDARY_OFFSET;
 
     const math::Rect area = world.playable_area() * TILE_SIZE;
 
