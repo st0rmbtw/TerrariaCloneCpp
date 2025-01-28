@@ -11,6 +11,7 @@
 enum class WallType : uint8_t {
     StoneWall = 0,
     DirtWall = 1,
+    WoodWall = 4,
     Count
 };
 

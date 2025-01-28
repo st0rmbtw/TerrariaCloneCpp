@@ -289,6 +289,7 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     inventory.set_item(4, ITEM_STONE_BLOCK.with_max_stack());
     inventory.set_item(5, ITEM_WOOD_BLOCK.with_max_stack());
     inventory.set_item(6, ITEM_TORCH.with_max_stack());
+    inventory.set_item(7, ITEM_WOOD_WALL.with_max_stack());
 
     Engine::ShowWindow();
 

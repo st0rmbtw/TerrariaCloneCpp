@@ -750,12 +750,17 @@ void Player::use_item(const Camera& camera, World& world) {
         }
 
         used = true;
-    } else if (item->places_block.has_value() && !world.block_exists(tile_pos)) {
-        const math::Rect player_rect = math::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
-        const math::Rect tile_rect = math::Rect::from_center_size(tile_pos.to_world_pos_center(), glm::vec2(TILE_SIZE));
+    } else if (item->places_tile.has_value()) {
+        if (item->places_tile->type == TileType::Block && !world.block_exists(tile_pos)) {
+            const math::Rect player_rect = math::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
+            const math::Rect tile_rect = math::Rect::from_center_size(tile_pos.to_world_pos_center(), glm::vec2(TILE_SIZE));
 
-        if (!player_rect.intersects(tile_rect)) {
-            world.set_block(tile_pos, item->places_block.value());
+            if (!player_rect.intersects(tile_rect)) {
+                world.set_block(tile_pos, item->places_tile->block);
+                used = true;
+            }
+        } else if (item->places_tile->type == TileType::Wall && !world.wall_exists(tile_pos)) {
+            world.set_wall(tile_pos, item->places_tile->wall);
             used = true;
         }
     }

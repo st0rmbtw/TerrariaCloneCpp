@@ -119,31 +119,35 @@ static const std::pair<TextureAsset, AssetTextureAtlas> TEXTURE_ATLAS_ASSETS[] =
     { TextureAsset::TileCracks,         AssetTextureAtlas(6, 4, glm::uvec2(16)) }
 };
 
+#define BLOCK_ASSET(BLOCK_TYPE, TEXTURE_ASSET, PATH) std::make_tuple(static_cast<uint16_t>(BLOCK_TYPE), TEXTURE_ASSET, PATH)
 static const std::array BLOCK_ASSETS = {
-    std::make_tuple(static_cast<uint16_t>(BlockType::Dirt), TextureAsset::Tiles0, "assets/sprites/tiles/Tiles_0.png"),
-    std::make_tuple(static_cast<uint16_t>(BlockType::Stone), TextureAsset::Tiles1, "assets/sprites/tiles/Tiles_1.png"),
-    std::make_tuple(static_cast<uint16_t>(BlockType::Grass), TextureAsset::Tiles2, "assets/sprites/tiles/Tiles_2.png"),
-    std::make_tuple(static_cast<uint16_t>(BlockType::Wood), TextureAsset::Tiles30, "assets/sprites/tiles/Tiles_30.png"),
+    BLOCK_ASSET(BlockType::Dirt, TextureAsset::Tiles0, "assets/sprites/tiles/Tiles_0.png"),
+    BLOCK_ASSET(BlockType::Stone, TextureAsset::Tiles1, "assets/sprites/tiles/Tiles_1.png"),
+    BLOCK_ASSET(BlockType::Grass, TextureAsset::Tiles2, "assets/sprites/tiles/Tiles_2.png"),
+    BLOCK_ASSET(BlockType::Wood, TextureAsset::Tiles30, "assets/sprites/tiles/Tiles_30.png"),
 };
 
+#define WALL_ASSET(WALL_TYPE, PATH) std::make_tuple(static_cast<uint16_t>(WALL_TYPE), TextureAsset::Stub, PATH)
 static const std::array WALL_ASSETS = {
-    std::make_tuple(static_cast<uint16_t>(WallType::DirtWall), TextureAsset::Stub, "assets/sprites/walls/Wall_2.png"),
-    std::make_tuple(static_cast<uint16_t>(WallType::StoneWall), TextureAsset::Stub, "assets/sprites/walls/Wall_1.png"),
+    WALL_ASSET(WallType::DirtWall, "assets/sprites/walls/Wall_2.png"),
+    WALL_ASSET(WallType::StoneWall, "assets/sprites/walls/Wall_1.png"),
+    WALL_ASSET(WallType::WoodWall, "assets/sprites/walls/Wall_4.png"),
 };
 
+#define BACKGROUND_ASSET(BACKGROUND_ASSET, PATH) std::make_tuple(static_cast<uint16_t>(BACKGROUND_ASSET), TextureAsset::Stub, PATH)
 static const std::array BACKGROUND_ASSETS = {
-    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background0), TextureAsset::Stub, "assets/sprites/backgrounds/Background_0.png"),
-    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background7), TextureAsset::Stub, "assets/sprites/backgrounds/Background_7.png"),
-    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background55), TextureAsset::Stub, "assets/sprites/backgrounds/Background_55.png"),
-    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background74), TextureAsset::Stub, "assets/sprites/backgrounds/Background_74.png"),
-    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background77), TextureAsset::Stub, "assets/sprites/backgrounds/Background_77.png"),
-    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background78), TextureAsset::Stub, "assets/sprites/backgrounds/Background_78.png"),
-    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background90), TextureAsset::Stub, "assets/sprites/backgrounds/Background_90.png"),
-    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background91), TextureAsset::Stub, "assets/sprites/backgrounds/Background_91.png"),
-    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background92), TextureAsset::Stub, "assets/sprites/backgrounds/Background_92.png"),
-    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background93), TextureAsset::Stub, "assets/sprites/backgrounds/Background_93.png"),
-    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background112), TextureAsset::Stub, "assets/sprites/backgrounds/Background_112.png"),
-    std::make_tuple(static_cast<uint16_t>(BackgroundAsset::Background114), TextureAsset::Stub, "assets/sprites/backgrounds/Background_114.png"),
+    BACKGROUND_ASSET(BackgroundAsset::Background0, "assets/sprites/backgrounds/Background_0.png"),
+    BACKGROUND_ASSET(BackgroundAsset::Background7, "assets/sprites/backgrounds/Background_7.png"),
+    BACKGROUND_ASSET(BackgroundAsset::Background55, "assets/sprites/backgrounds/Background_55.png"),
+    BACKGROUND_ASSET(BackgroundAsset::Background74, "assets/sprites/backgrounds/Background_74.png"),
+    BACKGROUND_ASSET(BackgroundAsset::Background77, "assets/sprites/backgrounds/Background_77.png"),
+    BACKGROUND_ASSET(BackgroundAsset::Background78, "assets/sprites/backgrounds/Background_78.png"),
+    BACKGROUND_ASSET(BackgroundAsset::Background90, "assets/sprites/backgrounds/Background_90.png"),
+    BACKGROUND_ASSET(BackgroundAsset::Background91, "assets/sprites/backgrounds/Background_91.png"),
+    BACKGROUND_ASSET(BackgroundAsset::Background92, "assets/sprites/backgrounds/Background_92.png"),
+    BACKGROUND_ASSET(BackgroundAsset::Background93, "assets/sprites/backgrounds/Background_93.png"),
+    BACKGROUND_ASSET(BackgroundAsset::Background112, "assets/sprites/backgrounds/Background_112.png"),
+    BACKGROUND_ASSET(BackgroundAsset::Background114, "assets/sprites/backgrounds/Background_114.png"),
 };
 
 static const std::pair<uint16_t, std::string> ITEM_ASSETS[] = {
@@ -154,6 +158,7 @@ static const std::pair<uint16_t, std::string> ITEM_ASSETS[] = {
     { 26, "assets/sprites/items/Item_26.png" },
     { 30, "assets/sprites/items/Item_30.png" },
     { 62, "assets/sprites/items/Item_62.png" },
+    { 93, "assets/sprites/items/Item_93.png" },
     { 3505, "assets/sprites/items/Item_3505.png" },
     { 3506, "assets/sprites/items/Item_3506.png" },
     { 3509, "assets/sprites/items/Item_3509.png" },

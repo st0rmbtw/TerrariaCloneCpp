@@ -9,6 +9,28 @@
 #include <optional>
 
 #include "block.hpp"
+#include "wall.hpp"
+
+enum class TileType : uint8_t {
+    Block = 0,
+    Wall
+};
+
+struct PlacesTile {
+    PlacesTile(TileType tile_type, BlockType block_type) :
+        block(block_type),
+        type(tile_type) {}
+
+    PlacesTile(TileType tile_type, WallType wall_type) :
+        wall(wall_type),
+        type(tile_type) {}
+
+    union {
+        BlockType block;
+        WallType wall;
+    };
+    TileType type;
+};
 
 using ItemStack = uint16_t;
 
@@ -21,6 +43,7 @@ public:
         StoneBlock = 3,
         Torch = 8,
         WoodBlock = 9,
+        WoodWall = 93,
         CopperHammer = 3505,
         CopperAxe = 3506,
         CopperPickaxe = 3509
@@ -53,7 +76,7 @@ struct Item {
     ItemId id;
     ItemStack max_stack;
     ItemStack stack;
-    std::optional<BlockType> places_block;
+    std::optional<PlacesTile> places_tile;
     uint8_t swing_speed;
     uint8_t use_cooldown;
     uint8_t power;
@@ -96,5 +119,6 @@ extern Item ITEM_DIRT_BLOCK;
 extern Item ITEM_STONE_BLOCK;
 extern Item ITEM_WOOD_BLOCK;
 extern Item ITEM_TORCH;
+extern Item ITEM_WOOD_WALL;
 
 #endif
