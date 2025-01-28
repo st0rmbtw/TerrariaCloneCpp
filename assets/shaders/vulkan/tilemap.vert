@@ -44,6 +44,7 @@ void main() {
     vec2 tex_size = size / a_tile_tex_size;
     vec2 start_uv = i_atlas_pos * (tex_size + a_tile_padding);
     vec2 tex_dims = a_tile_tex_size;
+    vec2 offset   = vec2(0.0);
 
     if (tile_type == TILE_TYPE_WALL) {
         order = depth_ubo.wall_depth;
@@ -51,6 +52,7 @@ void main() {
         tex_size = size / a_wall_tex_size;
         start_uv = i_atlas_pos * (tex_size + a_wall_padding);
         tex_dims = a_wall_tex_size;
+        offset = vec2(-TILE_SIZE * 0.5, -TILE_SIZE * 0.5);
     }
 
     order /= global_ubo.max_world_depth;
@@ -63,7 +65,7 @@ void main() {
     );
 
     mat4 mvp = global_ubo.view_projection * transform;
-    vec2 position = i_position * 16.0 + a_position * size;
+    vec2 position = i_position * 16.0 + a_position * size + offset;
     vec2 uv = start_uv + a_position * tex_size;
 
     vec2 pixel_offset = vec2(0.1 / tex_dims.x, 0.1 / tex_dims.y);

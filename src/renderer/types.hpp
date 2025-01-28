@@ -15,7 +15,7 @@ struct Vertex {
 };
 
 struct SpriteInstance {
-    glm::vec2 position;
+    glm::vec3 position;
     glm::quat rotation;
     glm::vec2 size;
     glm::vec2 offset;

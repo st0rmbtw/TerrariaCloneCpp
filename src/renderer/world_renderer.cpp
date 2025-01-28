@@ -41,7 +41,7 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
     const RenderBackend backend = Renderer::Backend();
 
     auto depth_uniform = DepthUniformData {
-        .tile_depth = 2,
+        .tile_depth = 3,
         .wall_depth = 1
     };
 

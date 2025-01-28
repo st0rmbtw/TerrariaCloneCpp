@@ -47,6 +47,7 @@ struct DrawCommandSprite {
     float outline_thickness;
     bool is_ui;
     bool ignore_camera_zoom;
+    bool depth_enabled;
 };
 
 struct DrawCommandNinePatch {
@@ -153,6 +154,7 @@ namespace SpriteFlags {
 
 struct SpriteBatchData {
     LLGL::PipelineState* pipeline = nullptr;
+    LLGL::PipelineState* pipeline_depth = nullptr;
 
     LLGL::Buffer* vertex_buffer = nullptr;
     LLGL::Buffer* instance_buffer = nullptr;
@@ -361,7 +363,15 @@ static void init_sprite_batch() {
         }
     };
 
-   state.sprite_batch_data.pipeline = context->CreatePipelineState(pipelineDesc);
+    state.sprite_batch_data.pipeline = context->CreatePipelineState(pipelineDesc);
+
+    pipelineDesc.debugName = "SpriteBatch Pipeline Depth";
+    pipelineDesc.depth = LLGL::DepthDescriptor {
+        .testEnabled = true,
+        .writeEnabled = true,
+        .compareOp = LLGL::CompareOp::GreaterEqual,
+    };
+    state.sprite_batch_data.pipeline_depth = context->CreatePipelineState(pipelineDesc);
 
     if (const LLGL::Report* report = state.sprite_batch_data.pipeline->GetReport()) {
         if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
@@ -394,7 +404,8 @@ static void draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_sca
         .order = static_cast<uint32_t>(order),
         .outline_thickness = sprite.outline_thickness(),
         .is_ui = is_ui,
-        .ignore_camera_zoom = sprite.ignore_camera_zoom()
+        .ignore_camera_zoom = sprite.ignore_camera_zoom(),
+        .depth_enabled = depth.depth_enabled
     };
 
     state.draw_commands.emplace_back(sprite_data);
@@ -432,7 +443,8 @@ static void draw_world_sprite(const BaseSprite& sprite, const glm::vec4& uv_offs
         .order = static_cast<uint32_t>(order),
         .outline_thickness = sprite.outline_thickness(),
         .is_ui = false,
-        .ignore_camera_zoom = sprite.ignore_camera_zoom()
+        .ignore_camera_zoom = sprite.ignore_camera_zoom(),
+        .depth_enabled = depth.depth_enabled
     };
 
     state.world_draw_commands.emplace_back(sprite_data);
@@ -923,8 +935,8 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
 
     state.main_depth_index = 0;
     // The first three are reserved for background, walls and tiles
-    state.world_depth_index = 3;
-    state.max_world_depth = 3;
+    state.world_depth_index = 4;
+    state.max_world_depth = 4;
     state.max_main_depth = 0;
 
     state.draw_commands.clear();
@@ -1008,7 +1020,7 @@ static INLINE void SortDrawCommands() {
             flags |= sprite_data.is_ui << SpriteFlags::UI;
             flags |= (curr_texture_id >= 0) << SpriteFlags::HasTexture;
 
-            state.sprite_batch_data.buffer_ptr->position = sprite_data.position;
+            state.sprite_batch_data.buffer_ptr->position = glm::vec3(sprite_data.position, static_cast<float>(state.max_main_depth));
             state.sprite_batch_data.buffer_ptr->rotation = sprite_data.rotation;
             state.sprite_batch_data.buffer_ptr->size = sprite_data.size;
             state.sprite_batch_data.buffer_ptr->offset = sprite_data.offset;
@@ -1225,11 +1237,13 @@ static INLINE void SortWorldDrawCommands() {
                 sprite_vertex_offset = sprite_total_count;
             }
 
-            const float order = static_cast<float>(sprite_data.order);
+            float order = static_cast<float>(state.max_world_depth);
+            
+            if (sprite_data.depth_enabled)
+                order = static_cast<float>(sprite_data.order);
 
-            int flags = 0;
+            int flags = 1 << SpriteFlags::World;
             flags |= sprite_data.ignore_camera_zoom << SpriteFlags::IgnoreCameraZoom;
-            flags |= sprite_data.is_ui << SpriteFlags::UI;
             flags |= (curr_texture_id >= 0) << SpriteFlags::HasTexture;
 
             state.sprite_batch_data.world_buffer_ptr->position = glm::vec3(sprite_data.position, order);
@@ -1313,7 +1327,7 @@ static void ApplyWorldDrawCommands() {
     auto* const commands = state.command_buffer;
 
     commands->SetVertexBufferArray(*state.sprite_batch_data.world_buffer_array);
-    commands->SetPipelineState(*state.sprite_batch_data.pipeline);
+    commands->SetPipelineState(*state.sprite_batch_data.pipeline_depth);
     commands->SetResource(0, *state.constant_buffer);
 
     int prev_texture_id = -1;

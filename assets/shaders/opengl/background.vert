@@ -20,7 +20,7 @@ layout(std140) uniform GlobalUniformBuffer {
     vec2 window_size;
     float max_depth;
     float max_world_depth;
-} global_ubo;
+} uniforms;
 
 out vec2 v_uv;
 flat out vec2 v_texture_size;
@@ -37,10 +37,9 @@ void main() {
     const int flags = i_flags;
     const bool ignore_camera_zoom = (flags & IGNORE_CAMERA_ZOOM_FLAG) == IGNORE_CAMERA_ZOOM_FLAG;
 
-    const mat4 view_proj = ignore_camera_zoom ? global_ubo.nonscale_view_projection : global_ubo.view_projection;
-    const mat4 proj_model = global_ubo.nonscale_projection * global_ubo.transform_matrix;
+    const mat4 view_proj = ignore_camera_zoom ? uniforms.nonscale_view_projection : uniforms.view_projection;
 
-    const vec2 offset = (proj_model * vec4(global_ubo.camera_position.x, global_ubo.camera_position.y, 0.0, 1.0)).xy;
+    const vec2 offset = (uniforms.nonscale_projection * vec4(uniforms.camera_position.x, uniforms.camera_position.y, 0.0, 1.0)).xy;
 
     const vec2 position = i_position.xy + i_size * a_position;
 

@@ -22,7 +22,7 @@ layout(binding = 2) uniform GlobalUniformBuffer {
     vec2 window_size;
     float max_depth;
     float max_world_depth;
-} global_ubo;
+} uniforms;
 
 const int HAS_TEXTURE_FLAG = 1 << 0;
 const int IS_UI_FLAG = 1 << 1;
@@ -76,7 +76,10 @@ void main() {
     bool is_world = (i_flags & IS_WORLD_FLAG) == IS_WORLD_FLAG;
     bool has_texture = (i_flags & HAS_TEXTURE_FLAG) == HAS_TEXTURE_FLAG;
 
-    mat4 mvp = (is_ui ? global_ubo.screen_projection : is_nonscale ? global_ubo.nonscale_view_projection : global_ubo.view_projection) * transform;
+    float max_depth = is_world ? uniforms.max_world_depth : uniforms.max_depth;
+    float depth = i_position.z / max_depth;
+
+    mat4 mvp = (is_ui ? uniforms.screen_projection : is_nonscale ? uniforms.nonscale_view_projection : uniforms.view_projection) * transform;
 
     v_uv = a_position * i_uv_offset_scale.zw + i_uv_offset_scale.xy;
     v_color = i_color;
@@ -85,5 +88,5 @@ void main() {
     v_has_texture = has_texture ? 1 : 0;
     
     gl_Position = mvp * vec4(a_position, 0, 1);
-    gl_Position.z = 1.0;
+    gl_Position.z = depth;
 }

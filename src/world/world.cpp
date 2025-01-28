@@ -201,17 +201,15 @@ void World::draw() const {
         sprite.set_position(pos.to_world_pos_center());
         sprite.set_index(cracks.cracks_index);
 
-        Renderer::DrawAtlasSprite(sprite, RenderLayer::World);
+        Renderer::DrawAtlasSprite(sprite, RenderLayer::World, Depth(4, false, true));
     }
 
     for (const auto& [pos, cracks] : m_wall_cracks) {
-        if (block_exists(pos)) continue;
-
         TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));
         sprite.set_position(pos.to_world_pos_center());
         sprite.set_index(cracks.cracks_index);
 
-        Renderer::DrawAtlasSprite(sprite, RenderLayer::World);
+        Renderer::DrawAtlasSprite(sprite, RenderLayer::World, Depth(2, false, true));
     }
 
     for (const BlockDigAnimation& anim : m_block_dig_animations) {
