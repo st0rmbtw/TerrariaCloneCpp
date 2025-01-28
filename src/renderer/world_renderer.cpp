@@ -196,7 +196,6 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
             LLGL::UniformDescriptor("uniform_min", LLGL::UniformType::UInt2),
             LLGL::UniformDescriptor("uniform_max", LLGL::UniformType::UInt2),
         };
-        lightBlurPipelineLayoutDesc.barrierFlags = LLGL::BarrierFlags::StorageTexture;
 
         LLGL::PipelineLayout* lightBlurPipelineLayout = context->CreatePipelineLayout(lightBlurPipelineLayoutDesc);
 
@@ -468,7 +467,7 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
 
                     image_view.data     = &result.data[write_offset.y * result.width + write_offset.x];
                     image_view.dataSize = write_width * write_height * sizeof(Color);
-                    image_view.rowStride = result.width;
+                    image_view.rowStride = result.width * sizeof(Color);
                     Renderer::Context()->WriteTexture(*lightmap_chunk.texture, LLGL::TextureRegion(LLGL::Offset3D(texture_offset.x, texture_offset.y, 0), LLGL::Extent3D(write_width, write_height, 1)), image_view);
 
                     offset.x = 0;
@@ -611,7 +610,7 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
     const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / Constants::TILE_SIZE) - static_cast<int>(WORKGROUP);
     const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / Constants::TILE_SIZE) + static_cast<int>(WORKGROUP);
 
-    math::URect blur_area = math::URect(
+    const math::URect blur_area = math::URect(
         glm::uvec2(glm::max(proj_area_min * Constants::SUBDIVISION, glm::ivec2(0))),
         glm::uvec2(glm::max(proj_area_max * Constants::SUBDIVISION, glm::ivec2(0)))
     );
@@ -629,7 +628,7 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
     }
     commands->PopDebugGroup();
 
-    for (int i = 0; i < 2; ++i) {
+    const auto blur_horizontal = [&blur_area, commands, grid_w, this] {
         commands->PushDebugGroup("CS Light BlurHorizontal");
         {
             commands->SetPipelineState(*m_light_horizontal_pipeline);
@@ -639,7 +638,9 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
             commands->Dispatch(grid_w, 1, 1);
         }
         commands->PopDebugGroup();
+    };
 
+    const auto blur_vertical = [&blur_area, commands, grid_h, this] {
         commands->PushDebugGroup("CS Light BlurVertical");
         {
             commands->SetPipelineState(*m_light_vertical_pipeline);
@@ -649,17 +650,16 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
             commands->Dispatch(grid_h, 1, 1);
         }
         commands->PopDebugGroup();
-    }
+    };
 
-    commands->PushDebugGroup("CS Light BlurHorizontal");
-    {
-        commands->SetPipelineState(*m_light_horizontal_pipeline);
-        commands->SetResourceHeap(*m_light_blur_resource_heap);
-        commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
-        commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
-        commands->Dispatch(grid_w, 1, 1);
+    for (int i = 0; i < 2; ++i) {
+        blur_horizontal();  
+        commands->ResourceBarrier(0, nullptr, 1, &m_light_texture);
+
+        blur_vertical();
+        commands->ResourceBarrier(0, nullptr, 1, &m_light_texture);
     }
-    commands->PopDebugGroup();
+    blur_horizontal();
 }
 
 void WorldRenderer::terminate() {
