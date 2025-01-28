@@ -23,6 +23,6 @@ void Time::advance_by(const delta_time_t& delta) {
     state.elapsed_seconds += delta.count();
 }
 
-void Time::fixed_advance() {
+void Time::advance_fixed() {
     state.fixed_elapsed_seconds += state.fixed_delta.count();
 }

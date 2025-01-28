@@ -699,7 +699,7 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
     swapChainDesc.fullscreen = fullscreen;
 
     state.swap_chain = context->CreateSwapChain(swapChainDesc, state.surface);
-    state.swap_chain->SetVsyncInterval(vsync);
+    state.swap_chain->SetVsyncInterval(vsync ? 1 : 0);
 
     LLGL::CommandBufferDescriptor command_buffer_desc;
     command_buffer_desc.numNativeBuffers = 3;
@@ -1346,7 +1346,7 @@ static void ApplyWorldDrawCommands() {
     }
 }
 
-void Renderer::Render(const Camera& camera, const World& world, bool window_resized) {
+void Renderer::Render(const Camera& camera, const World& world) {
     ZoneScopedN("Renderer::Render");
 
     auto* const commands = state.command_buffer;
@@ -1385,12 +1385,10 @@ void Renderer::Render(const Camera& camera, const World& world, bool window_resi
         state.world_renderer.compute_light(camera, world);
     }
 
-    if (state.compute_light_timer.finished() || world.is_lightmap_changed() || window_resized) {
-        commands->BeginRenderPass(*state.static_lightmap_target);
-            commands->Clear(LLGL::ClearFlags::Color, clear_value);
-            state.world_renderer.render_lightmap(camera);
-        commands->EndRenderPass();
-    }
+    commands->BeginRenderPass(*state.static_lightmap_target);
+        commands->Clear(LLGL::ClearFlags::Color, clear_value);
+        state.world_renderer.render_lightmap(camera);
+    commands->EndRenderPass();
 
     commands->BeginRenderPass(*state.background_render_target);
         commands->Clear(LLGL::ClearFlags::ColorDepth, clear_value);

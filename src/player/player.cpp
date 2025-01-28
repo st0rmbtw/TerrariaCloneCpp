@@ -121,6 +121,8 @@ void Player::init() {
 void Player::set_position(const World& world, const glm::vec2& position) {
     m_position.x = position.x;
     m_position.y = position.y - PLAYER_HEIGHT_HALF;
+    m_velocity.x = 0.0f;
+    m_velocity.y = 0.0f;
     keep_in_world_bounds(world);
 }
 

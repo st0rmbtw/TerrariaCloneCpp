@@ -165,7 +165,7 @@ void post_update() {
     UI::PostUpdate();
 }
 
-static void render(bool window_resized) {
+void render() {
     ZoneScopedN("Game::render");
 
     Renderer::Begin(g.camera, g.world.data());
@@ -180,10 +180,8 @@ static void render(bool window_resized) {
 
     UI::Draw(g.camera, g.player);
 
-    Renderer::Render(g.camera, g.world, window_resized);
+    Renderer::Render(g.camera, g.world);
 }
-
-void render() { render(false); }
 
 void post_render() {
     ZoneScopedN("Game::post_render");
@@ -210,7 +208,7 @@ void window_resized(uint32_t width, uint32_t height, uint32_t scaled_width, uint
 
     Background::Update(g.camera, g.world);
 
-    render(true);
+    render();
 }
 
 bool load_assets() {

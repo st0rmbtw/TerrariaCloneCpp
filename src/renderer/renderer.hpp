@@ -45,7 +45,7 @@ namespace Renderer {
     void ResizeTextures(LLGL::Extent2D resolution);
 
     void Begin(const Camera& camera, WorldData& world);
-    void Render(const Camera& camera, const World& world, bool window_resized = false);
+    void Render(const Camera& camera, const World& world);
 
     void DrawSprite(const Sprite& sprite, RenderLayer render_layer = RenderLayer::Main, Depth depth = {});
     inline void DrawSprite(const Sprite& sprite, Depth depth) {

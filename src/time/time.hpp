@@ -24,7 +24,7 @@ namespace Time {
     }
     
     void advance_by(const delta_time_t& delta);
-    void fixed_advance();
+    void advance_fixed();
 };
 
 #endif

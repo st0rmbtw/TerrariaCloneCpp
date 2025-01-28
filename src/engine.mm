@@ -203,7 +203,7 @@ void Engine::Run() {
 
             fixed_timer += delta_time;
             while (fixed_timer >= Time::fixed_delta_seconds()) {
-                Time::fixed_advance();
+                Time::advance_fixed();
                 state.fixed_update_callback();
                 fixed_timer -= Time::fixed_delta_seconds();
             }
