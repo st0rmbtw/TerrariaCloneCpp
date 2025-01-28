@@ -12,7 +12,6 @@ enum class WallType : uint8_t {
     StoneWall = 0,
     DirtWall = 1,
     WoodWall = 4,
-    Count
 };
 
 inline constexpr static int16_t wall_hp(WallType /* wall_type */) {

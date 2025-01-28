@@ -39,10 +39,11 @@ public:
     void set_block(TilePos pos, const Block& block);
     void set_block(TilePos pos, BlockType block_type);
     void remove_block(TilePos pos);
-
     void update_block(TilePos pos, BlockType new_type, uint8_t new_variant);
 
     void set_wall(TilePos pos, WallType wall_type);
+    void remove_wall(TilePos pos);
+    void update_wall(TilePos pos, WallType new_type, uint8_t new_variant);
 
     void update_tile_sprite_index(TilePos pos);
 
@@ -93,15 +94,26 @@ public:
         });
     }
 
-    [[nodiscard]] inline void create_tile_cracks(TilePos pos, uint8_t cracks_index) {
-        m_tile_cracks[pos] = TileCracks {
+    [[nodiscard]] inline void create_block_cracks(TilePos pos, uint8_t cracks_index) {
+        m_block_cracks[pos] = TileCracks {
             .tile_pos = pos,
             .cracks_index = cracks_index
         };
     }
 
-    [[nodiscard]] inline void remove_tile_cracks(TilePos pos) {
-        m_tile_cracks.erase(pos);
+    inline void remove_block_cracks(TilePos pos) {
+        m_block_cracks.erase(pos);
+    }
+
+    [[nodiscard]] inline void create_wall_cracks(TilePos pos, uint8_t cracks_index) {
+        m_wall_cracks[pos] = TileCracks {
+            .tile_pos = pos,
+            .cracks_index = cracks_index
+        };
+    }
+
+    inline void remove_wall_cracks(TilePos pos) {
+        m_wall_cracks.erase(pos);
     }
 
     [[nodiscard]] inline const Light* lights() const { return m_lights; }
@@ -121,7 +133,8 @@ private:
     WorldData m_data;
     ChunkManager m_chunk_manager;
     std::vector<BlockDigAnimation> m_block_dig_animations;
-    std::unordered_map<TilePos, TileCracks> m_tile_cracks;
+    std::unordered_map<TilePos, TileCracks> m_block_cracks;
+    std::unordered_map<TilePos, TileCracks> m_wall_cracks;
     Light* m_lights = nullptr;
     uint32_t m_light_count = 0; 
     bool m_changed = false;

@@ -46,18 +46,18 @@ static const glm::vec2 ITEM_HOLD_POINTS[] = {
 
 static constexpr float ITEM_ROTATION = 1.7;
 
-void spawn_particles_on_dig(const glm::vec2& position, BlockType type) {
+void spawn_particles_on_dig(const glm::vec2& position, Particle::Type particle, bool broken) {
     const float rotation_speed = glm::pi<float>() / 12.0f;
-    const Particle::Type particle = Particle::get_by_block(type);
 
-    const int count = rand_range(3, 8);
+    const int count = broken ? rand_range(7, 15) : rand_range(3, 8);
     
     for (int i = 0; i < count; i++) {
         const glm::vec2 velocity = glm::normalize(glm::diskRand(1.0f)) * 1.25f;
-        const float scale = glm::linearRand(0.3f, 1.0f);
+        const float min_scale = broken ? 0.6f : 0.3f;
+        const float scale = glm::linearRand(min_scale, 1.0f);
 
         ParticleManager::SpawnParticle(
-            ParticleBuilder::create(particle, position, velocity, 0.75)
+            ParticleBuilder::create(particle, position, velocity, 1.25f)
                 .in_world_layer()
                 .with_gravity(true)
                 .with_rotation_speed(rotation_speed)
@@ -703,7 +703,7 @@ void Player::use_item(const Camera& camera, World& world) {
 
     const glm::vec2& screen_pos = Input::MouseScreenPosition();
     
-    m_direction = screen_pos.x < camera.viewport().x * 0.5f ? Direction::Left : Direction::Right;
+    // m_direction = screen_pos.x < camera.viewport().x * 0.5f ? Direction::Left : Direction::Right;
 
     if (m_swing_counter <= 0) {
         m_swing_counter = item->swing_speed;
@@ -730,11 +730,11 @@ void Player::use_item(const Camera& camera, World& world) {
         }
 
         const glm::vec2 position = tile_pos.to_world_pos_center();
-        spawn_particles_on_dig(position, block->type);
+        spawn_particles_on_dig(position, Particle::get_by_block(block->type), block->hp <= 0);
         
         if (block->hp <= 0) {
             world.remove_block(tile_pos);
-            world.remove_tile_cracks(tile_pos);
+            world.remove_block_cracks(tile_pos);
         } else {
             uint8_t new_variant = rand() % 3;
             BlockType new_block_type;
@@ -746,7 +746,28 @@ void Player::use_item(const Camera& camera, World& world) {
             world.update_block(tile_pos, new_block_type, new_variant);
 
             world.create_dig_block_animation(*block, tile_pos);
-            world.create_tile_cracks(tile_pos, map_range(block_hp(block->type), 0, 0, 3, block->hp) * 6 + (rand() % 6));
+            world.create_block_cracks(tile_pos, map_range(block_hp(block->type), 0, 0, 3, block->hp) * 6 + (rand() % 6));
+        }
+
+        used = true;
+    } else if (item->is_hammer() && world.wall_exists(tile_pos)) {
+        Wall* wall = world.get_wall_mut(tile_pos);
+
+        if (wall->hp > 0) {
+            wall->hp -= item->power;
+        }
+
+        const glm::vec2 position = tile_pos.to_world_pos_center();
+        spawn_particles_on_dig(position, Particle::get_by_wall(wall->type), wall->hp <= 0);
+        
+        if (wall->hp <= 0) {
+            world.remove_wall(tile_pos);
+            world.remove_wall_cracks(tile_pos);
+        } else {
+            uint8_t new_variant = rand() % 3;
+
+            world.update_wall(tile_pos, wall->type, new_variant);
+            world.create_wall_cracks(tile_pos, map_range(wall_hp(wall->type), 0, 0, 3, wall->hp) * 6 + (rand() % 6));
         }
 
         used = true;

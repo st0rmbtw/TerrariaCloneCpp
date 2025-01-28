@@ -12,7 +12,6 @@
 #include "types/block.hpp"
 
 namespace Particle {
-
     enum class Type : uint8_t {
         Dirt = 0,
         Stone = 1,
@@ -29,6 +28,13 @@ namespace Particle {
         }
     }
 
+    inline constexpr Particle::Type get_by_wall(WallType wall_type) {
+        switch (wall_type) {
+        case WallType::DirtWall: return Particle::Type::Dirt;
+        case WallType::StoneWall: return Particle::Type::Stone;
+        case WallType::WoodWall: return Particle::Type::Wood;
+        }
+    }
 }
 
 struct ParticleData {

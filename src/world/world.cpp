@@ -86,10 +86,14 @@ void World::remove_block(TilePos pos) {
 void World::update_block(TilePos pos, BlockType new_type, uint8_t new_variant) {
     ZoneScopedN("World::update_block");
 
+    if (!m_data.is_tilepos_valid(pos)) return;
+
     const size_t index = m_data.get_tile_index(pos);
     m_data.blocks[index]->type = new_type;
     m_data.blocks[index]->variant = new_variant;
+
     m_changed = true;
+
     reset_tiles(pos, *this);
     update_neighbors(pos);
 }
@@ -112,6 +116,43 @@ void World::set_wall(TilePos pos, WallType wall_type) {
     update_neighbors(pos);
 
     m_chunk_manager.set_walls_changed(pos);
+}
+
+void World::remove_wall(TilePos pos) {
+    ZoneScopedN("World::remove_wall");
+
+    if (!m_data.is_tilepos_valid(pos)) return;
+
+    const size_t index = m_data.get_tile_index(pos);
+    
+    if (m_data.walls[index].has_value()) {
+        m_chunk_manager.set_walls_changed(pos);
+    }
+
+    m_data.walls[index] = std::nullopt;
+    m_changed = true;
+    m_lightmap_changed = true;
+
+    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
+        .clamp(m_data.playable_area);
+    m_data.lightmap_update_area_async(light_area);
+    m_data.changed_tiles.emplace_back(pos, 0);
+
+    this->update_neighbors(pos);
+}
+
+void World::update_wall(TilePos pos, WallType new_type, uint8_t new_variant) {
+    ZoneScopedN("World::update_wall");
+
+    if (!m_data.is_tilepos_valid(pos)) return;
+
+    const size_t index = m_data.get_tile_index(pos);
+    m_data.walls[index]->type = new_type;
+    m_data.walls[index]->variant = new_variant;
+
+    m_changed = true;
+
+    update_neighbors(pos);
 }
 
 void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
@@ -140,7 +181,7 @@ void World::update(const Camera& camera) {
             continue;
         }
 
-        anim.progress += 9.0f * Time::delta_seconds();
+        anim.progress += 7.0f * Time::delta_seconds();
 
         if (anim.progress >= 0.5f) {
             anim.scale = 1.0f - anim.progress;
@@ -155,7 +196,17 @@ void World::update(const Camera& camera) {
 void World::draw() const {
     ZoneScopedN("World::draw");
 
-    for (const auto& [pos, cracks] : m_tile_cracks) {
+    for (const auto& [pos, cracks] : m_block_cracks) {
+        TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));
+        sprite.set_position(pos.to_world_pos_center());
+        sprite.set_index(cracks.cracks_index);
+
+        Renderer::DrawAtlasSprite(sprite, RenderLayer::World);
+    }
+
+    for (const auto& [pos, cracks] : m_wall_cracks) {
+        if (block_exists(pos)) continue;
+
         TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));
         sprite.set_position(pos.to_world_pos_center());
         sprite.set_index(cracks.cracks_index);
@@ -164,7 +215,7 @@ void World::draw() const {
     }
 
     for (const BlockDigAnimation& anim : m_block_dig_animations) {
-        const glm::vec2 scale = glm::vec2(1.0f + anim.scale * 0.6f);
+        const glm::vec2 scale = glm::vec2(1.0f + anim.scale * 0.5f);
         const glm::vec2 position = anim.tile_pos.to_world_pos_center();
 
         TextureAtlasSprite sprite(Assets::GetTextureAtlas(block_texture_asset(anim.block_type)), position, scale);
@@ -172,8 +223,8 @@ void World::draw() const {
 
         Renderer::DrawAtlasSprite(sprite, RenderLayer::World);
 
-        const auto cracks = m_tile_cracks.find(anim.tile_pos);
-        if (cracks != m_tile_cracks.end()) {
+        const auto cracks = m_block_cracks.find(anim.tile_pos);
+        if (cracks != m_block_cracks.end()) {
             TextureAtlasSprite cracks_sprites(Assets::GetTextureAtlas(TextureAsset::TileCracks), position, scale);
             cracks_sprites.set_index(cracks->second.cracks_index);
 
