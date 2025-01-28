@@ -54,6 +54,7 @@ VSOutput VS(VSInput inp)
     float2 tex_size = size / inp.tile_tex_size;
     float2 start_uv = inp.i_atlas_pos * (tex_size + inp.tile_padding);
     float2 tex_dims = inp.tile_tex_size;
+    float2 offset = float2(0.0, 0.0);
 
     if (tile_type == TILE_TYPE_WALL) {
         order = u_wall_depth;
@@ -61,6 +62,7 @@ VSOutput VS(VSInput inp)
         tex_size = size / inp.wall_tex_size;
         start_uv = inp.i_atlas_pos * (tex_size + inp.wall_padding);
         tex_dims = inp.wall_tex_size;
+        offset = float2(-TILE_SIZE * 0.5, -TILE_SIZE * 0.5);
     }
 
     order /= u_max_world_depth;
@@ -73,7 +75,7 @@ VSOutput VS(VSInput inp)
     );
 
     const float4x4 mvp = mul(u_view_projection, transform);
-    const float2 position = inp.i_position * 16.0 + inp.position * size;
+    const float2 position = inp.i_position * 16.0 + inp.position * size + offset;
     const float2 uv = start_uv + inp.position * tex_size;
 
     const float2 pixel_offset = float2(0.1 / tex_dims.x, 0.1 / tex_dims.y);
