@@ -1332,7 +1332,7 @@ static void ApplyWorldDrawCommands() {
     }
 }
 
-void Renderer::Render(const Camera& camera, const World& world) {
+void Renderer::Render(const Camera& camera, const World& world, bool window_resized) {
     ZoneScopedN("Renderer::Render");
 
     auto* const commands = state.command_buffer;
@@ -1371,7 +1371,7 @@ void Renderer::Render(const Camera& camera, const World& world) {
         state.world_renderer.compute_light(camera, world);
     }
 
-    if (state.compute_light_timer.finished() || world.is_lightmap_changed()) {
+    if (state.compute_light_timer.finished() || world.is_lightmap_changed() || window_resized) {
         commands->BeginRenderPass(*state.static_lightmap_target);
             commands->Clear(LLGL::ClearFlags::Color, clear_value);
             state.world_renderer.render_lightmap(camera);

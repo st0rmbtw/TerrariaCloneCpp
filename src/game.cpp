@@ -165,7 +165,7 @@ void post_update() {
     UI::PostUpdate();
 }
 
-void render() {
+static void render(bool window_resized) {
     ZoneScopedN("Game::render");
 
     Renderer::Begin(g.camera, g.world.data());
@@ -180,8 +180,10 @@ void render() {
 
     UI::Draw(g.camera, g.player);
 
-    Renderer::Render(g.camera, g.world);
+    Renderer::Render(g.camera, g.world, window_resized);
 }
+
+void render() { render(false); }
 
 void post_render() {
     ZoneScopedN("Game::post_render");
@@ -207,6 +209,8 @@ void window_resized(uint32_t width, uint32_t height, uint32_t scaled_width, uint
     g.world.chunk_manager().manage_chunks(g.world.data(), g.camera);
 
     Background::Update(g.camera, g.world);
+
+    render(true);
 }
 
 bool load_assets() {

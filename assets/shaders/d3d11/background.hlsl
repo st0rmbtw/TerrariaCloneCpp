@@ -91,9 +91,8 @@ VSOutput VS(VSInput inp)
     const bool ignore_camera_zoom = (flags & IGNORE_CAMERA_ZOOM_FLAG) == IGNORE_CAMERA_ZOOM_FLAG;
 
     const float4x4 view_proj = ignore_camera_zoom ? u_nonscale_view_projection : u_view_projection;
-    const float4x4 proj_model = mul(u_nonscale_projection, u_transform_matrix);
 
-    const float2 offset = mul(proj_model, float4(u_camera_position.x, u_camera_position.y, 0.0, 1.0)).xy;
+    const float2 offset = mul(u_nonscale_projection, float4(u_camera_position.x, u_camera_position.y, 0.0, 1.0)).xy;
 
     const float2 position = inp.i_position.xy + inp.i_size * inp.position;
 
