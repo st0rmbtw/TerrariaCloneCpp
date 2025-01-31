@@ -20,6 +20,7 @@ static struct EngineState {
     Engine::UpdateCallback update_callback = nullptr;
     Engine::PostUpdateCallback post_update_callback = nullptr;
     Engine::FixedUpdateCallback fixed_update_callback = nullptr;
+    Engine::FixedUpdateCallback fixed_post_update_callback = nullptr;
     Engine::RenderCallback render_callback = nullptr;
     Engine::PostRenderCallback post_render_callback = nullptr;
     Engine::DestroyCallback destroy_callback = nullptr;
@@ -93,6 +94,11 @@ void Engine::SetFixedUpdateCallback(FixedUpdateCallback callback) {
     state.fixed_update_callback = callback;
 }
 
+void Engine::SetFixedPostUpdateCallback(FixedUpdateCallback callback) {
+    ASSERT(callback != nullptr, "Pointer to the callback must not be null.");
+    state.fixed_post_update_callback = callback;
+}
+
 void Engine::SetRenderCallback(RenderCallback callback) {
     ASSERT(callback != nullptr, "Pointer to the callback must not be null.");
     state.render_callback = callback;
@@ -145,6 +151,7 @@ bool Engine::Init(RenderBackend backend, bool vsync, WindowSettings settings, gl
     if (state.update_callback == nullptr) state.update_callback = default_callback;
     if (state.post_update_callback == nullptr) state.post_update_callback = default_callback;
     if (state.fixed_update_callback == nullptr) state.fixed_update_callback = default_callback;
+    if (state.fixed_post_update_callback == nullptr) state.fixed_post_update_callback = default_callback;
     if (state.render_callback == nullptr) state.render_callback = default_callback;
     if (state.post_render_callback == nullptr) state.post_render_callback = default_callback;
     if (state.destroy_callback == nullptr) state.destroy_callback = default_callback;
@@ -201,14 +208,22 @@ void Engine::Run() {
 
             state.pre_update_callback();
 
+            int fixed_update_count = 0;
+
             fixed_timer += delta_time;
             while (fixed_timer >= Time::fixed_delta_seconds()) {
                 Time::advance_fixed();
                 state.fixed_update_callback();
                 fixed_timer -= Time::fixed_delta_seconds();
+                ++fixed_update_count;
             }
 
             state.update_callback();
+
+            for (int i = 0; i < fixed_update_count; ++i) {
+                state.fixed_post_update_callback();
+            }
+
             state.post_update_callback();
             
             if (!state.minimized) {

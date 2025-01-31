@@ -29,7 +29,7 @@ static constexpr uint32_t LIGHTMAP_CHUNK_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Const
 static constexpr float LIGHTMAP_CHUNK_WORLD_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::TILE_SIZE;
 static constexpr float LIGHTMAP_TO_WORLD = Constants::TILE_SIZE / Constants::SUBDIVISION;
 
-struct __attribute__((aligned(16))) DepthUniformData {
+struct ALIGN(16) DepthUniformData {
     float tile_depth;
     float wall_depth;
 };
@@ -379,7 +379,7 @@ void WorldRenderer::init_lightmap_chunks(const WorldData& world) {
             texture_desc.mipLevels = 1;
             texture_desc.miscFlags = LLGL::MiscFlags::DynamicUsage;
 
-            Color* buffer = (Color*) malloc(chunk_size.x * chunk_size.y * sizeof(Color));
+            Color* buffer = checked_alloc<Color>(chunk_size.x * chunk_size.y);
             for (uint32_t y = 0; y < chunk_size.y; ++y) {
                 memcpy(&buffer[y * chunk_size.x], &lightmap.colors[(j * LIGHTMAP_CHUNK_SIZE + y) * m_lightmap_width + i * LIGHTMAP_CHUNK_SIZE], chunk_size.x * sizeof(Color));
             }

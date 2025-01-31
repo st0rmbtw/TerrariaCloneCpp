@@ -12,13 +12,13 @@
 #include "utils.hpp"
 
 #ifdef PLATFORM_WINDOWS
-#include <corecrt_malloc.h>
-#define ALIGNED_ALLOC(size, alignment) _aligned_malloc((size), (alignment))
-#define ALIGNED_FREE(ptr) _aligned_free((ptr))
+    #include <corecrt_malloc.h>
+    #define ALIGNED_ALLOC(size, alignment) _aligned_malloc((size), (alignment))
+    #define ALIGNED_FREE(ptr) _aligned_free((ptr))
 #else
-#include <stdlib.h>
-#define ALIGNED_ALLOC(size, alignment) aligned_alloc((alignment), (size))
-#define ALIGNED_FREE(ptr) free((ptr))
+    #include <stdlib.h>
+    #define ALIGNED_ALLOC(size, alignment) aligned_alloc((alignment), (size))
+    #define ALIGNED_FREE(ptr) free((ptr))
 #endif
 
 using Constants::MAX_PARTICLES_COUNT;
@@ -48,30 +48,42 @@ static struct ParticlesState {
     size_t active_count = 0;
 } state;
 
+template <typename T>
+static T* checked_aligned_alloc(size_t count, size_t alignment) {
+    T* _ptr = (T*) ALIGNED_ALLOC(count * sizeof(T), alignment);
+    if (_ptr == nullptr && count > 0) {
+        LOG_ERROR("Out of memory");
+        abort();
+    }
+    return _ptr;
+}
+
 void ParticleManager::Init() {
     ZoneScopedN("ParticleManager::Init");
 
 #if defined(__AVX__)
-    state.position = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 2 * sizeof(float), sizeof(__m256));
-    state.velocity = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 2 * sizeof(float), sizeof(__m256));
-    state.lifetime = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * sizeof(float), sizeof(__m256));
-    state.rotation = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), sizeof(__m256));
-    state.rotation_speed = (float*) ALIGNED_ALLOC(MAX_PARTICLES_COUNT * 4 * sizeof(float), sizeof(__m256));
+    state.position       = checked_aligned_alloc<float>(MAX_PARTICLES_COUNT * 2, sizeof(__m256));
+    state.velocity       = checked_aligned_alloc<float>(MAX_PARTICLES_COUNT * 2, sizeof(__m256));
+    state.lifetime       = checked_aligned_alloc<float>(MAX_PARTICLES_COUNT,     sizeof(__m256));
+    state.rotation       = checked_aligned_alloc<float>(MAX_PARTICLES_COUNT * 4, sizeof(__m256));
+    state.rotation_speed = checked_aligned_alloc<float>(MAX_PARTICLES_COUNT * 4, sizeof(__m256));
 #else
-    state.position = (float*) malloc(MAX_PARTICLES_COUNT * 2 * sizeof(float));
-    state.velocity = (float*) malloc(MAX_PARTICLES_COUNT * 2 * sizeof(float));
-    state.lifetime = (float*) malloc(MAX_PARTICLES_COUNT * sizeof(float));
-    state.rotation = (float*) malloc(MAX_PARTICLES_COUNT * 4 * sizeof(float));
-    state.rotation_speed = (float*) malloc(MAX_PARTICLES_COUNT * 4 * sizeof(float));
+    state.position       = checked_alloc<float>(MAX_PARTICLES_COUNT * 2);
+    state.velocity       = checked_alloc<float>(MAX_PARTICLES_COUNT * 2);
+    state.lifetime       = checked_alloc<float>(MAX_PARTICLES_COUNT);
+    state.rotation       = checked_alloc<float>(MAX_PARTICLES_COUNT * 4);
+    state.rotation_speed = checked_alloc<float>(MAX_PARTICLES_COUNT * 4);
 #endif
-    state.max_lifetime = new float[MAX_PARTICLES_COUNT];
-    state.custom_scale = new float[MAX_PARTICLES_COUNT];
-    state.scale = new float[MAX_PARTICLES_COUNT];
-    state.initial_light_color = new float[MAX_PARTICLES_COUNT * 3];
-    state.light_color = new float[MAX_PARTICLES_COUNT * 3];
-    state.flags = new uint8_t[MAX_PARTICLES_COUNT]();
-    state.type = new Particle::Type[MAX_PARTICLES_COUNT];
-    state.variant = new uint8_t[MAX_PARTICLES_COUNT];
+    state.max_lifetime        = checked_alloc<float>(MAX_PARTICLES_COUNT);
+    state.custom_scale        = checked_alloc<float>(MAX_PARTICLES_COUNT);
+    state.scale               = checked_alloc<float>(MAX_PARTICLES_COUNT);
+    state.initial_light_color = checked_alloc<float>(MAX_PARTICLES_COUNT * 3);
+    state.light_color         = checked_alloc<float>(MAX_PARTICLES_COUNT * 3);
+    state.flags               = checked_alloc<uint8_t>(MAX_PARTICLES_COUNT);
+    state.type                = checked_alloc<Particle::Type>(MAX_PARTICLES_COUNT);
+    state.variant             = checked_alloc<uint8_t>(MAX_PARTICLES_COUNT);
+
+    memset(state.flags, 0, MAX_PARTICLES_COUNT * sizeof(uint8_t));
 }
 
 void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
@@ -155,12 +167,14 @@ void ParticleManager::Update(World& world) {
             velocity_y += 0.1f;
         }
     }
+
+    const float dt = Time::fixed_delta_seconds();
     
 #if defined(__AVX__)
     // The size of a float type is 32 bit, so it can be packed as 8 into 256 bit vector.
     for (size_t i = 0; i < state.active_count; i += 8) {
         const __m256 lifetime = _mm256_load_ps(&state.lifetime[i]);
-        const __m256 delta = _mm256_set1_ps(Time::fixed_delta_seconds());
+        const __m256 delta = _mm256_set1_ps(dt);
         const __m256 new_lifetime = _mm256_sub_ps(lifetime, delta);
         _mm256_store_ps(&state.lifetime[i], new_lifetime);
     }
@@ -207,7 +221,7 @@ void ParticleManager::Update(World& world) {
     }
 #else
     for (size_t i = 0; i < state.active_count; i += 1) {
-        state.lifetime[i] -= Time::fixed_delta_seconds();
+        state.lifetime[i] -= dt;
     }
 
     for (size_t i = 0; i < state.active_count * 2; i += 2) {
@@ -324,11 +338,11 @@ void ParticleManager::Terminate() {
     free(state.lifetime);
 #endif
 
-    delete[] state.light_color;
-    delete[] state.max_lifetime;
-    delete[] state.custom_scale;
-    delete[] state.scale;
-    delete[] state.flags;
-    delete[] state.type;
-    delete[] state.variant;
+    free(state.light_color);
+    free(state.max_lifetime);
+    free(state.custom_scale);
+    free(state.scale);
+    free(state.flags);
+    free(state.type);
+    free(state.variant);
 }

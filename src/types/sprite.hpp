@@ -13,22 +13,6 @@
 #include "texture.hpp"
 #include "texture_atlas.hpp"
 
-#define SPRITE_SETTERS(_class, _override) \
-    virtual inline _class& set_position(const glm::vec2& position) _override { m_position = position; return *this; } \
-    virtual inline _class& set_rotation(const glm::quat& rotation) _override { m_rotation = rotation; return *this; } \
-    virtual inline _class& set_scale(const glm::vec2& scale) _override { m_scale = scale; return *this; } \
-    virtual inline _class& set_scale(const float scale) _override { m_scale = glm::vec2(scale); return *this; } \
-    virtual inline _class& set_color(const glm::vec4& color) _override { m_color = color; return *this; } \
-    virtual inline _class& set_color(const glm::vec3& color) _override { m_color = glm::vec4(color, 1.0); return *this; } \
-    virtual inline _class& set_outline_color(const glm::vec4& color) _override { m_outline_color = color; return *this; } \
-    virtual inline _class& set_outline_color(const glm::vec3& color) _override { m_outline_color = glm::vec4(color, 1.0); return *this; } \
-    virtual inline _class& set_outline_thickness(const float thickness) _override { m_outline_thickness = thickness; return *this; } \
-    virtual inline _class& set_anchor(Anchor anchor) _override { m_anchor = anchor; return *this; } \
-    virtual inline _class& set_flip_x(bool flip_x) _override { m_flip_x = flip_x; return *this; } \
-    virtual inline _class& set_flip_y(bool flip_y) _override { m_flip_y = flip_y; return *this; } \
-    virtual inline _class& set_ignore_camera_zoom(bool ignore) _override { m_ignore_camera_zoom = ignore; return *this; } \
-
-
 class BaseSprite {
 protected:
     BaseSprite() = default;
@@ -60,13 +44,26 @@ public:
     [[nodiscard]] inline bool flip_y() const { return m_flip_y; }
     [[nodiscard]] inline bool ignore_camera_zoom() const { return m_ignore_camera_zoom; }
 
-    [[nodiscard]] virtual glm::vec2 size() const = 0;
+    [[nodiscard]] virtual inline glm::vec2 size() const = 0;
 
     [[nodiscard]] inline math::Rect calculate_aabb() const {
         return math::Rect::from_top_left(m_position - m_anchor.to_vec2() * size(), size());
     }
 
-    SPRITE_SETTERS(BaseSprite,)
+    inline BaseSprite& set_position(const glm::vec2& position) { m_position = position; return *this; }
+    inline BaseSprite& set_rotation(const glm::quat& rotation) { m_rotation = rotation; return *this; }
+    inline BaseSprite& set_scale(const glm::vec2& scale) { m_scale = scale; return *this; }
+    inline BaseSprite& set_scale(const float scale) { m_scale = glm::vec2(scale); return *this; }
+    inline BaseSprite& set_custom_size(const std::optional<glm::vec2> size) { m_custom_size = size; return *this; }
+    inline BaseSprite& set_color(const glm::vec4& color) { m_color = color; return *this; }
+    inline BaseSprite& set_color(const glm::vec3& color) { m_color = glm::vec4(color, 1.0); return *this; }
+    inline BaseSprite& set_outline_color(const glm::vec4& color) { m_outline_color = color; return *this; }
+    inline BaseSprite& set_outline_color(const glm::vec3& color) { m_outline_color = glm::vec4(color, 1.0); return *this; }
+    inline BaseSprite& set_outline_thickness(const float thickness) { m_outline_thickness = thickness; return *this; }
+    inline BaseSprite& set_anchor(Anchor anchor) { m_anchor = anchor; return *this; }
+    inline BaseSprite& set_flip_x(bool flip_x) { m_flip_x = flip_x; return *this; }
+    inline BaseSprite& set_flip_y(bool flip_y) { m_flip_y = flip_y; return *this; }
+    inline BaseSprite& set_ignore_camera_zoom(bool ignore) { m_ignore_camera_zoom = ignore; return *this; }
 
 protected:
     glm::quat m_rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
@@ -74,6 +71,7 @@ protected:
     glm::vec2 m_scale = glm::vec2(1.0f);
     glm::vec4 m_color = glm::vec4(1.0f);
     glm::vec4 m_outline_color = glm::vec4(0.0f);
+    std::optional<glm::vec2> m_custom_size = std::nullopt;
     float m_outline_thickness = 0.0f;
     Anchor m_anchor = Anchor::Center;
     bool m_flip_x = false;
@@ -89,25 +87,15 @@ public:
     Sprite(glm::vec2 position, glm::vec2 scale) : BaseSprite(position, scale) {}
 
     inline Sprite& set_texture(Texture texture) { m_texture = texture; return *this; }
-    inline BaseSprite& set_custom_size(std::optional<glm::vec2> custom_size) { m_custom_size = custom_size; return *this; }
+    [[nodiscard]] inline const Texture& texture() const { return m_texture; }
 
-    [[nodiscard]] inline const std::optional<Texture>& texture() const { return m_texture; }
-    [[nodiscard]] inline const std::optional<glm::vec2>& custom_size() const { return m_custom_size; }
-
-    [[nodiscard]] glm::vec2 size() const override {
-        auto size = glm::vec2(1.0f);
-
-        if (m_texture.has_value()) size = m_texture->size();
-        if (m_custom_size.has_value()) size = m_custom_size.value();
-
-        return size * scale();
+    [[nodiscard]]
+    inline glm::vec2 size() const override {
+        return m_custom_size.value_or(m_texture.size()) * scale();
     }
 
-    SPRITE_SETTERS(Sprite, override)
-
 private:
-    std::optional<glm::vec2> m_custom_size = std::nullopt;
-    std::optional<Texture> m_texture = std::nullopt;
+    Texture m_texture;
 };
 
 class TextureAtlasSprite : public BaseSprite {
@@ -129,10 +117,8 @@ public:
     [[nodiscard]] inline const TextureAtlas& atlas() const { return m_texture_atlas; }
 
     [[nodiscard]] glm::vec2 size() const override {
-        return glm::vec2(m_texture_atlas.size()) * scale();
+        return m_custom_size.value_or(m_texture_atlas.size()) * scale();
     }
-
-    SPRITE_SETTERS(TextureAtlasSprite, override)
 
 private:
     TextureAtlas m_texture_atlas;

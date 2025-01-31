@@ -23,8 +23,6 @@
 #include "../log.hpp"
 #include "../types/shader_type.hpp"
 #include "../utils.hpp"
-#include "../time/timer.hpp"
-#include "../time/time.hpp"
 
 #include "types.hpp"
 #include "utils.hpp"
@@ -141,12 +139,9 @@ struct FlushData {
     FlushDataType type;
 };
 
-constexpr size_t MAX_QUADS = 5000 / 2;
-
 namespace SpriteFlags {
     enum : uint8_t {
-        HasTexture = 0,
-        UI,
+        UI = 0,
         World,
         IgnoreCameraZoom,
     };
@@ -230,14 +225,11 @@ static struct RendererState {
     GlyphBatchData glyph_batch_data;
     NinePatchBatchData ninepatch_batch_data;
 
-    Timer compute_light_timer;
-
     LLGL::RenderSystemPtr context = nullptr;
     std::shared_ptr<CustomSurface> surface = nullptr;
 
     math::Rect ui_frustum;
-    math::Rect nozoom_camera_frustum;
-    math::Rect camera_frustum;
+    math::Rect camera_frustums[2];
 
     LLGL::SwapChain* swap_chain = nullptr;
     LLGL::CommandBuffer* command_buffer = nullptr;
@@ -276,6 +268,7 @@ static struct RendererState {
 
     RenderBackend backend;
     bool depth_mode = false;
+    bool update_light = false;
 } state;
 
 const LLGL::RenderSystemPtr& Renderer::Context() { return state.context; }
@@ -292,6 +285,10 @@ LLGL::Buffer* Renderer::ChunkVertexBuffer() { return state.chunk_vertex_buffer; 
 #if DEBUG
 LLGL::RenderingDebugger* Renderer::Debugger() { return state.debugger; }
 #endif
+
+static constexpr size_t MAX_QUADS = 5000 / 2;
+static constexpr int CAMERA_FRUSTUM = 0;
+static constexpr int NOZOOM_CAMERA_FRUSTUM = 1;
 
 static void init_sprite_batch() {
     ZoneScopedN("RenderBatchSprite::init");
@@ -378,7 +375,7 @@ static void init_sprite_batch() {
     }
 }
 
-static void draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const std::optional<Texture>& sprite_texture, bool is_ui, Depth depth) {
+static void draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const Texture& sprite_texture, bool is_ui, Depth depth) {
     ZoneScopedN("RenderBatchSprite::draw_sprite");
 
     if (state.depth_mode) depth = state.depth;
@@ -393,7 +390,7 @@ static void draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_sca
     if (static_cast<uint32_t>(order) > max_depth) max_depth = order;
 
     DrawCommandSprite sprite_data = DrawCommandSprite {
-        .texture = sprite_texture.has_value() ? sprite_texture.value() : Assets::GetTexture(TextureAsset::Stub),
+        .texture = sprite_texture,
         .rotation = sprite.rotation(),
         .uv_offset_scale = uv_offset_scale,
         .color = sprite.color(),
@@ -412,7 +409,7 @@ static void draw_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_sca
     ++state.sprite_batch_data.count;
 }
 
-static void draw_world_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const std::optional<Texture>& sprite_texture, Depth depth) {
+static void draw_world_sprite(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const Texture& sprite_texture, Depth depth) {
     ZoneScopedN("RenderBatchSprite::draw_world_sprite");
 
     // if (m_world_sprites.size() >= MAX_QUADS) {
@@ -432,7 +429,7 @@ static void draw_world_sprite(const BaseSprite& sprite, const glm::vec4& uv_offs
     if (static_cast<uint32_t>(order) > max_depth) max_depth = order;
 
     DrawCommandSprite sprite_data = DrawCommandSprite {
-        .texture = sprite_texture.has_value() ? sprite_texture.value() : Assets::GetTexture(TextureAsset::Stub),
+        .texture = sprite_texture,
         .rotation = sprite.rotation(),
         .uv_offset_scale = uv_offset_scale,
         .color = sprite.color(),
@@ -806,8 +803,6 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
     state.postprocess_pipeline = context->CreatePipelineState(pipelineDesc);
 
-    state.compute_light_timer = Timer::from_seconds(Constants::FIXED_UPDATE_INTERVAL, TimerMode::Repeating);
-
     state.world_renderer.init(state.static_lightmap_render_pass);
     state.background_renderer.init();
     state.particle_renderer.init();
@@ -904,6 +899,10 @@ void Renderer::InitWorldRenderer(const WorldData &world) {
     state.world_renderer.init_lightmap_chunks(world);
 }
 
+void Renderer::UpdateLight() {
+    state.update_light = true;
+}
+
 void Renderer::Begin(const Camera& camera, WorldData& world) {
     ZoneScopedN("Renderer::Begin");
 
@@ -919,8 +918,8 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
     );
     const math::Rect ui_frustum = math::Rect::from_corners(glm::vec2(0.0), camera.viewport());
 
-    state.camera_frustum = camera_frustum;
-    state.nozoom_camera_frustum = nozoom_camera_frustum;
+    state.camera_frustums[CAMERA_FRUSTUM] = camera_frustum;
+    state.camera_frustums[NOZOOM_CAMERA_FRUSTUM] = nozoom_camera_frustum;
     state.ui_frustum = ui_frustum;
 
     state.world_renderer.update_lightmap_texture(world);
@@ -955,6 +954,8 @@ static FORCE_INLINE void UpdateBuffer(LLGL::Buffer* buffer, void* data, size_t l
 
 static INLINE void SortDrawCommands() {
     ZoneScopedN("Renderer::SortDrawCommands");
+
+    if (state.draw_commands.empty()) return;
 
     std::sort(
         state.draw_commands.begin(),
@@ -1018,7 +1019,6 @@ static INLINE void SortDrawCommands() {
             int flags = 0;
             flags |= sprite_data.ignore_camera_zoom << SpriteFlags::IgnoreCameraZoom;
             flags |= sprite_data.is_ui << SpriteFlags::UI;
-            flags |= (curr_texture_id >= 0) << SpriteFlags::HasTexture;
 
             state.sprite_batch_data.buffer_ptr->position = glm::vec3(sprite_data.position, static_cast<float>(state.max_main_depth));
             state.sprite_batch_data.buffer_ptr->rotation = sprite_data.rotation;
@@ -1202,6 +1202,8 @@ static INLINE void SortDrawCommands() {
 static INLINE void SortWorldDrawCommands() {
     ZoneScopedN("Renderer::SortWorldDrawCommands");
 
+    if (state.world_draw_commands.empty()) return;
+
     std::sort(
         state.world_draw_commands.begin(),
         state.world_draw_commands.end(),
@@ -1244,7 +1246,6 @@ static INLINE void SortWorldDrawCommands() {
 
             int flags = 1 << SpriteFlags::World;
             flags |= sprite_data.ignore_camera_zoom << SpriteFlags::IgnoreCameraZoom;
-            flags |= (curr_texture_id >= 0) << SpriteFlags::HasTexture;
 
             state.sprite_batch_data.world_buffer_ptr->position = glm::vec3(sprite_data.position, order);
             state.sprite_batch_data.world_buffer_ptr->rotation = sprite_data.rotation;
@@ -1375,20 +1376,20 @@ void Renderer::Render(const Camera& camera, const World& world) {
 
     LLGL::ClearValue clear_value = LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
-    state.compute_light_timer.tick(Time::delta());
-
-    if (state.compute_light_timer.finished()) {
+    if (state.update_light) {
         commands->BeginRenderPass(*state.world_renderer.light_texture_target());
             commands->Clear(LLGL::ClearFlags::Color, clear_value);
         commands->EndRenderPass();
 
         state.world_renderer.compute_light(camera, world);
-    }
 
-    commands->BeginRenderPass(*state.static_lightmap_target);
-        commands->Clear(LLGL::ClearFlags::Color, clear_value);
-        state.world_renderer.render_lightmap(camera);
-    commands->EndRenderPass();
+        commands->BeginRenderPass(*state.static_lightmap_target);
+            commands->Clear(LLGL::ClearFlags::Color, clear_value);
+            state.world_renderer.render_lightmap(camera);
+        commands->EndRenderPass();
+
+        state.update_light = false;
+    }
 
     commands->BeginRenderPass(*state.background_render_target);
         commands->Clear(LLGL::ClearFlags::ColorDepth, clear_value);
@@ -1513,9 +1514,7 @@ void Renderer::DrawSprite(const Sprite& sprite, RenderLayer render_layer, Depth 
     ZoneScopedN("Renderer::DrawSprite");
 
     const math::Rect aabb = sprite.calculate_aabb();
-
-    if (sprite.ignore_camera_zoom() && !state.nozoom_camera_frustum.intersects(aabb)) return;
-    if (!sprite.ignore_camera_zoom() && !state.camera_frustum.intersects(aabb)) return;
+    if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return;
 
     add_sprite_to_batch(sprite, render_layer, false, depth);
 }
@@ -1533,9 +1532,7 @@ void Renderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, RenderLayer ren
     ZoneScopedN("Renderer::DrawAtlasSprite");
 
     const math::Rect aabb = sprite.calculate_aabb();
-
-    if (sprite.ignore_camera_zoom() && !state.nozoom_camera_frustum.intersects(aabb)) return;
-    if (!sprite.ignore_camera_zoom() && !state.camera_frustum.intersects(aabb)) return;
+    if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return;
 
     add_atlas_sprite_to_batch(sprite, render_layer, false, depth);
 }
@@ -1613,9 +1610,7 @@ void Renderer::DrawBackground(const BackgroundLayer& layer) {
     ZoneScopedN("Renderer::DrawBackground");
 
     const math::Rect aabb = math::Rect::from_top_left(layer.position() - layer.anchor().to_vec2() * layer.size(), layer.size());
-
-    if (layer.nonscale() && !state.nozoom_camera_frustum.intersects(aabb)) return;
-    if (!layer.nonscale() && !state.camera_frustum.intersects(aabb)) return;
+    if (!state.camera_frustums[layer.nonscale()].intersects(aabb)) return;
 
     if (layer.is_world()) {
         state.background_renderer.draw_world_layer(layer);
@@ -1643,6 +1638,7 @@ Texture Renderer::CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_
     texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
     texture_desc.cpuAccessFlags = 0;
     texture_desc.miscFlags = LLGL::MiscFlags::GenerateMips * generate_mip_maps;
+    texture_desc.mipLevels = generate_mip_maps ? 0 : 1;
 
     LLGL::ImageView image_view;
     uint32_t components;

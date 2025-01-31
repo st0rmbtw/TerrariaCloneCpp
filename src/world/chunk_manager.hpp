@@ -11,6 +11,7 @@
 #include "../renderer/camera.h"
 #include "../renderer/types.hpp"
 #include "../types/tile_pos.hpp"
+#include "../utils.hpp"
 
 #include "chunk.hpp"
 #include "world_data.hpp"
@@ -19,8 +20,8 @@ class ChunkManager {
 public:
     ChunkManager() {
         using Constants::RENDER_CHUNK_SIZE_U;
-        m_block_data_arena = (ChunkInstance*) malloc(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U * sizeof(ChunkInstance));
-        m_wall_data_arena = (ChunkInstance*) malloc(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U * sizeof(ChunkInstance));
+        m_block_data_arena = checked_alloc<ChunkInstance>(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U);
+        m_wall_data_arena = checked_alloc<ChunkInstance>(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U);
     }
 
     void manage_chunks(const WorldData& world, const Camera& camera);

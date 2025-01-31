@@ -58,7 +58,7 @@ public:
     [[nodiscard]] inline const math::Rect& rect() const noexcept { return m_rect; }
     [[nodiscard]] inline UiElement type() const noexcept { return m_element_type; }
     [[nodiscard]] inline int data() const noexcept { return m_data; }
-    [[nodiscard]] inline int depth() const noexcept { return m_depth; }
+    [[nodiscard]] constexpr inline int depth() const noexcept { return m_depth; }
 private:
     uint8_t m_state = 0;
     UiElement m_element_type;

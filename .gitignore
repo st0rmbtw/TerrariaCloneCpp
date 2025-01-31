@@ -1,5 +1,6 @@
 .DS_Store
 .vscode/
+.vs/
 __MACOSX/
 out/
 out_release/

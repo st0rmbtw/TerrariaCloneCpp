@@ -24,7 +24,7 @@ public:
     constexpr operator Value() const { return m_value; }
     explicit operator bool() const = delete;
 
-    constexpr inline glm::vec2 operator*(const glm::vec2& vec) const noexcept {
+    inline glm::vec2 operator*(const glm::vec2& vec) const noexcept {
         return to_vec2() * vec;
     }
 

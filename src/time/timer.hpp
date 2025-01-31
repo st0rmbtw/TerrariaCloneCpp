@@ -72,7 +72,7 @@ public:
         return *this;
     }
 
-    constexpr void set_finished() { set_elapsed(m_duration); }
+    inline void set_finished() { set_elapsed(m_duration); }
 
 private:
     void tick_impl(const duration_t& delta);

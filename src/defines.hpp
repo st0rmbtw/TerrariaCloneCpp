@@ -16,7 +16,19 @@
     #error "Unknown platform"
 #endif
 
-#define FORCE_INLINE inline __attribute__((always_inline))
+#if defined(_MSC_VER)
+    #define FORCE_INLINE __forceinline
+#else
+    #define FORCE_INLINE inline __attribute__((always_inline))
+#endif
+
+#if defined(__GNUC__) || defined(__clang__)
+#  define ALIGN(x) __attribute__ ((aligned(x)))
+#elif defined(_MSC_VER)
+#  define ALIGN(x) __declspec(align(x))
+#else
+#  error "Unknown compiler; can't define ALIGN"
+#endif
 
 #if defined(TRACY_ENABLE)
     #define INLINE

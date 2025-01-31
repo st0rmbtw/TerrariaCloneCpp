@@ -52,7 +52,7 @@ void spawn_particles_on_dig(const glm::vec2& position, Particle::Type particle, 
     const int count = broken ? rand_range(7, 15) : rand_range(3, 8);
     
     for (int i = 0; i < count; i++) {
-        const glm::vec2 velocity = glm::normalize(glm::diskRand(1.0f)) * 1.25f;
+        const glm::vec2 velocity = glm::normalize(glm::diskRand(1.25f));
         const float min_scale = broken ? 0.6f : 0.3f;
         const float scale = glm::linearRand(min_scale, 1.0f);
 

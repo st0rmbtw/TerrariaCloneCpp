@@ -34,13 +34,11 @@ struct VSOutput
     nointerpolation float4 outline_color : OutlineColor;
     float2 uv : UV;
     nointerpolation float outline_thickness : OutlineThickness;
-    nointerpolation bool has_texture : HasTexture;
 };
 
-static const int HAS_TEXTURE_FLAG = 1 << 0;
-static const int IS_UI_FLAG = 1 << 1;
-static const int IS_WORLD_FLAG = 1 << 2;
-static const int IGNORE_CAMERA_ZOOM_FLAG = 1 << 3;
+static const int IS_UI_FLAG = 1 << 0;
+static const int IS_WORLD_FLAG = 1 << 1;
+static const int IGNORE_CAMERA_ZOOM_FLAG = 1 << 2;
 
 VSOutput VS(VSInput inp)
 {
@@ -93,7 +91,6 @@ VSOutput VS(VSInput inp)
     const bool is_ui = (flags & IS_UI_FLAG) == IS_UI_FLAG;
     const bool ignore_camera_zoom = (flags & IGNORE_CAMERA_ZOOM_FLAG) == IGNORE_CAMERA_ZOOM_FLAG;
     const bool is_world = (flags & IS_WORLD_FLAG) == IS_WORLD_FLAG;
-    const bool has_texture = (flags & HAS_TEXTURE_FLAG) == HAS_TEXTURE_FLAG;
 
     const float max_depth = is_world ? u_max_world_depth : u_max_depth;
     const float depth = inp.i_position.z / max_depth;
@@ -108,7 +105,6 @@ VSOutput VS(VSInput inp)
     outp.color = inp.i_color;
     outp.outline_color = inp.i_outline_color;
     outp.outline_thickness = inp.i_outline_thickness;
-    outp.has_texture = has_texture;
 
 	return outp;
 }
@@ -120,22 +116,20 @@ float4 PS(VSOutput inp) : SV_Target
 {
     float4 color = inp.color;
 
-    if (inp.has_texture > 0) {
-        if (inp.outline_thickness > 0.0) {
-            float outline = Texture.Sample(Sampler, inp.uv + float2(inp.outline_thickness, 0.0)).a;
-            outline += Texture.Sample(Sampler, inp.uv + float2(-inp.outline_thickness, 0.0)).a;
-            outline += Texture.Sample(Sampler, inp.uv + float2(0.0, inp.outline_thickness)).a;
-            outline += Texture.Sample(Sampler, inp.uv + float2(0.0, -inp.outline_thickness)).a;
-            outline += Texture.Sample(Sampler, inp.uv + float2(inp.outline_thickness, -inp.outline_thickness)).a;
-            outline += Texture.Sample(Sampler, inp.uv + float2(-inp.outline_thickness, inp.outline_thickness)).a;
-            outline += Texture.Sample(Sampler, inp.uv + float2(inp.outline_thickness, inp.outline_thickness)).a;
-            outline += Texture.Sample(Sampler, inp.uv + float2(-inp.outline_thickness, -inp.outline_thickness)).a;
-            outline = min(outline, 1.0);
-            float4 c = Texture.Sample(Sampler, inp.uv);
-            color = lerp(c, inp.outline_color, outline);
-        } else {
-            color = Texture.Sample(Sampler, inp.uv) * inp.color;
-        }
+    if (inp.outline_thickness > 0.0) {
+        float outline = Texture.Sample(Sampler, inp.uv + float2(inp.outline_thickness, 0.0)).a;
+        outline += Texture.Sample(Sampler, inp.uv + float2(-inp.outline_thickness, 0.0)).a;
+        outline += Texture.Sample(Sampler, inp.uv + float2(0.0, inp.outline_thickness)).a;
+        outline += Texture.Sample(Sampler, inp.uv + float2(0.0, -inp.outline_thickness)).a;
+        outline += Texture.Sample(Sampler, inp.uv + float2(inp.outline_thickness, -inp.outline_thickness)).a;
+        outline += Texture.Sample(Sampler, inp.uv + float2(-inp.outline_thickness, inp.outline_thickness)).a;
+        outline += Texture.Sample(Sampler, inp.uv + float2(inp.outline_thickness, inp.outline_thickness)).a;
+        outline += Texture.Sample(Sampler, inp.uv + float2(-inp.outline_thickness, -inp.outline_thickness)).a;
+        outline = min(outline, 1.0);
+        float4 c = Texture.Sample(Sampler, inp.uv);
+        color = lerp(c, inp.outline_color, outline);
+    } else {
+        color = Texture.Sample(Sampler, inp.uv) * inp.color;
     }
 
     clip(color.a - 0.5);

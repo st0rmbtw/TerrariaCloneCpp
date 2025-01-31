@@ -4,7 +4,11 @@ project(TerrariaClone CXX)
 
 find_package(OpenMP)
 
-set(CMAKE_CXX_STANDARD 17)
+if(MSVC)
+    set(CMAKE_CXX_STANDARD 20)
+else()
+    set(CMAKE_CXX_STANDARD 17)
+endif()
 
 if(APPLE)
     enable_language(OBJCXX)
@@ -40,7 +44,7 @@ if (RELEASE_BUILD)
 else()
     message("-- Build Type: Debug")
     if(MSVC)
-        add_compile_options("/ggdb" "/O0")
+        add_compile_options("/DEBUG" "/Od")
     else()
         add_compile_options("-ggdb" "-O0")
     endif()
@@ -107,7 +111,13 @@ add_executable(${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME} PRIVATE ${SRC})
 
-target_compile_options(${PROJECT_NAME} PRIVATE "-Wall" "-Wextra" "-Wno-gnu-zero-variadic-macro-arguments")
+if(NOT MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE "-Wall" "-Wextra" "-Wno-gnu-zero-variadic-macro-arguments")
+endif()
+
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE "/Zc:preprocessor")
+endif()
 
 if(RELEASE_BUILD)
     target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG=0)

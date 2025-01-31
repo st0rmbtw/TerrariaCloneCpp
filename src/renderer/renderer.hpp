@@ -25,7 +25,7 @@
 #include "custom_surface.hpp"
 #include "camera.h"
 
-struct __attribute__((aligned(16))) ProjectionsUniform {
+struct ALIGN(16) ProjectionsUniform {
     glm::mat4 screen_projection_matrix;
     glm::mat4 view_projection_matrix;
     glm::mat4 nonscale_view_projection_matrix;
@@ -46,6 +46,8 @@ namespace Renderer {
 
     void Begin(const Camera& camera, WorldData& world);
     void Render(const Camera& camera, const World& world);
+
+    void UpdateLight();
 
     void DrawSprite(const Sprite& sprite, RenderLayer render_layer = RenderLayer::Main, Depth depth = {});
     inline void DrawSprite(const Sprite& sprite, Depth depth) {

@@ -24,16 +24,14 @@ layout(std140) uniform GlobalUniformBuffer {
     float max_world_depth;
 } uniforms;
 
-const int HAS_TEXTURE_FLAG = 1 << 0;
-const int IS_UI_FLAG = 1 << 1;
-const int IS_WORLD_FLAG = 1 << 2;
-const int IS_NONSCALE_FLAG = 1 << 3;
+const int IS_UI_FLAG = 1 << 0;
+const int IS_WORLD_FLAG = 1 << 1;
+const int IS_NONSCALE_FLAG = 1 << 2;
 
 out vec2 v_uv;
 flat out vec4 v_color;
 flat out vec4 v_outline_color;
 flat out float v_outline_thickness;
-flat out int v_has_texture;
 
 void main() {
     float qxx = i_rotation.x * i_rotation.x;
@@ -74,7 +72,6 @@ void main() {
     bool is_ui = (i_flags & IS_UI_FLAG) == IS_UI_FLAG;
     bool is_nonscale = (i_flags & IS_NONSCALE_FLAG) == IS_NONSCALE_FLAG;
     bool is_world = (i_flags & IS_WORLD_FLAG) == IS_WORLD_FLAG;
-    bool has_texture = (i_flags & HAS_TEXTURE_FLAG) == HAS_TEXTURE_FLAG;
 
     float max_depth = is_world ? uniforms.max_world_depth : uniforms.max_depth;
     float depth = i_position.z / max_depth;
@@ -85,7 +82,6 @@ void main() {
     v_color = i_color;
     v_outline_color = i_outline_color;
     v_outline_thickness = i_outline_thickness;
-    v_has_texture = has_texture ? 1 : 0;
     
     gl_Position = mvp * vec4(a_position, 0, 1);
     gl_Position.z = depth;

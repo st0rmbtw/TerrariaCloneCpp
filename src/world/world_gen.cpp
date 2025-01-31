@@ -140,8 +140,8 @@ static void remove_walls_flood_fill(WorldData& world, TilePos start) {
 
     while (!queue.empty()) {
         const std::pair<TilePos, glm::ivec2>& pair = queue.back();
-        const TilePos& pos = pair.first;
-        const glm::ivec2& depth = pair.second;
+        const TilePos pos = pair.first;
+        const glm::ivec2 depth = pair.second;
 
         queue.pop_back();
 
@@ -503,7 +503,7 @@ static void grassify_flood_fill(WorldData &world, TilePos start) {
     set_block(world, start, BlockType::Grass);
 
     while (!queue.empty()) {
-        const TilePos& pos = queue.back();
+        const TilePos pos = queue.back();
         queue.pop_back();
 
         {

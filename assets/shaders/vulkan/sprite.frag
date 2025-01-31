@@ -14,22 +14,20 @@ layout(location = 4) flat in int v_has_texture;
 void main() {
     vec4 color = v_color;
 
-    if (v_has_texture > 0) {
-        if (v_outline_thickness > 0.0) {
-            float outline = texture(sampler2D(u_texture, u_sampler), v_uv + vec2(v_outline_thickness, 0.0)).a;
-            outline += texture(sampler2D(u_texture, u_sampler), v_uv + vec2(-v_outline_thickness, 0.0)).a;
-            outline += texture(sampler2D(u_texture, u_sampler), v_uv + vec2(0.0, v_outline_thickness)).a;
-            outline += texture(sampler2D(u_texture, u_sampler), v_uv + vec2(0.0, -v_outline_thickness)).a;
-            outline += texture(sampler2D(u_texture, u_sampler), v_uv + vec2(v_outline_thickness, -v_outline_thickness)).a;
-            outline += texture(sampler2D(u_texture, u_sampler), v_uv + vec2(-v_outline_thickness, v_outline_thickness)).a;
-            outline += texture(sampler2D(u_texture, u_sampler), v_uv + vec2(v_outline_thickness, v_outline_thickness)).a;
-            outline += texture(sampler2D(u_texture, u_sampler), v_uv + vec2(-v_outline_thickness, -v_outline_thickness)).a;
-            outline = min(outline, 1.0);
-            vec4 c = texture(sampler2D(u_texture, u_sampler), v_uv);
-            color = mix(c, v_outline_color, outline);
-        } else {
-            color = texture(sampler2D(u_texture, u_sampler), v_uv) * v_color;
-        }
+    if (v_outline_thickness > 0.0) {
+        float outline = texture(sampler2D(u_texture, u_sampler), v_uv + vec2(v_outline_thickness, 0.0)).a;
+        outline += texture(sampler2D(u_texture, u_sampler), v_uv + vec2(-v_outline_thickness, 0.0)).a;
+        outline += texture(sampler2D(u_texture, u_sampler), v_uv + vec2(0.0, v_outline_thickness)).a;
+        outline += texture(sampler2D(u_texture, u_sampler), v_uv + vec2(0.0, -v_outline_thickness)).a;
+        outline += texture(sampler2D(u_texture, u_sampler), v_uv + vec2(v_outline_thickness, -v_outline_thickness)).a;
+        outline += texture(sampler2D(u_texture, u_sampler), v_uv + vec2(-v_outline_thickness, v_outline_thickness)).a;
+        outline += texture(sampler2D(u_texture, u_sampler), v_uv + vec2(v_outline_thickness, v_outline_thickness)).a;
+        outline += texture(sampler2D(u_texture, u_sampler), v_uv + vec2(-v_outline_thickness, -v_outline_thickness)).a;
+        outline = min(outline, 1.0);
+        vec4 c = texture(sampler2D(u_texture, u_sampler), v_uv);
+        color = mix(c, v_outline_color, outline);
+    } else {
+        color = texture(sampler2D(u_texture, u_sampler), v_uv) * v_color;
     }
 
     if (color.a < 0.5) discard;

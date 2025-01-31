@@ -91,8 +91,6 @@ void pre_update() {
 void fixed_update() {
     ZoneScopedN("Game::fixed_update");
 
-    ParticleManager::Update(g.world);
-
 #if DEBUG
     const bool handle_input = !g.free_camera;
 #else
@@ -102,6 +100,8 @@ void fixed_update() {
     g.player.fixed_update(g.world, handle_input);
 
     UI::FixedUpdate();
+
+    Renderer::UpdateLight();
 }
 
 void update() {
@@ -109,13 +109,8 @@ void update() {
 
     float scale_speed = 2.f;
 
-    if (Input::Pressed(Key::LeftShift)) {
-        scale_speed *= 4.f;
-    }
-
-    if (Input::Pressed(Key::LeftAlt)) {
-        scale_speed /= 4.f;
-    }
+    if (Input::Pressed(Key::LeftShift)) scale_speed *= 4.f;
+    if (Input::Pressed(Key::LeftAlt)) scale_speed /= 4.f;
 
     if (Input::Pressed(Key::Minus)) {
         g.camera.set_zoom(g.camera.zoom() + scale_speed * Time::delta_seconds());
@@ -146,9 +141,10 @@ void update() {
     g.player.update(g.camera, g.world);
 
     if (Input::Pressed(Key::K)) {
+        const glm::vec2 position = g.camera.screen_to_world(Input::MouseScreenPosition());
+
         for (int i = 0; i < 500; ++i) {
-            const glm::vec2 position = g.camera.screen_to_world(Input::MouseScreenPosition());
-            const glm::vec2 velocity = glm::diskRand(1.0f) * 1.5f;
+            const glm::vec2 velocity = glm::diskRand(1.5f);
 
             ParticleManager::SpawnParticle(
                 ParticleBuilder::create(Particle::Type::Grass, position, velocity, 5.0f)
@@ -157,6 +153,10 @@ void update() {
             );
         }
     }
+}
+
+void fixed_post_update() {
+    ParticleManager::Update(g.world);
 }
 
 void post_update() {
@@ -243,6 +243,7 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     Engine::SetUpdateCallback(update);
     Engine::SetPostUpdateCallback(post_update);
     Engine::SetFixedUpdateCallback(fixed_update);
+    Engine::SetFixedPostUpdateCallback(fixed_post_update);
     Engine::SetRenderCallback(render);
     Engine::SetPostRenderCallback(post_render);
     Engine::SetDestroyCallback(destroy);

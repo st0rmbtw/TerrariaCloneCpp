@@ -24,6 +24,7 @@ namespace Engine {
     void SetUpdateCallback(UpdateCallback);
     void SetPostUpdateCallback(PostUpdateCallback);
     void SetFixedUpdateCallback(FixedUpdateCallback);
+    void SetFixedPostUpdateCallback(FixedUpdateCallback);
     void SetRenderCallback(RenderCallback);
     void SetPostRenderCallback(PostRenderCallback);
     void SetDestroyCallback(DestroyCallback);
