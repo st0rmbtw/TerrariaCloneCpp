@@ -44,6 +44,8 @@ namespace Renderer {
     void InitWorldRenderer(const WorldData& world);
     void ResizeTextures(LLGL::Extent2D resolution);
 
+    void UpdateLight();
+
     void Begin(const Camera& camera, WorldData& world);
     void Render(const Camera& camera, const World& world);
 
@@ -88,9 +90,9 @@ namespace Renderer {
     void DrawBackground(const BackgroundLayer& layer);
     void DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth = -1, bool world = false);
 
-#if DEBUG
+// #if DEBUG
     void PrintDebugInfo();
-#endif
+// #endif
 
     void BeginDepth(Depth depth = {});
     void EndDepth();
@@ -117,9 +119,9 @@ namespace Renderer {
     [[nodiscard]] uint32_t GetWorldDepthIndex();
     [[nodiscard]] LLGL::Buffer* ChunkVertexBuffer();
 
-#if DEBUG
+// #if DEBUG
     [[nodiscard]] LLGL::RenderingDebugger* Debugger();
-#endif
+// #endif
 };
 
 #endif

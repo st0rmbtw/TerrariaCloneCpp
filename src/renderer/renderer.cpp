@@ -23,8 +23,6 @@
 #include "../log.hpp"
 #include "../types/shader_type.hpp"
 #include "../utils.hpp"
-#include "../time/timer.hpp"
-#include "../time/time.hpp"
 
 #include "types.hpp"
 #include "utils.hpp"
@@ -230,8 +228,6 @@ static struct RendererState {
     GlyphBatchData glyph_batch_data;
     NinePatchBatchData ninepatch_batch_data;
 
-    Timer compute_light_timer;
-
     LLGL::RenderSystemPtr context = nullptr;
     std::shared_ptr<CustomSurface> surface = nullptr;
 
@@ -242,9 +238,9 @@ static struct RendererState {
     LLGL::SwapChain* swap_chain = nullptr;
     LLGL::CommandBuffer* command_buffer = nullptr;
     LLGL::CommandQueue* command_queue = nullptr;
-#if DEBUG
+// #if DEBUG
     LLGL::RenderingDebugger* debugger = nullptr;
-#endif
+// #endif
 
     LLGL::Buffer* constant_buffer = nullptr;
     LLGL::ResourceHeap* resource_heap = nullptr;
@@ -276,6 +272,7 @@ static struct RendererState {
 
     RenderBackend backend;
     bool depth_mode = false;
+    bool update_light = false;
 } state;
 
 const LLGL::RenderSystemPtr& Renderer::Context() { return state.context; }
@@ -289,9 +286,9 @@ uint32_t Renderer::GetMainDepthIndex() { return state.main_depth_index; };
 uint32_t Renderer::GetWorldDepthIndex() { return state.world_depth_index; };
 LLGL::Buffer* Renderer::ChunkVertexBuffer() { return state.chunk_vertex_buffer; }
 
-#if DEBUG
+// #if DEBUG
 LLGL::RenderingDebugger* Renderer::Debugger() { return state.debugger; }
-#endif
+// #endif
 
 static void init_sprite_batch() {
     ZoneScopedN("RenderBatchSprite::init");
@@ -656,11 +653,11 @@ bool Renderer::InitEngine(RenderBackend backend) {
         rendererDesc.rendererConfigSize = sizeof(LLGL::RendererConfigurationOpenGL);
     }
 
-#if DEBUG
+// #if DEBUG
     state.debugger = new LLGL::RenderingDebugger();
     rendererDesc.flags    = LLGL::RenderSystemFlags::DebugDevice;
     rendererDesc.debugger = state.debugger;
-#endif
+// #endif
 
     state.context = LLGL::RenderSystem::Load(rendererDesc, &report);
     state.backend = backend;
@@ -806,8 +803,6 @@ bool Renderer::Init(GLFWwindow* window, const LLGL::Extent2D& resolution, bool v
 
     state.postprocess_pipeline = context->CreatePipelineState(pipelineDesc);
 
-    state.compute_light_timer = Timer::from_seconds(Constants::FIXED_UPDATE_INTERVAL, TimerMode::Repeating);
-
     state.world_renderer.init(state.static_lightmap_render_pass);
     state.background_renderer.init();
     state.particle_renderer.init();
@@ -943,6 +938,10 @@ void Renderer::Begin(const Camera& camera, WorldData& world) {
     state.world_draw_commands.clear();
     state.flush_queue.clear();
     state.world_flush_queue.clear();
+}
+
+void Renderer::UpdateLight() {
+    state.update_light = true;
 }
 
 static FORCE_INLINE void UpdateBuffer(LLGL::Buffer* buffer, void* data, size_t length) {
@@ -1375,14 +1374,14 @@ void Renderer::Render(const Camera& camera, const World& world) {
 
     LLGL::ClearValue clear_value = LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
-    state.compute_light_timer.tick(Time::delta());
-
-    if (state.compute_light_timer.finished()) {
+    if (state.update_light) {
         commands->BeginRenderPass(*state.world_renderer.light_texture_target());
             commands->Clear(LLGL::ClearFlags::Color, clear_value);
         commands->EndRenderPass();
 
         state.world_renderer.compute_light(camera, world);
+
+        state.update_light = false;
     }
 
     commands->BeginRenderPass(*state.static_lightmap_target);
@@ -1427,14 +1426,70 @@ void Renderer::Render(const Camera& camera, const World& world) {
     state.particle_renderer.reset();
 }
 
-#if DEBUG
+std::string WriteFrameProfileToJson(const LLGL::FrameProfile& frameProfile)
+{
+    std::string s;
+
+    s += "{\n";
+    s += "\t\"traceEvents\": [\n";
+
+    for (size_t i = 0; i < frameProfile.timeRecords.size(); ++i)
+    {
+        const LLGL::ProfileTimeRecord& rec = frameProfile.timeRecords[i];
+
+        s += "\t\t{ \"pid\": 1, \"tid\": 1, ";
+
+        s += "\"ts\": ";
+        s += std::to_string(rec.cpuTicksStart);
+        s += ", ";
+
+        s += "\"dur\": ";
+        s += std::to_string(rec.cpuTicksEnd - rec.cpuTicksStart);
+        s += ", ";
+
+        s += "\"ph\": \"X\", \"name\": \"";
+        s += rec.annotation;
+        s += "\", ";
+
+        s += "\"args\": { \"Elapsed GPU Time\": ";
+        s += std::to_string(rec.elapsedTime);
+        s += "} ";
+
+        s += '}';
+        s += (i + 1 < frameProfile.timeRecords.size() ? ",\n" : "\n");
+    }
+
+    s += "\t],\n";
+    s += "\t\"meta_user\": \"LLGL\"\n";
+    s += "}\n";
+
+    return s;
+}
+
+bool WriteFrameProfileToJsonFile(const LLGL::FrameProfile& frameProfile, const char* filename)
+{
+    std::ofstream file{ filename };
+    if (file.good())
+    {
+        std::string jsonContent = WriteFrameProfileToJson(frameProfile);
+        file.write(jsonContent.c_str(), jsonContent.size());
+        return true;
+    }
+    return false;
+}
+
+// #if DEBUG
 void Renderer::PrintDebugInfo() {
     LLGL::FrameProfile profile;
     state.debugger->FlushProfile(&profile);
 
-    LOG_DEBUG("Draw commands count: %u", profile.commandBufferRecord.drawCommands);
+    if (!WriteFrameProfileToJsonFile(profile, "profile.json")) {
+        printf("Couldn't create a file\n");
+    }
+
+    // LOG_DEBUG("Draw commands count: %u", profile.commandBufferRecord.drawCommands);
 }
-#endif
+// #endif
 
 void Renderer::BeginDepth(Depth depth) {
     state.depth = depth.value;

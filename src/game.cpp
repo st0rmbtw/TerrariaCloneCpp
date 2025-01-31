@@ -91,6 +91,8 @@ void pre_update() {
 void fixed_update() {
     ZoneScopedN("Game::fixed_update");
 
+    Renderer::UpdateLight();
+
     ParticleManager::Update(g.world);
 
 #if DEBUG
@@ -165,8 +167,10 @@ void post_update() {
     UI::PostUpdate();
 }
 
-void render() {
+static void render() {
     ZoneScopedN("Game::render");
+
+    Renderer::Debugger()->SetTimeRecording(true);
 
     Renderer::Begin(g.camera, g.world.data());
 
@@ -181,6 +185,8 @@ void render() {
     UI::Draw(g.camera, g.player);
 
     Renderer::Render(g.camera, g.world);
+
+    Renderer::Debugger()->SetTimeRecording(false);
 }
 
 void post_render() {
@@ -191,11 +197,11 @@ void post_render() {
         g.world.chunk_manager().destroy_hidden_chunks();
     }
 
-#if DEBUG
-    if (Input::Pressed(Key::C)) {
+// #if DEBUG
+    if (Input::JustPressed(Key::C)) {
         Renderer::PrintDebugInfo();
     }
-#endif
+// #endif
 }
 
 void window_resized(uint32_t width, uint32_t height, uint32_t scaled_width, uint32_t scaled_height) {

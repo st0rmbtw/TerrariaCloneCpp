@@ -639,19 +639,20 @@ void Player::update_sprites() {
     const bool flip_x = m_direction == Direction::Left;
 
     const glm::vec2 position = draw_position();
+    const glm::vec2 upper_body_pos = position + glm::vec2(0.0f, 0.5f);
 
     m_hair.sprite
         .set_flip_x(flip_x)
-        .set_position(position);
+        .set_position(upper_body_pos);
     m_head.sprite
         .set_flip_x(flip_x)
-        .set_position(position);
-    m_body.sprite
+        .set_position(upper_body_pos);
+    m_left_eye.sprite
         .set_flip_x(flip_x)
-        .set_position(position);
-    m_legs.sprite
+        .set_position(upper_body_pos);
+    m_right_eye.sprite
         .set_flip_x(flip_x)
-        .set_position(position);
+        .set_position(upper_body_pos);
     m_left_hand.sprite
         .set_flip_x(flip_x)
         .set_position(position);
@@ -661,10 +662,10 @@ void Player::update_sprites() {
     m_right_arm.sprite
         .set_flip_x(flip_x)
         .set_position(position);
-    m_left_eye.sprite
+    m_body.sprite
         .set_flip_x(flip_x)
         .set_position(position);
-    m_right_eye.sprite
+    m_legs.sprite
         .set_flip_x(flip_x)
         .set_position(position);
 }
