@@ -1,6 +1,8 @@
 #include "assets.hpp"
 
 #include <array>
+#include <fstream>
+#include <filesystem>
 
 #include <LLGL/Utils/VertexFormat.h>
 #include <LLGL/Shader.h>
@@ -8,7 +10,6 @@
 #include <LLGL/VertexAttribute.h>
 #include <LLGL/TextureFlags.h>
 #include <STB/stb_image.h>
-#include <ft2build.h>
 #include <freetype/freetype.h>
 
 #include "LLGL/Format.h"
@@ -19,6 +20,8 @@
 #include "types/shader_pipeline.hpp"
 #include "types/shader_type.hpp"
 #include "types/texture.hpp"
+
+namespace fs = std::filesystem;
 
 struct AssetTextureAtlas {
     uint32_t rows;
@@ -165,8 +168,8 @@ static const std::pair<uint16_t, std::string> ITEM_ASSETS[] = {
 };
 
 static const std::array FONT_ASSETS = {
-    std::make_pair(FontAsset::AndyBold, "assets/fonts/andy_bold.otf"),
-    std::make_pair(FontAsset::AndyRegular, "assets/fonts/andy_regular.otf"),
+    std::make_pair(FontAsset::AndyBold, "andy_bold"),
+    std::make_pair(FontAsset::AndyRegular, "andy_regular"),
 };
 
 const std::pair<ShaderAsset, AssetShader> SHADER_ASSETS[] = {
@@ -198,7 +201,7 @@ static struct AssetsState {
     std::vector<Sampler> samplers;
 } state;
 
-static bool load_font(FT_Library ft, const std::string& path, Font& font);
+static bool load_font(Font& font, const char* meta_file_path, const char* atlas_file_path);
 static bool load_texture(const char* path, int sampler, Texture* texture);
 
 template <size_t T>
@@ -302,25 +305,29 @@ bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
 };
 
 bool Assets::LoadFonts() {
-    FT_Library ft;
-    if (FT_Init_FreeType(&ft)) {
-        LOG_ERROR("Couldn't init FreeType library.");
-        return false;
-    }
+    for (const auto& [key, name] : FONT_ASSETS) {
+        const fs::path fonts_folder = fs::path("assets") / "fonts";
+        const fs::path meta_file = fonts_folder / fs::path(name).concat(".meta");
+        const fs::path atlas_file = fonts_folder / fs::path(name).concat(".png");
 
-    for (const auto& [key, path] : FONT_ASSETS) {
-        if (!FileExists(path)) {
-            LOG_ERROR("Failed to find font '%s'",  path);
+        const std::string meta_file_str = meta_file.string();
+        const std::string atlas_file_str = atlas_file.string();
+
+        if (!FileExists(meta_file_str.c_str())) {
+            LOG_ERROR("Failed to find the font meta file '%s'", meta_file_str.c_str());
+            return false;
+        }
+
+        if (!FileExists(atlas_file_str.c_str())) {
+            LOG_ERROR("Failed to find the font atlas file '%s'", atlas_file_str.c_str());
             return false;
         }
 
         Font font;
-        if (!load_font(ft, path, font)) return false;
+        if (!load_font(font, meta_file_str.c_str(), atlas_file_str.c_str())) return false;
 
         state.fonts[key] = font;
     }
-
-    FT_Done_FreeType(ft);
 
     return true;
 }
@@ -857,112 +864,61 @@ Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, c
     return Renderer::CreateTexture(LLGL::TextureType::Texture2DArray, LLGL::ImageFormat::RGBA, width, height, layers_count, sampler, image_data, generate_mip_maps);
 }
 
-bool load_font(FT_Library ft, const std::string& path, Font& font) {
-    static constexpr uint32_t FONT_SIZE = 68;
-    static constexpr uint32_t PADDING = 4;
+template <typename T>
+static T read(std::ifstream& file) {
+    T data;
+    file.read(reinterpret_cast<char*>(&data), sizeof(T));
+    return data;
+}
 
-    FT_Face face;
-    if (FT_New_Face(ft, path.c_str(), 0, &face)) {
-        LOG_ERROR("Failed to load font: %s", path.c_str());
+static bool load_font(Font& font, const char* meta_file_path, const char* atlas_file_path) {
+    std::ifstream meta_file(meta_file_path, std::ios::in | std::ios::binary);
+
+    if (!meta_file.good()) {
+        LOG_ERROR("Failed to open file %s", meta_file_path);
         return false;
     }
-    
-    FT_Set_Pixel_Sizes(face, 0, FONT_SIZE);
 
-    struct GlyphInfo {
-        uint8_t* buffer;
-        uint32_t bitmap_width;
-        uint32_t bitmap_rows;
-        FT_Int bitmap_left;
-        FT_Int bitmap_top;
-        FT_Vector advance;
-        uint32_t col;
-        uint32_t row;
-    };
-
-    std::vector<std::pair<FT_ULong, GlyphInfo>> glyphs;
-
-    FT_UInt index;
-    FT_ULong character = FT_Get_First_Char(face, &index);
-
-    const uint32_t texture_width = 1512;
-
-    uint32_t col = PADDING;
-    uint32_t row = PADDING;
-
-    uint32_t max_height = 0;
-
-    while (true) {
-        if (FT_Load_Char(face, character, FT_LOAD_DEFAULT)) {
-            LOG_ERROR("Failed to load glyph %lu", character);
-        } else {
-            FT_Render_Glyph(face->glyph, FT_RENDER_MODE_SDF);
-
-            if (col + face->glyph->bitmap.width + PADDING >= texture_width) {
-                col = PADDING;
-                row += max_height + PADDING;
-                max_height = 0;
-            }
-
-            max_height = std::max(max_height, face->glyph->bitmap.rows);
-
-            GlyphInfo info;
-            info.bitmap_width = face->glyph->bitmap.width;
-            info.bitmap_rows = face->glyph->bitmap.rows;
-            info.bitmap_left = face->glyph->bitmap_left;
-            info.bitmap_top = face->glyph->bitmap_top;
-            info.advance = face->glyph->advance;
-            info.col = col;
-            info.row = row;
-            info.buffer = new uint8_t[face->glyph->bitmap.pitch * info.bitmap_rows];
-            memcpy(info.buffer, face->glyph->bitmap.buffer, face->glyph->bitmap.pitch * info.bitmap_rows);
-
-            glyphs.emplace_back(character, info);
-
-            col += info.bitmap_width + PADDING;
-        }
-
-        character = FT_Get_Next_Char(face, character, &index);
-        if (!index) break;
-    }
-
-    const uint32_t texture_height = row + max_height;
-
+    const FT_UShort ascender = read<FT_UShort>(meta_file);
+    const uint32_t font_size = read<uint32_t>(meta_file);
+    const uint32_t texture_width = read<uint32_t>(meta_file);
+    const uint32_t texture_height = read<uint32_t>(meta_file);
     const glm::vec2 texture_size = glm::vec2(texture_width, texture_height);
 
-    uint8_t* texture_data = new uint8_t[texture_width * texture_height];
-    memset(texture_data, 0, texture_width * texture_height * sizeof(uint8_t));
+    const uint32_t num_glyphs = read<uint32_t>(meta_file);
 
-    for (auto [c, info] : glyphs) {
-        for (uint32_t y = 0; y < info.bitmap_rows; ++y) {
-            for (uint32_t x = 0; x < info.bitmap_width; ++x) {
-                texture_data[(info.row + y) * texture_width + info.col + x] = info.buffer[y * info.bitmap_width + x];
-            }
-        }
+    for (uint32_t i = 0; i < num_glyphs; ++i) {
+        FT_ULong c = read<FT_ULong>(meta_file);
+        uint32_t bitmap_width = read<uint32_t>(meta_file);
+        uint32_t bitmap_rows = read<uint32_t>(meta_file);
+        FT_Int bitmap_left = read<FT_Int>(meta_file);
+        FT_Int bitmap_top = read<FT_Int>(meta_file);
+        FT_Pos advance_x = read<FT_Pos>(meta_file);
+        uint32_t col = read<uint32_t>(meta_file);
+        uint32_t row = read<uint32_t>(meta_file);
 
-        const glm::ivec2 size = glm::ivec2(info.bitmap_width, info.bitmap_rows);
+        const glm::ivec2 size = glm::ivec2(bitmap_width, bitmap_rows);
         
         const Glyph glyph = {
             .size = size,
             .tex_size = glm::vec2(size) / texture_size,
-            .bearing = glm::ivec2(info.bitmap_left, info.bitmap_top),
-            .advance = info.advance.x,
-            .texture_coords = glm::vec2(info.col, info.row) / texture_size
+            .bearing = glm::ivec2(bitmap_left, bitmap_top),
+            .advance = advance_x,
+            .texture_coords = glm::vec2(col, row) / texture_size
         };
 
         font.glyphs[c] = glyph;
-
-        delete[] info.buffer;
     }
 
-    font.texture = Renderer::CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::R, texture_width, texture_height, 1, TextureSampler::Linear, texture_data);
+    meta_file.close();
 
-    font.font_size = FONT_SIZE;
-    font.ascender = face->ascender >> 6;
+    int w, h;
+    stbi_uc* data = stbi_load(atlas_file_path, &w, &h, nullptr, 1);
+    font.texture = Renderer::CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::R, texture_width, texture_height, 1, TextureSampler::Linear, data);
+    stbi_image_free(data);
 
-    delete[] texture_data;
-
-    FT_Done_Face(face);
+    font.font_size = font_size;
+    font.ascender = ascender >> 6;
 
     return true;
 }

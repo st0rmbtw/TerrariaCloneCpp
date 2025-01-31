@@ -91,6 +91,7 @@ add_subdirectory(thirdparty/glfw)
 add_subdirectory(thirdparty/STB)
 add_subdirectory(thirdparty/FastNoiseLite)
 add_subdirectory(shader_compiler)
+add_subdirectory(font_asset_generator)
 add_subdirectory(thirdparty/freetype-2.13.2)
 add_subdirectory(thirdparty/tracy-0.11.1)
 
@@ -144,7 +145,7 @@ endforeach()
 add_custom_target(COPY_ASSETS DEPENDS ${ASSETS_OUTPUT})
 add_dependencies(${PROJECT_NAME} COPY_ASSETS)
 
-# -----------------------------------------------------------------------
+# ===================== Compile Vulkan Shaders =====================
 
 file(GLOB_RECURSE VULKAN_SHADERS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/vulkan/*.*)
 
@@ -155,7 +156,7 @@ foreach(shader ${VULKAN_SHADERS})
     add_custom_command(
         OUTPUT assets/shaders/vulkan/${shader_name}.spv
         COMMAND ${CMAKE_CURRENT_BINARY_DIR}/shader_compiler/ShaderCompiler${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${shader}
-        DEPENDS ${shader}
+        DEPENDS ${shader} ShaderCompiler
     )
     list(APPEND VULKAN_SHADERS_OUTPUT assets/shaders/vulkan/${shader_name}.spv)
 endforeach()
@@ -164,3 +165,26 @@ add_custom_target(COMPILE_VULKAN_SHADERS DEPENDS ${VULKAN_SHADERS_OUTPUT})
 add_dependencies(COMPILE_VULKAN_SHADERS ShaderCompiler)
 
 add_dependencies(${PROJECT_NAME} COMPILE_VULKAN_SHADERS)
+
+# ===================== Generate Font Assets =====================
+
+file(GLOB_RECURSE FONT_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/*.*)
+
+set(FONT_FILES_OUTPUT)
+
+foreach(font ${FONT_FILES})
+    get_filename_component(font_name ${font} NAME_WLE)
+    set(font_output_path assets/fonts/${font_name}.png)
+    set(font_meta_output_path assets/fonts/${font_name}.meta)
+    add_custom_command(
+        OUTPUT ${font_output_path} ${font_meta_output_path}
+        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/font_asset_generator/FontAssetGenerator${CMAKE_EXECUTABLE_SUFFIX} ${font} ${CMAKE_CURRENT_BINARY_DIR}/${font_output_path}
+        DEPENDS ${font} FontAssetGenerator
+    )
+    list(APPEND FONT_FILES_OUTPUT ${font_output_path})
+endforeach()
+
+add_custom_target(GENERATE_FONT_ATLASES DEPENDS ${FONT_FILES_OUTPUT})
+add_dependencies(GENERATE_FONT_ATLASES FontAssetGenerator)
+
+add_dependencies(${PROJECT_NAME} GENERATE_FONT_ATLASES)
