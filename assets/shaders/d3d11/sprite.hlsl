@@ -35,7 +35,7 @@ struct VSOutput
 };
 
 static const int IS_UI_FLAG = 1 << 0;
-static const int IGNORE_CAMERA_ZOOM_FLAG = 1 << 2;
+static const int IGNORE_CAMERA_ZOOM_FLAG = 1 << 1;
 
 VSOutput VS(VSInput inp)
 {

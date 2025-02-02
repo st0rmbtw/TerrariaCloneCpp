@@ -254,16 +254,15 @@ void UI::Draw(const Camera& camera, const Player& player) {
         const RichText text = rich_text(state.fps_text, 22.0f, glm::vec3(0.8f));
         GameRenderer::DrawTextUI(text, glm::vec2(10.0f, window_size.y - 10.0f - 22.0f), FontAsset::AndyBold, Order(0, false));
     }
-
-    uint32_t depth = GameRenderer::GetMainOrderIndex();
     
-    GameRenderer::DrawSpriteUI(state.cursor_background, ++depth);
-    GameRenderer::DrawSpriteUI(state.cursor_foreground, ++depth);
+    GameRenderer::DrawSpriteUI(state.cursor_background);
+    GameRenderer::DrawSpriteUI(state.cursor_foreground);
 
     const ItemSlot& taken_item = inventory.taken_item();
     const ItemSlot& selected_item = inventory.get_selected_item();
     const glm::vec2 position = state.cursor_background.position() + state.cursor_background.size();
 
+    uint32_t depth = GameRenderer::GetMainOrderIndex();
     if (state.show_extra_ui && taken_item.has_item()) {
         const Texture& texture = Assets::GetItemTexture(taken_item.item->id);
         const glm::vec2 size = glm::vec2(texture.size()) * state.cursor_scale;

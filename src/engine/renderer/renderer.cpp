@@ -123,19 +123,21 @@ void Renderer::End() {
 void Renderer::ApplyBatchDrawCommands(Batch& batch) {
     ZoneScopedN("Renderer::ApplyBatchDrawCommands");
 
-    Batch::FlushQueue& flush_queue = batch.flush_queue();
-
     auto* const commands = m_command_buffer;
 
     int prev_flush_data_type = -1;
     int prev_texture_id = -1;
 
-    for (const FlushData& flush_data : flush_queue) {
+    LLGL::PipelineState& sprite_pipeline = batch.depth_enabled()
+        ? *m_sprite_batch_data.pipeline_depth
+        : *m_sprite_batch_data.pipeline;
+
+    for (const FlushData& flush_data : batch.flush_queue()) {
         if (prev_flush_data_type != static_cast<int>(flush_data.type)) {
             switch (flush_data.type) {
             case FlushDataType::Sprite:
                 commands->SetVertexBufferArray(*m_sprite_batch_data.buffer_array);
-                commands->SetPipelineState(*m_sprite_batch_data.pipeline);
+                commands->SetPipelineState(sprite_pipeline);
             break;
 
             case FlushDataType::Glyph:

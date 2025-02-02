@@ -7,7 +7,6 @@
 namespace SpriteFlags {
     enum : uint8_t {
         UI = 0,
-        World,
         IgnoreCameraZoom,
     };
 };
@@ -30,7 +29,6 @@ void Batch::DrawSprite(const Sprite& sprite, bool is_ui, Order custom_order) {
     AddSpriteDrawCommand(sprite, uv_offset_scale, sprite.texture(), order, is_ui);
 
     if (custom_order.advance) m_order = ++order;
-    if (!m_order_mode) ++m_sprite_count;
 }
 
 void Batch::DrawAtlasSprite(const TextureAtlasSprite& sprite, bool is_ui, Order custom_order) {
@@ -58,8 +56,6 @@ void Batch::DrawAtlasSprite(const TextureAtlasSprite& sprite, bool is_ui, Order 
     AddSpriteDrawCommand(sprite, uv_offset_scale, sprite.atlas().texture(), order, is_ui);
 
     if (custom_order.advance) m_order = ++order;
-
-    ++m_sprite_count;
 }
 
 void Batch::DrawNinePatch(const NinePatch& ninepatch, bool is_ui, Order custom_order) {

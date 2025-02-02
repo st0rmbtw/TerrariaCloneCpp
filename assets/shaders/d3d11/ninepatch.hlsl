@@ -36,7 +36,7 @@ struct VSOutput
     float2 uv : UV;
 };
 
-static const int IS_UI_FLAG = 1 << 1;
+static const int IS_UI_FLAG = 1 << 0;
 
 VSOutput VS(VSInput inp)
 {

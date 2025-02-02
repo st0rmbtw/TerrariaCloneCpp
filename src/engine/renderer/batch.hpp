@@ -149,6 +149,8 @@ public:
         m_ninepatch_buffer_ptr = m_ninepatch_buffer;
     };
 
+    inline void set_depth_enabled(bool depth_enabled) { m_depth_enabled = depth_enabled; }
+
     inline void BeginOrderMode() { m_order_mode = true; }
     inline void EndOrderMode() { m_order_mode = true; }
 
@@ -193,6 +195,9 @@ public:
     inline bool is_empty() const { return m_draw_commands.empty(); }
 
     [[nodiscard]]
+    inline bool depth_enabled() const { return m_depth_enabled; }
+
+    [[nodiscard]]
     inline uint32_t order() const { return m_order; }
 
 private:
@@ -214,6 +219,8 @@ private:
             .ignore_camera_zoom = sprite.ignore_camera_zoom(),
             .depth_enabled = false
         });
+
+        ++m_sprite_count;
     }
 
     [[nodiscard]] inline FlushQueue& flush_queue() { return m_flush_queue; }
@@ -254,6 +261,7 @@ private:
     uint32_t m_ninepatch_count = 0;
 
     bool m_order_mode = false;
+    bool m_depth_enabled = false;
 };
 
 #endif

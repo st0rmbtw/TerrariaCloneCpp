@@ -164,6 +164,8 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
     state.background_renderer.init();
     state.particle_renderer.init();
 
+    state.world_batch.set_depth_enabled(true);
+
     return true;
 }
 
