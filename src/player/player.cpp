@@ -680,7 +680,7 @@ void Player::draw() const {
     GameRenderer::DrawAtlasSpriteWorld(m_body.sprite);
     GameRenderer::DrawAtlasSpriteWorld(m_legs.sprite);
 
-    GameRenderer::BeginOrderMode(GameRenderer::GetWorldOrderIndex());
+    GameRenderer::BeginOrderMode();
         GameRenderer::DrawAtlasSpriteWorld(m_left_eye.sprite);
         GameRenderer::DrawAtlasSpriteWorld(m_right_eye.sprite);
     GameRenderer::EndOrderMode();
@@ -689,7 +689,7 @@ void Player::draw() const {
         GameRenderer::DrawSprite(m_using_item);
     }
 
-    GameRenderer::BeginOrderMode(GameRenderer::GetWorldOrderIndex());
+    GameRenderer::BeginOrderMode();
         GameRenderer::DrawAtlasSpriteWorld(m_left_hand.sprite);
         GameRenderer::DrawAtlasSpriteWorld(m_left_shoulder.sprite);
     GameRenderer::EndOrderMode();

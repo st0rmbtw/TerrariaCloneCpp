@@ -13,7 +13,6 @@
 #include "../types/order.hpp"
 #include "../renderer/types.hpp"
 #include "../utils.hpp"
-#include "../defines.hpp"
 
 #include "../../assets.hpp"
 
@@ -129,6 +128,22 @@ private:
     Type m_type;
 };
 
+inline static glm::vec4 get_uv_offset_scale(bool flip_x, bool flip_y) {
+    glm::vec4 uv_offset_scale = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
+
+    if (flip_x) {
+        uv_offset_scale.x += uv_offset_scale.z;
+        uv_offset_scale.z *= -1.0f;
+    }
+
+    if (flip_y) {
+        uv_offset_scale.y += uv_offset_scale.w;
+        uv_offset_scale.w *= -1.0f;
+    }
+
+    return uv_offset_scale;
+}
+
 };
 
 class Batch {
@@ -150,70 +165,60 @@ public:
         m_ninepatch_buffer_ptr = m_ninepatch_buffer;
     };
 
+    Batch(const Batch&) = delete;
+    Batch& operator=(const Batch&) = delete;
+
     inline void set_depth_enabled(bool depth_enabled) { m_depth_enabled = depth_enabled; }
 
-    inline void BeginOrderMode() { m_order_mode = true; }
-    inline void EndOrderMode() { m_order_mode = true; }
-
-    void DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, bool is_ui, Order order = -1);
-
-    void DrawSprite(const Sprite& sprite, bool is_ui, Order custom_order = -1) {
-        glm::vec4 uv_offset_scale = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
-
-        if (sprite.flip_x()) {
-            uv_offset_scale.x += uv_offset_scale.z;
-            uv_offset_scale.z *= -1.0f;
-        }
-
-        if (sprite.flip_y()) {
-            uv_offset_scale.y += uv_offset_scale.w;
-            uv_offset_scale.w *= -1.0f;
-        }
-
-        uint32_t order = custom_order.value >= 0 ? custom_order.value : m_order;
-
-        AddSpriteDrawCommand(sprite, uv_offset_scale, sprite.texture(), order, is_ui);
-
-        if (custom_order.advance) m_order = ++order;
+    inline void BeginOrderMode(int order, bool advance) {
+        m_order_mode = true;
+        m_global_order.value = order < 0 ? m_order : order;
+        m_global_order.advance = advance;
     }
 
-    void DrawAtlasSprite(const TextureAtlasSprite& sprite, bool is_ui, Order order = -1);
-
-    void DrawNinePatch(const NinePatch& ninepatch, bool is_ui, Order custom_order = -1) {
-        glm::vec4 uv_offset_scale = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
-
-        if (ninepatch.flip_x()) {
-            uv_offset_scale.x += uv_offset_scale.z;
-            uv_offset_scale.z *= -1.0f;
-        }
-
-        if (ninepatch.flip_y()) {
-            uv_offset_scale.y += uv_offset_scale.w;
-            uv_offset_scale.w *= -1.0f;
-        }
-
-        uint32_t order = custom_order.value >= 0 ? custom_order.value : m_order;
-
-        AddNinePatchDrawCommand(ninepatch, uv_offset_scale, order, is_ui);
-
-        if (custom_order.advance) m_order = std::max(m_order, ++order);
+    inline void BeginOrderMode(int order = -1) {
+        BeginOrderMode(order, true);
     }
 
-    inline void DrawSprite(const Sprite& sprite, Order order = -1) { DrawSprite(sprite, false, order); }
-    inline void DrawSpriteUI(const Sprite& sprite, Order order = -1) { DrawSprite(sprite, true, order); }
-
-    inline void DrawAtlasSprite(const TextureAtlasSprite& sprite, Order order = -1) { DrawAtlasSprite(sprite, false, order); }
-    inline void DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, Order order = -1) { DrawAtlasSprite(sprite, true, order); }
-
-    inline void DrawNinePatch(const NinePatch& ninepatch, Order order = -1) { DrawNinePatch(ninepatch, false, order); }
-    inline void DrawNinePatchUI(const NinePatch& ninepatch, Order order = -1) { DrawNinePatch(ninepatch, true, order); }
-
-    inline void DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, Order order = -1) {
-        DrawText(sections, size, position, font, false, order);
+    inline void BeginOrderMode(bool advance) {
+        BeginOrderMode(-1, advance);
     }
 
-    inline void DrawTextUI(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, Order order = -1) {
-        DrawText(sections, size, position, font, true, order);
+    inline void EndOrderMode() {
+        m_order_mode = false;
+        m_global_order.value = 0;
+        m_global_order.advance = false;
+    }
+
+    uint32_t DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, bool is_ui, Order order = -1);
+
+    uint32_t DrawAtlasSprite(const TextureAtlasSprite& sprite, bool is_ui, Order order = -1);
+
+    inline uint32_t DrawSprite(const Sprite& sprite, bool is_ui, Order custom_order = -1) {
+        const glm::vec4 uv_offset_scale = batch_internal::get_uv_offset_scale(sprite.flip_x(), sprite.flip_y());
+        return AddSpriteDrawCommand(sprite, uv_offset_scale, sprite.texture(), custom_order, is_ui);
+    }
+
+    inline uint32_t DrawNinePatch(const NinePatch& ninepatch, bool is_ui, Order custom_order = -1) {
+        const glm::vec4 uv_offset_scale = batch_internal::get_uv_offset_scale(ninepatch.flip_x(), ninepatch.flip_y());
+        return AddNinePatchDrawCommand(ninepatch, uv_offset_scale, custom_order, is_ui);
+    }
+
+    inline uint32_t DrawSprite(const Sprite& sprite, Order order = -1) { return DrawSprite(sprite, false, order); }
+    inline uint32_t DrawSpriteUI(const Sprite& sprite, Order order = -1) { return DrawSprite(sprite, true, order); }
+
+    inline uint32_t DrawAtlasSprite(const TextureAtlasSprite& sprite, Order order = -1) { return DrawAtlasSprite(sprite, false, order); }
+    inline uint32_t DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, Order order = -1) { return DrawAtlasSprite(sprite, true, order); }
+
+    inline uint32_t DrawNinePatch(const NinePatch& ninepatch, Order order = -1) { return DrawNinePatch(ninepatch, false, order); }
+    inline uint32_t DrawNinePatchUI(const NinePatch& ninepatch, Order order = -1) { return DrawNinePatch(ninepatch, true, order); }
+
+    inline uint32_t DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, Order order = -1) {
+        return DrawText(sections, size, position, font, false, order);
+    }
+
+    inline uint32_t DrawTextUI(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, Order order = -1) {
+        return DrawText(sections, size, position, font, true, order);
     }
 
     inline void Reset() {
@@ -243,7 +248,17 @@ public:
 private:
     void SortDrawCommands();
 
-    FORCE_INLINE void AddSpriteDrawCommand(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const Texture& texture, uint32_t order, bool is_ui) {
+    inline uint32_t AddSpriteDrawCommand(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const Texture& texture, Order custom_order, bool is_ui) {
+        const uint32_t order = m_order_mode
+            ? m_global_order.value + std::max(custom_order.value, 0)
+            : (custom_order.value >= 0 ? custom_order.value : m_order);
+
+        custom_order.advance |= m_global_order.advance;
+        
+        if (custom_order.advance) {
+            m_order = std::max(m_order, order + 1);
+        }
+
         m_draw_commands.emplace_back(batch_internal::DrawCommandSprite {
             .texture = texture,
             .rotation = sprite.rotation(),
@@ -261,9 +276,21 @@ private:
         });
 
         ++m_sprite_count;
+
+        return order;
     }
 
-    FORCE_INLINE void AddNinePatchDrawCommand(const NinePatch& ninepatch, const glm::vec4& uv_offset_scale, uint32_t order, bool is_ui) {
+    inline uint32_t AddNinePatchDrawCommand(const NinePatch& ninepatch, const glm::vec4& uv_offset_scale, Order custom_order, bool is_ui) {
+        const uint32_t order = m_order_mode
+            ? m_global_order.value + std::max(custom_order.value, 0)
+            : (custom_order.value >= 0 ? custom_order.value : m_order);
+
+        custom_order.advance |= m_global_order.advance;
+        
+        if (custom_order.advance) {
+            m_order = std::max(m_order, order + 1);
+        }
+        
         m_draw_commands.emplace_back(batch_internal::DrawCommandNinePatch {
             .texture = ninepatch.texture(),
             .rotation = ninepatch.rotation(),
@@ -280,6 +307,8 @@ private:
         });
 
         ++m_ninepatch_count;
+
+        return order;
     }
 
     [[nodiscard]] inline FlushQueue& flush_queue() { return m_flush_queue; }
@@ -318,6 +347,8 @@ private:
     uint32_t m_sprite_count = 0;
     uint32_t m_glyph_count = 0;
     uint32_t m_ninepatch_count = 0;
+
+    Order m_global_order;
 
     bool m_order_mode = false;
     bool m_depth_enabled = false;

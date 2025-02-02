@@ -32,45 +32,47 @@ namespace GameRenderer {
 
     void UpdateLight();
 
-    void DrawSprite(const Sprite& sprite, Order order = {});
-    void DrawSpriteWorld(const Sprite& sprite, Order order = {});
+    uint32_t DrawSprite(const Sprite& sprite, Order order = {});
+    uint32_t DrawSpriteWorld(const Sprite& sprite, Order order = {});
     
-    void DrawAtlasSprite(const TextureAtlasSprite& sprite, Order order = {});
-    void DrawAtlasSpriteWorld(const TextureAtlasSprite& sprite, Order order = {});
+    uint32_t DrawAtlasSprite(const TextureAtlasSprite& sprite, Order order = {});
+    uint32_t DrawAtlasSpriteWorld(const TextureAtlasSprite& sprite, Order order = {});
 
-    void DrawSpriteUI(const Sprite& sprite, Order order = -1);
-    void DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, Order order = -1);
+    uint32_t DrawSpriteUI(const Sprite& sprite, Order order = -1);
+    uint32_t DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, Order order = -1);
 
-    void DrawNinePatchUI(const NinePatch& ninepatch, Order order = -1);
+    uint32_t DrawNinePatchUI(const NinePatch& ninepatch, Order order = -1);
 
-    void DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, bool is_ui = false, Order order = -1);
-
-    template <size_t L>
-    inline void DrawText(const RichText<L>& text, const glm::vec2& position, FontAsset font, Order order = -1) {
-        DrawText(text.sections().data(), L, position, font, false, order);
-    }
+    uint32_t DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, bool is_ui = false, Order order = -1);
 
     template <size_t L>
-    inline void DrawTextUI(const RichText<L>& text, const glm::vec2& position, FontAsset font, Order order = -1) {
-        DrawText(text.sections().data(), L, position, font, true, order);
+    inline uint32_t DrawText(const RichText<L>& text, const glm::vec2& position, FontAsset font, Order order = -1) {
+        return DrawText(text.sections().data(), L, position, font, false, order);
     }
 
-    inline void DrawChar(char ch, const glm::vec2& position, float size, const glm::vec3& color, FontAsset font, Order order = -1) {
-        char text[] = {ch, '\0'};
-        const RichTextSection section(text, size, color);
-        DrawText(&section, 1, position, font, false, order);
+    template <size_t L>
+    inline uint32_t DrawTextUI(const RichText<L>& text, const glm::vec2& position, FontAsset font, Order order = -1) {
+        return DrawText(text.sections().data(), L, position, font, true, order);
     }
-    inline void DrawCharUI(char ch, const glm::vec2& position, float size, const glm::vec3& color, FontAsset font, Order order = -1) {
+
+    inline uint32_t DrawChar(char ch, const glm::vec2& position, float size, const glm::vec3& color, FontAsset font, Order order = -1) {
         char text[] = {ch, '\0'};
         const RichTextSection section(text, size, color);
-        DrawText(&section, 1, position, font, true, order);
+        return DrawText(&section, 1, position, font, false, order);
+    }
+    inline uint32_t DrawCharUI(char ch, const glm::vec2& position, float size, const glm::vec3& color, FontAsset font, Order order = -1) {
+        char text[] = {ch, '\0'};
+        const RichTextSection section(text, size, color);
+        return DrawText(&section, 1, position, font, true, order);
     }
 
     void DrawBackground(const BackgroundLayer& layer);
     void DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Order order = -1, bool world = false);
 
-    void BeginOrderMode(Order order = -1);
-    void EndOrderMode(Order order = -1);
+    void BeginOrderMode(int order, bool advance);
+    inline void BeginOrderMode(int order = -1) { BeginOrderMode(order, true); }
+    inline void BeginOrderMode(bool advance) { BeginOrderMode(-1, advance); }
+    void EndOrderMode();
 
     void Terminate();
 

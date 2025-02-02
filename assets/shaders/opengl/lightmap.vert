@@ -12,8 +12,6 @@ layout(std140) uniform GlobalUniformBuffer {
     mat4 inv_view_proj;
     vec2 camera_position;
     vec2 window_size;
-    float max_depth;
-    float max_world_depth;
 } global_ubo;
 
 out vec2 v_uv;

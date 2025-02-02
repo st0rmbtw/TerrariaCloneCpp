@@ -128,7 +128,6 @@ private:
     void InitGlyphBatchPipeline();
     void InitNinepatchBatchPipeline();
 
-    void SortBatchDrawCommands(Batch& batch, const Camera& camera);
     void ApplyBatchDrawCommands(Batch& batch);
 
 private:

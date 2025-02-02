@@ -11,7 +11,7 @@ namespace SpriteFlags {
     };
 };
 
-void Batch::DrawAtlasSprite(const TextureAtlasSprite& sprite, bool is_ui, Order custom_order) {
+uint32_t Batch::DrawAtlasSprite(const TextureAtlasSprite& sprite, bool is_ui, Order custom_order) {
     const math::Rect& rect = sprite.atlas().get_rect(sprite.index());
 
     glm::vec4 uv_offset_scale = glm::vec4(
@@ -31,20 +31,22 @@ void Batch::DrawAtlasSprite(const TextureAtlasSprite& sprite, bool is_ui, Order 
         uv_offset_scale.w *= -1.0f;
     }
 
-    uint32_t order = custom_order.value >= 0 ? custom_order.value : m_order;
-
-    AddSpriteDrawCommand(sprite, uv_offset_scale, sprite.atlas().texture(), order, is_ui);
-
-    if (custom_order.advance) m_order = std::max(m_order, ++order);
+    return AddSpriteDrawCommand(sprite, uv_offset_scale, sprite.atlas().texture(), custom_order, is_ui);
 }
 
-void Batch::DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset key, bool is_ui, Order custom_order) {
+uint32_t Batch::DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset key, bool is_ui, Order custom_order) {
     const Font& font = Assets::GetFont(key);
 
     float x = position.x;
     float y = position.y;
 
-    uint32_t order = custom_order.value >= 0 ? custom_order.value : m_order;
+    const uint32_t order = m_order_mode
+        ? m_global_order.value + std::max(custom_order.value, 0)
+        : (custom_order.value >= 0 ? custom_order.value : m_order);
+
+    custom_order.advance |= m_global_order.advance;
+        
+    if (custom_order.advance) m_order = std::max(m_order, order + 1);
 
     for (size_t i = 0; i < size; ++i) {
         const RichTextSection section = sections[i];
@@ -90,7 +92,7 @@ void Batch::DrawText(const RichTextSection* sections, size_t size, const glm::ve
         }
     }
 
-    if (custom_order.advance) m_order = std::max(m_order, ++order);
+    return order;
 }
 
 void Batch::SortDrawCommands() {
