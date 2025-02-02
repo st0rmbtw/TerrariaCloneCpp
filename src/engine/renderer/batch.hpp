@@ -1,25 +1,26 @@
-#ifndef _RENDERER_BATCH_HPP_
-#define _RENDERER_BATCH_HPP_
+#ifndef _ENGINE_RENDERER_BATCH_HPP_
+#define _ENGINE_RENDERER_BATCH_HPP_
 
 #include <vector>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "../../types/texture.hpp"
-#include "../../types/sprite.hpp"
-#include "../../types/nine_patch.hpp"
-#include "../../types/rich_text.hpp"
-#include "../../types/order.hpp"
+#include "../types/texture.hpp"
+#include "../types/sprite.hpp"
+#include "../types/nine_patch.hpp"
+#include "../types/rich_text.hpp"
+#include "../types/order.hpp"
+#include "../renderer/types.hpp"
+#include "../utils.hpp"
+#include "../defines.hpp"
+
 #include "../../assets.hpp"
 
-#include "../../renderer/types.hpp"
-
-#include "../../utils.hpp"
-
 namespace batch_internal {
-    static constexpr size_t MAX_QUADS = 2500;
-    static constexpr size_t MAX_GLYPHS = 2500;
+
+static constexpr size_t MAX_QUADS = 2500;
+static constexpr size_t MAX_GLYPHS = 2500;
 
 enum class FlushDataType : uint8_t {
     Sprite = 0,
@@ -155,9 +156,48 @@ public:
     inline void EndOrderMode() { m_order_mode = true; }
 
     void DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, bool is_ui, Order order = -1);
-    void DrawSprite(const Sprite& sprite, bool is_ui, Order order = -1);
+
+    void DrawSprite(const Sprite& sprite, bool is_ui, Order custom_order = -1) {
+        glm::vec4 uv_offset_scale = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
+
+        if (sprite.flip_x()) {
+            uv_offset_scale.x += uv_offset_scale.z;
+            uv_offset_scale.z *= -1.0f;
+        }
+
+        if (sprite.flip_y()) {
+            uv_offset_scale.y += uv_offset_scale.w;
+            uv_offset_scale.w *= -1.0f;
+        }
+
+        uint32_t order = custom_order.value >= 0 ? custom_order.value : m_order;
+
+        AddSpriteDrawCommand(sprite, uv_offset_scale, sprite.texture(), order, is_ui);
+
+        if (custom_order.advance) m_order = ++order;
+    }
+
     void DrawAtlasSprite(const TextureAtlasSprite& sprite, bool is_ui, Order order = -1);
-    void DrawNinePatch(const NinePatch& ninepatch, bool is_ui, Order order = -1);
+
+    void DrawNinePatch(const NinePatch& ninepatch, bool is_ui, Order custom_order = -1) {
+        glm::vec4 uv_offset_scale = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
+
+        if (ninepatch.flip_x()) {
+            uv_offset_scale.x += uv_offset_scale.z;
+            uv_offset_scale.z *= -1.0f;
+        }
+
+        if (ninepatch.flip_y()) {
+            uv_offset_scale.y += uv_offset_scale.w;
+            uv_offset_scale.w *= -1.0f;
+        }
+
+        uint32_t order = custom_order.value >= 0 ? custom_order.value : m_order;
+
+        AddNinePatchDrawCommand(ninepatch, uv_offset_scale, order, is_ui);
+
+        if (custom_order.advance) m_order = std::max(m_order, ++order);
+    }
 
     inline void DrawSprite(const Sprite& sprite, Order order = -1) { DrawSprite(sprite, false, order); }
     inline void DrawSpriteUI(const Sprite& sprite, Order order = -1) { DrawSprite(sprite, true, order); }
@@ -203,7 +243,7 @@ public:
 private:
     void SortDrawCommands();
 
-    void AddSpriteDrawCommand(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const Texture& texture, uint32_t order, bool is_ui) {
+    FORCE_INLINE void AddSpriteDrawCommand(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const Texture& texture, uint32_t order, bool is_ui) {
         m_draw_commands.emplace_back(batch_internal::DrawCommandSprite {
             .texture = texture,
             .rotation = sprite.rotation(),
@@ -221,6 +261,25 @@ private:
         });
 
         ++m_sprite_count;
+    }
+
+    FORCE_INLINE void AddNinePatchDrawCommand(const NinePatch& ninepatch, const glm::vec4& uv_offset_scale, uint32_t order, bool is_ui) {
+        m_draw_commands.emplace_back(batch_internal::DrawCommandNinePatch {
+            .texture = ninepatch.texture(),
+            .rotation = ninepatch.rotation(),
+            .uv_offset_scale = uv_offset_scale,
+            .color = ninepatch.color(),
+            .margin = ninepatch.margin(),
+            .position = ninepatch.position(),
+            .size = ninepatch.size(),
+            .offset = ninepatch.anchor().to_vec2(),
+            .source_size = ninepatch.texture().size(),
+            .output_size = ninepatch.size(),
+            .order = order,
+            .is_ui = is_ui,
+        });
+
+        ++m_ninepatch_count;
     }
 
     [[nodiscard]] inline FlushQueue& flush_queue() { return m_flush_queue; }

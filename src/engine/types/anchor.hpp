@@ -1,5 +1,5 @@
-#ifndef TYPES_ANCHOR_HPP
-#define TYPES_ANCHOR_HPP
+#ifndef _ENGINE_TYPES_ANCHOR_HPP_
+#define _ENGINE_TYPES_ANCHOR_HPP_
 
 #pragma once
 

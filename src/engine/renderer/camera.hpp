@@ -1,12 +1,11 @@
-#ifndef RENDERER_CAMERA_H
-#define RENDERER_CAMERA_H
+#ifndef _ENGINE_RENDERER_CAMERA_HPP_
+#define _ENGINE_RENDERER_CAMERA_HPP_
 
 #pragma once
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "../math/rect.hpp"
-#include "../constants.hpp"
 
 class Camera {
 public:
@@ -40,7 +39,7 @@ public:
     inline void set_position(const glm::vec2& position) { m_position = position; }
 
     inline void set_zoom(float zoom) {
-        m_zoom = glm::clamp(zoom, Constants::CAMERA_MAX_ZOOM, Constants::CAMERA_MIN_ZOOM);
+        m_zoom = zoom;
         update_projection_area();
     }
 

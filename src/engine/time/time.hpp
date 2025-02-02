@@ -1,5 +1,5 @@
-#ifndef TIME_TIME_HPP
-#define TIME_TIME_HPP
+#ifndef _ENGINE_TIME_TIME_HPP_
+#define _ENGINE_TIME_TIME_HPP_
 
 #pragma once
 

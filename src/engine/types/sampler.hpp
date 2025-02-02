@@ -1,5 +1,5 @@
-#ifndef TYPES_SAMPLER_HPP
-#define TYPES_SAMPLER_HPP
+#ifndef _ENGINE_TYPES_SAMPLER_HPP_
+#define _ENGINE_TYPES_SAMPLER_HPP_
 
 #include <LLGL/Sampler.h>
 #include <LLGL/SamplerFlags.h>

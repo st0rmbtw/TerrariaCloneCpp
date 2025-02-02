@@ -11,26 +11,6 @@ namespace SpriteFlags {
     };
 };
 
-void Batch::DrawSprite(const Sprite& sprite, bool is_ui, Order custom_order) {
-    glm::vec4 uv_offset_scale = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
-
-    if (sprite.flip_x()) {
-        uv_offset_scale.x += uv_offset_scale.z;
-        uv_offset_scale.z *= -1.0f;
-    }
-
-    if (sprite.flip_y()) {
-        uv_offset_scale.y += uv_offset_scale.w;
-        uv_offset_scale.w *= -1.0f;
-    }
-
-    uint32_t order = custom_order.value >= 0 ? custom_order.value : m_order;
-
-    AddSpriteDrawCommand(sprite, uv_offset_scale, sprite.texture(), order, is_ui);
-
-    if (custom_order.advance) m_order = ++order;
-}
-
 void Batch::DrawAtlasSprite(const TextureAtlasSprite& sprite, bool is_ui, Order custom_order) {
     const math::Rect& rect = sprite.atlas().get_rect(sprite.index());
 
@@ -55,42 +35,7 @@ void Batch::DrawAtlasSprite(const TextureAtlasSprite& sprite, bool is_ui, Order 
 
     AddSpriteDrawCommand(sprite, uv_offset_scale, sprite.atlas().texture(), order, is_ui);
 
-    if (custom_order.advance) m_order = ++order;
-}
-
-void Batch::DrawNinePatch(const NinePatch& ninepatch, bool is_ui, Order custom_order) {
-    glm::vec4 uv_offset_scale = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
-
-    if (ninepatch.flip_x()) {
-        uv_offset_scale.x += uv_offset_scale.z;
-        uv_offset_scale.z *= -1.0f;
-    }
-
-    if (ninepatch.flip_y()) {
-        uv_offset_scale.y += uv_offset_scale.w;
-        uv_offset_scale.w *= -1.0f;
-    }
-
-    uint32_t order = custom_order.value >= 0 ? custom_order.value : m_order;
-
-    m_draw_commands.emplace_back(batch_internal::DrawCommandNinePatch {
-        .texture = ninepatch.texture(),
-        .rotation = ninepatch.rotation(),
-        .uv_offset_scale = uv_offset_scale,
-        .color = ninepatch.color(),
-        .margin = ninepatch.margin(),
-        .position = ninepatch.position(),
-        .size = ninepatch.size(),
-        .offset = ninepatch.anchor().to_vec2(),
-        .source_size = ninepatch.texture().size(),
-        .output_size = ninepatch.size(),
-        .order = order,
-        .is_ui = is_ui,
-    });
-
-    if (custom_order.advance) m_order = ++order;
-
-    ++m_ninepatch_count;
+    if (custom_order.advance) m_order = std::max(m_order, ++order);
 }
 
 void Batch::DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset key, bool is_ui, Order custom_order) {
@@ -145,7 +90,7 @@ void Batch::DrawText(const RichTextSection* sections, size_t size, const glm::ve
         }
     }
 
-    if (custom_order.advance) m_order = ++order;
+    if (custom_order.advance) m_order = std::max(m_order, ++order);
 }
 
 void Batch::SortDrawCommands() {

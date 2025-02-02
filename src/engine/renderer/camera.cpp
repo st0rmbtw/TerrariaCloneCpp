@@ -1,7 +1,9 @@
-#include "camera.h"
-#include "glm/ext/matrix_clip_space.hpp"
-#include "glm/ext/matrix_transform.hpp"
-#include "../engine/engine.hpp"
+#include "camera.hpp"
+
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
+
+#include "../engine.hpp"
 
 void Camera::update_projection_area() {
     m_area = math::Rect::from_corners(

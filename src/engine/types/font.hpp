@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef TYPES_FONT
-#define TYPES_FONT
+#ifndef _ENGINE_TYPES_FONT_HPP_
+#define _ENGINE_TYPES_FONT_HPP_
 
 #include <unordered_map>
 #include "texture.hpp"

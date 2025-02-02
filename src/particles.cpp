@@ -6,9 +6,10 @@
 #include <tracy/Tracy.hpp>
 
 #include "renderer/renderer.hpp"
-#include "defines.hpp"
+#include "engine/defines.hpp"
+#include "engine/time/time.hpp"
+
 #include "constants.hpp"
-#include "time/time.hpp"
 #include "utils.hpp"
 
 #ifdef PLATFORM_WINDOWS

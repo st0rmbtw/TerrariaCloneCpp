@@ -4,7 +4,7 @@
 #include <sstream>
 #include <tracy/Tracy.hpp>
 
-#include "../../log.hpp"
+#include "../log.hpp"
 #include "../../utils.hpp"
 
 #include "batch.hpp"

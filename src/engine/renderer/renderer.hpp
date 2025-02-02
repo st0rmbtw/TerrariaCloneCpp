@@ -7,15 +7,14 @@
 #include <LLGL/RenderSystem.h>
 #include <LLGL/Utils/Utility.h>
 
-#include "../../renderer/camera.h"
-#include "../../renderer/custom_surface.hpp"
+#include "../types/backend.hpp"
+#include "../types/texture.hpp"
+#include "../types/shader_path.hpp"
 
-#include "../../types/backend.hpp"
-#include "../../types/texture.hpp"
-#include "../../types/shader_path.hpp"
-
+#include "custom_surface.hpp"
 #include "batch.hpp"
 #include "macros.hpp"
+#include "camera.hpp"
 
 struct ALIGN(16) ProjectionsUniform {
     glm::mat4 screen_projection_matrix;

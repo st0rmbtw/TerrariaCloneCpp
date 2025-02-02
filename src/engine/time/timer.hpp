@@ -1,7 +1,7 @@
 // Based on https://github.com/bevyengine/bevy/blob/main/crates/bevy_time/src/timer.rs
 
-#ifndef TIME_TIMER_HPP
-#define TIME_TIMER_HPP
+#ifndef _ENGINE_TIME_TIMER_HPP_
+#define _ENGINE_TIME_TIMER_HPP_
 
 #pragma once
 

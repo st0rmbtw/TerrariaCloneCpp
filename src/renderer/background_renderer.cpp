@@ -5,7 +5,7 @@
 
 #include <tracy/Tracy.hpp>
 
-#include "../log.hpp"
+#include "../engine/log.hpp"
 #include "../engine/engine.hpp"
 
 #include "types.hpp"

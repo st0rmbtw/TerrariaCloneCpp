@@ -4,13 +4,15 @@
 
 #include <tracy/Tracy.hpp>
 
+#include "../engine/time/time.hpp"
+#include "../engine/time/timer.hpp"
+#include "../engine/types/anchor.hpp"
+#include "../engine/types/rich_text.hpp"
+#include "../engine/input.hpp"
+
 #include "../renderer/renderer.hpp"
-#include "../input.hpp"
 #include "../assets.hpp"
-#include "../time/time.hpp"
-#include "../time/timer.hpp"
-#include "../types/anchor.hpp"
-#include "../types/rich_text.hpp"
+
 #include "utils.hpp"
 
 static constexpr float INVENTORY_TITLE_SIZE = 22.0f;

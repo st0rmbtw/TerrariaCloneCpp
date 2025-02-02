@@ -8,18 +8,19 @@
 #include <LLGL/RenderingDebugger.h>
 #include <LLGL/Format.h>
 
-#include "../types/sprite.hpp"
-#include "../types/nine_patch.hpp"
+#include "../engine/types/sprite.hpp"
+#include "../engine/types/nine_patch.hpp"
+#include "../engine/types/order.hpp"
+#include "../engine/types/rich_text.hpp"
+#include "../engine/renderer/camera.hpp"
+
 #include "../types/background_layer.hpp"
-#include "../types/order.hpp"
-#include "../types/rich_text.hpp"
+
 #include "../assets.hpp"
 #include "../particles.hpp"
 
 #include "../world/world_data.hpp"
 #include "../world/world.hpp"
-
-#include "camera.h"
 
 namespace GameRenderer {
     bool Init(const LLGL::Extent2D& resolution);

@@ -9,9 +9,9 @@
 #include "types.hpp"
 
 #include "../engine/engine.hpp"
+#include "../engine/log.hpp"
 
 #include "../assets.hpp"
-#include "../log.hpp"
 
 using Constants::PARTICLE_SIZE;
 using Constants::MAX_PARTICLES_COUNT;

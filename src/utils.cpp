@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#include "defines.hpp"
+#include "engine/defines.hpp"
 
 bool FileExists(const char *path) {
 #ifdef PLATFORM_WINDOWS

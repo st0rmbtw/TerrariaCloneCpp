@@ -2,13 +2,13 @@
 #include <GLFW/glfw3.h>
 #include <tracy/Tracy.hpp>
 
-#include "../log.hpp"
+#include "../engine/time/time.hpp"
 #include "../utils.hpp"
-#include "../input.hpp"
-#include "../defines.hpp"
-#include "../time/time.hpp"
 
+#include "defines.hpp"
 #include "engine.hpp"
+#include "input.hpp"
+#include "log.hpp"
 
 static struct EngineState {
     Renderer renderer;

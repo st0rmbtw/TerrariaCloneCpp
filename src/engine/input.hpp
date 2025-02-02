@@ -1,5 +1,5 @@
-#ifndef INPUT_HPP
-#define INPUT_HPP
+#ifndef _ENGINE_INPUT_HPP_
+#define _ENGINE_INPUT_HPP_
 
 #pragma once
 

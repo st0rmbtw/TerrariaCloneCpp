@@ -4,18 +4,18 @@
 
 #include <tracy/Tracy.hpp>
 
+#include "../engine/math/quat.hpp"
+#include "../engine/math/rect.hpp"
+#include "../engine/input.hpp"
+#include "../engine/time/time.hpp"
+#include "../engine/time/timer.hpp"
+
 #include "../assets.hpp"
 #include "../constants.hpp"
-#include "../input.hpp"
 #include "../types/item.hpp"
-#include "../types/anchor.hpp"
 #include "../types/block.hpp"
-#include "../math/quat.hpp"
 #include "../renderer/renderer.hpp"
 #include "../math/math.hpp"
-#include "../math/rect.hpp"
-#include "../time/time.hpp"
-#include "../time/timer.hpp"
 #include "../utils.hpp"
 #include "../particles.hpp"
 

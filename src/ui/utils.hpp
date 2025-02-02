@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "../types/rich_text.hpp"
+#include "../engine/types/rich_text.hpp"
 #include "../assets.hpp"
 
 uint32_t next_utf8_codepoint(const char* text, size_t& index);

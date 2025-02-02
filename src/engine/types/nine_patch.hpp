@@ -1,5 +1,5 @@
-#ifndef TYPES_NINE_PATCH_HPP
-#define TYPES_NINE_PATCH_HPP
+#ifndef _ENGINE_TYPES_NINE_PATCH_HPP_
+#define _ENGINE_TYPES_NINE_PATCH_HPP_
 
 #pragma once
 

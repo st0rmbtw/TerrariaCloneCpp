@@ -17,6 +17,7 @@
 
 #include "../assets.hpp"
 #include "../engine/engine.hpp"
+#include "../utils.hpp"
 
 #include "world_renderer.hpp"
 #include "background_renderer.hpp"

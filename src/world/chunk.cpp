@@ -9,7 +9,7 @@
 
 #include "../renderer/renderer.hpp"
 
-#include "../defines.hpp"
+#include "../engine/defines.hpp"
 
 #define TILE_TYPE_BLOCK 0
 #define TILE_TYPE_WALL 1

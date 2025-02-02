@@ -1,24 +1,23 @@
 #include "game.hpp"
 
 #include <GLFW/glfw3.h>
-
+#include <LLGL/Types.h>
 #include <glm/gtc/random.hpp>
 
-#include "LLGL/Types.h"
-#include "constants.hpp"
 #include "engine/engine.hpp"
-#include "renderer/camera.h"
+#include "engine/input.hpp"
+#include "engine/renderer/camera.hpp"
+#include "engine/types/window_settings.hpp"
+#include "engine/time/time.hpp"
 #include "renderer/renderer.hpp"
-#include "time/time.hpp"
-#include "assets.hpp"
-#include "input.hpp"
-#include "types/window_settings.hpp"
 #include "ui/ui.hpp"
 #include "world/autotile.hpp"
+
 #include "player/player.hpp"
 #include "particles.hpp"
 #include "background.hpp"
-#include "defines.hpp"
+#include "assets.hpp"
+#include "constants.hpp"
 
 #include <string>
 #include <tracy/Tracy.hpp>
@@ -114,11 +113,13 @@ void update() {
     if (Input::Pressed(Key::LeftAlt)) scale_speed /= 4.f;
 
     if (Input::Pressed(Key::Minus)) {
-        g.camera.set_zoom(g.camera.zoom() + scale_speed * Time::delta_seconds());
+        const float zoom = g.camera.zoom() + scale_speed * Time::delta_seconds();
+        g.camera.set_zoom(glm::clamp(zoom, Constants::CAMERA_MAX_ZOOM, Constants::CAMERA_MIN_ZOOM));
     }
 
     if (Input::Pressed(Key::Equals)) {
-        g.camera.set_zoom(g.camera.zoom() - scale_speed * Time::delta_seconds());
+        const float zoom = g.camera.zoom() - scale_speed * Time::delta_seconds();
+        g.camera.set_zoom(glm::clamp(zoom, Constants::CAMERA_MAX_ZOOM, Constants::CAMERA_MIN_ZOOM));
     }
 
 #if DEBUG

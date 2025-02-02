@@ -1,5 +1,5 @@
-#ifndef TIME_STOPWATCH_HPP
-#define TIME_STOPWATCH_HPP
+#ifndef _ENGINE_TIME_STOPWATCH_HPP_
+#define _ENGINE_TIME_STOPWATCH_HPP_
 
 #pragma once
 

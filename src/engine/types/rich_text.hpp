@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef RICH_TEXT
-#define RICH_TEXT
+#ifndef _ENGINE_RICH_TEXT_HPP_
+#define _ENGINE_RICH_TEXT_HPP_
 
 #include <string_view>
 #include <utility>

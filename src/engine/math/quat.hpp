@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef MATH_QUAT_HPP
-#define MATH_QUAT_HPP
+#ifndef _ENGINE_MATH_QUAT_HPP_
+#define _ENGINE_MATH_QUAT_HPP_
 
 #include <glm/gtx/quaternion.hpp>
 

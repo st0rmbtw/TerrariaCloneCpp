@@ -1,5 +1,5 @@
-#ifndef TYPES_RENDER_LAYER
-#define TYPES_RENDER_LAYER
+#ifndef _ENGINE_TYPES_RENDER_LAYER_HPP_
+#define _ENGINE_TYPES_RENDER_LAYER_HPP_
 
 #pragma once
 

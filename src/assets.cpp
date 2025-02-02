@@ -14,13 +14,13 @@
 #include <freetype/freetype.h>
 
 #include "engine/engine.hpp"
+#include "engine/types/shader_pipeline.hpp"
+#include "engine/types/texture.hpp"
+#include "engine/log.hpp"
 #include "renderer/types.hpp"
-#include "types/shader_pipeline.hpp"
-#include "types/texture.hpp"
 #include "types/block.hpp"
 #include "types/wall.hpp"
 
-#include "log.hpp"
 #include "utils.hpp"
 
 namespace fs = std::filesystem;

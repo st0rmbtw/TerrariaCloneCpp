@@ -1,5 +1,5 @@
-#ifndef TYPES_SHADER_TYPE
-#define TYPES_SHADER_TYPE
+#ifndef _ENGINE_TYPES_SHADER_TYPE_HPP_
+#define _ENGINE_TYPES_SHADER_TYPE_HPP_
 
 #pragma once
 

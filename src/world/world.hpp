@@ -5,8 +5,8 @@
 
 #include <cstdint>
 
-#include "../math/rect.hpp"
-#include "../renderer/camera.h"
+#include "../engine/math/rect.hpp"
+#include "../engine/renderer/camera.hpp"
 
 #include "../types/block.hpp"
 #include "../types/wall.hpp"

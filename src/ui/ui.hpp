@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "../renderer/camera.h"
+#include "../engine/renderer/camera.hpp"
 #include "../player/inventory.hpp"
 #include "../player/player.hpp"
 

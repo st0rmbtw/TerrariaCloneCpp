@@ -1,5 +1,5 @@
-#ifndef ASSERT_HPP
-#define ASSERT_HPP
+#ifndef _ENGINE_ASSERT_HPP_
+#define _ENGINE_ASSERT_HPP_
 
 #pragma once
 
@@ -9,7 +9,7 @@
     #define ASSERT(expression, message, ...) \
         if (!(expression)) { \
             fprintf(stderr, "[%s:%d] " message "\n", __FILE__, __LINE__, ##__VA_ARGS__); \
-            exit(1); \
+            abort(); \
         }
 
     #define UNREACHABLE() ASSERT(false, "Reached an unreachable point!")

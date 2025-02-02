@@ -11,7 +11,7 @@
 #include "../types/tile_pos.hpp"
 #include "../types/neighbors.hpp"
 
-#include "../math/rect.hpp"
+#include "../engine/math/rect.hpp"
 
 #include "lightmap.hpp"
 

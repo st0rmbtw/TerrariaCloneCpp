@@ -1,5 +1,5 @@
-#ifndef LOG_HPP
-#define LOG_HPP
+#ifndef _ENGINE_LOG_HPP_
+#define _ENGINE_LOG_HPP_
 
 #pragma once
 

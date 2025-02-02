@@ -1,5 +1,5 @@
-#ifndef TYPES_SHADER_PATH
-#define TYPES_SHADER_PATH
+#ifndef _ENGINE_TYPES_SHADER_PATH_HPP_
+#define _ENGINE_TYPES_SHADER_PATH_HPP_
 
 #include "shader_type.hpp"
 

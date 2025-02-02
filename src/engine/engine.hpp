@@ -1,12 +1,12 @@
-#ifndef ENGINE_HPP
-#define ENGINE_HPP
+#ifndef _ENGINE_HPP_
+#define _ENGINE_HPP_
 
 #pragma once
 
 #include <glm/vec2.hpp>
 
-#include "../types/backend.hpp"
-#include "../types/window_settings.hpp"
+#include "types/backend.hpp"
+#include "types/window_settings.hpp"
 #include "renderer/renderer.hpp"
 
 namespace Engine {

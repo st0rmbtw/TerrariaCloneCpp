@@ -4,11 +4,13 @@
 
 #include <tracy/Tracy.hpp>
 
-#include "assets.hpp"
-#include "constants.hpp"
-#include "types/anchor.hpp"
+#include "engine/types/anchor.hpp"
+
 #include "types/background_layer.hpp"
 #include "renderer/renderer.hpp"
+
+#include "assets.hpp"
+#include "constants.hpp"
 
 using Constants::TILE_SIZE;
 

@@ -1,5 +1,5 @@
-#ifndef TYPES_BACKEND
-#define TYPES_BACKEND
+#ifndef _ENGINE_TYPES_BACKEND_HPP_
+#define _ENGINE_TYPES_BACKEND_HPP_
 
 #pragma once
 

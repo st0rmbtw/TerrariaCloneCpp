@@ -1,5 +1,5 @@
-#ifndef MATH_RECT_HPP
-#define MATH_RECT_HPP
+#ifndef _ENGINE_MATH_RECT_HPP_
+#define _ENGINE_MATH_RECT_HPP_
 
 #pragma once
 

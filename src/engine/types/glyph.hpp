@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef TYPES_GLYPH
-#define TYPES_GLYPH
+#ifndef _ENGINE_TYPES_GLYPH_HPP_
+#define _ENGINE_TYPES_GLYPH_HPP_
 
 #include <glm/vec2.hpp>
 

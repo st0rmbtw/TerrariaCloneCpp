@@ -1,5 +1,5 @@
-#ifndef TYPES_TEXTURE_HPP
-#define TYPES_TEXTURE_HPP
+#ifndef _ENGINE_TYPES_TEXTURE_HPP_
+#define _ENGINE_TYPES_TEXTURE_HPP_
 
 #pragma once
 

@@ -1,5 +1,5 @@
-#ifndef RENDERER_PARTICLE_RENDERER_HPP
-#define RENDERER_PARTICLE_RENDERER_HPP
+#ifndef _RENDERER_PARTICLE_RENDERER_HPP_
+#define _RENDERER_PARTICLE_RENDERER_HPP_
 
 #pragma once
 
@@ -7,13 +7,13 @@
 #include <LLGL/BufferArray.h>
 #include <LLGL/PipelineState.h>
 
-#include "types.hpp"
+#include "../engine/types/texture_atlas.hpp"
+#include "../engine/renderer/renderer.hpp"
+#include "../engine/types/order.hpp"
 
 #include "../particles.hpp"
-#include "../types/texture_atlas.hpp"
-#include "../types/order.hpp"
 
-#include "../engine/renderer/renderer.hpp"
+#include "types.hpp"
 
 class ParticleRenderer {
 public:

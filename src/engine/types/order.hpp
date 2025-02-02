@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef _TYPES_ORDER_HPP_
-#define _TYPES_ORDER_HPP_
+#ifndef _ENGINE_TYPES_ORDER_HPP_
+#define _ENGINE_TYPES_ORDER_HPP_
 
 struct Order {
 

@@ -6,10 +6,11 @@
 
 #include <tracy/Tracy.hpp>
 
+#include "../engine/time/time.hpp"
+
 #include "../types/block.hpp"
 #include "../world/world_gen.h"
 #include "../world/autotile.hpp"
-#include "../time/time.hpp"
 #include "../renderer/renderer.hpp"
 
 using Constants::LIGHT_DECAY_STEPS;

@@ -1,5 +1,5 @@
-#ifndef TYPES_SPRITE_HPP
-#define TYPES_SPRITE_HPP
+#ifndef _ENGINE_TYPES_SPRITE_HPP_
+#define _ENGINE_TYPES_SPRITE_HPP_
 
 #pragma once
 

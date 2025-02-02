@@ -6,7 +6,7 @@
 #include <optional>
 
 #include "../types/item.hpp"
-#include "../assert.hpp"
+#include "../engine/assert.hpp"
 
 constexpr uint8_t CELLS_IN_ROW = 10;
 constexpr uint8_t INVENTORY_ROWS = 5;
