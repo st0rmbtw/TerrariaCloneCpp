@@ -1,17 +1,17 @@
-#include "LLGL/Types.h"
-
+#include <LLGL/Types.h>
 #include <GLFW/glfw3.h>
 #include <tracy/Tracy.hpp>
 
-#include "renderer/renderer.hpp"
-#include "log.hpp"
-#include "utils.hpp"
-#include "input.hpp"
-#include "defines.hpp"
+#include "../log.hpp"
+#include "../utils.hpp"
+#include "../input.hpp"
+#include "../defines.hpp"
+#include "../time/time.hpp"
+
 #include "engine.hpp"
-#include "time/time.hpp"
 
 static struct EngineState {
+    Renderer renderer;
     GLFWwindow *window = nullptr;
     bool minimized = false;
     uint32_t window_width;
@@ -144,7 +144,7 @@ void Engine::HideCursor() {
     glfwSetInputMode(state.window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 }
 
-bool Engine::Init(RenderBackend backend, bool vsync, WindowSettings settings, glm::uvec2* output_viewport) {
+bool Engine::Init(RenderBackend backend, bool vsync, WindowSettings settings, LLGL::Extent2D& output_viewport) {
     ZoneScopedN("Engine::Init");
 
     if (state.pre_update_callback == nullptr) state.pre_update_callback = default_callback;
@@ -165,7 +165,7 @@ bool Engine::Init(RenderBackend backend, bool vsync, WindowSettings settings, gl
 
     LLGL::Log::RegisterCallbackStd();
 
-    if (!Renderer::InitEngine(backend)) return false;
+    if (!state.renderer.InitEngine(backend)) return false;
     
     if (!state.load_assets_callback()) return false;
 
@@ -182,10 +182,10 @@ bool Engine::Init(RenderBackend backend, bool vsync, WindowSettings settings, gl
     state.window_width = window_size.width;
     state.window_height = window_size.height;
 
-    *output_viewport = glm::uvec2(window_size.width, window_size.height);
+    output_viewport = window_size;
     
     const LLGL::Extent2D resolution = get_scaled_resolution(window_size.width, window_size.height);
-    if (!Renderer::Init(window, resolution, vsync, settings.fullscreen)) return false;
+    if (!state.renderer.Init(window, resolution, vsync, settings.fullscreen)) return false;
 
     Time::set_fixed_timestep_seconds(1.0f / 60.0f);
 
@@ -197,7 +197,7 @@ void Engine::Run() {
 
     double fixed_timer = 0;
     
-    while (Renderer::Surface()->ProcessEvents()) {
+    while (state.renderer.Surface()->ProcessEvents()) {
         MACOS_AUTORELEASEPOOL_OPEN
             const double current_tick = glfwGetTime();
             const double delta_time = (current_tick - prev_tick);
@@ -239,18 +239,24 @@ void Engine::Run() {
 }
 
 void Engine::Destroy() {
-    if (Renderer::CommandQueue()) {
-        Renderer::CommandQueue()->WaitIdle();
+    if (state.renderer.CommandQueue()) {
+        state.renderer.CommandQueue()->WaitIdle();
     }
+
+    Assets::DestroyShaders();
+    Assets::DestroyTextures();
+    Assets::DestroySamplers();
 
     state.destroy_callback();
     
-    if (Renderer::Context()) {
-        Renderer::Terminate();
+    if (state.renderer.Context()) {
+        state.renderer.Terminate();
     }
 
     glfwTerminate();
 }
+
+Renderer& Engine::Renderer() { return state.renderer; }
 
 static void handle_keyboard_events(GLFWwindow*, int key, int, int action, int) {
     if (action == GLFW_PRESS) {
@@ -291,8 +297,8 @@ static void handle_window_resize_events(GLFWwindow*, int width, int height) {
 
     const LLGL::Extent2D resolution = get_scaled_resolution(width, height);
 
-    Renderer::CommandQueue()->WaitIdle();
-    Renderer::SwapChain()->ResizeBuffers(resolution);
+    state.renderer.CommandQueue()->WaitIdle();
+    state.renderer.SwapChain()->ResizeBuffers(resolution);
 
     state.window_width = width;
     state.window_height = height;

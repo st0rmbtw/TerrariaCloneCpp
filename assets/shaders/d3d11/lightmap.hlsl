@@ -8,8 +8,6 @@ cbuffer GlobalUniformBuffer : register( b2 )
     float4x4 u_inv_view_proj;
     float2 u_camera_position;
     float2 u_window_size;
-    float u_max_depth;
-    float u_max_world_depth;
 };
 
 struct VSInput

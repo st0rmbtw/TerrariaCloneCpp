@@ -1,16 +1,14 @@
 #include "background_renderer.hpp"
 
 #include <LLGL/ShaderFlags.h>
+#include <LLGL/PipelineLayoutFlags.h>
 
 #include <tracy/Tracy.hpp>
 
-#include "LLGL/PipelineLayoutFlags.h"
-#include "renderer.hpp"
-#include "utils.hpp"
-#include "types.hpp"
-#include "macros.hpp"
-
 #include "../log.hpp"
+#include "../engine/engine.hpp"
+
+#include "types.hpp"
 
 constexpr uint32_t MAX_QUADS = 500;
 
@@ -23,9 +21,11 @@ namespace BackgroundFlags {
 void BackgroundRenderer::init() {
     ZoneScopedN("BackgroundRenderer::init");
 
-    const RenderBackend backend = Renderer::Backend();
-    const auto& context = Renderer::Context();
-    const auto* swap_chain = Renderer::SwapChain();
+    m_renderer = &Engine::Renderer();
+
+    const RenderBackend backend = m_renderer->Backend();
+    const auto& context = m_renderer->Context();
+    const auto* swap_chain = m_renderer->SwapChain();
 
     const Texture& backgrounds_texture = Assets::GetTexture(TextureAsset::Backgrounds);
 
@@ -42,9 +42,9 @@ void BackgroundRenderer::init() {
         BackgroundVertex(glm::vec2(1.0f, 1.0f), backgrounds_texture.size()),
     };
 
-    m_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::BackgroundVertex), "BackgroundRenderer VertexBuffer");
-    m_instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(BackgroundInstance), Assets::GetVertexFormat(VertexFormatAsset::BackgroundInstance), "BackgroundRenderer InstanceBuffer");
-    m_world_instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(BackgroundInstance), Assets::GetVertexFormat(VertexFormatAsset::BackgroundInstance), "BackgroundRenderer InstanceBuffer");
+    m_vertex_buffer = m_renderer->CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::BackgroundVertex), "BackgroundRenderer VertexBuffer");
+    m_instance_buffer = m_renderer->CreateVertexBuffer(MAX_QUADS * sizeof(BackgroundInstance), Assets::GetVertexFormat(VertexFormatAsset::BackgroundInstance), "BackgroundRenderer InstanceBuffer");
+    m_world_instance_buffer = m_renderer->CreateVertexBuffer(MAX_QUADS * sizeof(BackgroundInstance), Assets::GetVertexFormat(VertexFormatAsset::BackgroundInstance), "BackgroundRenderer InstanceBuffer");
 
     {
         LLGL::Buffer* buffers[] = { m_vertex_buffer, m_instance_buffer };
@@ -76,7 +76,7 @@ void BackgroundRenderer::init() {
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
     const LLGL::ResourceViewDescriptor resource_views[] = {
-        Renderer::GlobalUniformBuffer(), backgrounds_texture
+        m_renderer->GlobalUniformBuffer(), backgrounds_texture
     };
     m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
 
@@ -124,7 +124,7 @@ void BackgroundRenderer::render() {
 
     ZoneScopedN("BackgroundRenderer::render");
 
-    auto* const commands = Renderer::CommandBuffer();
+    auto* const commands = m_renderer->CommandBuffer();
 
     const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
     commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, size);
@@ -145,7 +145,7 @@ void BackgroundRenderer::render_world() {
 
     ZoneScopedN("BackgroundRenderer::render_world");
 
-    auto* const commands = Renderer::CommandBuffer();
+    auto* const commands = m_renderer->CommandBuffer();
 
     const ptrdiff_t size = (uint8_t*) m_world_buffer_ptr - (uint8_t*) m_world_buffer;
     commands->UpdateBuffer(*m_world_instance_buffer, 0, m_world_buffer, size);
@@ -162,6 +162,8 @@ void BackgroundRenderer::render_world() {
 }
 
 void BackgroundRenderer::terminate() {
+    const auto& context = m_renderer->Context();
+
     RESOURCE_RELEASE(m_vertex_buffer);
     RESOURCE_RELEASE(m_instance_buffer);
     RESOURCE_RELEASE(m_world_instance_buffer);

@@ -139,8 +139,8 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
 void ParticleManager::Draw() {
     ZoneScopedN("ParticleManager::Draw");
 
-    const uint32_t main_depth = Renderer::GetMainDepthIndex();
-    const uint32_t world_depth = Renderer::GetWorldDepthIndex();
+    const uint32_t main_depth = GameRenderer::GetMainOrderIndex();
+    const uint32_t world_depth = GameRenderer::GetWorldOrderIndex();
 
     for (size_t i = 0; i < state.active_count; ++i) {
         const glm::vec2 position(state.position[i * 2 + 0], state.position[i * 2 + 1]);
@@ -152,7 +152,7 @@ void ParticleManager::Draw() {
         const uint8_t variant = state.variant[i];
         const bool world = check_bitflag(state.flags[i], ParticleFlags::InWorldLayer);
 
-        Renderer::DrawParticle(position, rotation, scale, type, variant, world ? world_depth : main_depth, world);
+        GameRenderer::DrawParticle(position, rotation, scale, type, variant, world ? world_depth : main_depth, world);
     }
 }
 

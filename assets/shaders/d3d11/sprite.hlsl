@@ -8,8 +8,6 @@ cbuffer GlobalUniformBuffer : register( b2 )
     float4x4 u_inv_view_proj;
     float2 u_camera_position;
     float2 u_window_size;
-    float u_max_depth;
-    float u_max_world_depth;
 };
 
 struct VSInput
@@ -37,7 +35,6 @@ struct VSOutput
 };
 
 static const int IS_UI_FLAG = 1 << 0;
-static const int IS_WORLD_FLAG = 1 << 1;
 static const int IGNORE_CAMERA_ZOOM_FLAG = 1 << 2;
 
 VSOutput VS(VSInput inp)
@@ -90,17 +87,13 @@ VSOutput VS(VSInput inp)
     const int flags = inp.i_flags;
     const bool is_ui = (flags & IS_UI_FLAG) == IS_UI_FLAG;
     const bool ignore_camera_zoom = (flags & IGNORE_CAMERA_ZOOM_FLAG) == IGNORE_CAMERA_ZOOM_FLAG;
-    const bool is_world = (flags & IS_WORLD_FLAG) == IS_WORLD_FLAG;
-
-    const float max_depth = is_world ? u_max_world_depth : u_max_depth;
-    const float depth = inp.i_position.z / max_depth;
 
     const float4x4 mvp = mul(is_ui ? u_screen_projection : ignore_camera_zoom ? u_nozoom_view_projection : u_view_projection, transform);
     const float4 uv_offset_scale = inp.i_uv_offset_scale;
 
     VSOutput outp;
     outp.position = mul(mvp, float4(inp.position, 0.0, 1.0));
-    outp.position.z = depth;
+    outp.position.z = inp.i_position.z;
     outp.uv = inp.position * uv_offset_scale.zw + uv_offset_scale.xy;
     outp.color = inp.i_color;
     outp.outline_color = inp.i_outline_color;

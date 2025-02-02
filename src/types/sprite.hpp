@@ -38,6 +38,7 @@ public:
     [[nodiscard]] inline const glm::vec4& color() const { return m_color; }
     [[nodiscard]] inline const glm::vec4& outline_color() const { return m_outline_color; }
     [[nodiscard]] inline float outline_thickness() const { return m_outline_thickness; }
+    [[nodiscard]] inline float z() const { return m_z; }
 
     [[nodiscard]] inline Anchor anchor() const { return m_anchor; }
     [[nodiscard]] inline bool flip_x() const { return m_flip_x; }
@@ -64,6 +65,7 @@ public:
     inline BaseSprite& set_flip_x(bool flip_x) { m_flip_x = flip_x; return *this; }
     inline BaseSprite& set_flip_y(bool flip_y) { m_flip_y = flip_y; return *this; }
     inline BaseSprite& set_ignore_camera_zoom(bool ignore) { m_ignore_camera_zoom = ignore; return *this; }
+    inline BaseSprite& set_z(float z) { m_z = z; return *this; }
 
 protected:
     glm::quat m_rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
@@ -73,6 +75,7 @@ protected:
     glm::vec4 m_outline_color = glm::vec4(0.0f);
     std::optional<glm::vec2> m_custom_size = std::nullopt;
     float m_outline_thickness = 0.0f;
+    float m_z = 1.0f;
     Anchor m_anchor = Anchor::Center;
     bool m_flip_x = false;
     bool m_flip_y = false;

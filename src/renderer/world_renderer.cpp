@@ -18,11 +18,9 @@
 #include "../world/chunk.hpp"
 #include "../utils.hpp"
 #include "../world/utils.hpp"
+#include "../engine/engine.hpp"
 
-#include "renderer.hpp"
-#include "macros.hpp"
 #include "types.hpp"
-#include "utils.hpp"
 
 static constexpr uint32_t LIGHTMAP_CHUNK_TILE_SIZE = 500;
 static constexpr uint32_t LIGHTMAP_CHUNK_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::SUBDIVISION;
@@ -37,12 +35,14 @@ struct ALIGN(16) DepthUniformData {
 void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
     ZoneScopedN("WorldRenderer::init");
 
-    const auto& context = Renderer::Context();
-    const RenderBackend backend = Renderer::Backend();
+    m_renderer = &Engine::Renderer();
+
+    const auto& context = m_renderer->Context();
+    const RenderBackend backend = m_renderer->Backend();
 
     auto depth_uniform = DepthUniformData {
-        .tile_depth = 3,
-        .wall_depth = 1
+        .tile_depth = 0.3f,
+        .wall_depth = 0.1f
     };
 
     m_depth_buffer = context->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(DepthUniformData)), &depth_uniform);
@@ -78,7 +78,7 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
         LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
         const LLGL::ResourceViewDescriptor resource_views[] = {
-            Renderer::GlobalUniformBuffer(), m_depth_buffer
+            m_renderer->GlobalUniformBuffer(), m_depth_buffer
         };
 
         m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
@@ -151,7 +151,7 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
         LLGL::PipelineLayout* lightInitPipelineLayout = context->CreatePipelineLayout(lightInitPipelineLayoutDesc);
 
         const LLGL::ResourceViewDescriptor lightInitResourceViews[] = {
-            Renderer::GlobalUniformBuffer(), m_light_buffer, nullptr
+            m_renderer->GlobalUniformBuffer(), m_light_buffer, nullptr
         };
 
         LLGL::ResourceHeapDescriptor lightResourceHeapDesc;
@@ -200,7 +200,7 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
         LLGL::PipelineLayout* lightBlurPipelineLayout = context->CreatePipelineLayout(lightBlurPipelineLayoutDesc);
 
         const LLGL::ResourceViewDescriptor lightBlurResourceViews[] = {
-            Renderer::GlobalUniformBuffer(), nullptr, nullptr
+            m_renderer->GlobalUniformBuffer(), nullptr, nullptr
         };
 
         LLGL::ResourceHeapDescriptor lightBlurResourceHeapDesc;
@@ -250,7 +250,7 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
         LLGL::PipelineLayout* lightmapPipelineLayout = context->CreatePipelineLayout(lightmapPipelineLayoutDesc);
 
         const LLGL::ResourceViewDescriptor lightmapResourceViews[] = {
-            Renderer::GlobalUniformBuffer()
+            m_renderer->GlobalUniformBuffer()
         };
 
         m_lightmap_resource_heap = context->CreateResourceHeap(lightmapPipelineLayout, lightmapResourceViews);
@@ -283,8 +283,8 @@ void WorldRenderer::init_textures(const WorldData& world) {
 
     using Constants::SUBDIVISION;
 
-    auto& context = Renderer::Context();
-    const RenderBackend backend = Renderer::Backend();
+    auto& context = m_renderer->Context();
+    const RenderBackend backend = m_renderer->Backend();
 
     RESOURCE_RELEASE(m_light_texture);
     RESOURCE_RELEASE(m_tile_texture);
@@ -352,6 +352,8 @@ void WorldRenderer::init_textures(const WorldData& world) {
 void WorldRenderer::init_lightmap_chunks(const WorldData& world) {
     using Constants::TILE_SIZE;
 
+    const auto& context = m_renderer->Context();
+
     const LightMap& lightmap = world.lightmap;
 
     m_lightmap_width = lightmap.width;
@@ -390,7 +392,7 @@ void WorldRenderer::init_lightmap_chunks(const WorldData& world) {
             image_view.data = buffer;
             image_view.dataSize = chunk_size.x * chunk_size.y * sizeof(Color);
 
-            LLGL::Texture* texture = Renderer::Context()->CreateTexture(texture_desc, &image_view);
+            LLGL::Texture* texture = context->CreateTexture(texture_desc, &image_view);
             free(buffer);
 
             const StaticLightMapChunkVertex vertices[] = {
@@ -417,7 +419,7 @@ void WorldRenderer::init_lightmap_chunks(const WorldData& world) {
 
             m_lightmap_chunks[glm::uvec2(i, j)] = LightMapChunk {
                 .texture = texture,
-                .vertex_buffer = CreateVertexBuffer(vertices, Assets::GetVertexFormat(VertexFormatAsset::StaticLightMapVertex), "StaticLightMap VertexBuffer")
+                .vertex_buffer = m_renderer->CreateVertexBuffer(vertices, Assets::GetVertexFormat(VertexFormatAsset::StaticLightMapVertex), "StaticLightMap VertexBuffer")
             };
         }
     }
@@ -432,6 +434,8 @@ FORCE_INLINE static void internal_update_world_lightmap(const WorldData& world, 
 
 void WorldRenderer::update_lightmap_texture(WorldData& world) {
     ZoneScopedN("WorldRenderer::update_lightmap_texture");
+
+    const auto& context = m_renderer->Context();
 
     LLGL::ImageView image_view;
     image_view.format   = LLGL::ImageFormat::RGBA;
@@ -468,7 +472,7 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
                     image_view.data     = &result.data[write_offset.y * result.width + write_offset.x];
                     image_view.dataSize = write_width * write_height * sizeof(Color);
                     image_view.rowStride = result.width * sizeof(Color);
-                    Renderer::Context()->WriteTexture(*lightmap_chunk.texture, LLGL::TextureRegion(LLGL::Offset3D(texture_offset.x, texture_offset.y, 0), LLGL::Extent3D(write_width, write_height, 1)), image_view);
+                    context->WriteTexture(*lightmap_chunk.texture, LLGL::TextureRegion(LLGL::Offset3D(texture_offset.x, texture_offset.y, 0), LLGL::Extent3D(write_width, write_height, 1)), image_view);
 
                     offset.x = 0;
                     remaining_size.x -= write_width;
@@ -508,14 +512,14 @@ void WorldRenderer::update_tile_texture(WorldData& world) {
         world.changed_tiles.pop_back();
 
         image_view.data     = &value;
-        Renderer::Context()->WriteTexture(*m_tile_texture, LLGL::TextureRegion(LLGL::Offset3D(pos.x, pos.y, 0), LLGL::Extent3D(1, 1, 1)), image_view);
+        m_renderer->Context()->WriteTexture(*m_tile_texture, LLGL::TextureRegion(LLGL::Offset3D(pos.x, pos.y, 0), LLGL::Extent3D(1, 1, 1)), image_view);
     }
 }
 
 void WorldRenderer::render(const ChunkManager& chunk_manager) {
     ZoneScopedN("WorldRenderer::render");
 
-    auto* const commands = Renderer::CommandBuffer();
+    auto* const commands = m_renderer->CommandBuffer();
 
     commands->SetPipelineState(*m_pipeline);
 
@@ -577,7 +581,7 @@ void WorldRenderer::render_lightmap(const Camera& camera) {
     const math::Rect camera_fov = utils::get_camera_fov(camera);
     const math::URect chunk_range = get_chunk_range(camera_fov, glm::uvec2(m_lightmap_width, m_lightmap_height));
 
-    auto* const commands = Renderer::CommandBuffer();
+    auto* const commands = m_renderer->CommandBuffer();
 
     commands->SetPipelineState(*m_lightmap_pipeline);
     commands->SetResourceHeap(*m_lightmap_resource_heap);
@@ -600,7 +604,7 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
 
     if (world.light_count() == 0) return;
 
-    auto* const commands = Renderer::CommandBuffer();
+    auto* const commands = m_renderer->CommandBuffer();
 
     const size_t size = world.light_count() * sizeof(Light);
     commands->UpdateBuffer(*m_light_buffer, 0, world.lights(), size);
@@ -663,6 +667,8 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
 }
 
 void WorldRenderer::terminate() {
+    const auto& context = m_renderer->Context();
+
     RESOURCE_RELEASE(m_pipeline);
     RESOURCE_RELEASE(m_light_set_light_sources_pipeline);
     RESOURCE_RELEASE(m_light_vertical_pipeline);

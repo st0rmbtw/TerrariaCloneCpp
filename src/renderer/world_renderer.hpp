@@ -4,6 +4,9 @@
 #define RENDERER_WORLD_RENDERER_HPP
 
 #include <LLGL/LLGL.h>
+
+#include "../engine/renderer/renderer.hpp"
+
 #include "../world/world_data.hpp"
 #include "../world/world.hpp"
 #include "../world/chunk_manager.hpp"
@@ -36,6 +39,8 @@ public:
 
 private:
     std::unordered_map<glm::uvec2, LightMapChunk> m_lightmap_chunks;
+
+    Renderer* m_renderer = nullptr;
 
     LLGL::Buffer* m_depth_buffer = nullptr;
     LLGL::PipelineState* m_pipeline = nullptr;

@@ -4,8 +4,9 @@
 
 #include <glm/gtc/random.hpp>
 
+#include "LLGL/Types.h"
 #include "constants.hpp"
-#include "engine.hpp"
+#include "engine/engine.hpp"
 #include "renderer/camera.h"
 #include "renderer/renderer.hpp"
 #include "time/time.hpp"
@@ -101,7 +102,7 @@ void fixed_update() {
 
     UI::FixedUpdate();
 
-    Renderer::UpdateLight();
+    GameRenderer::UpdateLight();
 }
 
 void update() {
@@ -168,7 +169,7 @@ void post_update() {
 void render() {
     ZoneScopedN("Game::render");
 
-    Renderer::Begin(g.camera, g.world.data());
+    GameRenderer::Begin(g.camera, g.world.data());
 
     Background::Draw();
 
@@ -180,26 +181,26 @@ void render() {
 
     UI::Draw(g.camera, g.player);
 
-    Renderer::Render(g.camera, g.world);
+    GameRenderer::Render(g.camera, g.world);
 }
 
 void post_render() {
     ZoneScopedN("Game::post_render");
 
     if (g.world.chunk_manager().any_chunks_to_destroy()) {
-        Renderer::CommandQueue()->WaitIdle();
+        Engine::Renderer().CommandQueue()->WaitIdle();
         g.world.chunk_manager().destroy_hidden_chunks();
     }
 
 #if DEBUG
     if (Input::Pressed(Key::C)) {
-        Renderer::PrintDebugInfo();
+        Engine::Renderer().PrintDebugInfo();
     }
 #endif
 }
 
 void window_resized(uint32_t width, uint32_t height, uint32_t scaled_width, uint32_t scaled_height) {
-    Renderer::ResizeTextures(LLGL::Extent2D(scaled_width, scaled_height));
+    GameRenderer::ResizeTextures(LLGL::Extent2D(scaled_width, scaled_height));
 
     g.camera.set_viewport(glm::uvec2(width, height));
     g.camera.update();
@@ -255,8 +256,10 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     settings.fullscreen = config.fullscreen;
     settings.hidden = true;
 
-    glm::uvec2 resolution;
-    if (!Engine::Init(backend, config.vsync, settings, &resolution)) return false;
+    LLGL::Extent2D resolution;
+    if (!Engine::Init(backend, config.vsync, settings, resolution)) return false;
+
+    if (!GameRenderer::Init(resolution)) return false;
 
     Time::set_fixed_timestep_seconds(Constants::FIXED_UPDATE_INTERVAL);
 
@@ -266,10 +269,10 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
 
     g.world.generate(200, 500, 0);
 
-    g.camera.set_viewport(resolution);
+    g.camera.set_viewport(glm::uvec2(resolution.width, resolution.height));
     g.camera.set_zoom(1.0f);
 
-    Renderer::InitWorldRenderer(g.world.data());
+    GameRenderer::InitWorldRenderer(g.world.data());
 
     ParticleManager::Init();
     UI::Init();

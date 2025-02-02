@@ -10,6 +10,8 @@
 
 #include "../types/background_layer.hpp"
 
+#include "../engine/renderer/renderer.hpp"
+
 struct LayerData {
     int offset;
 };
@@ -37,6 +39,8 @@ private:
 private:
     size_t m_layer_count = 0;
     size_t m_world_layer_count = 0;
+
+    Renderer* m_renderer = nullptr;
     
     LLGL::PipelineState* m_pipeline = nullptr;
     LLGL::ResourceHeap* m_resource_heap = nullptr;

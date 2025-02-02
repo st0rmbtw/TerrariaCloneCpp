@@ -117,7 +117,7 @@ void Background::Draw() {
     ZoneScopedN("Background::Draw");
 
     for (const BackgroundLayer& layer : state.layers) {
-        Renderer::DrawBackground(layer);
+        GameRenderer::DrawBackground(layer);
     }
 }
 

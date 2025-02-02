@@ -4,9 +4,10 @@
 
 #include "../types/block.hpp"
 #include "../types/texture_atlas_pos.hpp"
-#include "../renderer/renderer.hpp"
 #include "../renderer/types.hpp"
-#include "../renderer/macros.hpp"
+#include "../engine/engine.hpp"
+
+#include "../renderer/renderer.hpp"
 
 #include "../defines.hpp"
 
@@ -19,6 +20,8 @@ using Constants::RENDER_CHUNK_SIZE_U;
 
 void RenderChunk::destroy() {
     ZoneScopedN("WorldChunk::destroy");
+
+    const auto& context = Engine::Renderer().Context();
 
     RESOURCE_RELEASE(block_instance_buffer);
     RESOURCE_RELEASE(wall_instance_buffer);
@@ -107,7 +110,7 @@ void RenderChunk::build_mesh(
     block_count = fill_block_buffer(world, block_data_arena, index, world_pos);
     wall_count = fill_wall_buffer(world, wall_data_arena, index, world_pos);
 
-    const auto& context = Renderer::Context();
+    const auto& context = Engine::Renderer().Context();
 
     {
         const size_t size = block_count * sizeof(ChunkInstance);
@@ -115,7 +118,7 @@ void RenderChunk::build_mesh(
 
         this->block_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
 
-        LLGL::Buffer* buffers[] = { Renderer::ChunkVertexBuffer(), block_instance_buffer };
+        LLGL::Buffer* buffers[] = { GameRenderer::ChunkVertexBuffer(), block_instance_buffer };
 
         this->block_buffer_array = context->CreateBufferArray(2, buffers);
     }
@@ -125,7 +128,7 @@ void RenderChunk::build_mesh(
 
         this->wall_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
 
-        LLGL::Buffer* buffers[] = { Renderer::ChunkVertexBuffer(), wall_instance_buffer };
+        LLGL::Buffer* buffers[] = { GameRenderer::ChunkVertexBuffer(), wall_instance_buffer };
 
         this->wall_buffer_array = context->CreateBufferArray(2, buffers);
     }
@@ -138,7 +141,7 @@ void RenderChunk::rebuild_mesh(
 ) {
     ZoneScopedN("WorldChunk::rebuild_mesh");
 
-    const auto& context = Renderer::Context();
+    const auto& context = Engine::Renderer().Context();
 
     if (blocks_dirty) {
         block_count = fill_block_buffer(world, block_data_arena, index, world_pos);

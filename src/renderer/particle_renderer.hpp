@@ -11,7 +11,9 @@
 
 #include "../particles.hpp"
 #include "../types/texture_atlas.hpp"
-#include "../types/depth.hpp"
+#include "../types/order.hpp"
+
+#include "../engine/renderer/renderer.hpp"
 
 class ParticleRenderer {
 public:
@@ -23,10 +25,12 @@ public:
     void prepare();
     void reset();
 
-    void draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth);
-    void draw_particle_world(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth);
+    void draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Order order);
+    void draw_particle_world(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Order order);
 
 private:
+    Renderer* m_renderer = nullptr;
+
     LLGL::PipelineState* m_pipeline = nullptr;
     LLGL::PipelineState* m_compute_pipeline = nullptr;
     LLGL::ResourceHeap* m_resource_heap = nullptr;

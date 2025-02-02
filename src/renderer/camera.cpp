@@ -1,7 +1,7 @@
 #include "camera.h"
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/matrix_transform.hpp"
-#include "renderer.hpp"
+#include "../engine/engine.hpp"
 
 void Camera::update_projection_area() {
     m_area = math::Rect::from_corners(
@@ -18,7 +18,7 @@ void Camera::compute_projection_and_view_matrix() {
     const math::Rect& projection_area = get_projection_area();
     const math::Rect& nozoom_projection_area = get_nozoom_projection_area();
 
-    if (Renderer::Backend().IsOpenGL()) {
+    if (Engine::Renderer().Backend().IsOpenGL()) {
         m_projection_matrix = glm::orthoRH_NO(
             projection_area.min.x, projection_area.max.x,
             projection_area.max.y, projection_area.min.y,

@@ -52,7 +52,7 @@ VSOutput VS(VSInput inp)
 
     VSOutput output;
     output.position = mul(mvp, float4(position, 0.0, 1.0));
-    output.position.z = inp.i_depth / (is_world ? u_max_world_depth : u_max_depth);
+    output.position.z = inp.i_depth;
     output.uv = uv + position * inp.inv_tex_size;
 
 	return output;
