@@ -32,7 +32,7 @@ public:
             case Value::Fragment: return LLGL::ShaderType::Fragment; break;
             case Value::Geometry: return LLGL::ShaderType::Geometry; break;
             case Value::Compute: return LLGL::ShaderType::Compute; break;
-            default: UNREACHABLE()
+            default: UNREACHABLE();
         };
     }
 

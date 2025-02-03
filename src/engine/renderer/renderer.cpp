@@ -7,10 +7,19 @@
 #include "../log.hpp"
 #include "../../utils.hpp"
 
+#include "LLGL/PipelineLayoutFlags.h"
+#include "LLGL/PipelineStateFlags.h"
 #include "batch.hpp"
 #include "macros.hpp"
+#include "types.hpp"
 
-using namespace batch_internal;
+using batch_internal::DrawCommand;
+using batch_internal::FlushData;
+using batch_internal::FlushDataType;
+
+static constexpr size_t MAX_SPRITES = 5000;
+static constexpr size_t MAX_NINEPATCHES = 5000;
+static constexpr size_t MAX_GLYPHS = 5000;
 
 bool Renderer::InitEngine(RenderBackend backend) {
     ZoneScopedN("Renderer::InitEngine");
@@ -109,6 +118,14 @@ void Renderer::Begin(const Camera& camera) {
     m_command_buffer->Begin();
     m_command_buffer->SetViewport(m_swap_chain->GetResolution());
     m_command_buffer->UpdateBuffer(*m_constant_buffer, 0, &projections_uniform, sizeof(projections_uniform));
+
+    m_sprite_instance_size = 0;
+    m_glyph_instance_size = 0;
+    m_ninepatch_instance_size = 0;
+
+    m_sprite_instance_count = 0;
+    m_glyph_instance_count = 0;
+    m_ninepatch_instance_count = 0;
 }
 
 void Renderer::End() {
@@ -120,7 +137,7 @@ void Renderer::End() {
     m_swap_chain->Present();
 }
 
-void Renderer::ApplyBatchDrawCommands(Batch& batch) {
+void Renderer::ApplyBatchDrawCommands(const Batch& batch) {
     ZoneScopedN("Renderer::ApplyBatchDrawCommands");
 
     auto* const commands = m_command_buffer;
@@ -128,9 +145,21 @@ void Renderer::ApplyBatchDrawCommands(Batch& batch) {
     int prev_flush_data_type = -1;
     int prev_texture_id = -1;
 
-    LLGL::PipelineState& sprite_pipeline = batch.depth_enabled()
-        ? *m_sprite_batch_data.pipeline_depth
-        : *m_sprite_batch_data.pipeline;
+    LLGL::PipelineState& sprite_pipeline = batch.is_ui()
+        ? *m_sprite_batch_data.pipeline_ui
+        : batch.depth_enabled()
+            ? *m_sprite_batch_data.pipeline_depth
+            : *m_sprite_batch_data.pipeline;
+
+    LLGL::PipelineState& glyph_pipeline = batch.is_ui()
+        ? *m_glyph_batch_data.pipeline_ui
+        : *m_glyph_batch_data.pipeline;
+
+    LLGL::PipelineState& ninepatch_pipeline = batch.is_ui()
+        ? *m_ninepatch_batch_data.pipeline_ui
+        : *m_ninepatch_batch_data.pipeline;
+
+    size_t offset = 0;
 
     for (const FlushData& flush_data : batch.flush_queue()) {
         if (prev_flush_data_type != static_cast<int>(flush_data.type)) {
@@ -138,16 +167,19 @@ void Renderer::ApplyBatchDrawCommands(Batch& batch) {
             case FlushDataType::Sprite:
                 commands->SetVertexBufferArray(*m_sprite_batch_data.buffer_array);
                 commands->SetPipelineState(sprite_pipeline);
+                offset = batch.sprite_offset();
             break;
 
             case FlushDataType::Glyph:
                 commands->SetVertexBufferArray(*m_glyph_batch_data.buffer_array);
-                commands->SetPipelineState(*m_glyph_batch_data.pipeline);
+                commands->SetPipelineState(glyph_pipeline);
+                offset = batch.glyph_offset();
             break;
 
             case FlushDataType::NinePatch:
                 commands->SetVertexBufferArray(*m_ninepatch_batch_data.buffer_array);
-                commands->SetPipelineState(*m_ninepatch_batch_data.pipeline);
+                commands->SetPipelineState(ninepatch_pipeline);
+                offset = batch.ninepatch_offset();
             break;
             }
 
@@ -159,33 +191,67 @@ void Renderer::ApplyBatchDrawCommands(Batch& batch) {
             commands->SetResource(2, Assets::GetSampler(flush_data.texture));
         }
         
-        commands->DrawInstanced(4, 0, flush_data.count, flush_data.offset);
+        commands->DrawInstanced(4, 0, flush_data.count, offset + flush_data.offset);
 
         prev_flush_data_type = static_cast<int>(flush_data.type);
         prev_texture_id = flush_data.texture.id();
     }
 }
 
-void Renderer::RenderBatch(Batch& batch) {
+void Renderer::PrepareBatch(Batch& batch) {
     batch.SortDrawCommands();
+
+    batch.set_sprite_offset(m_sprite_instance_count);
+    batch.set_glyph_offset(m_glyph_instance_count);
+    batch.set_ninepatch_offset(m_ninepatch_instance_count);
 
     const size_t sprite_size = batch.sprite_buffer_size();
     if (sprite_size > 0) {
-        UpdateBuffer(m_sprite_batch_data.instance_buffer, batch.sprite_buffer(), sprite_size);
+        uint8_t* dst = reinterpret_cast<uint8_t*>(m_sprite_batch_data.buffer) + m_sprite_instance_size;
+        const void* src = batch.sprite_buffer();
+        memcpy(dst, src, sprite_size);
+        
+        m_sprite_instance_size += sprite_size;
+        m_sprite_instance_count += batch.sprite_count();
     }
 
     const size_t glyph_size = batch.glyph_buffer_size();
     if (glyph_size > 0) {
-        UpdateBuffer(m_glyph_batch_data.instance_buffer, batch.glyph_buffer(), glyph_size);
+        uint8_t* dst = reinterpret_cast<uint8_t*>(m_glyph_batch_data.buffer) + m_glyph_instance_size;
+        const void* src = batch.glyph_buffer();
+        memcpy(dst, src, glyph_size);
+
+        m_glyph_instance_size += glyph_size;
+        m_glyph_instance_count += batch.glyph_count();
     }
 
     const size_t ninepatch_size = batch.glyph_buffer_size();
     if (ninepatch_size > 0) {
-        UpdateBuffer(m_ninepatch_batch_data.instance_buffer, batch.glyph_buffer(), ninepatch_size);
+        uint8_t* dst = reinterpret_cast<uint8_t*>(m_ninepatch_batch_data.buffer) + m_ninepatch_instance_size;
+        const void* src = batch.ninepatch_buffer();
+        memcpy(dst, src, ninepatch_size);
+
+        m_ninepatch_instance_size += ninepatch_size;
+        m_ninepatch_instance_count += batch.ninepatch_count();
+    }
+}
+
+void Renderer::UploadBatchData() {
+    if (m_sprite_instance_size > 0) {
+        UpdateBuffer(m_sprite_batch_data.instance_buffer, m_sprite_batch_data.buffer, m_sprite_instance_size);
     }
 
+    if (m_glyph_instance_size > 0) {
+        UpdateBuffer(m_glyph_batch_data.instance_buffer, m_glyph_batch_data.buffer, m_glyph_instance_size);
+    }
+
+    if (m_ninepatch_instance_size > 0) {
+        UpdateBuffer(m_ninepatch_batch_data.instance_buffer, m_ninepatch_batch_data.buffer, m_ninepatch_instance_size);
+    }
+}
+
+void Renderer::RenderBatch(Batch& batch) {
     ApplyBatchDrawCommands(batch);
-    batch.Reset();
 }
 
 Texture Renderer::CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, LLGL::DataType data_type, uint32_t width, uint32_t height, uint32_t layers, int sampler, const void* data, bool generate_mip_maps) {
@@ -339,9 +405,11 @@ void Renderer::InitSpriteBatchPipeline() {
         Vertex(1.0f, 1.0f),
     };
 
+    m_sprite_batch_data.buffer = checked_alloc<SpriteInstance>(MAX_SPRITES);
+
     m_sprite_batch_data.vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::SpriteVertex), "SpriteBatch VertexBuffer");
 
-    m_sprite_batch_data.instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(SpriteInstance), Assets::GetVertexFormat(VertexFormatAsset::SpriteInstance), "SpriteBatch InstanceBuffer");
+    m_sprite_batch_data.instance_buffer = CreateVertexBuffer(MAX_SPRITES * sizeof(SpriteInstance), Assets::GetVertexFormat(VertexFormatAsset::SpriteInstance), "SpriteBatch InstanceBuffer");
     LLGL::Buffer* buffers[] = { m_sprite_batch_data.vertex_buffer, m_sprite_batch_data.instance_buffer };
     m_sprite_batch_data.buffer_array = context->CreateBufferArray(2, buffers);
 
@@ -361,6 +429,7 @@ void Renderer::InitSpriteBatchPipeline() {
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
     const ShaderPipeline& sprite_shader = Assets::GetShader(ShaderAsset::SpriteShader);
+    const ShaderPipeline& sprite_shader_ui = Assets::GetShader(ShaderAsset::UiSpriteShader);
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
     pipelineDesc.debugName = "SpriteBatch Pipeline";
@@ -387,13 +456,25 @@ void Renderer::InitSpriteBatchPipeline() {
 
     m_sprite_batch_data.pipeline = context->CreatePipelineState(pipelineDesc);
 
-    pipelineDesc.debugName = "SpriteBatch Pipeline Depth";
-    pipelineDesc.depth = LLGL::DepthDescriptor {
-        .testEnabled = true,
-        .writeEnabled = true,
-        .compareOp = LLGL::CompareOp::GreaterEqual,
-    };
-    m_sprite_batch_data.pipeline_depth = context->CreatePipelineState(pipelineDesc);
+    {
+        LLGL::GraphicsPipelineDescriptor depthPipelineDesc = pipelineDesc;
+        depthPipelineDesc.debugName = "SpriteBatch Pipeline Depth";
+        depthPipelineDesc.depth = LLGL::DepthDescriptor {
+            .testEnabled = true,
+            .writeEnabled = true,
+            .compareOp = LLGL::CompareOp::GreaterEqual,
+        };
+        m_sprite_batch_data.pipeline_depth = context->CreatePipelineState(depthPipelineDesc);
+    }
+
+    {
+        LLGL::GraphicsPipelineDescriptor uiPipelineDesc = pipelineDesc;
+        uiPipelineDesc.debugName = "SpriteBatch Pipeline UI";
+        uiPipelineDesc.vertexShader = sprite_shader_ui.vs;
+        uiPipelineDesc.fragmentShader = sprite_shader_ui.ps;
+        uiPipelineDesc.geometryShader = sprite_shader_ui.gs;
+        m_sprite_batch_data.pipeline_ui = context->CreatePipelineState(uiPipelineDesc);
+    }
 
     if (const LLGL::Report* report = m_sprite_batch_data.pipeline->GetReport()) {
         if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
@@ -413,8 +494,10 @@ void Renderer::InitNinepatchBatchPipeline() {
         Vertex(1.0f, 1.0f),
     };
 
+    m_ninepatch_batch_data.buffer = checked_alloc<NinePatchInstance>(MAX_NINEPATCHES);
+
     m_ninepatch_batch_data.vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::NinePatchVertex), "NinePatchBatch VertexBuffer");
-    m_ninepatch_batch_data.instance_buffer = CreateVertexBuffer(MAX_QUADS * sizeof(NinePatchInstance), Assets::GetVertexFormat(VertexFormatAsset::NinePatchInstance), "NinePatchBatch InstanceBuffer");
+    m_ninepatch_batch_data.instance_buffer = CreateVertexBuffer(MAX_NINEPATCHES * sizeof(NinePatchInstance), Assets::GetVertexFormat(VertexFormatAsset::NinePatchInstance), "NinePatchBatch InstanceBuffer");
 
     {
         LLGL::Buffer* buffers[] = { m_ninepatch_batch_data.vertex_buffer, m_ninepatch_batch_data.instance_buffer };
@@ -437,6 +520,7 @@ void Renderer::InitNinepatchBatchPipeline() {
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
     const ShaderPipeline& ninepatch_shader = Assets::GetShader(ShaderAsset::NinePatchShader);
+    const ShaderPipeline& ninepatch_shader_ui = Assets::GetShader(ShaderAsset::UiNinePatchShader);
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
     pipelineDesc.debugName = "NinePatchBatch Pipeline";
@@ -463,6 +547,12 @@ void Renderer::InitNinepatchBatchPipeline() {
 
     m_ninepatch_batch_data.pipeline = context->CreatePipelineState(pipelineDesc);
 
+    pipelineDesc.debugName = "NinePatchBatch Pipeline UI";
+    pipelineDesc.vertexShader = ninepatch_shader_ui.vs;
+    pipelineDesc.fragmentShader = ninepatch_shader_ui.ps;
+
+    m_ninepatch_batch_data.pipeline_ui = context->CreatePipelineState(pipelineDesc);
+
     if (const LLGL::Report* report = m_ninepatch_batch_data.pipeline->GetReport()) {
         if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
     }
@@ -480,6 +570,8 @@ void Renderer::InitGlyphBatchPipeline() {
         Vertex(1.0f, 0.0f),
         Vertex(1.0f, 1.0f),
     };
+
+    m_glyph_batch_data.buffer = checked_alloc<GlyphInstance>(MAX_GLYPHS);
 
     m_glyph_batch_data.vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::FontVertex), "GlyphBatch VertexBuffer");
     m_glyph_batch_data.instance_buffer = CreateVertexBuffer(MAX_GLYPHS * sizeof(GlyphInstance), Assets::GetVertexFormat(VertexFormatAsset::FontInstance), "GlyphBatch InstanceBuffer");
@@ -503,6 +595,7 @@ void Renderer::InitGlyphBatchPipeline() {
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
     const ShaderPipeline& font_shader = Assets::GetShader(ShaderAsset::FontShader);
+    const ShaderPipeline& font_shader_ui = Assets::GetShader(ShaderAsset::UiFontShader);
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
     pipelineDesc.debugName = "GlyphBatch Pipeline";
@@ -528,6 +621,13 @@ void Renderer::InitGlyphBatchPipeline() {
     };
 
     m_glyph_batch_data.pipeline = context->CreatePipelineState(pipelineDesc);
+
+    pipelineDesc.debugName = "GlyphBatch Pipeline UI";
+    pipelineDesc.vertexShader = font_shader_ui.vs;
+    pipelineDesc.fragmentShader = font_shader_ui.ps;
+    pipelineDesc.geometryShader = font_shader_ui.gs;
+
+    m_glyph_batch_data.pipeline_ui = context->CreatePipelineState(pipelineDesc);
 
     if (const LLGL::Report* report = m_glyph_batch_data.pipeline->GetReport()) {
         if (report->HasErrors()) LOG_ERROR("%s", report->GetText());

@@ -18,9 +18,6 @@
 
 namespace batch_internal {
 
-static constexpr size_t MAX_QUADS = 2500;
-static constexpr size_t MAX_GLYPHS = 2500;
-
 enum class FlushDataType : uint8_t {
     Sprite = 0,
     Glyph,
@@ -45,7 +42,6 @@ struct DrawCommandSprite {
     glm::vec2 offset;
     uint32_t order;
     float outline_thickness;
-    bool is_ui;
     bool ignore_camera_zoom;
     bool depth_enabled;
 };
@@ -62,7 +58,6 @@ struct DrawCommandNinePatch {
     glm::vec2 source_size;
     glm::vec2 output_size;
     uint32_t order;
-    bool is_ui;
 };
 
 struct DrawCommandGlyph {
@@ -73,7 +68,6 @@ struct DrawCommandGlyph {
     glm::vec2 tex_size;
     glm::vec2 tex_uv;
     uint32_t order;
-    bool is_ui;
 };
 
 class DrawCommand {
@@ -154,14 +148,15 @@ public:
     using FlushQueue = std::vector<batch_internal::FlushData>;
 
     Batch() {
-        m_draw_commands.reserve(100);
-        m_sprite_buffer = checked_alloc<SpriteInstance>(batch_internal::MAX_QUADS);
+        m_draw_commands.reserve(500);
+        m_flush_queue.reserve(100);
+        m_sprite_buffer = checked_alloc<SpriteInstance>(MAX_QUADS);
         m_sprite_buffer_ptr = m_sprite_buffer;
 
-        m_glyph_buffer = checked_alloc<GlyphInstance>(batch_internal::MAX_GLYPHS);
+        m_glyph_buffer = checked_alloc<GlyphInstance>(MAX_GLYPHS);
         m_glyph_buffer_ptr = m_glyph_buffer;
 
-        m_ninepatch_buffer = checked_alloc<NinePatchInstance>(batch_internal::MAX_QUADS);
+        m_ninepatch_buffer = checked_alloc<NinePatchInstance>(MAX_QUADS);
         m_ninepatch_buffer_ptr = m_ninepatch_buffer;
     };
 
@@ -169,6 +164,7 @@ public:
     Batch& operator=(const Batch&) = delete;
 
     inline void set_depth_enabled(bool depth_enabled) { m_depth_enabled = depth_enabled; }
+    inline void set_is_ui(bool is_ui) { m_is_ui = is_ui; }
 
     inline void BeginOrderMode(int order, bool advance) {
         m_order_mode = true;
@@ -190,35 +186,18 @@ public:
         m_global_order.advance = false;
     }
 
-    uint32_t DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, bool is_ui, Order order = -1);
+    uint32_t DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, Order order = -1);
 
-    uint32_t DrawAtlasSprite(const TextureAtlasSprite& sprite, bool is_ui, Order order = -1);
+    uint32_t DrawAtlasSprite(const TextureAtlasSprite& sprite, Order order = -1);
 
-    inline uint32_t DrawSprite(const Sprite& sprite, bool is_ui, Order custom_order = -1) {
+    inline uint32_t DrawSprite(const Sprite& sprite, Order custom_order = -1) {
         const glm::vec4 uv_offset_scale = batch_internal::get_uv_offset_scale(sprite.flip_x(), sprite.flip_y());
-        return AddSpriteDrawCommand(sprite, uv_offset_scale, sprite.texture(), custom_order, is_ui);
+        return AddSpriteDrawCommand(sprite, uv_offset_scale, sprite.texture(), custom_order);
     }
 
-    inline uint32_t DrawNinePatch(const NinePatch& ninepatch, bool is_ui, Order custom_order = -1) {
+    inline uint32_t DrawNinePatch(const NinePatch& ninepatch, Order custom_order = -1) {
         const glm::vec4 uv_offset_scale = batch_internal::get_uv_offset_scale(ninepatch.flip_x(), ninepatch.flip_y());
-        return AddNinePatchDrawCommand(ninepatch, uv_offset_scale, custom_order, is_ui);
-    }
-
-    inline uint32_t DrawSprite(const Sprite& sprite, Order order = -1) { return DrawSprite(sprite, false, order); }
-    inline uint32_t DrawSpriteUI(const Sprite& sprite, Order order = -1) { return DrawSprite(sprite, true, order); }
-
-    inline uint32_t DrawAtlasSprite(const TextureAtlasSprite& sprite, Order order = -1) { return DrawAtlasSprite(sprite, false, order); }
-    inline uint32_t DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, Order order = -1) { return DrawAtlasSprite(sprite, true, order); }
-
-    inline uint32_t DrawNinePatch(const NinePatch& ninepatch, Order order = -1) { return DrawNinePatch(ninepatch, false, order); }
-    inline uint32_t DrawNinePatchUI(const NinePatch& ninepatch, Order order = -1) { return DrawNinePatch(ninepatch, true, order); }
-
-    inline uint32_t DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, Order order = -1) {
-        return DrawText(sections, size, position, font, false, order);
-    }
-
-    inline uint32_t DrawTextUI(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, Order order = -1) {
-        return DrawText(sections, size, position, font, true, order);
+        return AddNinePatchDrawCommand(ninepatch, uv_offset_scale, custom_order);
     }
 
     inline void Reset() {
@@ -227,12 +206,15 @@ public:
         m_order = 0;
 
         m_sprite_buffer_ptr = m_sprite_buffer;
+        m_sprite_buffer_offset = 0;
         m_sprite_count = 0;
 
         m_glyph_buffer_ptr = m_glyph_buffer;
+        m_glyph_buffer_offset = 0;
         m_glyph_count = 0;
 
         m_ninepatch_buffer_ptr = m_ninepatch_buffer;
+        m_ninepatch_buffer_offset = 0;
         m_ninepatch_count = 0;
     }
 
@@ -243,12 +225,34 @@ public:
     inline bool depth_enabled() const { return m_depth_enabled; }
 
     [[nodiscard]]
+    inline bool is_ui() const { return m_is_ui; }
+
+    [[nodiscard]]
     inline uint32_t order() const { return m_order; }
+
+    [[nodiscard]]
+    inline size_t sprite_count() const { return m_sprite_count; }
+
+    [[nodiscard]]
+    inline size_t glyph_count() const { return m_glyph_count; }
+
+    [[nodiscard]]
+    inline size_t ninepatch_count() const { return m_ninepatch_count; }
+
+    ~Batch() {
+        free(m_sprite_buffer);
+        free(m_glyph_buffer);
+        free(m_ninepatch_buffer);
+
+        m_sprite_buffer = nullptr;
+        m_glyph_buffer = nullptr;
+        m_ninepatch_buffer = nullptr;
+    }
 
 private:
     void SortDrawCommands();
 
-    inline uint32_t AddSpriteDrawCommand(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const Texture& texture, Order custom_order, bool is_ui) {
+    inline uint32_t AddSpriteDrawCommand(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const Texture& texture, Order custom_order) {
         const uint32_t order = m_order_mode
             ? m_global_order.value + std::max(custom_order.value, 0)
             : (custom_order.value >= 0 ? custom_order.value : m_order);
@@ -270,7 +274,6 @@ private:
             .offset = sprite.anchor().to_vec2(),
             .order = order,
             .outline_thickness = sprite.outline_thickness(),
-            .is_ui = is_ui,
             .ignore_camera_zoom = sprite.ignore_camera_zoom(),
             .depth_enabled = false
         });
@@ -280,7 +283,7 @@ private:
         return order;
     }
 
-    inline uint32_t AddNinePatchDrawCommand(const NinePatch& ninepatch, const glm::vec4& uv_offset_scale, Order custom_order, bool is_ui) {
+    inline uint32_t AddNinePatchDrawCommand(const NinePatch& ninepatch, const glm::vec4& uv_offset_scale, Order custom_order) {
         const uint32_t order = m_order_mode
             ? m_global_order.value + std::max(custom_order.value, 0)
             : (custom_order.value >= 0 ? custom_order.value : m_order);
@@ -303,7 +306,6 @@ private:
             .source_size = ninepatch.texture().size(),
             .output_size = ninepatch.size(),
             .order = order,
-            .is_ui = is_ui,
         });
 
         ++m_ninepatch_count;
@@ -311,25 +313,37 @@ private:
         return order;
     }
 
+    inline void set_sprite_offset(size_t offset) { m_sprite_buffer_offset = offset; }
+    inline void set_glyph_offset(size_t offset) { m_glyph_buffer_offset = offset; }
+    inline void set_ninepatch_offset(size_t offset) { m_ninepatch_buffer_offset = offset; }
+
+    [[nodiscard]] inline size_t sprite_offset() const { return m_sprite_buffer_offset; }
+    [[nodiscard]] inline size_t glyph_offset() const { return m_glyph_buffer_offset; }
+    [[nodiscard]] inline size_t ninepatch_offset() const { return m_ninepatch_buffer_offset; }
+
+    [[nodiscard]] inline const FlushQueue& flush_queue() const { return m_flush_queue; }
     [[nodiscard]] inline FlushQueue& flush_queue() { return m_flush_queue; }
 
-    [[nodiscard]] inline SpriteInstance* sprite_buffer() { return m_sprite_buffer; }
-    [[nodiscard]] inline GlyphInstance* glyph_buffer() { return m_glyph_buffer; }
-    [[nodiscard]] inline NinePatchInstance* ninepatch_buffer() { return m_ninepatch_buffer; }
+    [[nodiscard]] inline const SpriteInstance* sprite_buffer() const { return m_sprite_buffer; }
+    [[nodiscard]] inline const GlyphInstance* glyph_buffer() const { return m_glyph_buffer; }
+    [[nodiscard]] inline const NinePatchInstance* ninepatch_buffer() const { return m_ninepatch_buffer; }
 
-    [[nodiscard]] inline size_t sprite_buffer_size() {
+    [[nodiscard]] inline size_t sprite_buffer_size() const {
         return (size_t) m_sprite_buffer_ptr - (size_t) m_sprite_buffer;
     }
 
-    [[nodiscard]] inline size_t glyph_buffer_size() {
+    [[nodiscard]] inline size_t glyph_buffer_size() const {
         return (size_t) m_glyph_buffer_ptr - (size_t) m_glyph_buffer;
     }
 
-    [[nodiscard]] inline size_t ninepatch_buffer_size() {
+    [[nodiscard]] inline size_t ninepatch_buffer_size() const {
         return (size_t) m_ninepatch_buffer_ptr - (size_t) m_ninepatch_buffer;
     }
 
 private:
+    static constexpr size_t MAX_QUADS = 2500;
+    static constexpr size_t MAX_GLYPHS = 2500;
+
     DrawCommands m_draw_commands;
     FlushQueue m_flush_queue;
 
@@ -342,6 +356,10 @@ private:
     NinePatchInstance* m_ninepatch_buffer = nullptr;
     NinePatchInstance* m_ninepatch_buffer_ptr = nullptr;
 
+    size_t m_sprite_buffer_offset = 0;
+    size_t m_glyph_buffer_offset = 0;
+    size_t m_ninepatch_buffer_offset = 0;
+
     uint32_t m_order = 0;
 
     uint32_t m_sprite_count = 0;
@@ -352,6 +370,7 @@ private:
 
     bool m_order_mode = false;
     bool m_depth_enabled = false;
+    bool m_is_ui = false;
 };
 
 #endif

@@ -29,6 +29,7 @@ static constexpr int NOZOOM_CAMERA_FRUSTUM = 1;
 static struct RendererState {
     Batch main_batch;
     Batch world_batch;
+    Batch ui_batch;
 
     math::Rect camera_frustums[2];
     math::Rect ui_frustum;
@@ -166,6 +167,7 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
     state.particle_renderer.init();
 
     state.world_batch.set_depth_enabled(true);
+    state.ui_batch.set_is_ui(true);
 
     return true;
 }
@@ -287,6 +289,7 @@ void GameRenderer::Begin(const Camera& camera, WorldData& world) {
 
     state.main_batch.Reset();
     state.world_batch.Reset();
+    state.ui_batch.Reset();
 }
 
 void GameRenderer::Render(const Camera& camera, const World& world) {
@@ -299,6 +302,12 @@ void GameRenderer::Render(const Camera& camera, const World& world) {
     state.particle_renderer.prepare();
 
     LLGL::ClearValue clear_value = LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+    state.renderer->PrepareBatch(state.main_batch);
+    state.renderer->PrepareBatch(state.world_batch);
+    state.renderer->PrepareBatch(state.ui_batch);
+
+    state.renderer->UploadBatchData();
 
     if (state.update_light) {
         commands->BeginRenderPass(*state.world_renderer.light_texture_target());
@@ -342,6 +351,7 @@ void GameRenderer::Render(const Camera& camera, const World& world) {
         state.particle_renderer.render();
 
         state.renderer->RenderBatch(state.main_batch);
+        state.renderer->RenderBatch(state.ui_batch);
     commands->EndRenderPass();
 
     state.renderer->End();
@@ -383,7 +393,7 @@ uint32_t GameRenderer::DrawSpriteUI(const Sprite& sprite, Order order) {
     const math::Rect aabb = sprite.calculate_aabb();
     if (!state.ui_frustum.intersects(aabb)) return 0;
 
-    return state.main_batch.DrawSpriteUI(sprite, order);
+    return state.ui_batch.DrawSprite(sprite, order);
 }
 
 uint32_t GameRenderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, Order order) {
@@ -410,7 +420,7 @@ uint32_t GameRenderer::DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, Order
     const math::Rect aabb = sprite.calculate_aabb();
     if (!state.ui_frustum.intersects(aabb)) return 0;
 
-    return state.main_batch.DrawAtlasSpriteUI(sprite, order);
+    return state.ui_batch.DrawAtlasSprite(sprite, order);
 }
 
 uint32_t GameRenderer::DrawNinePatchUI(const NinePatch& ninepatch, Order order) {
@@ -419,13 +429,19 @@ uint32_t GameRenderer::DrawNinePatchUI(const NinePatch& ninepatch, Order order) 
     const math::Rect aabb = ninepatch.calculate_aabb();
     if (!state.ui_frustum.intersects(aabb)) return 0;
 
-    return state.main_batch.DrawNinePatchUI(ninepatch, order);
+    return state.ui_batch.DrawNinePatch(ninepatch, order);
 }
 
-uint32_t GameRenderer::DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset key, bool is_ui, Order order) {
+uint32_t GameRenderer::DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset key, Order order) {
     ZoneScopedN("Renderer::DrawText");
 
-    return state.main_batch.DrawText(sections, size, position, key, is_ui, order);
+    return state.main_batch.DrawText(sections, size, position, key, order);
+}
+
+uint32_t GameRenderer::DrawTextUI(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset key, Order order) {
+    ZoneScopedN("Renderer::DrawTextUI");
+
+    return state.ui_batch.DrawText(sections, size, position, key, order);
 }
 
 void GameRenderer::DrawBackground(const BackgroundLayer& layer) {

@@ -34,8 +34,6 @@ struct VSOutput
     nointerpolation float outline_thickness : OutlineThickness;
 };
 
-static const int IGNORE_CAMERA_ZOOM_FLAG = 1 << 1;
-
 VSOutput VS(VSInput inp)
 {
     const float qxx = inp.i_rotation.x * inp.i_rotation.x;
@@ -83,10 +81,7 @@ VSOutput VS(VSInput inp)
     transform[2][1] = transform[2][1] * inp.i_size[1];
     transform[3][1] = transform[3][1] * inp.i_size[1];
 
-    const int flags = inp.i_flags;
-    const bool ignore_camera_zoom = (flags & IGNORE_CAMERA_ZOOM_FLAG) == IGNORE_CAMERA_ZOOM_FLAG;
-
-    const float4x4 mvp = mul(ignore_camera_zoom ? u_nozoom_view_projection : u_view_projection, transform);
+    const float4x4 mvp = mul(u_screen_projection, transform);
     const float4 uv_offset_scale = inp.i_uv_offset_scale;
 
     VSOutput outp;

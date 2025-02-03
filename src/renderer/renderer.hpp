@@ -43,27 +43,28 @@ namespace GameRenderer {
 
     uint32_t DrawNinePatchUI(const NinePatch& ninepatch, Order order = -1);
 
-    uint32_t DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, bool is_ui = false, Order order = -1);
+    uint32_t DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, Order order = -1);
+    uint32_t DrawTextUI(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset font, Order order = -1);
 
     template <size_t L>
     inline uint32_t DrawText(const RichText<L>& text, const glm::vec2& position, FontAsset font, Order order = -1) {
-        return DrawText(text.sections().data(), L, position, font, false, order);
+        return DrawText(text.sections().data(), L, position, font, order);
     }
 
     template <size_t L>
     inline uint32_t DrawTextUI(const RichText<L>& text, const glm::vec2& position, FontAsset font, Order order = -1) {
-        return DrawText(text.sections().data(), L, position, font, true, order);
+        return DrawTextUI(text.sections().data(), L, position, font, order);
     }
 
     inline uint32_t DrawChar(char ch, const glm::vec2& position, float size, const glm::vec3& color, FontAsset font, Order order = -1) {
         char text[] = {ch, '\0'};
         const RichTextSection section(text, size, color);
-        return DrawText(&section, 1, position, font, false, order);
+        return DrawText(&section, 1, position, font, order);
     }
     inline uint32_t DrawCharUI(char ch, const glm::vec2& position, float size, const glm::vec3& color, FontAsset font, Order order = -1) {
         char text[] = {ch, '\0'};
         const RichTextSection section(text, size, color);
-        return DrawText(&section, 1, position, font, true, order);
+        return DrawTextUI(&section, 1, position, font, order);
     }
 
     void DrawBackground(const BackgroundLayer& layer);

@@ -11,7 +11,7 @@ namespace SpriteFlags {
     };
 };
 
-uint32_t Batch::DrawAtlasSprite(const TextureAtlasSprite& sprite, bool is_ui, Order custom_order) {
+uint32_t Batch::DrawAtlasSprite(const TextureAtlasSprite& sprite, Order custom_order) {
     const math::Rect& rect = sprite.atlas().get_rect(sprite.index());
 
     glm::vec4 uv_offset_scale = glm::vec4(
@@ -31,10 +31,10 @@ uint32_t Batch::DrawAtlasSprite(const TextureAtlasSprite& sprite, bool is_ui, Or
         uv_offset_scale.w *= -1.0f;
     }
 
-    return AddSpriteDrawCommand(sprite, uv_offset_scale, sprite.atlas().texture(), custom_order, is_ui);
+    return AddSpriteDrawCommand(sprite, uv_offset_scale, sprite.atlas().texture(), custom_order);
 }
 
-uint32_t Batch::DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset key, bool is_ui, Order custom_order) {
+uint32_t Batch::DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset key, Order custom_order) {
     const Font& font = Assets::GetFont(key);
 
     float x = position.x;
@@ -83,7 +83,6 @@ uint32_t Batch::DrawText(const RichTextSection* sections, size_t size, const glm
                 .tex_size = ch.tex_size,
                 .tex_uv = ch.texture_coords,
                 .order = order,
-                .is_ui = is_ui
             });
 
             x += (ch.advance >> 6) * scale;
@@ -161,9 +160,7 @@ void Batch::SortDrawCommands() {
                 sprite_vertex_offset = sprite_total_count;
             }
 
-            int flags = 0;
-            flags |= sprite_data.ignore_camera_zoom << SpriteFlags::IgnoreCameraZoom;
-            flags |= sprite_data.is_ui << SpriteFlags::UI;
+            int flags = sprite_data.ignore_camera_zoom << SpriteFlags::IgnoreCameraZoom;
 
             m_sprite_buffer_ptr->position = sprite_data.position;
             m_sprite_buffer_ptr->rotation = sprite_data.rotation;
@@ -216,7 +213,6 @@ void Batch::SortDrawCommands() {
             m_glyph_buffer_ptr->size = glyph_data.size;
             m_glyph_buffer_ptr->tex_size = glyph_data.tex_size;
             m_glyph_buffer_ptr->uv = glyph_data.tex_uv;
-            m_glyph_buffer_ptr->is_ui = glyph_data.is_ui;
             m_glyph_buffer_ptr++;
 
             ++glyph_count;
@@ -257,8 +253,6 @@ void Batch::SortDrawCommands() {
                 ninepatch_vertex_offset = ninepatch_total_count;
             }
 
-            int flags = ninepatch_data.is_ui << SpriteFlags::UI;
-
             m_ninepatch_buffer_ptr->position = ninepatch_data.position;
             m_ninepatch_buffer_ptr->rotation = ninepatch_data.rotation;
             m_ninepatch_buffer_ptr->margin = ninepatch_data.margin;
@@ -268,7 +262,7 @@ void Batch::SortDrawCommands() {
             m_ninepatch_buffer_ptr->output_size = ninepatch_data.output_size;
             m_ninepatch_buffer_ptr->uv_offset_scale = ninepatch_data.uv_offset_scale;
             m_ninepatch_buffer_ptr->color = ninepatch_data.color;
-            m_ninepatch_buffer_ptr->flags = flags;
+            m_ninepatch_buffer_ptr->flags = 0;
             m_ninepatch_buffer_ptr++;
 
             ++ninepatch_count;

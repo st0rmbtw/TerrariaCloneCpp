@@ -42,7 +42,6 @@ struct GlyphInstance {
     glm::vec2 size;
     glm::vec2 tex_size;
     glm::vec2 uv;
-    int is_ui;
 };
 
 #endif

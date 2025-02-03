@@ -31,7 +31,7 @@ struct VSOutput
 
 VSOutput VS(VSInput inp)
 {
-    const float4x4 mvp = u_view_projection;
+    const float4x4 mvp = u_screen_projection;
 
     const float2 position = inp.i_position + inp.position * inp.i_size;
     const float2 uv = inp.i_uv + inp.position * inp.i_tex_size;

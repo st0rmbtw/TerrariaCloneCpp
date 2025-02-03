@@ -62,12 +62,15 @@ enum class BackgroundAsset : uint16_t {
 enum class ShaderAsset : uint8_t {
     TilemapShader = 0,
     SpriteShader,
+    UiSpriteShader,
     NinePatchShader,
+    UiNinePatchShader,
     PostProcessShader,
     FontShader,
+    UiFontShader,
     BackgroundShader,
     ParticleShader,
-    StaticLightMapShader
+    StaticLightMapShader,
 };
 
 enum class ComputeShaderAsset : uint8_t {

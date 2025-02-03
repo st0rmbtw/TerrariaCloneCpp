@@ -47,6 +47,8 @@ public:
     void Begin(const Camera& camera);
     void End();
 
+    void PrepareBatch(Batch& batch);
+    void UploadBatchData();
     void RenderBatch(Batch& batch);
 
     Texture CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, LLGL::DataType data_type, uint32_t width, uint32_t height, uint32_t layers, int sampler, const void* data, bool generate_mip_maps = false);
@@ -103,11 +105,11 @@ public:
         return m_context->CreateBuffer(bufferDesc);
     }
 
-    inline void UpdateBuffer(LLGL::Buffer* buffer, void* data, size_t length) {
+    inline void UpdateBuffer(LLGL::Buffer* buffer, void* data, size_t length, size_t offset = 0) {
         if (length < (1 << 16)) {
-            m_command_buffer->UpdateBuffer(*buffer, 0, data, length);
+            m_command_buffer->UpdateBuffer(*buffer, offset, data, length);
         } else {
-            m_context->WriteBuffer(*buffer, 0, data, length);
+            m_context->WriteBuffer(*buffer, offset, data, length);
         }
     }
 
@@ -128,12 +130,15 @@ private:
     void InitGlyphBatchPipeline();
     void InitNinepatchBatchPipeline();
 
-    void ApplyBatchDrawCommands(Batch& batch);
+    void ApplyBatchDrawCommands(const Batch& batch);
 
 private:
     struct {
         LLGL::PipelineState* pipeline = nullptr;
         LLGL::PipelineState* pipeline_depth = nullptr;
+        LLGL::PipelineState* pipeline_ui = nullptr;
+
+        SpriteInstance* buffer = nullptr;
 
         LLGL::Buffer* vertex_buffer = nullptr;
         LLGL::Buffer* instance_buffer = nullptr;
@@ -142,6 +147,9 @@ private:
 
     struct {
         LLGL::PipelineState* pipeline = nullptr;
+        LLGL::PipelineState* pipeline_ui = nullptr;
+
+        GlyphInstance* buffer = nullptr;
 
         LLGL::Buffer* vertex_buffer = nullptr;
         LLGL::Buffer* instance_buffer = nullptr;
@@ -150,6 +158,9 @@ private:
 
     struct NinePatchBatchData {
         LLGL::PipelineState* pipeline = nullptr;
+        LLGL::PipelineState* pipeline_ui = nullptr;
+
+        NinePatchInstance* buffer = nullptr;
 
         LLGL::Buffer* vertex_buffer = nullptr;
         LLGL::Buffer* instance_buffer = nullptr;
@@ -169,7 +180,15 @@ private:
     LLGL::RenderingDebugger* m_debugger = nullptr;
 #endif
 
-    uint32_t m_texture_index;
+    uint32_t m_texture_index = 0;
+
+    size_t m_sprite_instance_size = 0;
+    size_t m_glyph_instance_size = 0;
+    size_t m_ninepatch_instance_size = 0;
+
+    size_t m_sprite_instance_count = 0;
+    size_t m_glyph_instance_count = 0;
+    size_t m_ninepatch_instance_count = 0;
 
     RenderBackend m_backend;
 };
