@@ -17,6 +17,7 @@
 
 #include "../assets.hpp"
 #include "../engine/engine.hpp"
+#include "../engine/renderer/macros.hpp"
 #include "../utils.hpp"
 
 #include "world_renderer.hpp"
@@ -362,11 +363,13 @@ void GameRenderer::Render(const Camera& camera, const World& world) {
 void GameRenderer::BeginOrderMode(int order, bool advance) {
     state.main_batch.BeginOrderMode(order, advance);
     state.world_batch.BeginOrderMode(order, advance);
+    state.ui_batch.BeginOrderMode(order, advance);
 }
 
 void GameRenderer::EndOrderMode() {
     state.main_batch.EndOrderMode();
     state.world_batch.EndOrderMode();
+    state.ui_batch.EndOrderMode();
 }
 
 uint32_t GameRenderer::DrawSprite(const Sprite& sprite, Order order) {

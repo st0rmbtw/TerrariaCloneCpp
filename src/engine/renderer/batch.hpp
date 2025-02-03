@@ -11,8 +11,6 @@
 #include "../types/nine_patch.hpp"
 #include "../types/rich_text.hpp"
 #include "../types/order.hpp"
-#include "../renderer/types.hpp"
-#include "../utils.hpp"
 
 #include "../../assets.hpp"
 
@@ -78,19 +76,23 @@ public:
         DrawNinePatch
     };
 
-    DrawCommand(DrawCommandSprite sprite_data) :
+    DrawCommand(DrawCommandSprite sprite_data, uint32_t id) :
         m_sprite_data(sprite_data),
+        m_id(id),
         m_type(Type::DrawSprite) {}
 
-    DrawCommand(DrawCommandGlyph glyph_data) :
+    DrawCommand(DrawCommandGlyph glyph_data, uint32_t id) :
         m_glyph_data(glyph_data),
+        m_id(id),
         m_type(Type::DrawGlyph) {}
 
-    DrawCommand(DrawCommandNinePatch ninepatch_data) :
+    DrawCommand(DrawCommandNinePatch ninepatch_data, uint32_t id) :
         m_ninepatch_data(ninepatch_data),
+        m_id(id),
         m_type(Type::DrawNinePatch) {}
 
     [[nodiscard]] inline Type type() const { return m_type; }
+    [[nodiscard]] inline uint32_t id() const { return m_id; }
 
     [[nodiscard]] inline uint32_t order() const {
         switch (m_type) {
@@ -118,6 +120,8 @@ private:
         DrawCommandSprite m_sprite_data;
         DrawCommandGlyph m_glyph_data;
     };
+
+    uint32_t m_id;
 
     Type m_type;
 };
@@ -150,14 +154,6 @@ public:
     Batch() {
         m_draw_commands.reserve(500);
         m_flush_queue.reserve(100);
-        m_sprite_buffer = checked_alloc<SpriteInstance>(MAX_QUADS);
-        m_sprite_buffer_ptr = m_sprite_buffer;
-
-        m_glyph_buffer = checked_alloc<GlyphInstance>(MAX_GLYPHS);
-        m_glyph_buffer_ptr = m_glyph_buffer;
-
-        m_ninepatch_buffer = checked_alloc<NinePatchInstance>(MAX_QUADS);
-        m_ninepatch_buffer_ptr = m_ninepatch_buffer;
     };
 
     Batch(const Batch&) = delete;
@@ -205,16 +201,16 @@ public:
         m_flush_queue.clear();
         m_order = 0;
 
-        m_sprite_buffer_ptr = m_sprite_buffer;
         m_sprite_buffer_offset = 0;
+        m_sprite_rendered = 0;
         m_sprite_count = 0;
 
-        m_glyph_buffer_ptr = m_glyph_buffer;
         m_glyph_buffer_offset = 0;
+        m_glyph_rendered = 0;
         m_glyph_count = 0;
 
-        m_ninepatch_buffer_ptr = m_ninepatch_buffer;
         m_ninepatch_buffer_offset = 0;
+        m_ninepatch_rendered = 0;
         m_ninepatch_count = 0;
     }
 
@@ -239,106 +235,36 @@ public:
     [[nodiscard]]
     inline size_t ninepatch_count() const { return m_ninepatch_count; }
 
-    ~Batch() {
-        free(m_sprite_buffer);
-        free(m_glyph_buffer);
-        free(m_ninepatch_buffer);
-
-        m_sprite_buffer = nullptr;
-        m_glyph_buffer = nullptr;
-        m_ninepatch_buffer = nullptr;
-    }
-
 private:
-    void SortDrawCommands();
-
-    inline uint32_t AddSpriteDrawCommand(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const Texture& texture, Order custom_order) {
-        const uint32_t order = m_order_mode
-            ? m_global_order.value + std::max(custom_order.value, 0)
-            : (custom_order.value >= 0 ? custom_order.value : m_order);
-
-        custom_order.advance |= m_global_order.advance;
-        
-        if (custom_order.advance) {
-            m_order = std::max(m_order, order + 1);
-        }
-
-        m_draw_commands.emplace_back(batch_internal::DrawCommandSprite {
-            .texture = texture,
-            .rotation = sprite.rotation(),
-            .uv_offset_scale = uv_offset_scale,
-            .color = sprite.color(),
-            .outline_color = sprite.outline_color(),
-            .position = glm::vec3(sprite.position(), sprite.z()),
-            .size = sprite.size(),
-            .offset = sprite.anchor().to_vec2(),
-            .order = order,
-            .outline_thickness = sprite.outline_thickness(),
-            .ignore_camera_zoom = sprite.ignore_camera_zoom(),
-            .depth_enabled = false
-        });
-
-        ++m_sprite_count;
-
-        return order;
-    }
-
-    inline uint32_t AddNinePatchDrawCommand(const NinePatch& ninepatch, const glm::vec4& uv_offset_scale, Order custom_order) {
-        const uint32_t order = m_order_mode
-            ? m_global_order.value + std::max(custom_order.value, 0)
-            : (custom_order.value >= 0 ? custom_order.value : m_order);
-
-        custom_order.advance |= m_global_order.advance;
-        
-        if (custom_order.advance) {
-            m_order = std::max(m_order, order + 1);
-        }
-        
-        m_draw_commands.emplace_back(batch_internal::DrawCommandNinePatch {
-            .texture = ninepatch.texture(),
-            .rotation = ninepatch.rotation(),
-            .uv_offset_scale = uv_offset_scale,
-            .color = ninepatch.color(),
-            .margin = ninepatch.margin(),
-            .position = ninepatch.position(),
-            .size = ninepatch.size(),
-            .offset = ninepatch.anchor().to_vec2(),
-            .source_size = ninepatch.texture().size(),
-            .output_size = ninepatch.size(),
-            .order = order,
-        });
-
-        ++m_ninepatch_count;
-
-        return order;
-    }
+    uint32_t AddSpriteDrawCommand(const BaseSprite& sprite, const glm::vec4& uv_offset_scale, const Texture& texture, Order custom_order);
+    uint32_t AddNinePatchDrawCommand(const NinePatch& ninepatch, const glm::vec4& uv_offset_scale, Order custom_order);
+    void AddGlyphDrawCommand(const batch_internal::DrawCommandGlyph& command);
 
     inline void set_sprite_offset(size_t offset) { m_sprite_buffer_offset = offset; }
     inline void set_glyph_offset(size_t offset) { m_glyph_buffer_offset = offset; }
     inline void set_ninepatch_offset(size_t offset) { m_ninepatch_buffer_offset = offset; }
 
+    inline void set_sprite_count(size_t count) { m_sprite_count = count; }
+    inline void set_glyph_count(size_t count) { m_glyph_count = count; }
+    inline void set_ninepatch_count(size_t count) { m_ninepatch_count = count; }
+
+    inline void set_sprite_rendered(size_t count) { m_sprite_rendered = count; }
+    inline void set_glyph_rendered(size_t count) { m_glyph_rendered = count; }
+    inline void set_ninepatch_rendered(size_t count) { m_ninepatch_rendered = count; }
+
     [[nodiscard]] inline size_t sprite_offset() const { return m_sprite_buffer_offset; }
     [[nodiscard]] inline size_t glyph_offset() const { return m_glyph_buffer_offset; }
     [[nodiscard]] inline size_t ninepatch_offset() const { return m_ninepatch_buffer_offset; }
 
+    [[nodiscard]] inline size_t sprite_rendered() const { return m_sprite_rendered; }
+    [[nodiscard]] inline size_t glyph_rendered() const { return m_glyph_rendered; }
+    [[nodiscard]] inline size_t ninepatch_rendered() const { return m_ninepatch_rendered; }
+
     [[nodiscard]] inline const FlushQueue& flush_queue() const { return m_flush_queue; }
     [[nodiscard]] inline FlushQueue& flush_queue() { return m_flush_queue; }
 
-    [[nodiscard]] inline const SpriteInstance* sprite_buffer() const { return m_sprite_buffer; }
-    [[nodiscard]] inline const GlyphInstance* glyph_buffer() const { return m_glyph_buffer; }
-    [[nodiscard]] inline const NinePatchInstance* ninepatch_buffer() const { return m_ninepatch_buffer; }
-
-    [[nodiscard]] inline size_t sprite_buffer_size() const {
-        return (size_t) m_sprite_buffer_ptr - (size_t) m_sprite_buffer;
-    }
-
-    [[nodiscard]] inline size_t glyph_buffer_size() const {
-        return (size_t) m_glyph_buffer_ptr - (size_t) m_glyph_buffer;
-    }
-
-    [[nodiscard]] inline size_t ninepatch_buffer_size() const {
-        return (size_t) m_ninepatch_buffer_ptr - (size_t) m_ninepatch_buffer;
-    }
+    [[nodiscard]] inline const DrawCommands& draw_commands() const { return m_draw_commands; }
+    [[nodiscard]] inline DrawCommands& draw_commands() { return m_draw_commands; }
 
 private:
     static constexpr size_t MAX_QUADS = 2500;
@@ -346,15 +272,6 @@ private:
 
     DrawCommands m_draw_commands;
     FlushQueue m_flush_queue;
-
-    SpriteInstance* m_sprite_buffer = nullptr;
-    SpriteInstance* m_sprite_buffer_ptr = nullptr;
-
-    GlyphInstance* m_glyph_buffer = nullptr;
-    GlyphInstance* m_glyph_buffer_ptr = nullptr;
-
-    NinePatchInstance* m_ninepatch_buffer = nullptr;
-    NinePatchInstance* m_ninepatch_buffer_ptr = nullptr;
 
     size_t m_sprite_buffer_offset = 0;
     size_t m_glyph_buffer_offset = 0;
@@ -365,6 +282,10 @@ private:
     uint32_t m_sprite_count = 0;
     uint32_t m_glyph_count = 0;
     uint32_t m_ninepatch_count = 0;
+
+    uint32_t m_sprite_rendered = 0;
+    uint32_t m_glyph_rendered = 0;
+    uint32_t m_ninepatch_rendered = 0;
 
     Order m_global_order;
 

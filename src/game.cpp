@@ -172,6 +172,25 @@ void render() {
 
     GameRenderer::Begin(g.camera, g.world.data());
 
+    if (Input::Pressed(Key::Z)) {
+        const math::Rect area = g.camera.get_projection_area();
+
+        Sprite sprite;
+        sprite.set_texture(Assets::GetTexture(TextureAsset::UiInventoryHotbar));
+
+        GameRenderer::BeginOrderMode();
+
+        const glm::vec2 position = glm::linearRand(area.min, area.max);
+        const glm::vec2 ui_position = glm::linearRand(glm::vec2(0.0f), glm::vec2(g.camera.viewport()));
+        sprite.set_position(ui_position);
+        
+        for (int i = 0; i < 5000; ++i) {
+            GameRenderer::DrawSpriteUI(sprite);
+        }
+
+        GameRenderer::EndOrderMode();
+    }
+
     Background::Draw();
 
     g.world.draw();

@@ -10,6 +10,7 @@
 
 #include "../engine/engine.hpp"
 #include "../engine/log.hpp"
+#include "../engine/renderer/macros.hpp"
 
 #include "../assets.hpp"
 

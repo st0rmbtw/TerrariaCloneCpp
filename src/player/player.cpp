@@ -686,7 +686,7 @@ void Player::draw() const {
     GameRenderer::EndOrderMode();
 
     if (m_using_item_visible) {
-        GameRenderer::DrawSprite(m_using_item);
+        GameRenderer::DrawSpriteWorld(m_using_item);
     }
 
     GameRenderer::BeginOrderMode();

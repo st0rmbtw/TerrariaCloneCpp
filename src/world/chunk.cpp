@@ -6,6 +6,7 @@
 #include "../types/texture_atlas_pos.hpp"
 #include "../renderer/types.hpp"
 #include "../engine/engine.hpp"
+#include "../engine/renderer/macros.hpp"
 
 #include "../renderer/renderer.hpp"
 

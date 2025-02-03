@@ -13,8 +13,6 @@
 
 #define ARRAY_LEN(array) (sizeof(array)/sizeof(array[0]))
 
-bool FileExists(const char *path);
-
 static inline int rand_range(int from, int to) {
     return rand() % (to + 1 - from) + from;
 }

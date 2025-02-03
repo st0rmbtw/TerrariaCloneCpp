@@ -13,8 +13,8 @@
 
 #include "custom_surface.hpp"
 #include "batch.hpp"
-#include "macros.hpp"
 #include "camera.hpp"
+#include "types.hpp"
 
 struct ALIGN(16) ProjectionsUniform {
     glm::mat4 screen_projection_matrix;
@@ -130,7 +130,18 @@ private:
     void InitGlyphBatchPipeline();
     void InitNinepatchBatchPipeline();
 
+    void SortBatchDrawCommands(Batch& batch);
+    void UpdateBatchBuffers(
+        Batch& batch,
+        size_t command_start = 0,
+        size_t sprite_offset = 0,
+        size_t glyph_offset = 0,
+        size_t ninepatch_offset = 0
+    );
     void ApplyBatchDrawCommands(const Batch& batch);
+    void ApplyBatchSpriteDrawCommands(const Batch& batch);
+    void ApplyBatchGlyphDrawCommands(const Batch& batch);
+    void ApplyBatchNinePatchDrawCommands(const Batch& batch);
 
 private:
     struct {
@@ -139,6 +150,7 @@ private:
         LLGL::PipelineState* pipeline_ui = nullptr;
 
         SpriteInstance* buffer = nullptr;
+        SpriteInstance* buffer_ptr = nullptr;
 
         LLGL::Buffer* vertex_buffer = nullptr;
         LLGL::Buffer* instance_buffer = nullptr;
@@ -150,6 +162,7 @@ private:
         LLGL::PipelineState* pipeline_ui = nullptr;
 
         GlyphInstance* buffer = nullptr;
+        GlyphInstance* buffer_ptr = nullptr;
 
         LLGL::Buffer* vertex_buffer = nullptr;
         LLGL::Buffer* instance_buffer = nullptr;
@@ -161,11 +174,11 @@ private:
         LLGL::PipelineState* pipeline_ui = nullptr;
 
         NinePatchInstance* buffer = nullptr;
+        NinePatchInstance* buffer_ptr = nullptr;
 
         LLGL::Buffer* vertex_buffer = nullptr;
         LLGL::Buffer* instance_buffer = nullptr;
         LLGL::BufferArray* buffer_array = nullptr;
-
     } m_ninepatch_batch_data;
 
     LLGL::RenderSystemPtr m_context = nullptr;

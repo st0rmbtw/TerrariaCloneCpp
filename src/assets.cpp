@@ -17,6 +17,7 @@
 #include "engine/types/shader_pipeline.hpp"
 #include "engine/types/texture.hpp"
 #include "engine/log.hpp"
+#include "engine/utils.hpp"
 #include "renderer/types.hpp"
 #include "types/block.hpp"
 #include "types/wall.hpp"

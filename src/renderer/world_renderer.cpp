@@ -19,6 +19,7 @@
 #include "../utils.hpp"
 #include "../world/utils.hpp"
 #include "../engine/engine.hpp"
+#include "../engine/renderer/macros.hpp"
 
 #include "types.hpp"
 

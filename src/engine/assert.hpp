@@ -16,7 +16,7 @@
         
     #define UNREACHABLE() ASSERT(false, "Reached an unreachable point!")
 #else
-    #define ASSERT(expression, message, ...) ((void)0);
+    #define ASSERT(expression, message, ...) ((void)0)
 
     #if defined(__GNUC__) || defined(__clang__)
         #define UNREACHABLE() __builtin_unreachable()
