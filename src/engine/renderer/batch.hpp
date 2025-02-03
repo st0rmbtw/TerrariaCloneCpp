@@ -26,7 +26,9 @@ struct FlushData {
     Texture texture;
     uint32_t offset;
     uint32_t count;
+    uint32_t order;
     FlushDataType type;
+    bool rendered;
 };
 
 struct DrawCommandSprite {
@@ -148,11 +150,15 @@ class Batch {
     friend class Renderer;
 
 public:
-    using DrawCommands = std::vector<batch_internal::DrawCommand>;
+    using SpriteDrawCommands = std::vector<batch_internal::DrawCommandSprite>;
+    using GlyphDrawCommands = std::vector<batch_internal::DrawCommandGlyph>;
+    using NinePatchDrawCommands = std::vector<batch_internal::DrawCommandNinePatch>;
     using FlushQueue = std::vector<batch_internal::FlushData>;
 
     Batch() {
-        m_draw_commands.reserve(500);
+        m_sprite_draw_commands.reserve(500);
+        m_glyph_draw_commands.reserve(500);
+        m_ninepatch_draw_commands.reserve(500);
         m_flush_queue.reserve(100);
     };
 
@@ -197,7 +203,9 @@ public:
     }
 
     inline void Reset() {
-        m_draw_commands.clear();
+        m_sprite_draw_commands.clear();
+        m_glyph_draw_commands.clear();
+        m_ninepatch_draw_commands.clear();
         m_flush_queue.clear();
         m_order = 0;
 
@@ -213,9 +221,6 @@ public:
         m_ninepatch_rendered = 0;
         m_ninepatch_count = 0;
     }
-
-    [[nodiscard]]
-    inline bool is_empty() const { return m_draw_commands.empty(); }
 
     [[nodiscard]]
     inline bool depth_enabled() const { return m_depth_enabled; }
@@ -263,14 +268,22 @@ private:
     [[nodiscard]] inline const FlushQueue& flush_queue() const { return m_flush_queue; }
     [[nodiscard]] inline FlushQueue& flush_queue() { return m_flush_queue; }
 
-    [[nodiscard]] inline const DrawCommands& draw_commands() const { return m_draw_commands; }
-    [[nodiscard]] inline DrawCommands& draw_commands() { return m_draw_commands; }
+    [[nodiscard]] inline const SpriteDrawCommands& sprite_draw_commands() const { return m_sprite_draw_commands; }
+    [[nodiscard]] inline SpriteDrawCommands& sprite_draw_commands() { return m_sprite_draw_commands; }
+
+    [[nodiscard]] inline const GlyphDrawCommands& glyph_draw_commands() const { return m_glyph_draw_commands; }
+    [[nodiscard]] inline GlyphDrawCommands& glyph_draw_commands() { return m_glyph_draw_commands; }
+
+    [[nodiscard]] inline const NinePatchDrawCommands& ninepatch_draw_commands() const { return m_ninepatch_draw_commands; }
+    [[nodiscard]] inline NinePatchDrawCommands& ninepatch_draw_commands() { return m_ninepatch_draw_commands; }
 
 private:
     static constexpr size_t MAX_QUADS = 2500;
     static constexpr size_t MAX_GLYPHS = 2500;
 
-    DrawCommands m_draw_commands;
+    SpriteDrawCommands m_sprite_draw_commands;
+    GlyphDrawCommands m_glyph_draw_commands;
+    NinePatchDrawCommands m_ninepatch_draw_commands;
     FlushQueue m_flush_queue;
 
     size_t m_sprite_buffer_offset = 0;

@@ -12,6 +12,7 @@
 #include "batch.hpp"
 #include "macros.hpp"
 #include "types.hpp"
+#include "../../utils.hpp"
 
 using batch_internal::DrawCommand;
 using batch_internal::FlushData;
@@ -20,6 +21,12 @@ using batch_internal::FlushDataType;
 static constexpr size_t MAX_SPRITES = 5000;
 static constexpr size_t MAX_NINEPATCHES = 5000;
 static constexpr size_t MAX_GLYPHS = 5000;
+
+namespace ExcludeFlags {
+    static constexpr uint8_t Sprite = 1 << 0;
+    static constexpr uint8_t Glyph = 1 << 1;
+    static constexpr uint8_t Ninepatch = 1 << 2;
+};
 
 namespace SpriteFlags {
     enum : uint8_t {
@@ -148,7 +155,7 @@ void Renderer::End() {
     m_swap_chain->Present();
 }
 
-void Renderer::ApplyBatchDrawCommands(const Batch& batch) {
+void Renderer::ApplyBatchDrawCommands(Batch& batch, uint8_t exclude) {
     ZoneScopedN("Renderer::ApplyBatchDrawCommands");
 
     auto* const commands = m_command_buffer;
@@ -172,7 +179,13 @@ void Renderer::ApplyBatchDrawCommands(const Batch& batch) {
 
     size_t offset = 0;
 
-    for (const FlushData& flush_data : batch.flush_queue()) {
+    for (FlushData& flush_data : batch.flush_queue()) {
+        if (flush_data.rendered) continue;
+
+        if (flush_data.type == FlushDataType::Sprite && check_bitflag(exclude, ExcludeFlags::Sprite)) continue;
+        if (flush_data.type == FlushDataType::Glyph && check_bitflag(exclude, ExcludeFlags::Glyph)) continue;
+        if (flush_data.type == FlushDataType::NinePatch && check_bitflag(exclude, ExcludeFlags::Ninepatch)) continue;
+
         if (prev_flush_data_type != static_cast<int>(flush_data.type)) {
             switch (flush_data.type) {
             case FlushDataType::Sprite:
@@ -206,10 +219,11 @@ void Renderer::ApplyBatchDrawCommands(const Batch& batch) {
 
         prev_flush_data_type = static_cast<int>(flush_data.type);
         prev_texture_id = flush_data.texture.id();
+        flush_data.rendered = true;
     }
 }
 
-void Renderer::ApplyBatchSpriteDrawCommands(const Batch& batch) {
+void Renderer::ApplyBatchSpriteDrawCommands(Batch& batch) {
     ZoneScopedN("Renderer::ApplyBatchSpriteDrawCommands");
 
     auto* const commands = m_command_buffer;
@@ -228,7 +242,8 @@ void Renderer::ApplyBatchSpriteDrawCommands(const Batch& batch) {
     commands->SetPipelineState(sprite_pipeline);
     commands->SetResource(0, *m_constant_buffer);
 
-    for (const FlushData& flush_data : batch.flush_queue()) {
+    for (FlushData& flush_data : batch.flush_queue()) {
+        if (flush_data.rendered) continue;
         if (flush_data.type != FlushDataType::Sprite) continue;
 
         if (prev_texture_id != flush_data.texture.id()) {
@@ -239,10 +254,12 @@ void Renderer::ApplyBatchSpriteDrawCommands(const Batch& batch) {
         commands->DrawInstanced(4, 0, flush_data.count, offset + flush_data.offset);
 
         prev_texture_id = flush_data.texture.id();
+
+        flush_data.rendered = true;
     }
 }
 
-void Renderer::ApplyBatchGlyphDrawCommands(const Batch& batch) {
+void Renderer::ApplyBatchGlyphDrawCommands(Batch& batch) {
     ZoneScopedN("Renderer::ApplyBatchGlyphDrawCommands");
 
     auto* const commands = m_command_buffer;
@@ -258,8 +275,9 @@ void Renderer::ApplyBatchGlyphDrawCommands(const Batch& batch) {
     commands->SetResource(0, *m_constant_buffer);
     size_t offset = batch.glyph_offset();
 
-    for (const FlushData& flush_data : batch.flush_queue()) {
-        if (flush_data.type != FlushDataType::NinePatch) continue;
+    for (FlushData& flush_data : batch.flush_queue()) {
+        if (flush_data.rendered) continue;
+        if (flush_data.type != FlushDataType::Glyph) continue;
 
         if (prev_texture_id != flush_data.texture.id()) {
             commands->SetResource(1, flush_data.texture);
@@ -269,10 +287,12 @@ void Renderer::ApplyBatchGlyphDrawCommands(const Batch& batch) {
         commands->DrawInstanced(4, 0, flush_data.count, offset + flush_data.offset);
 
         prev_texture_id = flush_data.texture.id();
+
+        flush_data.rendered = true;
     }
 }
 
-void Renderer::ApplyBatchNinePatchDrawCommands(const Batch& batch) {
+void Renderer::ApplyBatchNinePatchDrawCommands(Batch& batch) {
     ZoneScopedN("Renderer::ApplyBatchNinePatchDrawCommands");
 
     auto* const commands = m_command_buffer;
@@ -289,7 +309,7 @@ void Renderer::ApplyBatchNinePatchDrawCommands(const Batch& batch) {
 
     size_t offset = batch.ninepatch_offset();
 
-    for (const FlushData& flush_data : batch.flush_queue()) {
+    for (FlushData& flush_data : batch.flush_queue()) {
         if (flush_data.type != FlushDataType::NinePatch) continue;
 
         if (prev_texture_id != flush_data.texture.id()) {
@@ -300,49 +320,79 @@ void Renderer::ApplyBatchNinePatchDrawCommands(const Batch& batch) {
         commands->DrawInstanced(4, 0, flush_data.count, offset + flush_data.offset);
 
         prev_texture_id = flush_data.texture.id();
+
+        flush_data.rendered = true;
     }
 }
 
 
 void Renderer::SortBatchDrawCommands(Batch& batch) {
+    using namespace batch_internal;
+
     ZoneScopedN("Renderer::SortBatchDrawCommands");
 
-    Batch::DrawCommands& draw_commands = batch.draw_commands();
+    Batch::SpriteDrawCommands& sprite_draw_commands = batch.sprite_draw_commands();
+    Batch::GlyphDrawCommands& glyph_draw_commands = batch.glyph_draw_commands();
+    Batch::NinePatchDrawCommands& ninepatch_draw_commands = batch.ninepatch_draw_commands();
 
     std::sort(
-        draw_commands.begin(),
-        draw_commands.end(),
-        [](const DrawCommand& a, const DrawCommand& b) {
-            const uint32_t a_order = a.order();
-            const uint32_t b_order = b.order();
+        sprite_draw_commands.begin(),
+        sprite_draw_commands.end(),
+        [](const DrawCommandSprite& a, const DrawCommandSprite& b) {
+            const uint32_t a_order = a.order;
+            const uint32_t b_order = b.order;
 
             if (a_order < b_order) return true;
             if (a_order > b_order) return false;
 
-            return a.texture().id() < b.texture().id();
+            return a.texture.id() < b.texture.id();
+        }
+    );
+
+    std::sort(
+        glyph_draw_commands.begin(),
+        glyph_draw_commands.end(),
+        [](const DrawCommandGlyph& a, const DrawCommandGlyph& b) {
+            const uint32_t a_order = a.order;
+            const uint32_t b_order = b.order;
+
+            if (a_order < b_order) return true;
+            if (a_order > b_order) return false;
+
+            return a.texture.id() < b.texture.id();
+        }
+    );
+
+    std::sort(
+        ninepatch_draw_commands.begin(),
+        ninepatch_draw_commands.end(),
+        [](const DrawCommandNinePatch& a, const DrawCommandNinePatch& b) {
+            const uint32_t a_order = a.order;
+            const uint32_t b_order = b.order;
+
+            if (a_order < b_order) return true;
+            if (a_order > b_order) return false;
+
+            return a.texture.id() < b.texture.id();
         }
     );
 }
 
-void Renderer::UpdateBatchBuffers(
+void Renderer::UpdateBatchBuffersSprite(
     Batch& batch,
-    size_t command_start,
-    size_t sprite_offset,
-    size_t glyph_offset,
-    size_t ninepatch_offset
+    size_t begin
 ) {
     using namespace batch_internal;
 
     ZoneScopedN("Renderer::UpdateBatchBuffers");
 
-    if (batch.is_empty()) return;
+    const Batch::SpriteDrawCommands& draw_commands = batch.sprite_draw_commands();
 
-    const Batch::DrawCommands& draw_commands = batch.draw_commands();
+    if (draw_commands.empty()) return;
+
     Batch::FlushQueue& flush_queue = batch.flush_queue();
 
-    ASSERT(sprite_offset < batch.sprite_count(), "Sprite offset must be less than the number of sprites.");
-    ASSERT(glyph_offset < batch.glyph_count(), "Glyph offset must be less than the number of glyphs.");
-    ASSERT(ninepatch_offset < batch.ninepatch_count(), "Ninepatch offset must be less than the number of ninepatches.");
+    ASSERT(begin < batch.sprite_count(), "Sprite offset must be less than the number of sprites.");
 
     Texture sprite_prev_texture;
     uint32_t sprite_count = 0;
@@ -350,179 +400,66 @@ void Renderer::UpdateBatchBuffers(
     uint32_t sprite_vertex_offset = 0;
     uint32_t sprite_remaining = batch.sprite_count();
 
-    Texture glyph_prev_texture;
-    uint32_t glyph_count = 0;
-    uint32_t glyph_total_count = 0;
-    uint32_t glyph_vertex_offset = 0;
-    uint32_t glyph_remaining = batch.glyph_count();
+    uint32_t prev_order = draw_commands[begin].order;
 
-    Texture ninepatch_prev_texture;
-    uint32_t ninepatch_count = 0;
-    uint32_t ninepatch_total_count = 0;
-    uint32_t ninepatch_vertex_offset = 0;
-    uint32_t ninepatch_remaining = batch.ninepatch_count();
-
-    uint32_t prev_order = draw_commands[command_start].order();
-
-    for (size_t i = command_start; i < draw_commands.size(); ++i) {
-        const DrawCommand& draw_command = draw_commands[i];
+    for (size_t i = begin; i < draw_commands.size(); ++i) {
+        const batch_internal::DrawCommandSprite& sprite_data = draw_commands[i];
 
         uint32_t new_order = prev_order;
 
-        switch (draw_command.type()) {
-        case DrawCommand::DrawSprite: {
-            if (draw_command.id() < sprite_offset) continue;
-            if (sprite_remaining == 0 || m_sprite_instance_count + sprite_total_count >= MAX_SPRITES) continue;
+        if (sprite_remaining == 0 || m_sprite_instance_count + sprite_total_count >= MAX_SPRITES) continue;
 
-            const DrawCommandSprite& sprite_data = draw_command.sprite_data();
-
-            if (sprite_total_count == 0) {
-                sprite_prev_texture = sprite_data.texture;
-            }
-
-            const uint32_t prev_texture_id = sprite_prev_texture.id();
-            const uint32_t curr_texture_id = sprite_data.texture.id();
-
-            if (sprite_count > 0 && prev_texture_id != curr_texture_id) {
-                flush_queue.push_back(FlushData {
-                    .texture = sprite_prev_texture,
-                    .offset = sprite_vertex_offset,
-                    .count = sprite_count,
-                    .type = FlushDataType::Sprite
-                });
-                sprite_count = 0;
-                sprite_vertex_offset = sprite_total_count;
-            }
-
-            int flags = sprite_data.ignore_camera_zoom << SpriteFlags::IgnoreCameraZoom;
-
-            m_sprite_batch_data.buffer_ptr->position = sprite_data.position;
-            m_sprite_batch_data.buffer_ptr->rotation = sprite_data.rotation;
-            m_sprite_batch_data.buffer_ptr->size = sprite_data.size;
-            m_sprite_batch_data.buffer_ptr->offset = sprite_data.offset;
-            m_sprite_batch_data.buffer_ptr->uv_offset_scale = sprite_data.uv_offset_scale;
-            m_sprite_batch_data.buffer_ptr->color = sprite_data.color;
-            m_sprite_batch_data.buffer_ptr->outline_color = sprite_data.outline_color;
-            m_sprite_batch_data.buffer_ptr->outline_thickness = sprite_data.outline_thickness;
-            m_sprite_batch_data.buffer_ptr->flags = flags;
-            m_sprite_batch_data.buffer_ptr++;
-
-            ++sprite_count;
-            ++sprite_total_count;
-            --sprite_remaining;
-
-            if (sprite_remaining == 0) {
-                flush_queue.push_back(FlushData {
-                    .texture = sprite_data.texture,
-                    .offset = sprite_vertex_offset,
-                    .count = sprite_count,
-                    .type = FlushDataType::Sprite
-                });
-                sprite_count = 0;
-            }
-
+        if (sprite_total_count == 0) {
             sprite_prev_texture = sprite_data.texture;
-            new_order = sprite_data.order;
-        } break;
-        case DrawCommand::DrawGlyph: {
-            if (draw_command.id() < glyph_offset) continue;
-            if (glyph_remaining == 0 || m_glyph_instance_count + glyph_total_count >= MAX_GLYPHS) continue;
-
-            const DrawCommandGlyph& glyph_data = draw_command.glyph_data();
-
-            if (glyph_total_count == 0) {
-                glyph_prev_texture = glyph_data.texture;
-            }
-
-            if (glyph_count > 0 && glyph_prev_texture.id() != glyph_data.texture.id()) {
-                flush_queue.push_back(FlushData {
-                    .texture = glyph_prev_texture,
-                    .offset = glyph_vertex_offset,
-                    .count = glyph_count,
-                    .type = FlushDataType::Glyph
-                });
-                glyph_count = 0;
-                glyph_vertex_offset = glyph_total_count;
-            }
-
-            m_glyph_batch_data.buffer_ptr->color = glyph_data.color;
-            m_glyph_batch_data.buffer_ptr->pos = glyph_data.pos;
-            m_glyph_batch_data.buffer_ptr->size = glyph_data.size;
-            m_glyph_batch_data.buffer_ptr->tex_size = glyph_data.tex_size;
-            m_glyph_batch_data.buffer_ptr->uv = glyph_data.tex_uv;
-            m_glyph_batch_data.buffer_ptr++;
-
-            ++glyph_count;
-            ++glyph_total_count;
-            --glyph_remaining;
-
-            if (glyph_remaining == 0) {
-                flush_queue.push_back(FlushData {
-                    .texture = glyph_data.texture,
-                    .offset = glyph_vertex_offset,
-                    .count = glyph_count,
-                    .type = FlushDataType::Glyph
-                });
-                glyph_count = 0;
-            }
-
-            glyph_prev_texture = glyph_data.texture;
-            new_order = glyph_data.order;
-        } break;
-        case DrawCommand::DrawNinePatch: {
-            if (draw_command.id() < ninepatch_offset) continue;
-            if (ninepatch_remaining == 0 || m_ninepatch_instance_count + ninepatch_total_count >= MAX_NINEPATCHES) continue;
-
-            const DrawCommandNinePatch& ninepatch_data = draw_command.ninepatch_data();
-
-            if (ninepatch_total_count == 0) {
-                ninepatch_prev_texture = ninepatch_data.texture;
-            }
-
-            const uint32_t prev_texture_id = ninepatch_prev_texture.id();
-            const uint32_t curr_texture_id = ninepatch_data.texture.id();
-
-            if (ninepatch_count > 0 && prev_texture_id != curr_texture_id) {
-                flush_queue.push_back(FlushData {
-                    .texture = ninepatch_prev_texture,
-                    .offset = ninepatch_vertex_offset,
-                    .count = ninepatch_count,
-                    .type = FlushDataType::NinePatch
-                });
-                ninepatch_count = 0;
-                ninepatch_vertex_offset = ninepatch_total_count;
-            }
-
-            m_ninepatch_batch_data.buffer_ptr->position = ninepatch_data.position;
-            m_ninepatch_batch_data.buffer_ptr->rotation = ninepatch_data.rotation;
-            m_ninepatch_batch_data.buffer_ptr->margin = ninepatch_data.margin;
-            m_ninepatch_batch_data.buffer_ptr->size = ninepatch_data.size;
-            m_ninepatch_batch_data.buffer_ptr->offset = ninepatch_data.offset;
-            m_ninepatch_batch_data.buffer_ptr->source_size = ninepatch_data.source_size;
-            m_ninepatch_batch_data.buffer_ptr->output_size = ninepatch_data.output_size;
-            m_ninepatch_batch_data.buffer_ptr->uv_offset_scale = ninepatch_data.uv_offset_scale;
-            m_ninepatch_batch_data.buffer_ptr->color = ninepatch_data.color;
-            m_ninepatch_batch_data.buffer_ptr->flags = 0;
-            m_ninepatch_batch_data.buffer_ptr++;
-
-            ++ninepatch_count;
-            ++ninepatch_total_count;
-            --ninepatch_remaining;
-
-            if (ninepatch_remaining == 0) {
-                flush_queue.push_back(FlushData {
-                    .texture = ninepatch_data.texture,
-                    .offset = ninepatch_vertex_offset,
-                    .count = ninepatch_count,
-                    .type = FlushDataType::NinePatch
-                });
-                ninepatch_count = 0;
-            }
-
-            ninepatch_prev_texture = ninepatch_data.texture;
-            new_order = ninepatch_data.order;
-        } break;
         }
+
+        const uint32_t prev_texture_id = sprite_prev_texture.id();
+        const uint32_t curr_texture_id = sprite_data.texture.id();
+
+        if (sprite_count > 0 && prev_texture_id != curr_texture_id) {
+            flush_queue.push_back(FlushData {
+                .texture = sprite_prev_texture,
+                .offset = sprite_vertex_offset,
+                .count = sprite_count,
+                .order = prev_order,
+                .type = FlushDataType::Sprite,
+                .rendered = false
+            });
+            sprite_count = 0;
+            sprite_vertex_offset = sprite_total_count;
+        }
+
+        int flags = sprite_data.ignore_camera_zoom << SpriteFlags::IgnoreCameraZoom;
+
+        m_sprite_batch_data.buffer_ptr->position = sprite_data.position;
+        m_sprite_batch_data.buffer_ptr->rotation = sprite_data.rotation;
+        m_sprite_batch_data.buffer_ptr->size = sprite_data.size;
+        m_sprite_batch_data.buffer_ptr->offset = sprite_data.offset;
+        m_sprite_batch_data.buffer_ptr->uv_offset_scale = sprite_data.uv_offset_scale;
+        m_sprite_batch_data.buffer_ptr->color = sprite_data.color;
+        m_sprite_batch_data.buffer_ptr->outline_color = sprite_data.outline_color;
+        m_sprite_batch_data.buffer_ptr->outline_thickness = sprite_data.outline_thickness;
+        m_sprite_batch_data.buffer_ptr->flags = flags;
+        m_sprite_batch_data.buffer_ptr++;
+
+        ++sprite_count;
+        ++sprite_total_count;
+        --sprite_remaining;
+
+        if (sprite_remaining == 0) {
+            flush_queue.push_back(FlushData {
+                .texture = sprite_data.texture,
+                .offset = sprite_vertex_offset,
+                .count = sprite_count,
+                .order = sprite_data.order,
+                .type = FlushDataType::Sprite,
+                .rendered = false
+            });
+            sprite_count = 0;
+        }
+
+        sprite_prev_texture = sprite_data.texture;
+        new_order = sprite_data.order;
 
         if (prev_order != new_order) {
             if (sprite_count > 1) {
@@ -530,32 +467,12 @@ void Renderer::UpdateBatchBuffers(
                     .texture = sprite_prev_texture,
                     .offset = sprite_vertex_offset,
                     .count = sprite_count,
-                    .type = FlushDataType::Sprite
+                    .order = prev_order,
+                    .type = FlushDataType::Sprite,
+                    .rendered = false
                 });
                 sprite_count = 0;
                 sprite_vertex_offset = sprite_total_count;
-            }
-
-            if (glyph_count > 1) {
-                flush_queue.push_back(FlushData {
-                    .texture = glyph_prev_texture,
-                    .offset = glyph_vertex_offset,
-                    .count = glyph_count,
-                    .type = FlushDataType::Glyph
-                });
-                glyph_count = 0;
-                glyph_vertex_offset = glyph_total_count;
-            }
-
-            if (ninepatch_count > 1) {
-                flush_queue.push_back(FlushData {
-                    .texture = ninepatch_prev_texture,
-                    .offset = ninepatch_vertex_offset,
-                    .count = ninepatch_count,
-                    .type = FlushDataType::NinePatch
-                });
-                ninepatch_count = 0;
-                ninepatch_vertex_offset = ninepatch_total_count;
             }
         }
 
@@ -566,22 +483,223 @@ void Renderer::UpdateBatchBuffers(
     m_sprite_instance_size += sprite_size;
     m_sprite_instance_count += sprite_total_count;
 
+    batch.set_sprite_count(sprite_remaining);
+    batch.set_sprite_rendered(batch.sprite_rendered() + sprite_total_count);
+}
+
+void Renderer::UpdateBatchBuffersGlyph(
+    Batch& batch,
+    size_t begin
+) {
+    using namespace batch_internal;
+
+    ZoneScopedN("Renderer::UpdateBatchBuffers");
+
+    const Batch::GlyphDrawCommands& draw_commands = batch.glyph_draw_commands();
+
+    if (draw_commands.empty()) return;
+
+    Batch::FlushQueue& flush_queue = batch.flush_queue();
+
+    ASSERT(begin < batch.glyph_count(), "Glyph offset must be less than the number of glyphs.");
+
+    Texture glyph_prev_texture;
+    uint32_t glyph_count = 0;
+    uint32_t glyph_total_count = 0;
+    uint32_t glyph_vertex_offset = 0;
+    uint32_t glyph_remaining = batch.glyph_count();
+
+    uint32_t prev_order = draw_commands[begin].order;
+
+    for (size_t i = begin; i < draw_commands.size(); ++i) {
+        const DrawCommandGlyph& glyph_data = draw_commands[i];
+
+        uint32_t new_order = prev_order;
+
+        // if (draw_command.id() < glyph_offset) continue;
+        if (glyph_remaining == 0 || m_glyph_instance_count + glyph_total_count >= MAX_GLYPHS) continue;
+
+
+        if (glyph_total_count == 0) {
+            glyph_prev_texture = glyph_data.texture;
+        }
+
+        if (glyph_count > 0 && glyph_prev_texture.id() != glyph_data.texture.id()) {
+            flush_queue.push_back(FlushData {
+                .texture = glyph_prev_texture,
+                .offset = glyph_vertex_offset,
+                .count = glyph_count,
+                .order = prev_order,
+                .type = FlushDataType::Glyph,
+                .rendered = false
+            });
+            glyph_count = 0;
+            glyph_vertex_offset = glyph_total_count;
+        }
+
+        m_glyph_batch_data.buffer_ptr->color = glyph_data.color;
+        m_glyph_batch_data.buffer_ptr->pos = glyph_data.pos;
+        m_glyph_batch_data.buffer_ptr->size = glyph_data.size;
+        m_glyph_batch_data.buffer_ptr->tex_size = glyph_data.tex_size;
+        m_glyph_batch_data.buffer_ptr->uv = glyph_data.tex_uv;
+        m_glyph_batch_data.buffer_ptr++;
+
+        ++glyph_count;
+        ++glyph_total_count;
+        --glyph_remaining;
+
+        if (glyph_remaining == 0) {
+            flush_queue.push_back(FlushData {
+                .texture = glyph_data.texture,
+                .offset = glyph_vertex_offset,
+                .count = glyph_count,
+                .order = glyph_data.order,
+                .type = FlushDataType::Glyph,
+                .rendered = false
+            });
+            glyph_count = 0;
+        }
+
+        glyph_prev_texture = glyph_data.texture;
+        new_order = glyph_data.order;
+    
+
+        if (prev_order != new_order) {
+            if (glyph_count > 1) {
+                flush_queue.push_back(FlushData {
+                    .texture = glyph_prev_texture,
+                    .offset = glyph_vertex_offset,
+                    .count = glyph_count,
+                    .order = prev_order,
+                    .type = FlushDataType::Glyph,
+                    .rendered = false
+                });
+                glyph_count = 0;
+                glyph_vertex_offset = glyph_total_count;
+            }
+        }
+
+        prev_order = new_order;
+    }
+
     const size_t glyph_size = glyph_total_count * sizeof(GlyphInstance);
     m_glyph_instance_size += glyph_size;
     m_glyph_instance_count += glyph_total_count;
+
+    batch.set_glyph_count(glyph_remaining);
+    batch.set_glyph_rendered(batch.glyph_rendered() + glyph_total_count);
+}
+
+
+void Renderer::UpdateBatchBuffersNinePatch(
+    Batch& batch,
+    size_t begin
+) {
+    using namespace batch_internal;
+
+    ZoneScopedN("Renderer::UpdateBatchBuffers");
+
+    const Batch::NinePatchDrawCommands& draw_commands = batch.ninepatch_draw_commands();
+
+    if (draw_commands.empty()) return;
+
+    Batch::FlushQueue& flush_queue = batch.flush_queue();
+
+    ASSERT(begin < batch.ninepatch_count(), "Ninepatch offset must be less than the number of ninepatches.");
+
+    Texture ninepatch_prev_texture;
+    uint32_t ninepatch_count = 0;
+    uint32_t ninepatch_total_count = 0;
+    uint32_t ninepatch_vertex_offset = 0;
+    uint32_t ninepatch_remaining = batch.ninepatch_count();
+
+    uint32_t prev_order = draw_commands[begin].order;
+
+    for (size_t i = begin; i < draw_commands.size(); ++i) {
+        const DrawCommandNinePatch& ninepatch_data = draw_commands[i];
+
+        uint32_t new_order = prev_order;
+
+        // if (draw_command.id < ninepatch_offset) continue;
+        if (ninepatch_remaining == 0 || m_ninepatch_instance_count + ninepatch_total_count >= MAX_NINEPATCHES) continue;
+
+        if (ninepatch_total_count == 0) {
+            ninepatch_prev_texture = ninepatch_data.texture;
+        }
+
+        const uint32_t prev_texture_id = ninepatch_prev_texture.id();
+        const uint32_t curr_texture_id = ninepatch_data.texture.id();
+
+        if (ninepatch_count > 0 && prev_texture_id != curr_texture_id) {
+            flush_queue.push_back(FlushData {
+                .texture = ninepatch_prev_texture,
+                .offset = ninepatch_vertex_offset,
+                .count = ninepatch_count,
+                .order = prev_order,
+                .type = FlushDataType::NinePatch,
+                .rendered = false
+            });
+            ninepatch_count = 0;
+            ninepatch_vertex_offset = ninepatch_total_count;
+        }
+
+        m_ninepatch_batch_data.buffer_ptr->position = ninepatch_data.position;
+        m_ninepatch_batch_data.buffer_ptr->rotation = ninepatch_data.rotation;
+        m_ninepatch_batch_data.buffer_ptr->margin = ninepatch_data.margin;
+        m_ninepatch_batch_data.buffer_ptr->size = ninepatch_data.size;
+        m_ninepatch_batch_data.buffer_ptr->offset = ninepatch_data.offset;
+        m_ninepatch_batch_data.buffer_ptr->source_size = ninepatch_data.source_size;
+        m_ninepatch_batch_data.buffer_ptr->output_size = ninepatch_data.output_size;
+        m_ninepatch_batch_data.buffer_ptr->uv_offset_scale = ninepatch_data.uv_offset_scale;
+        m_ninepatch_batch_data.buffer_ptr->color = ninepatch_data.color;
+        m_ninepatch_batch_data.buffer_ptr->flags = 0;
+        m_ninepatch_batch_data.buffer_ptr++;
+
+        ++ninepatch_count;
+        ++ninepatch_total_count;
+        --ninepatch_remaining;
+
+        if (ninepatch_remaining == 0) {
+            flush_queue.push_back(FlushData {
+                .texture = ninepatch_data.texture,
+                .offset = ninepatch_vertex_offset,
+                .count = ninepatch_count,
+                .order = ninepatch_data.order,
+                .type = FlushDataType::NinePatch,
+                .rendered = false
+            });
+            ninepatch_count = 0;
+        }
+
+        ninepatch_prev_texture = ninepatch_data.texture;
+        new_order = ninepatch_data.order;
+
+        if (prev_order != new_order) {
+            if (ninepatch_count > 1) {
+                flush_queue.push_back(FlushData {
+                    .texture = ninepatch_prev_texture,
+                    .offset = ninepatch_vertex_offset,
+                    .count = ninepatch_count,
+                    .order = prev_order,
+                    .type = FlushDataType::NinePatch,
+                    .rendered = false
+                });
+                ninepatch_count = 0;
+                ninepatch_vertex_offset = ninepatch_total_count;
+            }
+        }
+
+        prev_order = new_order;
+    }
 
     const size_t ninepatch_size = ninepatch_total_count * sizeof(NinePatchInstance);
     m_ninepatch_instance_size += ninepatch_size;
     m_ninepatch_instance_count += ninepatch_total_count;
 
-    batch.set_sprite_count(sprite_remaining);
-    batch.set_glyph_count(glyph_remaining);
     batch.set_ninepatch_count(ninepatch_remaining);
-
-    batch.set_sprite_rendered(batch.sprite_rendered() + sprite_total_count);
-    batch.set_glyph_rendered(batch.glyph_rendered() + glyph_total_count);
     batch.set_ninepatch_rendered(batch.ninepatch_rendered() + ninepatch_total_count);
 }
+
 
 void Renderer::PrepareBatch(Batch& batch) {
     batch.set_sprite_offset(m_sprite_instance_count);
@@ -589,7 +707,9 @@ void Renderer::PrepareBatch(Batch& batch) {
     batch.set_ninepatch_offset(m_ninepatch_instance_count);
 
     SortBatchDrawCommands(batch);
-    UpdateBatchBuffers(batch);
+    UpdateBatchBuffersSprite(batch);
+    UpdateBatchBuffersGlyph(batch);
+    UpdateBatchBuffersNinePatch(batch);
 }
 
 void Renderer::UploadBatchData() {
@@ -609,8 +729,9 @@ void Renderer::UploadBatchData() {
 void Renderer::RenderBatch(Batch& batch) {
     ZoneScopedN("Renderer::RenderBatch");
 
-    ApplyBatchDrawCommands(batch);
-    batch.flush_queue().clear();
+    if (batch.sprite_count() > 0) ApplyBatchSpriteDrawCommands(batch);
+    if (batch.glyph_count() > 0) ApplyBatchGlyphDrawCommands(batch);
+    if (batch.ninepatch_count() > 0) ApplyBatchNinePatchDrawCommands(batch);
 
     while (batch.sprite_count() > 0
         || batch.glyph_count() > 0
@@ -620,9 +741,7 @@ void Renderer::RenderBatch(Batch& batch) {
         const bool remaining_glyphs = batch.glyph_count() > 0;
         const bool remaining_ninepatches = batch.ninepatch_count() > 0;
 
-        size_t sprite_offset = SIZE_MAX;
-        size_t glyph_offset = SIZE_MAX;
-        size_t ninepatch_offset = SIZE_MAX;
+        bool do_render = false;
 
         if (remaining_sprites) {
             m_sprite_instance_count = 0;
@@ -630,65 +749,72 @@ void Renderer::RenderBatch(Batch& batch) {
             m_sprite_batch_data.buffer_ptr = m_sprite_batch_data.buffer;
             batch.set_sprite_offset(m_sprite_instance_count);
 
-            sprite_offset = batch.sprite_rendered();
+            UpdateBatchBuffersSprite(batch, batch.sprite_rendered());
+
+            UpdateBuffer(m_sprite_batch_data.instance_buffer, m_sprite_batch_data.buffer, m_sprite_instance_size);
+
+            m_sprite_instance_count = 0;
+            m_sprite_instance_size = 0;
+            batch.set_sprite_offset(m_sprite_instance_count);
+
+            do_render = true;
         }
+
         if (remaining_glyphs) {
             m_glyph_instance_count = 0;
             m_glyph_instance_size = 0;
             m_glyph_batch_data.buffer_ptr = m_glyph_batch_data.buffer;
             batch.set_glyph_offset(m_glyph_instance_count);
 
-            glyph_offset = batch.glyph_rendered();
+            UpdateBatchBuffersGlyph(batch, batch.glyph_rendered());
+
+            UpdateBuffer(m_glyph_batch_data.instance_buffer, m_glyph_batch_data.buffer, m_glyph_instance_size);
+
+            m_glyph_instance_count = 0;
+            m_glyph_instance_size = 0;
+            batch.set_glyph_offset(m_glyph_instance_count);
+
+            do_render = true;
         }
+
         if (remaining_ninepatches) {
             m_ninepatch_instance_count = 0;
             m_ninepatch_instance_size = 0;
             m_ninepatch_batch_data.buffer_ptr = m_ninepatch_batch_data.buffer;
             batch.set_ninepatch_offset(m_ninepatch_instance_count);
 
-            ninepatch_offset = batch.ninepatch_rendered();
-        }
-
-        const size_t start = std::min(sprite_offset, std::min(glyph_offset, ninepatch_offset));
-
-        UpdateBatchBuffers(
-            batch,
-            start,
-            batch.sprite_rendered(),
-            batch.glyph_rendered(),
-            batch.ninepatch_rendered()
-        );
-
-        if (remaining_sprites) {
-            UpdateBuffer(m_sprite_batch_data.instance_buffer, m_sprite_batch_data.buffer, m_sprite_instance_size);
-        }
-        if (remaining_glyphs) {
-            UpdateBuffer(m_glyph_batch_data.instance_buffer, m_glyph_batch_data.buffer, m_glyph_instance_size);
-        }
-        if (remaining_ninepatches) {
+            UpdateBatchBuffersNinePatch(batch, batch.ninepatch_rendered());
             UpdateBuffer(m_ninepatch_batch_data.instance_buffer, m_ninepatch_batch_data.buffer, m_ninepatch_instance_size);
-        }
-        
-        ApplyBatchDrawCommands(batch);
 
-        if (remaining_sprites) {
-            m_sprite_instance_count = 0;
-            m_sprite_instance_size = 0;
-            batch.set_sprite_offset(m_sprite_instance_count);
-        }
-        if (remaining_glyphs) {
-            m_glyph_instance_count = 0;
-            m_glyph_instance_size = 0;
-            batch.set_glyph_offset(m_glyph_instance_count);
-        }
-        if (remaining_ninepatches) {
             m_ninepatch_instance_count = 0;
             m_ninepatch_instance_size = 0;
             batch.set_ninepatch_offset(m_ninepatch_instance_count);
+
+            do_render = true;
         }
 
-        batch.flush_queue().clear();
+        if (do_render) {
+            std::sort(
+                batch.flush_queue().begin(),
+                batch.flush_queue().end(),
+                [](const FlushData& a, const FlushData& b) {
+                    return a.order < b.order;
+                }
+            );
+
+            ApplyBatchDrawCommands(batch);
+        }
     }
+
+    std::sort(
+        batch.flush_queue().begin(),
+        batch.flush_queue().end(),
+        [](const FlushData& a, const FlushData& b) {
+            return a.order < b.order;
+        }
+    );
+
+    ApplyBatchDrawCommands(batch);
 }
 
 Texture Renderer::CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_format, LLGL::DataType data_type, uint32_t width, uint32_t height, uint32_t layers, int sampler, const void* data, bool generate_mip_maps) {

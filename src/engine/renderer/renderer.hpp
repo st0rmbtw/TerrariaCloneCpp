@@ -131,17 +131,22 @@ private:
     void InitNinepatchBatchPipeline();
 
     void SortBatchDrawCommands(Batch& batch);
-    void UpdateBatchBuffers(
+    void UpdateBatchBuffersSprite(
         Batch& batch,
-        size_t command_start = 0,
-        size_t sprite_offset = 0,
-        size_t glyph_offset = 0,
-        size_t ninepatch_offset = 0
+        size_t begin = 0
     );
-    void ApplyBatchDrawCommands(const Batch& batch);
-    void ApplyBatchSpriteDrawCommands(const Batch& batch);
-    void ApplyBatchGlyphDrawCommands(const Batch& batch);
-    void ApplyBatchNinePatchDrawCommands(const Batch& batch);
+    void UpdateBatchBuffersGlyph(
+        Batch& batch,
+        size_t begin = 0
+    );
+    void UpdateBatchBuffersNinePatch(
+        Batch& batch,
+        size_t begin = 0
+    );
+    void ApplyBatchDrawCommands(Batch& batch, uint8_t exclude = 0);
+    void ApplyBatchSpriteDrawCommands(Batch& batch);
+    void ApplyBatchGlyphDrawCommands(Batch& batch);
+    void ApplyBatchNinePatchDrawCommands(Batch& batch);
 
 private:
     struct {

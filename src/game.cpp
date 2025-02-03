@@ -183,8 +183,8 @@ void render() {
         const glm::vec2 position = glm::linearRand(area.min, area.max);
         const glm::vec2 ui_position = glm::linearRand(glm::vec2(0.0f), glm::vec2(g.camera.viewport()));
         sprite.set_position(ui_position);
-        
-        for (int i = 0; i < 5000; ++i) {
+
+        for (int i = 0; i < 10000; ++i) {
             GameRenderer::DrawSpriteUI(sprite);
         }
 
