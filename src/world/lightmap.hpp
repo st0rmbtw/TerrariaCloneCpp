@@ -7,7 +7,6 @@
 
 #include "../types/tile_pos.hpp"
 #include "../constants.hpp"
-#include "../defines.hpp"
 
 struct Color {
     uint8_t r = 0;

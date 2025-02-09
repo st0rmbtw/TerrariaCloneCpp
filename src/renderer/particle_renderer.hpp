@@ -1,5 +1,5 @@
-#ifndef RENDERER_PARTICLE_RENDERER_HPP
-#define RENDERER_PARTICLE_RENDERER_HPP
+#ifndef _RENDERER_PARTICLE_RENDERER_HPP_
+#define _RENDERER_PARTICLE_RENDERER_HPP_
 
 #pragma once
 
@@ -7,11 +7,13 @@
 #include <LLGL/BufferArray.h>
 #include <LLGL/PipelineState.h>
 
-#include "types.hpp"
+#include "../engine/types/texture_atlas.hpp"
+#include "../engine/renderer/renderer.hpp"
+#include "../engine/types/order.hpp"
 
 #include "../particles.hpp"
-#include "../types/texture_atlas.hpp"
-#include "../types/depth.hpp"
+
+#include "types.hpp"
 
 class ParticleRenderer {
 public:
@@ -23,10 +25,12 @@ public:
     void prepare();
     void reset();
 
-    void draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth);
-    void draw_particle_world(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth);
+    void draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Order order);
+    void draw_particle_world(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Order order);
 
 private:
+    Renderer* m_renderer = nullptr;
+
     LLGL::PipelineState* m_pipeline = nullptr;
     LLGL::PipelineState* m_compute_pipeline = nullptr;
     LLGL::ResourceHeap* m_resource_heap = nullptr;

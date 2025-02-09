@@ -10,11 +10,8 @@
 #include <list>
 
 #include "types/tile_pos.hpp"
-#include "log.hpp"
 
 #define ARRAY_LEN(array) (sizeof(array)/sizeof(array[0]))
-
-bool FileExists(const char *path);
 
 static inline int rand_range(int from, int to) {
     return rand() % (to + 1 - from) + from;
@@ -46,16 +43,6 @@ static inline constexpr bool check_bitflag(T data, T flag) {
 template <typename T>
 static inline constexpr T remove_bitflag(T data, T flag) {
     return data & ~flag;
-}
-
-template <typename T> 
-T* checked_alloc(size_t count) {
-    T* _ptr = (T*) malloc(count * sizeof(T));
-    if (_ptr == nullptr && count > 0) {
-        LOG_ERROR("Out of memory");
-        abort();
-    }
-    return _ptr;
 }
 
 #endif

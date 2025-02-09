@@ -32,7 +32,7 @@ struct RenderChunk {
         const WorldData& world,
         ChunkInstance* block_data_arena,
         ChunkInstance* wall_data_arena
-    ) : world_pos(world_pos.x * Constants::RENDER_CHUNK_SIZE, world_pos.y * Constants::RENDER_CHUNK_SIZE),
+    ) : world_pos(world_pos * Constants::RENDER_CHUNK_SIZE),
         index(index)
     {
         build_mesh(world, block_data_arena, wall_data_arena);

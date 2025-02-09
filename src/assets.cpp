@@ -7,19 +7,22 @@
 #include <LLGL/Utils/VertexFormat.h>
 #include <LLGL/Shader.h>
 #include <LLGL/ShaderFlags.h>
+#include <LLGL/Format.h>
 #include <LLGL/VertexAttribute.h>
 #include <LLGL/TextureFlags.h>
 #include <STB/stb_image.h>
 #include <freetype/freetype.h>
 
-#include "LLGL/Format.h"
-#include "renderer/renderer.hpp"
+#include "engine/engine.hpp"
+#include "engine/types/shader_pipeline.hpp"
+#include "engine/types/texture.hpp"
+#include "engine/log.hpp"
+#include "engine/utils.hpp"
 #include "renderer/types.hpp"
-#include "log.hpp"
+#include "types/block.hpp"
+#include "types/wall.hpp"
+
 #include "utils.hpp"
-#include "types/shader_pipeline.hpp"
-#include "types/shader_type.hpp"
-#include "types/texture.hpp"
 
 namespace fs = std::filesystem;
 
@@ -173,14 +176,17 @@ static const std::array FONT_ASSETS = {
 };
 
 const std::pair<ShaderAsset, AssetShader> SHADER_ASSETS[] = {
-    { ShaderAsset::BackgroundShader,     AssetShader("background", ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::BackgroundVertex, VertexFormatAsset::BackgroundInstance }) },
-    { ShaderAsset::PostProcessShader,    AssetShader("postprocess",ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::PostProcessVertex) },
-    { ShaderAsset::TilemapShader,        AssetShader("tilemap",    ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::TilemapVertex,   VertexFormatAsset::TilemapInstance   }) },
-    { ShaderAsset::FontShader,           AssetShader("font",       ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::FontVertex,      VertexFormatAsset::FontInstance      }) },
-    { ShaderAsset::SpriteShader,         AssetShader("sprite",     ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::SpriteVertex,    VertexFormatAsset::SpriteInstance    }) },
-    { ShaderAsset::ParticleShader,       AssetShader("particle",   ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::ParticleVertex,  VertexFormatAsset::ParticleInstance  }) },
-    { ShaderAsset::NinePatchShader,      AssetShader("ninepatch",  ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::NinePatchVertex, VertexFormatAsset::NinePatchInstance }) },
-    { ShaderAsset::StaticLightMapShader, AssetShader("lightmap",   ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::StaticLightMapVertex ) },
+    { ShaderAsset::BackgroundShader,     AssetShader("background",   ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::BackgroundVertex, VertexFormatAsset::BackgroundInstance }) },
+    { ShaderAsset::PostProcessShader,    AssetShader("postprocess",  ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::PostProcessVertex) },
+    { ShaderAsset::TilemapShader,        AssetShader("tilemap",      ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::TilemapVertex,   VertexFormatAsset::TilemapInstance   }) },
+    { ShaderAsset::FontShader,           AssetShader("font",         ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::FontVertex,      VertexFormatAsset::FontInstance      }) },
+    { ShaderAsset::UiFontShader,         AssetShader("ui_font",      ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::FontVertex,      VertexFormatAsset::FontInstance      }) },
+    { ShaderAsset::SpriteShader,         AssetShader("sprite",       ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::SpriteVertex,    VertexFormatAsset::SpriteInstance    }) },
+    { ShaderAsset::UiSpriteShader,       AssetShader("ui_sprite",    ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::SpriteVertex,    VertexFormatAsset::SpriteInstance    }) },
+    { ShaderAsset::ParticleShader,       AssetShader("particle",     ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::ParticleVertex,  VertexFormatAsset::ParticleInstance  }) },
+    { ShaderAsset::NinePatchShader,      AssetShader("ninepatch",    ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::NinePatchVertex, VertexFormatAsset::NinePatchInstance }) },
+    { ShaderAsset::UiNinePatchShader,    AssetShader("ui_ninepatch", ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::NinePatchVertex, VertexFormatAsset::NinePatchInstance }) },
+    { ShaderAsset::StaticLightMapShader, AssetShader("lightmap",     ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::StaticLightMapVertex ) },
 };
 
 const std::pair<ComputeShaderAsset, AssetComputeShader> COMPUTE_SHADER_ASSETS[] = {
@@ -208,8 +214,10 @@ template <size_t T>
 static Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*>, T>& assets, int sampler, bool generate_mip_maps = false);
 
 bool Assets::Load() {
+    Renderer& renderer = Engine::Renderer();
+
     const uint8_t data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
-    state.textures[TextureAsset::Stub] = Renderer::CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, 1, 1, 1, TextureSampler::Nearest, data);
+    state.textures[TextureAsset::Stub] = renderer.CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, 1, 1, 1, TextureSampler::Nearest, data);
 
     for (const auto& [key, asset] : TEXTURE_ASSETS) {
         Texture texture;
@@ -252,7 +260,7 @@ bool Assets::Load() {
     }
 
     // There is some glitches in mipmaps on Metal
-    const bool mip_maps = !Renderer::Backend().IsMetal();
+    const bool mip_maps = !renderer.Backend().IsMetal();
 
     state.textures[TextureAsset::Tiles] = load_texture_array(BLOCK_ASSETS, mip_maps ? TextureSampler::NearestMips : TextureSampler::Nearest, mip_maps);
     state.textures[TextureAsset::Walls] = load_texture_array(WALL_ASSETS, TextureSampler::Nearest);
@@ -263,8 +271,10 @@ bool Assets::Load() {
 
 bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
     InitVertexFormats();
+    
+    Renderer& renderer = Engine::Renderer();
 
-    RenderBackend backend = Renderer::Backend();
+    RenderBackend backend = renderer.Backend();
 
     for (const auto& [key, asset] : SHADER_ASSETS) {
         ShaderPipeline shader_pipeline;
@@ -277,17 +287,17 @@ bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
         }
 
         if (check_bitflag(asset.stages, ShaderStages::Vertex)) {
-            if (!(shader_pipeline.vs = Renderer::LoadShader(ShaderPath(ShaderType::Vertex, asset.file_name), shader_defs, attributes)))
+            if (!(shader_pipeline.vs = renderer.LoadShader(ShaderPath(ShaderType::Vertex, asset.file_name), shader_defs, attributes)))
                 return false;
         }
         
         if (check_bitflag(asset.stages, ShaderStages::Fragment)) {
-            if (!(shader_pipeline.ps = Renderer::LoadShader(ShaderPath(ShaderType::Fragment, asset.file_name), shader_defs)))
+            if (!(shader_pipeline.ps = renderer.LoadShader(ShaderPath(ShaderType::Fragment, asset.file_name), shader_defs)))
                 return false;
         }
 
         if (check_bitflag(asset.stages, ShaderStages::Geometry)) {
-            if (!(shader_pipeline.gs = Renderer::LoadShader(ShaderPath(ShaderType::Geometry, asset.file_name), shader_defs)))
+            if (!(shader_pipeline.gs = renderer.LoadShader(ShaderPath(ShaderType::Geometry, asset.file_name), shader_defs)))
                 return false;
         }
 
@@ -297,7 +307,7 @@ bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
     for (const auto& [key, asset] : COMPUTE_SHADER_ASSETS) {
         const std::string& file_name = backend.IsGLSL() ? asset.glsl_file_name : asset.file_name;
 
-        if (!(state.compute_shaders[key] = Renderer::LoadShader(ShaderPath(ShaderType::Compute, file_name, asset.func_name), shader_defs)))
+        if (!(state.compute_shaders[key] = renderer.LoadShader(ShaderPath(ShaderType::Compute, file_name, asset.func_name), shader_defs)))
             return false;
     }
 
@@ -333,6 +343,9 @@ bool Assets::LoadFonts() {
 }
 
 bool Assets::InitSamplers() {
+    Renderer& renderer = Engine::Renderer();
+    const auto& context = renderer.Context();
+
     state.samplers.resize(4);
     {
         LLGL::SamplerDescriptor sampler_desc;
@@ -347,7 +360,7 @@ bool Assets::InitSamplers() {
         sampler_desc.mipMapEnabled = false;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[TextureSampler::Linear] = Sampler(Renderer::Context()->CreateSampler(sampler_desc), sampler_desc);
+        state.samplers[TextureSampler::Linear] = Sampler(context->CreateSampler(sampler_desc), sampler_desc);
     }
     {
         LLGL::SamplerDescriptor sampler_desc;
@@ -362,7 +375,7 @@ bool Assets::InitSamplers() {
         sampler_desc.mipMapEnabled = true;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[TextureSampler::LinearMips] = Sampler(Renderer::Context()->CreateSampler(sampler_desc), sampler_desc);
+        state.samplers[TextureSampler::LinearMips] = Sampler(context->CreateSampler(sampler_desc), sampler_desc);
     }
     {
         LLGL::SamplerDescriptor sampler_desc;
@@ -377,7 +390,7 @@ bool Assets::InitSamplers() {
         sampler_desc.mipMapEnabled = false;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[TextureSampler::Nearest] = Sampler(Renderer::Context()->CreateSampler(sampler_desc), sampler_desc);
+        state.samplers[TextureSampler::Nearest] = Sampler(context->CreateSampler(sampler_desc), sampler_desc);
     }
     {
         LLGL::SamplerDescriptor sampler_desc;
@@ -392,14 +405,16 @@ bool Assets::InitSamplers() {
         sampler_desc.mipMapEnabled = true;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[TextureSampler::NearestMips] = Sampler(Renderer::Context()->CreateSampler(sampler_desc), sampler_desc);
+        state.samplers[TextureSampler::NearestMips] = Sampler(context->CreateSampler(sampler_desc), sampler_desc);
     }
 
     return true;
 }
 
 void Assets::InitVertexFormats() {
-    const RenderBackend backend = Renderer::Backend();
+    Renderer& renderer = Engine::Renderer();
+
+    const RenderBackend backend = renderer.Backend();
 
     LLGL::VertexFormat sprite_vertex_format;
     LLGL::VertexFormat sprite_instance_format;
@@ -575,7 +590,6 @@ void Assets::InitVertexFormats() {
             {"i_size",      LLGL::Format::RG32Float,  3, offsetof(GlyphInstance,size),     sizeof(GlyphInstance), 1, 1},
             {"i_tex_size",  LLGL::Format::RG32Float,  4, offsetof(GlyphInstance,tex_size), sizeof(GlyphInstance), 1, 1},
             {"i_uv",        LLGL::Format::RG32Float,  5, offsetof(GlyphInstance,uv),       sizeof(GlyphInstance), 1, 1},
-            {"i_is_ui",     LLGL::Format::R32SInt,    6, offsetof(GlyphInstance,is_ui),    sizeof(GlyphInstance), 1, 1}
         };
     } else if (backend.IsHLSL()) {
         font_instance_format.attributes = {
@@ -584,7 +598,6 @@ void Assets::InitVertexFormats() {
             {"I_Size",     LLGL::Format::RG32Float,  3, offsetof(GlyphInstance,size),     sizeof(GlyphInstance), 1, 1},
             {"I_TexSize",  LLGL::Format::RG32Float,  4, offsetof(GlyphInstance,tex_size), sizeof(GlyphInstance), 1, 1},
             {"I_UV",       LLGL::Format::RG32Float,  5, offsetof(GlyphInstance,uv),       sizeof(GlyphInstance), 1, 1},
-            {"I_IsUI",     LLGL::Format::R32SInt,    6, offsetof(GlyphInstance,is_ui),    sizeof(GlyphInstance), 1, 1}
         };
     } else {
         font_instance_format.attributes = {
@@ -593,7 +606,6 @@ void Assets::InitVertexFormats() {
             {"i_size",      LLGL::Format::RG32Float,  3, offsetof(GlyphInstance,size),     sizeof(GlyphInstance), 1, 1},
             {"i_tex_size",  LLGL::Format::RG32Float,  4, offsetof(GlyphInstance,tex_size), sizeof(GlyphInstance), 1, 1},
             {"i_uv",        LLGL::Format::RG32Float,  5, offsetof(GlyphInstance,uv),       sizeof(GlyphInstance), 1, 1},
-            {"i_is_ui",     LLGL::Format::R32SInt,    6, offsetof(GlyphInstance,is_ui),    sizeof(GlyphInstance), 1, 1}
         };
     }
 
@@ -734,20 +746,26 @@ void Assets::InitVertexFormats() {
 }
 
 void Assets::DestroyTextures() {
+    const auto& context = Engine::Renderer().Context();
+
     for (auto& entry : state.textures) {
-        Renderer::Context()->Release(entry.second);
+        context->Release(entry.second);
     }
 }
 
 void Assets::DestroySamplers() {
+    const auto& context = Engine::Renderer().Context();
+
     for (auto& sampler : state.samplers) {
-        Renderer::Context()->Release(sampler);
+        context->Release(sampler);
     }
 }
 
 void Assets::DestroyShaders() {
+    const auto& context = Engine::Renderer().Context();
+
     for (auto& entry : state.shaders) {
-        entry.second.Unload(Renderer::Context());
+        entry.second.Unload(context);
     }
 }
 
@@ -807,7 +825,7 @@ static bool load_texture(const char* path, int sampler, Texture* texture) {
         return false;
     }
 
-    *texture = Renderer::CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, width, height, 1, sampler, data);
+    *texture = Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, width, height, 1, sampler, data);
 
     stbi_image_free(data);
 
@@ -861,7 +879,7 @@ Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, c
         stbi_image_free(layer_data.data);
     }
     
-    return Renderer::CreateTexture(LLGL::TextureType::Texture2DArray, LLGL::ImageFormat::RGBA, width, height, layers_count, sampler, image_data, generate_mip_maps);
+    return Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2DArray, LLGL::ImageFormat::RGBA, width, height, layers_count, sampler, image_data, generate_mip_maps);
 }
 
 template <typename T>
@@ -914,7 +932,7 @@ static bool load_font(Font& font, const char* meta_file_path, const char* atlas_
 
     int w, h;
     stbi_uc* data = stbi_load(atlas_file_path, &w, &h, nullptr, 1);
-    font.texture = Renderer::CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::R, texture_width, texture_height, 1, TextureSampler::Linear, data);
+    font.texture = Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::R, texture_width, texture_height, 1, TextureSampler::Linear, data);
     stbi_image_free(data);
 
     font.font_size = font_size;

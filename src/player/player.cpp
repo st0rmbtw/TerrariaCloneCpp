@@ -4,18 +4,18 @@
 
 #include <tracy/Tracy.hpp>
 
+#include "../engine/math/quat.hpp"
+#include "../engine/math/rect.hpp"
+#include "../engine/input.hpp"
+#include "../engine/time/time.hpp"
+#include "../engine/time/timer.hpp"
+
 #include "../assets.hpp"
 #include "../constants.hpp"
-#include "../input.hpp"
 #include "../types/item.hpp"
-#include "../types/anchor.hpp"
 #include "../types/block.hpp"
-#include "../math/quat.hpp"
 #include "../renderer/renderer.hpp"
 #include "../math/math.hpp"
-#include "../math/rect.hpp"
-#include "../time/time.hpp"
-#include "../time/timer.hpp"
 #include "../utils.hpp"
 #include "../particles.hpp"
 
@@ -672,27 +672,27 @@ void Player::update_sprites() {
 void Player::draw() const {
     ZoneScopedN("Player::draw");
 
-    Renderer::DrawAtlasSprite(m_head.sprite, RenderLayer::World);
+    GameRenderer::DrawAtlasSpriteWorld(m_head.sprite);
 
-    Renderer::DrawAtlasSprite(m_right_arm.sprite, RenderLayer::World);
+    GameRenderer::DrawAtlasSpriteWorld(m_right_arm.sprite);
 
-    Renderer::DrawAtlasSprite(m_hair.sprite, RenderLayer::World);
-    Renderer::DrawAtlasSprite(m_body.sprite, RenderLayer::World);
-    Renderer::DrawAtlasSprite(m_legs.sprite, RenderLayer::World);
+    GameRenderer::DrawAtlasSpriteWorld(m_hair.sprite);
+    GameRenderer::DrawAtlasSpriteWorld(m_body.sprite);
+    GameRenderer::DrawAtlasSpriteWorld(m_legs.sprite);
 
-    Renderer::BeginDepth(Renderer::GetWorldDepthIndex());
-        Renderer::DrawAtlasSprite(m_left_eye.sprite, RenderLayer::World);
-        Renderer::DrawAtlasSprite(m_right_eye.sprite, RenderLayer::World);
-    Renderer::EndDepth();
+    GameRenderer::BeginOrderMode();
+        GameRenderer::DrawAtlasSpriteWorld(m_left_eye.sprite);
+        GameRenderer::DrawAtlasSpriteWorld(m_right_eye.sprite);
+    GameRenderer::EndOrderMode();
 
     if (m_using_item_visible) {
-        Renderer::DrawSprite(m_using_item, RenderLayer::World);
+        GameRenderer::DrawSpriteWorld(m_using_item);
     }
 
-    Renderer::BeginDepth(Renderer::GetWorldDepthIndex());
-        Renderer::DrawAtlasSprite(m_left_hand.sprite, RenderLayer::World);
-        Renderer::DrawAtlasSprite(m_left_shoulder.sprite, RenderLayer::World);
-    Renderer::EndDepth();
+    GameRenderer::BeginOrderMode();
+        GameRenderer::DrawAtlasSpriteWorld(m_left_hand.sprite);
+        GameRenderer::DrawAtlasSpriteWorld(m_left_shoulder.sprite);
+    GameRenderer::EndOrderMode();
 }
 
 void Player::use_item(const Camera& camera, World& world) {

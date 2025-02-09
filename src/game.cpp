@@ -1,23 +1,24 @@
 #include "game.hpp"
 
 #include <GLFW/glfw3.h>
-
+#include <LLGL/Types.h>
 #include <glm/gtc/random.hpp>
 
-#include "constants.hpp"
-#include "engine.hpp"
-#include "renderer/camera.h"
+#include "engine/defines.hpp"
+#include "engine/engine.hpp"
+#include "engine/input.hpp"
+#include "engine/renderer/camera.hpp"
+#include "engine/types/window_settings.hpp"
+#include "engine/time/time.hpp"
 #include "renderer/renderer.hpp"
-#include "time/time.hpp"
-#include "assets.hpp"
-#include "input.hpp"
-#include "types/window_settings.hpp"
 #include "ui/ui.hpp"
 #include "world/autotile.hpp"
+
 #include "player/player.hpp"
 #include "particles.hpp"
 #include "background.hpp"
-#include "defines.hpp"
+#include "assets.hpp"
+#include "constants.hpp"
 
 #include <string>
 #include <tracy/Tracy.hpp>
@@ -78,6 +79,12 @@ static glm::vec2 camera_free() {
 void pre_update() {
     ZoneScopedN("Game::pre_update");
 
+#if DEBUG
+    if (Input::JustPressed(Key::B)) {
+        DEBUG_BREAK();
+    }
+#endif
+
     ParticleManager::DeleteExpired();
 
     UI::PreUpdate(g.player.inventory());
@@ -101,7 +108,7 @@ void fixed_update() {
 
     UI::FixedUpdate();
 
-    Renderer::UpdateLight();
+    GameRenderer::UpdateLight();
 }
 
 void update() {
@@ -113,11 +120,13 @@ void update() {
     if (Input::Pressed(Key::LeftAlt)) scale_speed /= 4.f;
 
     if (Input::Pressed(Key::Minus)) {
-        g.camera.set_zoom(g.camera.zoom() + scale_speed * Time::delta_seconds());
+        const float zoom = g.camera.zoom() + scale_speed * Time::delta_seconds();
+        g.camera.set_zoom(glm::clamp(zoom, Constants::CAMERA_MAX_ZOOM, Constants::CAMERA_MIN_ZOOM));
     }
 
     if (Input::Pressed(Key::Equals)) {
-        g.camera.set_zoom(g.camera.zoom() - scale_speed * Time::delta_seconds());
+        const float zoom = g.camera.zoom() - scale_speed * Time::delta_seconds();
+        g.camera.set_zoom(glm::clamp(zoom, Constants::CAMERA_MAX_ZOOM, Constants::CAMERA_MIN_ZOOM));
     }
 
 #if DEBUG
@@ -168,7 +177,7 @@ void post_update() {
 void render() {
     ZoneScopedN("Game::render");
 
-    Renderer::Begin(g.camera, g.world.data());
+    GameRenderer::Begin(g.camera, g.world.data());
 
     Background::Draw();
 
@@ -180,26 +189,26 @@ void render() {
 
     UI::Draw(g.camera, g.player);
 
-    Renderer::Render(g.camera, g.world);
+    GameRenderer::Render(g.camera, g.world);
 }
 
 void post_render() {
     ZoneScopedN("Game::post_render");
 
     if (g.world.chunk_manager().any_chunks_to_destroy()) {
-        Renderer::CommandQueue()->WaitIdle();
+        Engine::Renderer().CommandQueue()->WaitIdle();
         g.world.chunk_manager().destroy_hidden_chunks();
     }
 
 #if DEBUG
     if (Input::Pressed(Key::C)) {
-        Renderer::PrintDebugInfo();
+        Engine::Renderer().PrintDebugInfo();
     }
 #endif
 }
 
 void window_resized(uint32_t width, uint32_t height, uint32_t scaled_width, uint32_t scaled_height) {
-    Renderer::ResizeTextures(LLGL::Extent2D(scaled_width, scaled_height));
+    GameRenderer::ResizeTextures(LLGL::Extent2D(scaled_width, scaled_height));
 
     g.camera.set_viewport(glm::uvec2(width, height));
     g.camera.update();
@@ -255,8 +264,10 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     settings.fullscreen = config.fullscreen;
     settings.hidden = true;
 
-    glm::uvec2 resolution;
-    if (!Engine::Init(backend, config.vsync, settings, &resolution)) return false;
+    LLGL::Extent2D resolution;
+    if (!Engine::Init(backend, config.vsync, settings, resolution)) return false;
+
+    if (!GameRenderer::Init(resolution)) return false;
 
     Time::set_fixed_timestep_seconds(Constants::FIXED_UPDATE_INTERVAL);
 
@@ -266,10 +277,10 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
 
     g.world.generate(200, 500, 0);
 
-    g.camera.set_viewport(resolution);
+    g.camera.set_viewport(glm::uvec2(resolution.width, resolution.height));
     g.camera.set_zoom(1.0f);
 
-    Renderer::InitWorldRenderer(g.world.data());
+    GameRenderer::InitWorldRenderer(g.world.data());
 
     ParticleManager::Init();
     UI::Init();

@@ -7,11 +7,11 @@
 #include <LLGL/Utils/VertexFormat.h>
 #include <glm/glm.hpp>
 
-#include "types/texture_atlas.hpp"
-#include "types/texture.hpp"
-#include "types/shader_pipeline.hpp"
-#include "types/font.hpp"
-#include "types/sampler.hpp"
+#include "engine/types/texture_atlas.hpp"
+#include "engine/types/texture.hpp"
+#include "engine/types/shader_pipeline.hpp"
+#include "engine/types/font.hpp"
+#include "engine/types/sampler.hpp"
 
 enum class TextureAsset : uint8_t {
     Stub = 0,
@@ -62,12 +62,15 @@ enum class BackgroundAsset : uint16_t {
 enum class ShaderAsset : uint8_t {
     TilemapShader = 0,
     SpriteShader,
+    UiSpriteShader,
     NinePatchShader,
+    UiNinePatchShader,
     PostProcessShader,
     FontShader,
+    UiFontShader,
     BackgroundShader,
     ParticleShader,
-    StaticLightMapShader
+    StaticLightMapShader,
 };
 
 enum class ComputeShaderAsset : uint8_t {

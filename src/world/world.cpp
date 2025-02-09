@@ -6,10 +6,11 @@
 
 #include <tracy/Tracy.hpp>
 
+#include "../engine/time/time.hpp"
+
 #include "../types/block.hpp"
 #include "../world/world_gen.h"
 #include "../world/autotile.hpp"
-#include "../time/time.hpp"
 #include "../renderer/renderer.hpp"
 
 using Constants::LIGHT_DECAY_STEPS;
@@ -200,16 +201,18 @@ void World::draw() const {
         TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));
         sprite.set_position(pos.to_world_pos_center());
         sprite.set_index(cracks.cracks_index);
+        sprite.set_z(0.4f);
 
-        Renderer::DrawAtlasSprite(sprite, RenderLayer::World, Depth(4, false, true));
+        GameRenderer::DrawAtlasSpriteWorld(sprite);
     }
 
     for (const auto& [pos, cracks] : m_wall_cracks) {
         TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));
         sprite.set_position(pos.to_world_pos_center());
         sprite.set_index(cracks.cracks_index);
+        sprite.set_z(0.2f);
 
-        Renderer::DrawAtlasSprite(sprite, RenderLayer::World, Depth(2, false, true));
+        GameRenderer::DrawAtlasSpriteWorld(sprite);
     }
 
     for (const BlockDigAnimation& anim : m_block_dig_animations) {
@@ -219,14 +222,14 @@ void World::draw() const {
         TextureAtlasSprite sprite(Assets::GetTextureAtlas(block_texture_asset(anim.block_type)), position, scale);
         sprite.set_index(anim.atlas_pos.x, anim.atlas_pos.y);
 
-        Renderer::DrawAtlasSprite(sprite, RenderLayer::World);
+        GameRenderer::DrawAtlasSpriteWorld(sprite);
 
         const auto cracks = m_block_cracks.find(anim.tile_pos);
         if (cracks != m_block_cracks.end()) {
             TextureAtlasSprite cracks_sprites(Assets::GetTextureAtlas(TextureAsset::TileCracks), position, scale);
             cracks_sprites.set_index(cracks->second.cracks_index);
 
-            Renderer::DrawAtlasSprite(cracks_sprites, RenderLayer::World);
+            GameRenderer::DrawAtlasSpriteWorld(cracks_sprites);
         }
     }
 }

@@ -3,9 +3,10 @@
 
 #include <glm/glm.hpp>
 
-#include "../renderer/camera.h"
+#include "../engine/renderer/camera.hpp"
+#include "../engine/math/rect.hpp"
+
 #include "../types/tile_pos.hpp"
-#include "../math/rect.hpp"
 #include "../constants.hpp"
 
 namespace utils {

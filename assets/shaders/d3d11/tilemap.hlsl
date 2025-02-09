@@ -8,8 +8,6 @@ cbuffer GlobalUniformBuffer : register( b2 )
     float4x4 u_inv_view_proj;
     float2 u_camera_position;
     float2 u_window_size;
-    float u_max_depth;
-    float u_max_world_depth;
 };
 
 cbuffer DepthBuffer : register( b3 ) {
@@ -49,7 +47,7 @@ VSOutput VS(VSInput inp)
     // Extract other 10 bits
     const uint tile_id = (tile_data >> 6) & 0x3ff;
 
-    float order = u_tile_depth;
+    float depth = u_tile_depth;
     float2 size = float2(TILE_SIZE, TILE_SIZE);
     float2 tex_size = size / inp.tile_tex_size;
     float2 start_uv = inp.i_atlas_pos * (tex_size + inp.tile_padding);
@@ -57,15 +55,13 @@ VSOutput VS(VSInput inp)
     float2 offset = float2(0.0, 0.0);
 
     if (tile_type == TILE_TYPE_WALL) {
-        order = u_wall_depth;
+        depth = u_wall_depth;
         size = float2(WALL_SIZE, WALL_SIZE);
         tex_size = size / inp.wall_tex_size;
         start_uv = inp.i_atlas_pos * (tex_size + inp.wall_padding);
         tex_dims = inp.wall_tex_size;
         offset = float2(-TILE_SIZE * 0.5, -TILE_SIZE * 0.5);
     }
-
-    order /= u_max_world_depth;
 
     const float4x4 transform = float4x4(
         float4(1.0, 0.0, 0.0, world_pos.x),
@@ -84,7 +80,7 @@ VSOutput VS(VSInput inp)
     output.uv = uv + pixel_offset * (float2(1.0, 1.0) - inp.position * 2.0);
     output.tile_id = tile_id;
     output.position = mul(mvp, float4(position, 0.0, 1.0));
-    output.position.z = order;
+    output.position.z = depth;
 
 	return output;
 }

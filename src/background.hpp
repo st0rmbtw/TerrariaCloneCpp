@@ -3,7 +3,7 @@
 #ifndef BACKGROUND_HPP
 #define BACKGROUND_HPP
 
-#include "renderer/camera.h"
+#include "engine/renderer/camera.hpp"
 #include "world/world.hpp"
 
 namespace Background {

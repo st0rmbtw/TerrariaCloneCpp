@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include "types/backend.hpp"
-#include "types/config.hpp"
+#include "engine/types/backend.hpp"
+#include "engine/types/config.hpp"
 
 namespace Game {
     bool Init(RenderBackend backend, GameConfig config);

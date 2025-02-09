@@ -5,7 +5,7 @@
 
 #include <glm/glm.hpp>
 
-#include "../types/anchor.hpp"
+#include "../engine/types/anchor.hpp"
 #include "../assets.hpp"
 
 class BackgroundLayer {

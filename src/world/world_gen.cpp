@@ -5,8 +5,8 @@
 #include <FastNoiseLite.hpp>
 #include <time.h>
 
+#include "../engine/log.hpp"
 #include "../types/wall.hpp"
-#include "../log.hpp"
 #include "../math/math.hpp"
 
 #include "autotile.hpp"

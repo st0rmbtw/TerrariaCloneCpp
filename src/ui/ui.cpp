@@ -4,13 +4,15 @@
 
 #include <tracy/Tracy.hpp>
 
+#include "../engine/time/time.hpp"
+#include "../engine/time/timer.hpp"
+#include "../engine/types/anchor.hpp"
+#include "../engine/types/rich_text.hpp"
+#include "../engine/input.hpp"
+
 #include "../renderer/renderer.hpp"
-#include "../input.hpp"
 #include "../assets.hpp"
-#include "../time/time.hpp"
-#include "../time/timer.hpp"
-#include "../types/anchor.hpp"
-#include "../types/rich_text.hpp"
+
 #include "utils.hpp"
 
 static constexpr float INVENTORY_TITLE_SIZE = 22.0f;
@@ -221,24 +223,24 @@ void UI::PostUpdate() {
     state.elements.clear();
 }
 
-static inline void draw_item(Sprite& item_sprite, const glm::vec2& item_size, const glm::vec2& position, const Item& item, Depth item_depth) {
+static inline void draw_item(Sprite& item_sprite, const glm::vec2& item_size, const glm::vec2& position, const Item& item, Order item_order = {}) {
     item_sprite.set_position(position);
     item_sprite.set_anchor(Anchor::Center);
     item_sprite.set_custom_size(item_size);
     item_sprite.set_texture(Assets::GetItemTexture(item.id));
     item_sprite.set_color(glm::vec3(1.0f));
-    Renderer::DrawSpriteUI(item_sprite, item_depth);
+    GameRenderer::DrawSpriteUI(item_sprite, item_order);
 }
 
-static inline void draw_item_with_stack(Sprite& item_sprite, const glm::vec2& item_size, float stack_size, const glm::vec2& position, const Item& item, Depth item_depth, Depth stack_depth) {
-    draw_item(item_sprite, item_size, position, item, item_depth);
+static inline void draw_item_with_stack(Sprite& item_sprite, const glm::vec2& item_size, float stack_size, const glm::vec2& position, const Item& item, Order item_order = {}, Order stack_order = {}) {
+    draw_item(item_sprite, item_size, position, item, item_order);
 
     if (item.stack > 1) {
         const std::string stack_string = std::to_string(item.stack);
         const RichText text = rich_text(stack_string, stack_size, glm::vec3(0.9f));
         const float a = stack_size / 14.0f;
         const glm::vec2 stack_position = glm::vec2(position.x - 15.0f * a, position.y + 2.5f * a);
-        Renderer::DrawTextUI(text, stack_position, FontAsset::AndyBold, stack_depth);
+        GameRenderer::DrawTextUI(text, stack_position, FontAsset::AndyBold, stack_order);
     }
 }
 
@@ -252,13 +254,11 @@ void UI::Draw(const Camera& camera, const Player& player) {
 
     if (state.show_fps) {
         const RichText text = rich_text(state.fps_text, 22.0f, glm::vec3(0.8f));
-        Renderer::DrawTextUI(text, glm::vec2(10.0f, window_size.y - 10.0f - 22.0f), FontAsset::AndyBold, Depth(0, false));
+        GameRenderer::DrawTextUI(text, glm::vec2(10.0f, window_size.y - 10.0f - 22.0f), FontAsset::AndyBold, Order(0, false));
     }
-
-    uint32_t depth = Renderer::GetMainDepthIndex();
     
-    Renderer::DrawSpriteUI(state.cursor_background, ++depth);
-    Renderer::DrawSpriteUI(state.cursor_foreground, ++depth);
+    GameRenderer::DrawSpriteUI(state.cursor_background);
+    GameRenderer::DrawSpriteUI(state.cursor_foreground);
 
     const ItemSlot& taken_item = inventory.taken_item();
     const ItemSlot& selected_item = inventory.get_selected_item();
@@ -267,18 +267,15 @@ void UI::Draw(const Camera& camera, const Player& player) {
     if (state.show_extra_ui && taken_item.has_item()) {
         const Texture& texture = Assets::GetItemTexture(taken_item.item->id);
         const glm::vec2 size = glm::vec2(texture.size()) * state.cursor_scale;
-        const uint32_t item_depth = ++depth;
-        const uint32_t stack_depth = ++depth;
 
         Sprite item_sprite;
-        draw_item_with_stack(item_sprite, size, 16.0f * state.cursor_scale, position, taken_item.item.value(), item_depth, stack_depth);
+        draw_item_with_stack(item_sprite, size, 16.0f * state.cursor_scale, position, taken_item.item.value());
     } else if (player.can_use_item() && selected_item.has_item() && !Input::IsMouseOverUi()) {
         const Texture& texture = Assets::GetItemTexture(selected_item.item->id);
         const glm::vec2 size = glm::vec2(texture.size()) * state.cursor_scale;
-        const uint32_t item_depth = ++depth;
 
         Sprite item_sprite;
-        draw_item(item_sprite, size, position, *selected_item.item, item_depth);
+        draw_item(item_sprite, size, position, *selected_item.item);
     }
 }
 
@@ -312,16 +309,15 @@ static void update_cursor() {
     state.cursor_foreground.set_color(state.cursor_foreground_color * (0.7f + 0.3f * state.cursor_anim_progress));
 }
 
-inline void draw_inventory_cell(Sprite& cell_sprite, UiElement element_type, uint8_t index, const glm::vec2& size, const glm::vec2& position, TextureAsset texture, Depth depth) {    
-    const uint32_t d = depth.value < 0 ? Renderer::GetMainDepthIndex() : depth.value;
-    state.elements.emplace(element_type, d, index, math::Rect::from_top_left(position, size));
-    
+inline void draw_inventory_cell(Sprite& cell_sprite, UiElement element_type, uint8_t index, const glm::vec2& size, const glm::vec2& position, TextureAsset texture, Order order) {
     cell_sprite.set_position(position);
     cell_sprite.set_anchor(Anchor::TopLeft);
     cell_sprite.set_custom_size(size);
     cell_sprite.set_color(glm::vec4(1.0f, 1.0f, 1.0f, 0.8f));
     cell_sprite.set_texture(Assets::GetTexture(texture));
-    Renderer::DrawSpriteUI(cell_sprite, depth);
+    uint32_t d = GameRenderer::DrawSpriteUI(cell_sprite, order);
+
+    state.elements.emplace(element_type, d, index, math::Rect::from_top_left(position, size));
 }
 
 static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
@@ -329,10 +325,12 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
 
     static constexpr float TITLE_OFFSET = 4.0f;
     static constexpr float DEFAULT_TEXT_SIZE = 14.0f;
+    
+    GameRenderer::BeginOrderMode();
 
-    const uint32_t inventory_index = Renderer::GetMainDepthIndex();
-    const uint32_t item_index = inventory_index + 1;
-    const uint32_t text_index = item_index + 1;
+    static constexpr uint32_t inventory_index = 0;
+    static constexpr uint32_t item_index = 1;
+    static constexpr uint32_t text_index = item_index + 1;
 
     glm::vec2 offset = glm::vec2(INVENTORY_PADDING, INVENTORY_TITLE_SIZE);
     glm::vec2 item_size = glm::vec2(0.0f);
@@ -398,7 +396,7 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
             const glm::vec2 position = offset + padding + glm::vec2(6.0f, 6.0f) * a;
 
             const char index = '0' + (i + 1) % 10;
-            Renderer::DrawCharUI(index, position, index_size, glm::vec3(index_color), FontAsset::AndyBold, text_index);
+            GameRenderer::DrawCharUI(index, position, index_size, glm::vec3(index_color), FontAsset::AndyBold, text_index);
         }
 
         offset.x += cell_size.x + INVENTORY_CELL_MARGIN;
@@ -407,7 +405,7 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
     if (state.show_extra_ui) {
         const RichText text = rich_text("Inventory", INVENTORY_TITLE_SIZE, glm::vec3(0.8f));
         const glm::vec2 position = glm::vec2(INVENTORY_PADDING + INVENTORY_SLOT_SIZE * 0.5f, TITLE_OFFSET);
-        Renderer::DrawTextUI(text, position, FontAsset::AndyBold, text_index);
+        GameRenderer::DrawTextUI(text, position, FontAsset::AndyBold, text_index);
     } else {
         const ItemSlot& item_slot = inventory.get_item(inventory.selected_slot());
         const std::string_view& title = item_slot.has_item() ? item_slot.item->name : "Items";
@@ -415,7 +413,7 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
 
         const glm::vec2 bounds = calculate_text_bounds(text, FontAsset::AndyBold);
         const glm::vec2 position = glm::vec2((offset.x - bounds.x) * 0.5f, TITLE_OFFSET);
-        Renderer::DrawTextUI(text, position, FontAsset::AndyBold, text_index);
+        GameRenderer::DrawTextUI(text, position, FontAsset::AndyBold, text_index);
     }
 
     if (state.show_extra_ui) {
@@ -457,4 +455,6 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
     // );
     // const glm::vec2 bounds = calculate_text_bounds(text, FontAsset::AndyBold);
     // Renderer::DrawTextUI(text, glm::vec2(window_size.x * 0.5f - bounds.x * 0.5f, window_size.y * 0.5f - bounds.y * 0.5f), FontAsset::AndyBold, inventory_index);
+
+    GameRenderer::EndOrderMode();
 }

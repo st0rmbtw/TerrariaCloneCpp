@@ -8,10 +8,11 @@
 #include <optional>
 #include <glm/glm.hpp>
 
-#include "../renderer/camera.h"
-#include "../types/sprite.hpp"
+#include "../engine/renderer/camera.hpp"
+#include "../engine/types/sprite.hpp"
+#include "../engine/time/timer.hpp"
+
 #include "../world/world.hpp"
-#include "../time/timer.hpp"
 
 static constexpr size_t WALK_ANIMATION_LENGTH = 13;
 

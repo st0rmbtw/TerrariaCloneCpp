@@ -8,8 +8,6 @@ cbuffer GlobalUniformBuffer : register( b2 )
     float4x4 u_inv_view_proj;
     float2 u_camera_position;
     float2 u_window_size;
-    float u_max_depth;
-    float u_max_world_depth;
 };
 
 struct VSInput
@@ -21,7 +19,6 @@ struct VSInput
     float2 i_size : I_Size;
     float2 i_tex_size : I_TexSize;
     float2 i_uv : I_UV;
-    int i_is_ui : I_IsUI;
 };
 
 struct VSOutput
@@ -34,7 +31,7 @@ struct VSOutput
 
 VSOutput VS(VSInput inp)
 {
-    const float4x4 mvp = inp.i_is_ui > 0 ? u_screen_projection : u_view_projection;
+    const float4x4 mvp = u_view_projection;
 
     const float2 position = inp.i_position + inp.position * inp.i_size;
     const float2 uv = inp.i_uv + inp.position * inp.i_tex_size;

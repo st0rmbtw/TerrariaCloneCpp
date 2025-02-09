@@ -6,7 +6,7 @@
 
 #include <tracy/Tracy.hpp>
 
-#include "../defines.hpp"
+#include "../engine/defines.hpp"
 #include "lightmap.hpp"
 
 using Constants::SUBDIVISION;

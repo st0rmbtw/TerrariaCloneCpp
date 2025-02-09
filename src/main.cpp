@@ -1,7 +1,7 @@
 #include <cstring>
 #include <cstdio>
 #include "game.hpp"
-#include "defines.hpp"
+#include "engine/defines.hpp"
 
 inline void print_render_backends() {
     #if defined(PLATFORM_WINDOWS)

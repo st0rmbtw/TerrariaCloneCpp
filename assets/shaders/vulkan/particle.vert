@@ -17,8 +17,6 @@ layout(binding = 2) uniform GlobalUniformBuffer {
     mat4 inv_view_proj;
     vec2 camera_position;
     vec2 window_size;
-    float max_depth;
-    float max_world_depth;
 } global_ubo;
 
 layout(binding = 5) buffer TransformsBuffer
@@ -43,5 +41,5 @@ void main() {
     bool is_world = i_is_world > 0;
     
     gl_Position = mvp * vec4(a_position, 0.0, 1.0);
-    gl_Position.z = i_depth / (is_world ? global_ubo.max_world_depth : global_ubo.max_depth);
+    gl_Position.z = i_depth;
 }

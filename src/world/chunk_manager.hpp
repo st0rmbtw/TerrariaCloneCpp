@@ -8,10 +8,10 @@
 #include <deque>
 #include <glm/vec2.hpp>
 
-#include "../renderer/camera.h"
+#include "../engine/renderer/camera.hpp"
+#include "../engine/utils.hpp"
 #include "../renderer/types.hpp"
 #include "../types/tile_pos.hpp"
-#include "../utils.hpp"
 
 #include "chunk.hpp"
 #include "world_data.hpp"

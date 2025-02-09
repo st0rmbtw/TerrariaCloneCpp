@@ -6,7 +6,7 @@
 #include <optional>
 
 #include "../types/item.hpp"
-#include "../assert.hpp"
+#include "../engine/assert.hpp"
 
 constexpr uint8_t CELLS_IN_ROW = 10;
 constexpr uint8_t INVENTORY_ROWS = 5;
@@ -33,31 +33,31 @@ public:
     Inventory() = default;
 
     inline void set_selected_slot(uint8_t index) {
-        ASSERT(index < CELLS_IN_ROW, "Index must be less than 10.")
+        ASSERT(index < CELLS_IN_ROW, "Index must be less than 10.");
         m_selected_slot = index;
     }
 
     [[nodiscard]]
     inline ItemSlot get_item(uint8_t index) const {
-        ASSERT(index < 51, "Index must be less than 50.")
+        ASSERT(index < 51, "Index must be less than 50.");
 
         return ItemSlot(m_items[index], index);
     }
 
     [[nodiscard]]
     inline void set_item(uint8_t index, const Item& item) {
-        ASSERT(index < 51, "Index must be less than 50.")
+        ASSERT(index < 51, "Index must be less than 50.");
         m_items[index] = item;
     }
 
     [[nodiscard]]
     inline bool item_exits(uint8_t index) const {
-        ASSERT(index < 51, "Index must be less than 50.")
+        ASSERT(index < 51, "Index must be less than 50.");
         return m_items[index].has_value();
     }
 
     inline void take_or_put_item(uint8_t index) {
-        ASSERT(index < 51, "Index must be less than 50.")
+        ASSERT(index < 51, "Index must be less than 50.");
         m_taken_item_index = index;
         std::swap(m_items[index], m_items[TAKEN_ITEM_INDEX]);
     }
@@ -69,7 +69,7 @@ public:
     }
 
     inline void consume_item(uint8_t index) {
-        ASSERT(index < 51, "Index must be less than 50.")
+        ASSERT(index < 51, "Index must be less than 50.");
         std::optional<Item>& item = m_items[index];
         if (!item) return;
 

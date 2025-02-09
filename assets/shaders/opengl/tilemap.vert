@@ -19,8 +19,6 @@ layout(std140) uniform GlobalUniformBuffer {
     mat4 inv_view_proj;
     vec2 camera_position;
     vec2 window_size;
-    float max_depth;
-    float max_world_depth;
 } global_ubo;
 
 layout(std140) uniform DepthBuffer {
@@ -54,8 +52,6 @@ void main() {
         tex_dims = a_wall_tex_size;
         offset = vec2(-TILE_SIZE * 0.5, -TILE_SIZE * 0.5);
     }
-
-    order /= global_ubo.max_world_depth;
 
     mat4 transform = mat4(
         vec4(1.0, 0.0, 0.0, 0.0),

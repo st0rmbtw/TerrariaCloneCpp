@@ -20,13 +20,10 @@ layout(binding = 2) uniform GlobalUniformBuffer {
     mat4 inv_view_proj;
     vec2 camera_position;
     vec2 window_size;
-    float max_depth;
-    float max_world_depth;
 } uniforms;
 
 const int IS_UI_FLAG = 1 << 0;
-const int IS_WORLD_FLAG = 1 << 1;
-const int IS_NONSCALE_FLAG = 1 << 2;
+const int IS_NONSCALE_FLAG = 1 << 1;
 
 layout(location = 0) out vec2 v_uv;
 layout(location = 1) flat out vec4 v_color;
@@ -71,10 +68,6 @@ void main() {
 
     bool is_ui = (i_flags & IS_UI_FLAG) == IS_UI_FLAG;
     bool is_nonscale = (i_flags & IS_NONSCALE_FLAG) == IS_NONSCALE_FLAG;
-    bool is_world = (i_flags & IS_WORLD_FLAG) == IS_WORLD_FLAG;
-
-    float max_depth = is_world ? uniforms.max_world_depth : uniforms.max_depth;
-    float depth = i_position.z / max_depth;
 
     mat4 mvp = (is_ui ? uniforms.screen_projection : is_nonscale ? uniforms.nonscale_view_projection : uniforms.view_projection) * transform;
 
@@ -84,5 +77,5 @@ void main() {
     v_outline_thickness = i_outline_thickness;
     
     gl_Position = mvp * vec4(a_position, 0, 1);
-    gl_Position.z = depth;
+    gl_Position.z = i_position.z;
 }

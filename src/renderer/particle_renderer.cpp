@@ -6,13 +6,13 @@
 
 #include <tracy/Tracy.hpp>
 
-#include "renderer.hpp"
 #include "types.hpp"
-#include "utils.hpp"
-#include "macros.hpp"
+
+#include "../engine/engine.hpp"
+#include "../engine/log.hpp"
+#include "../engine/renderer/macros.hpp"
 
 #include "../assets.hpp"
-#include "../log.hpp"
 
 using Constants::PARTICLE_SIZE;
 using Constants::MAX_PARTICLES_COUNT;
@@ -29,9 +29,11 @@ static inline constexpr size_t get_particle_index(Particle::Type type, uint8_t v
 void ParticleRenderer::init() {
     ZoneScopedN("ParticleRenderer::init");
 
-    const RenderBackend backend = Renderer::Backend();
-    const auto& context = Renderer::Context();
-    const auto* swap_chain = Renderer::SwapChain();
+    m_renderer = &Engine::Renderer();
+
+    const RenderBackend backend = m_renderer->Backend();
+    const auto& context = m_renderer->Context();
+    const auto* swap_chain = m_renderer->SwapChain();
 
     m_atlas = Assets::GetTextureAtlas(TextureAsset::Particles);
 
@@ -49,8 +51,8 @@ void ParticleRenderer::init() {
         ParticleVertex(1.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size()), glm::vec2(m_atlas.texture().size())),
     };
 
-    m_vertex_buffer = CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::ParticleVertex), "ParticleRenderer VertexBuffer");
-    m_instance_buffer = CreateVertexBuffer(MAX_PARTICLES_COUNT * sizeof(ParticleInstance), Assets::GetVertexFormat(VertexFormatAsset::ParticleInstance), "ParticleRenderer InstanceBuffer");
+    m_vertex_buffer = m_renderer->CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::ParticleVertex), "ParticleRenderer VertexBuffer");
+    m_instance_buffer = m_renderer->CreateVertexBuffer(MAX_PARTICLES_COUNT * sizeof(ParticleInstance), Assets::GetVertexFormat(VertexFormatAsset::ParticleInstance), "ParticleRenderer InstanceBuffer");
 
     LLGL::Buffer* buffers[] = { m_vertex_buffer, m_instance_buffer };
     m_buffer_array = context->CreateBufferArray(2, buffers);
@@ -127,7 +129,7 @@ void ParticleRenderer::init() {
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
     {
         const LLGL::ResourceViewDescriptor resource_views[] = {
-            Renderer::GlobalUniformBuffer(), m_transform_buffer, m_atlas.texture()
+            m_renderer->GlobalUniformBuffer(), m_transform_buffer, m_atlas.texture()
         };
 
         m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
@@ -210,7 +212,7 @@ void ParticleRenderer::init() {
     LLGL::PipelineLayout* compute_pipeline_layout = context->CreatePipelineLayout(compute_pipeline_layout_desc);
 
     const LLGL::ResourceViewDescriptor resource_views[] = {
-        Renderer::GlobalUniformBuffer(), m_transform_buffer, m_position_buffer, m_rotation_buffer, m_scale_buffer
+        m_renderer->GlobalUniformBuffer(), m_transform_buffer, m_position_buffer, m_rotation_buffer, m_scale_buffer
     };
 
     m_compute_resource_heap = context->CreateResourceHeap(compute_pipeline_layout, resource_views);
@@ -231,7 +233,7 @@ void ParticleRenderer::init() {
     reset();
 }
 
-void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth) {
+void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Order order) {
     ZoneScopedN("ParticleRenderer::draw_particle");
 
     const math::Rect& rect = m_atlas.get_rect(get_particle_index(type, variant));
@@ -246,7 +248,7 @@ void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat&
     m_scale_buffer_data_ptr++;
 
     m_instance_buffer_data_ptr->uv = rect.min;
-    m_instance_buffer_data_ptr->depth = static_cast<float>(depth.value);
+    m_instance_buffer_data_ptr->depth = 1.0f;
     m_instance_buffer_data_ptr->id = m_particle_id++;
     m_instance_buffer_data_ptr->is_world = false;
     m_instance_buffer_data_ptr++;
@@ -254,7 +256,7 @@ void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat&
     m_particle_count++;
 }
 
-void ParticleRenderer::draw_particle_world(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Depth depth) {
+void ParticleRenderer::draw_particle_world(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Order order) {
     ZoneScopedN("ParticleRenderer::draw_particle");
 
     const math::Rect& rect = m_atlas.get_rect(get_particle_index(type, variant));
@@ -269,7 +271,7 @@ void ParticleRenderer::draw_particle_world(const glm::vec2& position, const glm:
     m_scale_buffer_data_ptr++;
 
     m_instance_buffer_data_world_ptr->uv = rect.min;
-    m_instance_buffer_data_world_ptr->depth = static_cast<float>(depth.value);
+    m_instance_buffer_data_world_ptr->depth = 1.0f;
     m_instance_buffer_data_world_ptr->id = m_particle_id++;
     m_instance_buffer_data_world_ptr->is_world = true;
     m_instance_buffer_data_world_ptr++;
@@ -282,8 +284,8 @@ void ParticleRenderer::compute() {
 
     ZoneScopedN("ParticleRenderer::compute");
 
-    const auto& context = Renderer::Context();
-    auto* const commands = Renderer::CommandBuffer();
+    const auto& context = m_renderer->Context();
+    auto* const commands = m_renderer->CommandBuffer();
 
     ptrdiff_t size = (uint8_t*) m_position_buffer_data_ptr - (uint8_t*) m_position_buffer_data;
     if (size < (1 << 16)) {
@@ -328,8 +330,8 @@ void ParticleRenderer::compute() {
 void ParticleRenderer::prepare() {
     ZoneScopedN("ParticleRenderer::prepare");
 
-    const auto& context = Renderer::Context();
-    auto* const commands = Renderer::CommandBuffer();
+    const auto& context = m_renderer->Context();
+    auto* const commands = m_renderer->CommandBuffer();
 
     if (m_particle_count > 0) {
         const ptrdiff_t size = (uint8_t*) m_instance_buffer_data_ptr - (uint8_t*) m_instance_buffer_data;
@@ -355,7 +357,7 @@ void ParticleRenderer::render() {
     
     ZoneScopedN("ParticleRenderer::render");
 
-    auto* const commands = Renderer::CommandBuffer();
+    auto* const commands = m_renderer->CommandBuffer();
 
     commands->SetVertexBufferArray(*m_buffer_array);
     commands->SetPipelineState(*m_pipeline);
@@ -370,7 +372,7 @@ void ParticleRenderer::render_world() {
     
     ZoneScopedN("ParticleRenderer::render_world");
 
-    auto* const commands = Renderer::CommandBuffer();
+    auto* const commands = m_renderer->CommandBuffer();
 
     commands->SetVertexBufferArray(*m_buffer_array);
     commands->SetPipelineState(*m_pipeline);
@@ -392,6 +394,8 @@ void ParticleRenderer::reset() {
 }
 
 void ParticleRenderer::terminate() {
+    const auto& context = m_renderer->Context();
+
     RESOURCE_RELEASE(m_buffer_array);
     RESOURCE_RELEASE(m_instance_buffer);
     RESOURCE_RELEASE(m_vertex_buffer);
