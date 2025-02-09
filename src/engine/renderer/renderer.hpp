@@ -105,14 +105,6 @@ public:
         return m_context->CreateBuffer(bufferDesc);
     }
 
-    inline void UpdateBuffer(LLGL::Buffer* buffer, void* data, size_t length, size_t offset = 0) {
-        if (length < (1 << 16)) {
-            m_command_buffer->UpdateBuffer(*buffer, offset, data, length);
-        } else {
-            m_context->WriteBuffer(*buffer, offset, data, length);
-        }
-    }
-
     [[nodiscard]] inline const LLGL::RenderSystemPtr& Context() const { return m_context; }
     [[nodiscard]] inline LLGL::SwapChain* SwapChain() const { return m_swap_chain; };
     [[nodiscard]] inline LLGL::CommandBuffer* CommandBuffer() const { return m_command_buffer; };
@@ -131,22 +123,20 @@ private:
     void InitNinepatchBatchPipeline();
 
     void SortBatchDrawCommands(Batch& batch);
-    void UpdateBatchBuffersSprite(
-        Batch& batch,
-        size_t begin = 0
-    );
-    void UpdateBatchBuffersGlyph(
-        Batch& batch,
-        size_t begin = 0
-    );
-    void UpdateBatchBuffersNinePatch(
-        Batch& batch,
-        size_t begin = 0
-    );
-    void ApplyBatchDrawCommands(Batch& batch, uint8_t exclude = 0);
-    void ApplyBatchSpriteDrawCommands(Batch& batch);
-    void ApplyBatchGlyphDrawCommands(Batch& batch);
-    void ApplyBatchNinePatchDrawCommands(Batch& batch);
+    void UpdateBatchBuffers(Batch& batch, size_t begin = 0);
+    void ApplyBatchDrawCommands(Batch& batch);
+
+    inline void UpdateBuffer(LLGL::Buffer* buffer, void* data, size_t length, size_t offset = 0) {
+        static constexpr size_t SIZE = (1 << 16) - 1;
+
+        const uint8_t* const src = static_cast<const uint8_t*>(data);
+
+        while (offset < length) {
+            const size_t len = std::min(offset + SIZE, length) - offset;
+            m_command_buffer->UpdateBuffer(*buffer, offset, src + offset, len);
+            offset += SIZE;
+        }
+    }
 
 private:
     struct {
@@ -199,6 +189,8 @@ private:
 #endif
 
     uint32_t m_texture_index = 0;
+
+    size_t m_batch_instance_count = 0;
 
     size_t m_sprite_instance_size = 0;
     size_t m_glyph_instance_size = 0;

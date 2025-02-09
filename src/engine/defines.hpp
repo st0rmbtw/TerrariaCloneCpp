@@ -10,11 +10,11 @@
 #endif
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) || defined(__NT__)
-    #define PLATFORM_WINDOWS
+    #define PLATFORM_WINDOWS 1
 #elif defined(__APPLE__)
-    #define PLATFORM_MACOS
+    #define PLATFORM_MACOS 1
 #elif defined(__linux__)
-    #define PLATFORM_LINUX
+    #define PLATFORM_LINUX 1
 #else
     #error "Unknown platform"
 #endif
@@ -27,18 +27,19 @@
     #error "Unknown compiler; can't define FORCE_INLINE"
 #endif
 
+#if PLATFORM_WINDOWS
+    #define DEBUG_BREAK() __debugbreak()
+#else
+    #include <signal.h>
+    #define DEBUG_BREAK() raise(SIGTRAP)
+#endif
+
 #if defined(__GNUC__) || defined(__clang__)
     #define ALIGN(x) __attribute__ ((aligned(x)))
 #elif defined(_MSC_VER)
     #define ALIGN(x) __declspec(align(x))
 #else
     #error "Unknown compiler; can't define ALIGN"
-#endif
-
-#if defined(TRACY_ENABLE)
-    #define INLINE
-#else
-    #define INLINE inline
 #endif
 
 

@@ -111,7 +111,7 @@ uint32_t Batch::AddSpriteDrawCommand(const BaseSprite& sprite, const glm::vec4& 
         .depth_enabled = false
     };
 
-    m_sprite_draw_commands.emplace_back(draw_command);
+    m_draw_commands.emplace_back(draw_command, m_sprite_count);
 
     ++m_sprite_count;
 
@@ -143,7 +143,7 @@ uint32_t Batch::AddNinePatchDrawCommand(const NinePatch& ninepatch, const glm::v
         .order = order,
     };
     
-    m_ninepatch_draw_commands.emplace_back(draw_command);
+    m_draw_commands.emplace_back(draw_command, m_ninepatch_count);
 
     ++m_ninepatch_count;
 
@@ -151,7 +151,7 @@ uint32_t Batch::AddNinePatchDrawCommand(const NinePatch& ninepatch, const glm::v
 }
 
 void Batch::AddGlyphDrawCommand(const batch_internal::DrawCommandGlyph& command) {
-    m_glyph_draw_commands.emplace_back(command);
+    m_draw_commands.emplace_back(command, m_glyph_count);
     
     ++m_glyph_count;
 }

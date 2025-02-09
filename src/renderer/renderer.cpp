@@ -177,15 +177,15 @@ void GameRenderer::ResizeTextures(LLGL::Extent2D resolution) {
     const auto& context = state.renderer->Context();
     const auto* swap_chain = state.renderer->SwapChain();
 
+    RESOURCE_RELEASE(state.world_render_target);
     RESOURCE_RELEASE(state.world_render_texture);
     RESOURCE_RELEASE(state.world_depth_texture);
-    RESOURCE_RELEASE(state.world_render_target);
 
-    RESOURCE_RELEASE(state.background_render_texture);
     RESOURCE_RELEASE(state.background_render_target);
+    RESOURCE_RELEASE(state.background_render_texture);
 
-    RESOURCE_RELEASE(state.static_lightmap_texture);
     RESOURCE_RELEASE(state.static_lightmap_target);
+    RESOURCE_RELEASE(state.static_lightmap_texture);
 
     LLGL::TextureDescriptor texture_desc;
     texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);

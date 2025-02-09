@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(TerrariaClone CXX)
+project(TerrariaClone LANGUAGES CXX)
+
+cmake_policy(SET CMP0069 NEW)
+set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 
 find_package(OpenMP)
 
@@ -41,6 +44,7 @@ if (RELEASE_BUILD)
     set(LLGL_ENABLE_DEBUG_LAYER OFF CACHE BOOL "" FORCE)
     set(LLGL_ENABLE_CHECKED_CAST OFF CACHE BOOL "" FORCE)
     set(LLGL_ENABLE_EXCEPTIONS OFF CACHE BOOL "" FORCE)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 else()
     message("-- Build Type: Debug")
     if(MSVC)
@@ -108,7 +112,6 @@ if (APPLE)
 endif()
 
 add_executable(${PROJECT_NAME})
-
 target_sources(${PROJECT_NAME} PRIVATE ${SRC})
 
 if(NOT MSVC)
@@ -146,17 +149,19 @@ foreach(asset ${ASSETS})
 
     if (NOT ${out_dir} STREQUAL "shaders/vulkan")
         add_custom_command(
-            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/assets/${out_dir}/${out_name}
-            COMMAND ${CMAKE_COMMAND} -E copy ${asset} ${CMAKE_CURRENT_BINARY_DIR}/assets/${out_dir}
-            DEPENDS ${asset}
+            OUTPUT
+                ${CMAKE_CURRENT_BINARY_DIR}/assets/${out_dir}/${out_name}
+            COMMAND
+                ${CMAKE_COMMAND} -E copy ${asset} ${CMAKE_CURRENT_BINARY_DIR}/assets/${out_dir}
+            DEPENDS
+                ${asset}
         )
 
         list(APPEND ASSETS_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/assets/${out_dir}/${out_name})
     endif()
 endforeach()
 
-add_custom_target(COPY_ASSETS DEPENDS ${ASSETS_OUTPUT})
-add_dependencies(${PROJECT_NAME} COPY_ASSETS)
+add_custom_target(COPY_ASSETS ALL DEPENDS ${ASSETS_OUTPUT})
 
 # ===================== Compile Vulkan Shaders =====================
 
@@ -167,17 +172,18 @@ set(VULKAN_SHADERS_OUTPUT)
 foreach(shader ${VULKAN_SHADERS})
     get_filename_component(shader_name ${shader} NAME)
     add_custom_command(
-        OUTPUT assets/shaders/vulkan/${shader_name}.spv
-        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/shader_compiler/ShaderCompiler${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${shader}
-        DEPENDS ${shader} ShaderCompiler
+        OUTPUT
+            assets/shaders/vulkan/${shader_name}.spv
+        COMMAND
+            ${CMAKE_CURRENT_BINARY_DIR}/shader_compiler/ShaderCompiler${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${shader}
+        DEPENDS
+            ${shader} ShaderCompiler
     )
     list(APPEND VULKAN_SHADERS_OUTPUT assets/shaders/vulkan/${shader_name}.spv)
 endforeach()
 
-add_custom_target(COMPILE_VULKAN_SHADERS DEPENDS ${VULKAN_SHADERS_OUTPUT})
+add_custom_target(COMPILE_VULKAN_SHADERS ALL DEPENDS ${VULKAN_SHADERS_OUTPUT})
 add_dependencies(COMPILE_VULKAN_SHADERS ShaderCompiler)
-
-add_dependencies(${PROJECT_NAME} COMPILE_VULKAN_SHADERS)
 
 # ===================== Generate Font Assets =====================
 
@@ -190,14 +196,15 @@ foreach(font ${FONT_FILES})
     set(font_output_path assets/fonts/${font_name}.png)
     set(font_meta_output_path assets/fonts/${font_name}.meta)
     add_custom_command(
-        OUTPUT ${font_output_path} ${font_meta_output_path}
-        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/font_asset_generator/FontAssetGenerator${CMAKE_EXECUTABLE_SUFFIX} ${font} ${CMAKE_CURRENT_BINARY_DIR}/${font_output_path}
-        DEPENDS ${font} FontAssetGenerator
+        OUTPUT
+            ${font_output_path} ${font_meta_output_path}
+        COMMAND
+            ${CMAKE_CURRENT_BINARY_DIR}/font_asset_generator/FontAssetGenerator${CMAKE_EXECUTABLE_SUFFIX} ${font} ${CMAKE_CURRENT_BINARY_DIR}/${font_output_path}
+        DEPENDS
+            ${font} FontAssetGenerator
     )
     list(APPEND FONT_FILES_OUTPUT ${font_output_path})
 endforeach()
 
-add_custom_target(GENERATE_FONT_ATLASES DEPENDS ${FONT_FILES_OUTPUT})
+add_custom_target(GENERATE_FONT_ATLASES ALL DEPENDS ${FONT_FILES_OUTPUT})
 add_dependencies(GENERATE_FONT_ATLASES FontAssetGenerator)
-
-add_dependencies(${PROJECT_NAME} GENERATE_FONT_ATLASES)
