@@ -78,6 +78,12 @@ static glm::vec2 camera_free() {
 void pre_update() {
     ZoneScopedN("Game::pre_update");
 
+#if DEBUG
+    if (Input::JustPressed(Key::B)) {
+        DEBUG_BREAK();
+    }
+#endif
+
     ParticleManager::DeleteExpired();
 
     UI::PreUpdate(g.player.inventory());
@@ -171,25 +177,6 @@ void render() {
     ZoneScopedN("Game::render");
 
     GameRenderer::Begin(g.camera, g.world.data());
-
-    if (Input::Pressed(Key::Z)) {
-        const math::Rect area = g.camera.get_projection_area();
-
-        Sprite sprite;
-        sprite.set_texture(Assets::GetTexture(TextureAsset::UiInventoryHotbar));
-
-        GameRenderer::BeginOrderMode();
-
-        const glm::vec2 position = glm::linearRand(area.min, area.max);
-        const glm::vec2 ui_position = glm::linearRand(glm::vec2(0.0f), glm::vec2(g.camera.viewport()));
-        sprite.set_position(ui_position);
-
-        for (int i = 0; i < 10000; ++i) {
-            GameRenderer::DrawSpriteUI(sprite);
-        }
-
-        GameRenderer::EndOrderMode();
-    }
 
     Background::Draw();
 
