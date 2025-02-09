@@ -4,6 +4,7 @@
 #include <LLGL/Types.h>
 #include <glm/gtc/random.hpp>
 
+#include "engine/defines.hpp"
 #include "engine/engine.hpp"
 #include "engine/input.hpp"
 #include "engine/renderer/camera.hpp"
