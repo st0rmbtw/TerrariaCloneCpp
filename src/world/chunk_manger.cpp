@@ -29,7 +29,7 @@ static math::URect get_chunk_range(const math::Rect& camera_fov, const glm::uvec
         bottom = glm::ceil((camera_fov.max.y + TILE_SIZE) / (TILE_SIZE * RENDER_CHUNK_SIZE)) + expand;
     }
 
-    const glm::uvec2 chunk_max_pos = (world_size + RENDER_CHUNK_SIZE_U - 1u) / RENDER_CHUNK_SIZE_U;
+    const glm::uvec2 chunk_max_pos = (world_size + glm::uvec2(RENDER_CHUNK_SIZE_U)- 1u) / static_cast<uint32_t>(RENDER_CHUNK_SIZE_U);
 
     if (right >= chunk_max_pos.x) right = chunk_max_pos.x;
     if (bottom >= chunk_max_pos.y) bottom = chunk_max_pos.y;

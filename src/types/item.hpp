@@ -11,25 +11,25 @@
 #include "block.hpp"
 #include "wall.hpp"
 
-enum class TileType : uint8_t {
-    Block = 0,
-    Wall
-};
-
 struct PlacesTile {
-    PlacesTile(TileType tile_type, BlockType block_type) :
-        block(block_type),
-        type(tile_type) {}
+    enum Type : uint8_t {
+        Block = 0,
+        Wall
+    };
 
-    PlacesTile(TileType tile_type, WallType wall_type) :
+    PlacesTile(TileType tile_type) :
+        tile(tile_type),
+        type(Type::Block) {}
+
+    PlacesTile(WallType wall_type) :
         wall(wall_type),
-        type(tile_type) {}
+        type(Type::Wall) {}
 
     union {
-        BlockType block;
+        TileType tile;
         WallType wall;
     };
-    TileType type;
+    Type type;
 };
 
 using ItemStack = uint16_t;

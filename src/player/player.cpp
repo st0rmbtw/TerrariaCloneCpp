@@ -47,17 +47,18 @@ static const glm::vec2 ITEM_HOLD_POINTS[] = {
 static constexpr float ITEM_ROTATION = 1.7;
 
 void spawn_particles_on_dig(const glm::vec2& position, Particle::Type particle, bool broken) {
-    const float rotation_speed = glm::pi<float>() / 12.0f;
-
     const int count = broken ? rand_range(7, 15) : rand_range(3, 8);
-    
+
     for (int i = 0; i < count; i++) {
-        const glm::vec2 velocity = glm::normalize(glm::diskRand(1.25f));
+        const float rotation_speed = rand_range(0.0f, glm::pi<float>() / 12.0f);
+
+        const glm::vec2 velocity = glm::vec2(rand_range(-1.0f, 1.0f), rand_range(-2.0f, 2.0f));
+        const glm::vec2 offset = particle == Particle::Type::Torch ? glm::diskRand(10.0f) : glm::vec2(0.0f);
         const float min_scale = broken ? 0.6f : 0.3f;
         const float scale = glm::linearRand(min_scale, 1.0f);
 
         ParticleManager::SpawnParticle(
-            ParticleBuilder::create(particle, position, velocity, 1.25f)
+            ParticleBuilder::create(particle, position + offset, velocity, 1.25f)
                 .in_world_layer()
                 .with_gravity(true)
                 .with_rotation_speed(rotation_speed)
@@ -216,7 +217,7 @@ glm::vec2 Player::check_collisions(const World& world) {
 
     for (int y = top; y < bottom; ++y) {
         for (int x = left; x < right; ++x) {
-            if (!world.block_exists(TilePos(x, y))) continue;
+            if (!world.solid_tile_exists(TilePos(x, y))) continue;
             
             const glm::vec2 tile_pos = glm::vec2(x * TILE_SIZE, y * TILE_SIZE);
 
@@ -230,7 +231,7 @@ glm::vec2 Player::check_collisions(const World& world) {
                     if (vx != hx) {
                         m_collisions.down = true;
                         m_jumping = false;
-                        m_stand_on_block = world.get_block_type(TilePos(x, y));
+                        m_stand_on_tile = world.get_tile_type(TilePos(x, y));
 
                         result.y = tile_pos.y - (pos.y + PLAYER_HEIGHT_HALF);
                     }
@@ -287,7 +288,7 @@ glm::vec2 Player::check_collisions(const World& world) {
 
         for (int x = left; x <= right; ++x) {
             for (int y = bottom; y <= bottom + 1; ++y) {
-                if (!world.block_exists(TilePos(x, y))) continue;
+                if (!world.solid_tile_exists(TilePos(x, y))) continue;
 
                 const glm::vec2 tile_pos = glm::vec2(x * TILE_SIZE, y * TILE_SIZE);
                 const math::Rect player_rect = math::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
@@ -314,9 +315,9 @@ glm::vec2 Player::check_collisions(const World& world) {
 
     if (
         hy == a && (
-            !world.block_exists(TilePos(hx, hy - 1)) &&
-            !world.block_exists(TilePos(hx, hy - 2)) &&
-            !world.block_exists(TilePos(hx, hy - 3))
+            !world.solid_tile_exists(TilePos(hx, hy - 1)) &&
+            !world.solid_tile_exists(TilePos(hx, hy - 2)) &&
+            !world.solid_tile_exists(TilePos(hx, hy - 3))
         )
     ) {
         result.x = m_velocity.x;
@@ -493,11 +494,11 @@ void Player::spawn_particles_on_walk() const {
     ZoneScopedN("Player::spawn_particles_on_walk");
 
     if (m_movement_state != MovementState::Walking) return;
-    if (!m_stand_on_block.has_value()) return;
+    if (!m_stand_on_tile.has_value()) return;
     if (glm::abs(m_velocity.x) < 1.0f) return;
 
-    const BlockType block = m_stand_on_block.value();
-    if (!block_dusty(block)) return;
+    const TileType tile = m_stand_on_tile.value();
+    if (!tile_dusty(tile)) return;
 
     const float direction = m_direction == Direction::Right ? -1.0f : 1.0f;
 
@@ -507,7 +508,7 @@ void Player::spawn_particles_on_walk() const {
     const float rotation_speed = glm::pi<float>() / 12.0f;
 
     ParticleManager::SpawnParticle(
-        ParticleBuilder::create(Particle::get_by_block(block), position, velocity, 0.3f)
+        ParticleBuilder::create(Particle::get_by_tile(tile), position, velocity, 0.3f)
             .in_world_layer()
             .with_scale(scale)
             .with_rotation_speed(rotation_speed)
@@ -517,12 +518,12 @@ void Player::spawn_particles_on_walk() const {
 void Player::spawn_particles_grounded() const {
     ZoneScopedN("Player::spawn_particles_grounded");
     
-    if (!m_stand_on_block.has_value()) return;
-    const BlockType block = m_stand_on_block.value();
+    if (!m_stand_on_tile.has_value()) return;
+    const TileType tile = m_stand_on_tile.value();
 
-    if (!block_dusty(block)) return;
+    if (!tile_dusty(tile)) return;
 
-    const Particle::Type particle = Particle::get_by_block(block);
+    const Particle::Type particle = Particle::get_by_tile(tile);
 
     const float fall_distance = get_fall_distance();
     const float rotation_speed = glm::pi<float>() / 12.0f;
@@ -544,10 +545,18 @@ void Player::spawn_particles_grounded() const {
     }
 }
 
-void Player::fixed_update(const World& world, bool handle_input) {
+void Player::fixed_update(const Camera& camera, World& world, bool handle_input) {
     ZoneScopedN("Player::fixed_update");
 
     m_using_item_visible = false;
+
+    if (Input::Pressed(MouseButton::Left) && !Input::IsMouseOverUi()) {
+        use_item(camera, world);
+    }
+
+    if (Input::Pressed(MouseButton::Right) && !Input::IsMouseOverUi()) {
+        interact(camera, world);
+    }
 
     horizontal_movement(handle_input);
     vertical_movement(handle_input);
@@ -593,12 +602,8 @@ void Player::fixed_update(const World& world, bool handle_input) {
     m_fall_start = -1;
 }
 
-void Player::update(const Camera& camera, World& world) {
+void Player::update(World& world) {
     ZoneScopedN("Player::update");
-
-    if (Input::Pressed(MouseButton::Left) && !Input::IsMouseOverUi()) {
-        use_item(camera, world);
-    }
 
     const std::optional<Item>& selected_item = m_inventory.get_selected_item().item;
     if (selected_item.has_value() && selected_item->id == ItemId::Torch) {
@@ -702,8 +707,6 @@ void Player::use_item(const Camera& camera, World& world) {
     const ItemSlot item_slot = taken_item.has_item() ? taken_item : m_inventory.get_selected_item();
     const std::optional<Item>& item = item_slot.item;
     if (!item) return;
-
-    const glm::vec2& screen_pos = Input::MouseScreenPosition();
     
     // m_direction = screen_pos.x < camera.viewport().x * 0.5f ? Direction::Left : Direction::Right;
 
@@ -717,38 +720,39 @@ void Player::use_item(const Camera& camera, World& world) {
 
     if (m_use_cooldown > 0) return;
     m_use_cooldown = item->use_cooldown;
-
+    
+    const glm::vec2& screen_pos = Input::MouseScreenPosition();
     const glm::vec2 world_pos = camera.screen_to_world(screen_pos);
 
     const TilePos tile_pos = TilePos::from_world_pos(world_pos);
 
     bool used = false;
 
-    if (item->is_pickaxe() && world.block_exists(tile_pos)) {
-        Block* block = world.get_block_mut(tile_pos);
+    if (item->is_pickaxe() && world.tile_exists(tile_pos)) {
+        Tile* tile = world.get_tile_mut(tile_pos);
 
-        if (block->hp > 0) {
-            block->hp -= item->power;
+        if (tile->hp > 0) {
+            tile->hp -= item->power;
         }
 
         const glm::vec2 position = tile_pos.to_world_pos_center();
-        spawn_particles_on_dig(position, Particle::get_by_block(block->type), block->hp <= 0);
+        spawn_particles_on_dig(position, Particle::get_by_tile(tile->type), tile->hp <= 0);
         
-        if (block->hp <= 0) {
-            world.remove_block(tile_pos);
-            world.remove_block_cracks(tile_pos);
+        if (tile->hp <= 0) {
+            world.remove_tile(tile_pos);
+            world.remove_tile_cracks(tile_pos);
         } else {
             uint8_t new_variant = rand() % 3;
-            BlockType new_block_type;
-            switch (block->type) {
-                case BlockType::Grass: new_block_type = BlockType::Dirt; break;
-                default: new_block_type = block->type;
+            TileType new_tile_type;
+            switch (tile->type) {
+                case TileType::Grass: new_tile_type = TileType::Dirt; break;
+                default: new_tile_type = tile->type;
             }
 
-            world.update_block(tile_pos, new_block_type, new_variant);
+            world.update_tile(tile_pos, new_tile_type, new_variant);
 
-            world.create_dig_block_animation(*block, tile_pos);
-            world.create_block_cracks(tile_pos, map_range(block_hp(block->type), 0, 0, 3, block->hp) * 6 + (rand() % 6));
+            world.create_dig_tile_animation(*tile, tile_pos);
+            world.create_tile_cracks(tile_pos, map_range(tile_hp(tile->type), 0, 0, 3, tile->hp) * 6 + (rand() % 6));
         }
 
         used = true;
@@ -774,19 +778,36 @@ void Player::use_item(const Camera& camera, World& world) {
 
         used = true;
     } else if (item->places_tile.has_value()) {
-        if (item->places_tile->type == TileType::Block && !world.block_exists(tile_pos)) {
+        if (item->places_tile->type == PlacesTile::Block && !world.tile_exists(tile_pos)) {
             const math::Rect player_rect = math::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
             const math::Rect tile_rect = math::Rect::from_center_size(tile_pos.to_world_pos_center(), glm::vec2(TILE_SIZE));
 
             if (!player_rect.intersects(tile_rect)) {
-                world.set_block(tile_pos, item->places_tile->block);
-                used = true;
+                const Neighbors<TileType> neighbors = world.get_tile_type_neighbors(tile_pos);
+
+                if (check_anchor_data(tile_anchor(item->places_tile->tile), neighbors, world.wall_exists(tile_pos))) {
+                    world.set_tile(tile_pos, item->places_tile->tile);
+                    used = true;
+                }
             }
-        } else if (item->places_tile->type == TileType::Wall && !world.wall_exists(tile_pos)) {
+        } else if (item->places_tile->type == PlacesTile::Wall && !world.wall_exists(tile_pos)) {
             world.set_wall(tile_pos, item->places_tile->wall);
             used = true;
         }
     }
 
     if (used) m_inventory.consume_item(item_slot.index);
+}
+
+void Player::interact(const Camera& camera, World& world) {
+    const glm::vec2& screen_pos = Input::MouseScreenPosition();
+    const glm::vec2 world_pos = camera.screen_to_world(screen_pos);
+    const TilePos tile_pos = TilePos::from_world_pos(world_pos);
+
+    std::optional<TileType> tile = world.get_tile_type(tile_pos);
+    if (tile.has_value() && tile_hand_destroy(tile.value())) {
+        world.remove_tile(tile_pos);
+        const glm::vec2 position = tile_pos.to_world_pos_center();
+        spawn_particles_on_dig(position, Particle::get_by_tile(tile.value()), false);
+    }
 }

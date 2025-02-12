@@ -14,6 +14,7 @@
 
 #define TILE_TYPE_BLOCK 0
 #define TILE_TYPE_WALL 1
+#define TILE_TYPE_TORCH 2
 
 using Constants::SUBDIVISION;
 using Constants::RENDER_CHUNK_SIZE;
@@ -42,24 +43,29 @@ static FORCE_INLINE uint16_t pack_tile_data(uint16_t tile_id, uint8_t tile_type)
     return (tile_type & 0x3f) | (tile_id << 6);
 }
 
+static FORCE_INLINE uint16_t pack_position(uint8_t x, uint8_t y) {
+    return (y << 8) | x;
+}
+
 static inline uint16_t fill_block_buffer(const WorldData& world, ChunkInstance* data, glm::uvec2 index, glm::vec2 world_pos) {
     uint16_t count = 0;
 
-    for (uint32_t y = 0; y < RENDER_CHUNK_SIZE_U; ++y) {
-        for (uint32_t x = 0; x < RENDER_CHUNK_SIZE_U; ++x) {
+    for (uint8_t y = 0; y < RENDER_CHUNK_SIZE_U; ++y) {
+        for (uint8_t x = 0; x < RENDER_CHUNK_SIZE_U; ++x) {
             const glm::uvec2 map_pos = glm::uvec2(
                 index.x * RENDER_CHUNK_SIZE_U + x,
                 index.y * RENDER_CHUNK_SIZE_U + y
             );
 
-            const std::optional<Block> block = world.get_block(map_pos);
-            if (block.has_value()) {
+            const std::optional<Tile> tile = world.get_tile(map_pos);
+            if (tile.has_value()) {
                 count++;
 
-                const glm::vec2 atlas_pos = glm::vec2(block->atlas_pos.x, block->atlas_pos.y);
-                const uint16_t tile_data = pack_tile_data(static_cast<uint32_t>(block->type), TILE_TYPE_BLOCK);
+                const glm::vec2 atlas_pos = glm::vec2(tile->atlas_pos.x, tile->atlas_pos.y);
+                const uint8_t tile_type = tile->type == TileType::Torch ? TILE_TYPE_TORCH : TILE_TYPE_BLOCK;
+                const uint16_t tile_data = pack_tile_data(static_cast<uint32_t>(tile->type), tile_type);
 
-                data->position = glm::vec2(x, y);
+                data->position = pack_position(x, y);
                 data->atlas_pos = atlas_pos;
                 data->world_pos = world_pos;
                 data->tile_data = tile_data;
@@ -74,8 +80,8 @@ static inline uint16_t fill_block_buffer(const WorldData& world, ChunkInstance* 
 static inline uint16_t fill_wall_buffer(const WorldData& world, ChunkInstance* data, glm::uvec2 index, glm::vec2 world_pos) {
     uint16_t count = 0;
 
-    for (uint32_t y = 0; y < RENDER_CHUNK_SIZE_U; ++y) {
-        for (uint32_t x = 0; x < RENDER_CHUNK_SIZE_U; ++x) {
+    for (uint8_t y = 0; y < RENDER_CHUNK_SIZE_U; ++y) {
+        for (uint8_t x = 0; x < RENDER_CHUNK_SIZE_U; ++x) {
             const glm::uvec2 map_pos = glm::uvec2(
                 index.x * RENDER_CHUNK_SIZE_U + x,
                 index.y * RENDER_CHUNK_SIZE_U + y
@@ -88,7 +94,7 @@ static inline uint16_t fill_wall_buffer(const WorldData& world, ChunkInstance* d
                 const glm::vec2 atlas_pos = glm::vec2(wall->atlas_pos.x, wall->atlas_pos.y);
                 const uint16_t tile_data = pack_tile_data(static_cast<uint32_t>(wall->type), TILE_TYPE_WALL);
 
-                data->position = glm::vec2(x, y);
+                data->position = pack_position(x, y);
                 data->atlas_pos = atlas_pos;
                 data->world_pos = world_pos;
                 data->tile_data = tile_data;

@@ -11,7 +11,7 @@
 
 namespace utils {
     inline glm::uvec2 get_chunk_pos(TilePos tile_pos) noexcept {
-        return glm::uvec2(tile_pos.x, tile_pos.y) / Constants::RENDER_CHUNK_SIZE_U;
+        return glm::uvec2(tile_pos.x, tile_pos.y) / static_cast<uint32_t>(Constants::RENDER_CHUNK_SIZE_U);
     }
 
     inline math::Rect get_camera_fov(const Camera& camera) {

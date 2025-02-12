@@ -42,7 +42,7 @@ private:
 
     Renderer* m_renderer = nullptr;
 
-    LLGL::Buffer* m_depth_buffer = nullptr;
+    LLGL::Buffer* m_tile_texture_data_buffer = nullptr;
     LLGL::PipelineState* m_pipeline = nullptr;
     LLGL::ResourceHeap* m_resource_heap = nullptr;
 

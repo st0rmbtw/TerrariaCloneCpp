@@ -10,20 +10,23 @@ cbuffer GlobalUniformBuffer : register( b2 )
     float2 u_window_size;
 };
 
-cbuffer DepthBuffer : register( b3 ) {
-    float u_tile_depth;
-    float u_wall_depth;
+struct TileData {
+    float2 tex_size;
+    float2 tex_padding;
+    float2 size;
+    float2 offset;
+    float depth;
 };
+
+cbuffer TileDataBuffer : register(b3) {
+    TileData u_tile_data[3];
+}
 
 struct VSInput
 {
     float2 position : Position;
-    float2 wall_tex_size : WallTexSize;
-    float2 tile_tex_size : TileTexSize;
-    float2 wall_padding : WallPadding;
-    float2 tile_padding : TilePadding;
 
-    float2 i_position: I_Position;
+    uint   i_position: I_Position;
     float2 i_atlas_pos : I_AtlasPos;
     float2 i_world_pos: I_WorldPos;
     nointerpolation uint i_tile_data: I_TileData;
@@ -36,32 +39,30 @@ struct VSOutput {
 };
 
 static const uint TILE_TYPE_WALL = 1u;
+static const uint TILE_TYPE_TORCH = 2u;
+
+static float2 unpack_position(uint position) {
+    uint x = position & 0xFF;
+    uint y = (position >> 8) & 0xFF;
+    return float2(float(x), float(y));
+}
 
 VSOutput VS(VSInput inp)
 {
     const float2 world_pos = inp.i_world_pos;
-    const uint tile_data = inp.i_tile_data;
 
     // Extract last 6 bits
-    const uint tile_type = tile_data & 0x3f;
+    const uint tile_type = inp.i_tile_data & 0x3f;
     // Extract other 10 bits
-    const uint tile_id = (tile_data >> 6) & 0x3ff;
+    const uint tile_id = (inp.i_tile_data >> 6) & 0x3ff;
 
-    float depth = u_tile_depth;
-    float2 size = float2(TILE_SIZE, TILE_SIZE);
-    float2 tex_size = size / inp.tile_tex_size;
-    float2 start_uv = inp.i_atlas_pos * (tex_size + inp.tile_padding);
-    float2 tex_dims = inp.tile_tex_size;
-    float2 offset = float2(0.0, 0.0);
-
-    if (tile_type == TILE_TYPE_WALL) {
-        depth = u_wall_depth;
-        size = float2(WALL_SIZE, WALL_SIZE);
-        tex_size = size / inp.wall_tex_size;
-        start_uv = inp.i_atlas_pos * (tex_size + inp.wall_padding);
-        tex_dims = inp.wall_tex_size;
-        offset = float2(-TILE_SIZE * 0.5, -TILE_SIZE * 0.5);
-    }
+    const TileData tile_data = u_tile_data[tile_type];
+    const float depth = tile_data.depth;
+    const float2 size = tile_data.size;
+    const float2 tex_size = size / tile_data.tex_size;
+    const float2 start_uv = inp.i_atlas_pos * (tex_size + tile_data.tex_padding);
+    const float2 tex_dims = tile_data.tex_size;
+    const float2 offset = tile_data.offset;;
 
     const float4x4 transform = float4x4(
         float4(1.0, 0.0, 0.0, world_pos.x),
@@ -71,7 +72,7 @@ VSOutput VS(VSInput inp)
     );
 
     const float4x4 mvp = mul(u_view_projection, transform);
-    const float2 position = inp.i_position * 16.0 + inp.position * size + offset;
+    const float2 position = unpack_position(inp.i_position) * 16.0 + inp.position * size + offset;
     const float2 uv = start_uv + inp.position * tex_size;
 
     const float2 pixel_offset = float2(0.1 / tex_dims.x, 0.1 / tex_dims.y);

@@ -51,10 +51,12 @@ struct AssetTexture {
 };
 
 namespace ShaderStages {
-    static constexpr uint8_t Vertex = 1 << 0;
-    static constexpr uint8_t Fragment = 1 << 1;
-    static constexpr uint8_t Geometry = 1 << 2;
-    static constexpr uint8_t Compute = 1 << 3;
+    enum : uint8_t {
+        Vertex = 1 << 0,
+        Fragment = 1 << 1,
+        Geometry = 1 << 2,
+        Compute = 1 << 3,
+    };
 }
 
 struct AssetShader {
@@ -125,22 +127,23 @@ static const std::pair<TextureAsset, AssetTextureAtlas> TEXTURE_ATLAS_ASSETS[] =
     { TextureAsset::TileCracks,         AssetTextureAtlas(6, 4, glm::uvec2(16)) }
 };
 
-#define BLOCK_ASSET(BLOCK_TYPE, TEXTURE_ASSET, PATH) std::make_tuple(static_cast<uint16_t>(BLOCK_TYPE), TEXTURE_ASSET, PATH)
+#define BLOCK_ASSET(BLOCK_TYPE, TEXTURE_ASSET, PATH, SIZE) std::make_tuple(static_cast<uint16_t>(BLOCK_TYPE), TEXTURE_ASSET, PATH, SIZE)
 static const std::array BLOCK_ASSETS = {
-    BLOCK_ASSET(BlockType::Dirt, TextureAsset::Tiles0, "assets/sprites/tiles/Tiles_0.png"),
-    BLOCK_ASSET(BlockType::Stone, TextureAsset::Tiles1, "assets/sprites/tiles/Tiles_1.png"),
-    BLOCK_ASSET(BlockType::Grass, TextureAsset::Tiles2, "assets/sprites/tiles/Tiles_2.png"),
-    BLOCK_ASSET(BlockType::Wood, TextureAsset::Tiles30, "assets/sprites/tiles/Tiles_30.png"),
+    BLOCK_ASSET(TileType::Dirt, TextureAsset::Tiles0, "assets/sprites/tiles/Tiles_0.png", glm::uvec2(16)),
+    BLOCK_ASSET(TileType::Stone, TextureAsset::Tiles1, "assets/sprites/tiles/Tiles_1.png", glm::uvec2(16)),
+    BLOCK_ASSET(TileType::Grass, TextureAsset::Tiles2, "assets/sprites/tiles/Tiles_2.png", glm::uvec2(16)),
+    BLOCK_ASSET(TileType::Torch, TextureAsset::Tiles4, "assets/sprites/tiles/Tiles_4.png", glm::uvec2(20)),
+    BLOCK_ASSET(TileType::Wood, TextureAsset::Tiles30, "assets/sprites/tiles/Tiles_30.png", glm::uvec2(16)),
 };
 
-#define WALL_ASSET(WALL_TYPE, PATH) std::make_tuple(static_cast<uint16_t>(WALL_TYPE), TextureAsset::Stub, PATH)
+#define WALL_ASSET(WALL_TYPE, PATH) std::make_tuple(static_cast<uint16_t>(WALL_TYPE), TextureAsset::Stub, PATH, glm::uvec2(32))
 static const std::array WALL_ASSETS = {
     WALL_ASSET(WallType::DirtWall, "assets/sprites/walls/Wall_2.png"),
     WALL_ASSET(WallType::StoneWall, "assets/sprites/walls/Wall_1.png"),
     WALL_ASSET(WallType::WoodWall, "assets/sprites/walls/Wall_4.png"),
 };
 
-#define BACKGROUND_ASSET(BACKGROUND_ASSET, PATH) std::make_tuple(static_cast<uint16_t>(BACKGROUND_ASSET), TextureAsset::Stub, PATH)
+#define BACKGROUND_ASSET(BACKGROUND_ASSET, PATH) std::make_tuple(static_cast<uint16_t>(BACKGROUND_ASSET), TextureAsset::Stub, PATH, glm::uvec2(0))
 static const std::array BACKGROUND_ASSETS = {
     BACKGROUND_ASSET(BackgroundAsset::Background0, "assets/sprites/backgrounds/Background_0.png"),
     BACKGROUND_ASSET(BackgroundAsset::Background7, "assets/sprites/backgrounds/Background_7.png"),
@@ -211,7 +214,7 @@ static bool load_font(Font& font, const char* meta_file_path, const char* atlas_
 static bool load_texture(const char* path, int sampler, Texture* texture);
 
 template <size_t T>
-static Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*>, T>& assets, int sampler, bool generate_mip_maps = false);
+static Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*, glm::uvec2>, T>& assets, int sampler, bool generate_mip_maps = false);
 
 bool Assets::Load() {
     Renderer& renderer = Engine::Renderer();
@@ -227,17 +230,17 @@ bool Assets::Load() {
         state.textures[key] = texture;
     }
 
-    for (const auto& [block_type, asset_key, path] : BLOCK_ASSETS) {
+    for (const auto& [block_type, asset_key, path, size] : BLOCK_ASSETS) {
         Texture texture;
         if (!load_texture(path, TextureSampler::Nearest, &texture)) {
             return false;
         }
         state.textures[asset_key] = texture;
-        state.textures_atlases[asset_key] = TextureAtlas::from_grid(texture, glm::uvec2(16, 16), (texture.width() - (texture.width() / 16) * 2) / 16 + 1, (texture.height() - (texture.height() / 16) * 2) / 16 + 1, glm::uvec2(2));
+        state.textures_atlases[asset_key] = TextureAtlas::from_grid(texture, size, (texture.width() - (texture.width() / 16) * 2) / 16 + 1, (texture.height() - (texture.height() / 16) * 2) / 16 + 1, glm::uvec2(2));
     }
 
     std::vector<math::Rect> background_rects(static_cast<size_t>(BackgroundAsset::Count));
-    for (const auto& [id, asset_key, path] : BACKGROUND_ASSETS) {
+    for (const auto& [id, asset_key, path, _] : BACKGROUND_ASSETS) {
         int width;
         int height;
 
@@ -286,17 +289,17 @@ bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
             attributes.insert(attributes.end(), vertex_format.attributes.begin(), vertex_format.attributes.end());
         }
 
-        if (check_bitflag(asset.stages, ShaderStages::Vertex)) {
+        if (BITFLAG_CHECK(asset.stages, ShaderStages::Vertex)) {
             if (!(shader_pipeline.vs = renderer.LoadShader(ShaderPath(ShaderType::Vertex, asset.file_name), shader_defs, attributes)))
                 return false;
         }
         
-        if (check_bitflag(asset.stages, ShaderStages::Fragment)) {
+        if (BITFLAG_CHECK(asset.stages, ShaderStages::Fragment)) {
             if (!(shader_pipeline.ps = renderer.LoadShader(ShaderPath(ShaderType::Fragment, asset.file_name), shader_defs)))
                 return false;
         }
 
-        if (check_bitflag(asset.stages, ShaderStages::Geometry)) {
+        if (BITFLAG_CHECK(asset.stages, ShaderStages::Geometry)) {
             if (!(shader_pipeline.gs = renderer.LoadShader(ShaderPath(ShaderType::Geometry, asset.file_name), shader_defs)))
                 return false;
         }
@@ -528,47 +531,35 @@ void Assets::InitVertexFormats() {
 
     if (backend.IsGLSL()) {
         tilemap_vertex_format.attributes = {
-            {"a_position", LLGL::Format::RG32Float, 0, 0, sizeof(ChunkVertex), 0, 0 },
-            {"a_wall_tex_size", LLGL::Format::RG32Float, 1, offsetof(ChunkVertex,wall_tex_size), sizeof(ChunkVertex), 0, 0},
-            {"a_tile_tex_size", LLGL::Format::RG32Float, 2, offsetof(ChunkVertex,tile_tex_size), sizeof(ChunkVertex), 0, 0},
-            {"a_wall_padding",  LLGL::Format::RG32Float, 3, offsetof(ChunkVertex,wall_padding),  sizeof(ChunkVertex), 0, 0},
-            {"a_tile_padding",  LLGL::Format::RG32Float, 4, offsetof(ChunkVertex,tile_padding),  sizeof(ChunkVertex), 0, 0}
+            {"a_position", LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 },
         };
     } else if (backend.IsHLSL()) {
         tilemap_vertex_format.attributes = {
-            {"Position"   , LLGL::Format::RG32Float, 0, 0, sizeof(ChunkVertex), 0, 0 },
-            {"WallTexSize", LLGL::Format::RG32Float, 1, offsetof(ChunkVertex,wall_tex_size), sizeof(ChunkVertex), 0, 0},
-            {"TileTexSize", LLGL::Format::RG32Float, 2, offsetof(ChunkVertex,tile_tex_size), sizeof(ChunkVertex), 0, 0},
-            {"WallPadding", LLGL::Format::RG32Float, 3, offsetof(ChunkVertex,wall_padding), sizeof(ChunkVertex), 0, 0},
-            {"TilePadding", LLGL::Format::RG32Float, 4, offsetof(ChunkVertex,tile_padding), sizeof(ChunkVertex), 0, 0},
+            {"Position", LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 },
         };
     } else {
         tilemap_vertex_format.attributes = {
-            {"position",      LLGL::Format::RG32Float, 0, 0, sizeof(ChunkVertex), 0, 0 },
-            {"wall_tex_size", LLGL::Format::RG32Float, 1, offsetof(ChunkVertex,wall_tex_size), sizeof(ChunkVertex), 0, 0},
-            {"tile_tex_size", LLGL::Format::RG32Float, 2, offsetof(ChunkVertex,tile_tex_size), sizeof(ChunkVertex), 0, 0},
-            {"wall_padding",  LLGL::Format::RG32Float, 3, offsetof(ChunkVertex,wall_padding),  sizeof(ChunkVertex), 0, 0},
-            {"tile_padding",  LLGL::Format::RG32Float, 4, offsetof(ChunkVertex,tile_padding),  sizeof(ChunkVertex), 0, 0}
+            {"position", LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 }
         };
     }
 
     if (backend.IsGLSL()) {
         tilemap_instance_format.attributes = {
-            {"i_position",  LLGL::Format::RG32Float,  5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
+            {"i_position",  LLGL::Format::R16UInt,    5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
             {"i_atlas_pos", LLGL::Format::RG32Float,  6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
             {"i_world_pos", LLGL::Format::RG32Float,  7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
             {"i_tile_data", LLGL::Format::R32UInt,    8, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
         };
     } else if (backend.IsHLSL()) {
         tilemap_instance_format.attributes = {
-            {"I_Position",  LLGL::Format::RG32Float,  5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
+            {"I_Position",  LLGL::Format::R16UInt,    5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
             {"I_AtlasPos",  LLGL::Format::RG32Float,  6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
             {"I_WorldPos",  LLGL::Format::RG32Float,  7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
             {"I_TileData",  LLGL::Format::R16UInt,    8, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
         };
     } else {
         tilemap_instance_format.attributes = {
-            {"i_position",  LLGL::Format::RG32Float,  5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
+            {"i_position",  LLGL::Format::R16UInt,    5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
             {"i_atlas_pos", LLGL::Format::RG32Float,  6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
             {"i_world_pos", LLGL::Format::RG32Float,  7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
             {"i_tile_data", LLGL::Format::R32UInt,    8, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
@@ -833,7 +824,7 @@ static bool load_texture(const char* path, int sampler, Texture* texture) {
 }
 
 template <size_t T>
-Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*>, T>& assets, int sampler, bool generate_mip_maps) {
+Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*, glm::uvec2>, T>& assets, int sampler, bool generate_mip_maps) {
     uint32_t width = 0;
     uint32_t height = 0;
     uint32_t layers_count = 0;
@@ -847,7 +838,7 @@ Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, c
     std::unordered_map<uint16_t, Layer> layer_to_data_map;
     layer_to_data_map.reserve(assets.size());
 
-    for (const auto& [block_type, asset_key, path] : assets) {
+    for (const auto& [block_type, asset_key, path, _] : assets) {
         layers_count = glm::max(layers_count, static_cast<uint32_t>(block_type));
 
         int w, h;

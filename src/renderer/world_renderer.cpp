@@ -28,25 +28,48 @@ static constexpr uint32_t LIGHTMAP_CHUNK_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Const
 static constexpr float LIGHTMAP_CHUNK_WORLD_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::TILE_SIZE;
 static constexpr float LIGHTMAP_TO_WORLD = Constants::TILE_SIZE / Constants::SUBDIVISION;
 
-struct ALIGN(16) DepthUniformData {
-    float tile_depth;
-    float wall_depth;
+static constexpr float TILE_DEPTH = 0.3f;
+static constexpr float WALL_DEPTH = 0.1f;
+
+struct ALIGN(16) TileTextureData {
+    glm::vec2 tex_size;
+    glm::vec2 tex_padding;
+    glm::vec2 size;
+    glm::vec2 offset;
+    float depth;
 };
 
 void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
     ZoneScopedN("WorldRenderer::init");
+
+    using Constants::TILE_SIZE;
+    using Constants::WALL_SIZE;
+    using Constants::TORCH_SIZE;
 
     m_renderer = &Engine::Renderer();
 
     const auto& context = m_renderer->Context();
     const RenderBackend backend = m_renderer->Backend();
 
-    auto depth_uniform = DepthUniformData {
-        .tile_depth = 0.3f,
-        .wall_depth = 0.1f
-    };
+    {
+        const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Tiles).size());
+        const glm::vec2 tile_padding = glm::vec2(Constants::TILE_TEXTURE_PADDING) / tile_tex_size;
 
-    m_depth_buffer = context->CreateBuffer(LLGL::ConstantBufferDesc(sizeof(DepthUniformData)), &depth_uniform);
+        const glm::vec2 wall_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Walls).size());
+        const glm::vec2 wall_padding = glm::vec2(Constants::WALL_TEXTURE_PADDING) / wall_tex_size;
+
+        const TileTextureData texture_data[] = {
+            TileTextureData{tile_tex_size, tile_padding, glm::vec2(TILE_SIZE),  glm::vec2(0.0f), TILE_DEPTH}, // Tile
+            TileTextureData{wall_tex_size, wall_padding, glm::vec2(WALL_SIZE),  glm::vec2(-TILE_SIZE * 0.5f), WALL_DEPTH}, // Wall
+            TileTextureData{tile_tex_size, tile_padding, glm::vec2(TORCH_SIZE), glm::vec2(-2.0f, 0.0f), TILE_DEPTH}, // Torch
+        };
+    
+        LLGL::BufferDescriptor desc;
+        desc.size = sizeof(texture_data);
+        desc.bindFlags = LLGL::BindFlags::ConstantBuffer;
+
+        m_tile_texture_data_buffer = context->CreateBuffer(desc, texture_data);
+    }
 
     {
         LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
@@ -59,7 +82,7 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
                 LLGL::BindingSlot(2)
             ),
             LLGL::BindingDescriptor(
-                "DepthBuffer",
+                "TileTextureDataBuffer",
                 LLGL::ResourceType::Buffer,
                 LLGL::BindFlags::ConstantBuffer,
                 LLGL::StageFlags::VertexStage,
@@ -79,7 +102,7 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
         LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
         const LLGL::ResourceViewDescriptor resource_views[] = {
-            m_renderer->GlobalUniformBuffer(), m_depth_buffer
+            m_renderer->GlobalUniformBuffer(), m_tile_texture_data_buffer
         };
 
         m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
@@ -326,7 +349,7 @@ void WorldRenderer::init_textures(const WorldData& world) {
         uint8_t* data = new uint8_t[size];
         for (int y = 0; y < world.area.height(); ++y) {
             for (int x = 0; x < world.area.width(); ++x) {
-                uint8_t tile = world.block_exists(TilePos(x, y)) ? 1 : 0;
+                uint8_t tile = world.tile_exists(TilePos(x, y)) ? 1 : 0;
                 data[y * world.area.width() + x] = tile;
             }
         }
@@ -677,7 +700,7 @@ void WorldRenderer::terminate() {
     RESOURCE_RELEASE(m_light_init_resource_heap);
     RESOURCE_RELEASE(m_light_blur_resource_heap);
     RESOURCE_RELEASE(m_resource_heap);
-    RESOURCE_RELEASE(m_depth_buffer);
+    RESOURCE_RELEASE(m_tile_texture_data_buffer);
     RESOURCE_RELEASE(m_light_texture);
     RESOURCE_RELEASE(m_light_texture_target);
     RESOURCE_RELEASE(m_tile_texture);

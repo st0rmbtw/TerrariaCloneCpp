@@ -15,14 +15,14 @@
 
 using Constants::LIGHT_DECAY_STEPS;
 
-void World::set_block(TilePos pos, const Block& block) {
-    ZoneScopedN("World::set_block");
+void World::set_tile(TilePos pos, const Tile& tile) {
+    ZoneScopedN("World::set_tile");
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
     const size_t index = m_data.get_tile_index(pos);
 
-    m_data.blocks[index] = block;
+    m_data.blocks[index] = tile;
     m_changed = true;
     m_lightmap_changed = true;
 
@@ -35,14 +35,14 @@ void World::set_block(TilePos pos, const Block& block) {
     this->update_neighbors(pos);
 }
 
-void World::set_block(TilePos pos, BlockType block_type) {
-    ZoneScopedN("World::set_block");
+void World::set_tile(TilePos pos, TileType tile_type) {
+    ZoneScopedN("World::set_tile");
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
     const size_t index = m_data.get_tile_index(pos);
 
-    m_data.blocks[index] = Block(block_type);
+    m_data.blocks[index] = Tile(tile_type);
 
     reset_tiles(pos, *this);
 
@@ -59,8 +59,8 @@ void World::set_block(TilePos pos, BlockType block_type) {
     m_chunk_manager.set_blocks_changed(pos);
 }
 
-void World::remove_block(TilePos pos) {
-    ZoneScopedN("World::remove_block");
+void World::remove_tile(TilePos pos) {
+    ZoneScopedN("World::remove_tile");
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
@@ -84,8 +84,8 @@ void World::remove_block(TilePos pos) {
     this->update_neighbors(pos);
 }
 
-void World::update_block(TilePos pos, BlockType new_type, uint8_t new_variant) {
-    ZoneScopedN("World::update_block");
+void World::update_tile(TilePos pos, TileType new_type, uint8_t new_variant) {
+    ZoneScopedN("World::update_tile");
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
@@ -174,11 +174,11 @@ void World::update(const Camera& camera) {
     m_lightmap_changed = false;
     m_chunk_manager.manage_chunks(m_data, camera);
 
-    for (auto it = m_block_dig_animations.begin(); it != m_block_dig_animations.end();) {
-        BlockDigAnimation& anim = *it;
+    for (auto it = m_tile_dig_animations.begin(); it != m_tile_dig_animations.end();) {
+        TileDigAnimation& anim = *it;
 
         if (anim.progress >= 1.0f) {
-            it = m_block_dig_animations.erase(it);
+            it = m_tile_dig_animations.erase(it);
             continue;
         }
 
@@ -197,7 +197,7 @@ void World::update(const Camera& camera) {
 void World::draw() const {
     ZoneScopedN("World::draw");
 
-    for (const auto& [pos, cracks] : m_block_cracks) {
+    for (const auto& [pos, cracks] : m_tile_cracks) {
         TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));
         sprite.set_position(pos.to_world_pos_center());
         sprite.set_index(cracks.cracks_index);
@@ -215,17 +215,17 @@ void World::draw() const {
         GameRenderer::DrawAtlasSpriteWorld(sprite);
     }
 
-    for (const BlockDigAnimation& anim : m_block_dig_animations) {
+    for (const TileDigAnimation& anim : m_tile_dig_animations) {
         const glm::vec2 scale = glm::vec2(1.0f + anim.scale * 0.5f);
         const glm::vec2 position = anim.tile_pos.to_world_pos_center();
 
-        TextureAtlasSprite sprite(Assets::GetTextureAtlas(block_texture_asset(anim.block_type)), position, scale);
+        TextureAtlasSprite sprite(Assets::GetTextureAtlas(tile_texture_asset(anim.tile_type)), position, scale);
         sprite.set_index(anim.atlas_pos.x, anim.atlas_pos.y);
 
         GameRenderer::DrawAtlasSpriteWorld(sprite);
 
-        const auto cracks = m_block_cracks.find(anim.tile_pos);
-        if (cracks != m_block_cracks.end()) {
+        const auto cracks = m_tile_cracks.find(anim.tile_pos);
+        if (cracks != m_tile_cracks.end()) {
             TextureAtlasSprite cracks_sprites(Assets::GetTextureAtlas(TextureAsset::TileCracks), position, scale);
             cracks_sprites.set_index(cracks->second.cracks_index);
 
@@ -247,13 +247,13 @@ void World::update_neighbors(TilePos initial_pos) {
 }
 
 void World::update_tile_sprite_index(TilePos pos) {
-    Block* block = this->get_block_mut(pos);
+    Tile* tile = this->get_tile_mut(pos);
     Wall* wall = this->get_wall_mut(pos);
 
-    if (block) {
-        const Neighbors<Block> neighbors = this->get_block_neighbors(pos);
+    if (tile) {
+        const Neighbors<Tile> neighbors = this->get_tile_neighbors(pos);
 
-        update_block_sprite_index(*block, neighbors);
+        update_block_sprite_index(*tile, neighbors);
     
         m_chunk_manager.set_blocks_changed(pos);
     }

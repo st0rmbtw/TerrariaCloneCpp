@@ -2,10 +2,54 @@
 
 #include "autotile.hpp"
 
+#include <string>
 #include <array>
 
+#include "../types/texture_atlas_pos.hpp"
 #include "../types/block.hpp"
 #include "../utils.hpp"
+
+static constexpr uint8_t MERGE_VALIDATION[22][16] = {
+    {11, 13, 13, 13, 14, 10, 8, 8, 8, 1, 15, 15, 4, 13, 13, 13},
+    {11, 15, 15, 15, 14, 10, 15, 15, 15, 1, 15, 15, 4, 7, 7, 7},
+    {11, 7, 7, 7, 14, 10, 15, 15, 15, 1, 15, 15, 4, 11, 11, 11},
+    {9, 12, 9, 12, 9, 12, 2, 2, 2, 0, 0, 0, 0, 14, 14, 14},
+    {3, 6, 3, 6, 3, 6, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0},
+    {15, 15, 15, 15, 11, 14, 8, 10, 15, 15, 15, 15, 15, 0, 0, 0},
+    {15, 15, 15, 15, 11, 14, 8, 10, 15, 15, 15, 15, 15, 0, 0, 0},
+    {15, 15, 15, 15, 11, 14, 8, 10, 15, 15, 15, 15, 15, 0, 0, 0},
+    {15, 15, 15, 15, 11, 14, 2, 10, 15, 15, 15, 15, 15, 0, 0, 0},
+    {15, 15, 15, 15, 11, 14, 2, 10, 15, 15, 15, 15, 15, 0, 0, 0},
+    {15, 15, 15, 15, 11, 14, 2, 10, 15, 15, 15, 15, 15, 0, 0, 0},
+    {13, 13, 13, 13, 13, 13, 15, 15, 15, 5, 5, 5, 0, 0, 0, 0},
+    {7, 7, 7, 7, 7, 7, 10, 9, 13, 12, 9, 13, 12, 9, 13, 12},
+    {4, 4, 4, 1, 1, 1, 10, 11, 15, 14, 11, 15, 14, 11, 15, 14},
+    {5, 5, 5, 5, 5, 5, 10, 3, 7, 6, 3, 7, 6, 3, 7, 6},
+    {11, 14, 13, 13, 13, 9, 9, 9, 12, 12, 12, 15, 15, 15, 0, 0},
+    {11, 14, 7, 7, 7, 3, 3, 3, 6, 6, 6, 15, 15, 15, 0, 0},
+    {11, 14, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 0, 0},
+    {13, 13, 13, 13, 13, 13, 15, 15, 15, 0, 0, 0, 0, 0, 0, 0},
+    {7, 7, 7, 7, 7, 7, 15, 15, 15, 0, 0, 0, 0, 0, 0, 0},
+    {11, 11, 11, 11, 11, 11, 15, 15, 15, 0, 0, 0, 0, 0, 0, 0},
+    {14, 14, 14, 14, 14, 14, 15, 15, 15, 0, 0, 0, 0, 0, 0, 0}
+};
+
+struct TileRule {
+    TileRule() = default;
+
+    TileRule(const std::string& start, const std::string& end, uint32_t corner_exclusion_mask = 0, uint32_t blend_exclusion_mask = 0, uint32_t blend_inclusion_mask = 0, uint32_t corner_inclusion_mask = 0);
+
+    [[nodiscard]] bool matches(uint32_t neighbors_mask, uint32_t blend_mask) const;
+    [[nodiscard]] bool matches_relaxed(uint32_t neighbors_mask, uint32_t blend_mask) const;
+
+public:
+    TextureAtlasPos indexes[3];
+private:
+    uint32_t corner_exclusion_mask;
+    uint32_t blend_exclusion_mask;
+    uint32_t blend_inclusion_mask;
+    uint32_t corner_inclusion_mask;
+};
 
 static struct {
     std::array<std::list<TileRule>, 16> base_rules;
@@ -251,68 +295,86 @@ void init_tile_rules() {
     state.grass_rules[15].emplace_back("F3", "J3",   0x1000, 0x10000000, 0x00000000, 0x0000);
 }
 
-void update_block_sprite_index(Block& block, const Neighbors<Block>& neighbors) {
-    if (block.is_merged) return;
+void update_block_sprite_index(Tile& tile, const Neighbors<Tile>& neighbors) {
+    if (tile.type == TileType::Torch) {
+        AnchorData anchor = tile_anchor(tile.type);
+
+        const auto to_type = [](Tile tile) {
+            return tile.type;
+        };
+
+        uint16_t index;
+        if (check_anchor_vertical(map(neighbors.bottom, to_type), anchor.bottom)) index = 0;
+        else if (check_anchor_horizontal(map(neighbors.left, to_type), anchor.left)) index = 1;
+        else if (check_anchor_horizontal(map(neighbors.right, to_type), anchor.right)) index = 2;
+        else index = 0;
+
+        tile.atlas_pos = TextureAtlasPos(index, 0);
+
+        return;
+    }
+
+    if (tile.is_merged) return;
 
     uint32_t neighbors_mask = 0;
     uint32_t blend_mask = 0;
 
-    if (block_is_stone(block.type)) {
-        neighbors_mask |= (neighbors.right.has_value()        && block_is_stone(neighbors.right->type))        ? 0x00000001 : 0x0;
-        neighbors_mask |= (neighbors.top.has_value()          && block_is_stone(neighbors.top->type))          ? 0x00000010 : 0x0;
-        neighbors_mask |= (neighbors.left.has_value()         && block_is_stone(neighbors.left->type))         ? 0x00000100 : 0x0;
-        neighbors_mask |= (neighbors.bottom.has_value()       && block_is_stone(neighbors.bottom->type))       ? 0x00001000 : 0x0;
-        neighbors_mask |= (neighbors.top_right.has_value()    && block_is_stone(neighbors.top_right->type))    ? 0x00010000 : 0x0;
-        neighbors_mask |= (neighbors.top_left.has_value()     && block_is_stone(neighbors.top_left->type))     ? 0x00100000 : 0x0;
-        neighbors_mask |= (neighbors.bottom_left.has_value()  && block_is_stone(neighbors.bottom_left->type))  ? 0x01000000 : 0x0;
-        neighbors_mask |= (neighbors.bottom_right.has_value() && block_is_stone(neighbors.bottom_right->type)) ? 0x10000000 : 0x0;
+    if (tile_is_stone(tile.type)) {
+        neighbors_mask |= (neighbors.right.has_value()        && tile_is_stone(neighbors.right->type))        ? 0x00000001 : 0x0;
+        neighbors_mask |= (neighbors.top.has_value()          && tile_is_stone(neighbors.top->type))          ? 0x00000010 : 0x0;
+        neighbors_mask |= (neighbors.left.has_value()         && tile_is_stone(neighbors.left->type))         ? 0x00000100 : 0x0;
+        neighbors_mask |= (neighbors.bottom.has_value()       && tile_is_stone(neighbors.bottom->type))       ? 0x00001000 : 0x0;
+        neighbors_mask |= (neighbors.top_right.has_value()    && tile_is_stone(neighbors.top_right->type))    ? 0x00010000 : 0x0;
+        neighbors_mask |= (neighbors.top_left.has_value()     && tile_is_stone(neighbors.top_left->type))     ? 0x00100000 : 0x0;
+        neighbors_mask |= (neighbors.bottom_left.has_value()  && tile_is_stone(neighbors.bottom_left->type))  ? 0x01000000 : 0x0;
+        neighbors_mask |= (neighbors.bottom_right.has_value() && tile_is_stone(neighbors.bottom_right->type)) ? 0x10000000 : 0x0;
     } else {
-        neighbors_mask |= (neighbors.right.has_value()        && block_merges_with(block.type, neighbors.right->type))        ? 0x00000001 : 0x0;
-        neighbors_mask |= (neighbors.top.has_value()          && block_merges_with(block.type, neighbors.top->type))          ? 0x00000010 : 0x0;
-        neighbors_mask |= (neighbors.left.has_value()         && block_merges_with(block.type, neighbors.left->type))         ? 0x00000100 : 0x0;
-        neighbors_mask |= (neighbors.bottom.has_value()       && block_merges_with(block.type, neighbors.bottom->type))       ? 0x00001000 : 0x0;
-        neighbors_mask |= (neighbors.top_right.has_value()    && block_merges_with(block.type, neighbors.top_right->type))    ? 0x00010000 : 0x0;
-        neighbors_mask |= (neighbors.top_left.has_value()     && block_merges_with(block.type, neighbors.top_left->type))     ? 0x00100000 : 0x0;
-        neighbors_mask |= (neighbors.bottom_left.has_value()  && block_merges_with(block.type, neighbors.bottom_left->type))  ? 0x01000000 : 0x0;
-        neighbors_mask |= (neighbors.bottom_right.has_value() && block_merges_with(block.type, neighbors.bottom_right->type)) ? 0x10000000 : 0x0;
+        neighbors_mask |= (neighbors.right.has_value()        && tile_merges_with(tile.type, neighbors.right->type))        ? 0x00000001 : 0x0;
+        neighbors_mask |= (neighbors.top.has_value()          && tile_merges_with(tile.type, neighbors.top->type))          ? 0x00000010 : 0x0;
+        neighbors_mask |= (neighbors.left.has_value()         && tile_merges_with(tile.type, neighbors.left->type))         ? 0x00000100 : 0x0;
+        neighbors_mask |= (neighbors.bottom.has_value()       && tile_merges_with(tile.type, neighbors.bottom->type))       ? 0x00001000 : 0x0;
+        neighbors_mask |= (neighbors.top_right.has_value()    && tile_merges_with(tile.type, neighbors.top_right->type))    ? 0x00010000 : 0x0;
+        neighbors_mask |= (neighbors.top_left.has_value()     && tile_merges_with(tile.type, neighbors.top_left->type))     ? 0x00100000 : 0x0;
+        neighbors_mask |= (neighbors.bottom_left.has_value()  && tile_merges_with(tile.type, neighbors.bottom_left->type))  ? 0x01000000 : 0x0;
+        neighbors_mask |= (neighbors.bottom_right.has_value() && tile_merges_with(tile.type, neighbors.bottom_right->type)) ? 0x10000000 : 0x0;
 
-        neighbors_mask |= (neighbors.right.has_value()        && neighbors.right->type        == block.type) ? 0x00000001 : 0x0;
-        neighbors_mask |= (neighbors.top.has_value()          && neighbors.top->type          == block.type) ? 0x00000010 : 0x0;
-        neighbors_mask |= (neighbors.left.has_value()         && neighbors.left->type         == block.type) ? 0x00000100 : 0x0;
-        neighbors_mask |= (neighbors.bottom.has_value()       && neighbors.bottom->type       == block.type) ? 0x00001000 : 0x0;
-        neighbors_mask |= (neighbors.top_right.has_value()    && neighbors.top_right->type    == block.type) ? 0x00010000 : 0x0;
-        neighbors_mask |= (neighbors.top_left.has_value()     && neighbors.top_left->type     == block.type) ? 0x00100000 : 0x0;
-        neighbors_mask |= (neighbors.bottom_left.has_value()  && neighbors.bottom_left->type  == block.type) ? 0x01000000 : 0x0;
-        neighbors_mask |= (neighbors.bottom_right.has_value() && neighbors.bottom_right->type == block.type) ? 0x10000000 : 0x0;
+        neighbors_mask |= (neighbors.right.has_value()        && neighbors.right->type        == tile.type) ? 0x00000001 : 0x0;
+        neighbors_mask |= (neighbors.top.has_value()          && neighbors.top->type          == tile.type) ? 0x00000010 : 0x0;
+        neighbors_mask |= (neighbors.left.has_value()         && neighbors.left->type         == tile.type) ? 0x00000100 : 0x0;
+        neighbors_mask |= (neighbors.bottom.has_value()       && neighbors.bottom->type       == tile.type) ? 0x00001000 : 0x0;
+        neighbors_mask |= (neighbors.top_right.has_value()    && neighbors.top_right->type    == tile.type) ? 0x00010000 : 0x0;
+        neighbors_mask |= (neighbors.top_left.has_value()     && neighbors.top_left->type     == tile.type) ? 0x00100000 : 0x0;
+        neighbors_mask |= (neighbors.bottom_left.has_value()  && neighbors.bottom_left->type  == tile.type) ? 0x01000000 : 0x0;
+        neighbors_mask |= (neighbors.bottom_right.has_value() && neighbors.bottom_right->type == tile.type) ? 0x10000000 : 0x0;
     }
 
-    if (!block.is_merged) {
+    if (!tile.is_merged) {
         bool check_ready = true;
-        check_ready &= (!neighbors.right.has_value()  || !block_merges_with(block.type, neighbors.right->type))  ? true : (neighbors.right->merge_id  != 0xFF);
-        check_ready &= (!neighbors.top.has_value()    || !block_merges_with(block.type, neighbors.top->type))    ? true : (neighbors.top->merge_id    != 0xFF);
-        check_ready &= (!neighbors.left.has_value()   || !block_merges_with(block.type, neighbors.left->type))   ? true : (neighbors.left->merge_id   != 0xFF);
-        check_ready &= (!neighbors.bottom.has_value() || !block_merges_with(block.type, neighbors.bottom->type)) ? true : (neighbors.bottom->merge_id != 0xFF);
+        check_ready &= (!neighbors.right.has_value()  || !tile_merges_with(tile.type, neighbors.right->type))  ? true : (neighbors.right->merge_id  != 0xFF);
+        check_ready &= (!neighbors.top.has_value()    || !tile_merges_with(tile.type, neighbors.top->type))    ? true : (neighbors.top->merge_id    != 0xFF);
+        check_ready &= (!neighbors.left.has_value()   || !tile_merges_with(tile.type, neighbors.left->type))   ? true : (neighbors.left->merge_id   != 0xFF);
+        check_ready &= (!neighbors.bottom.has_value() || !tile_merges_with(tile.type, neighbors.bottom->type)) ? true : (neighbors.bottom->merge_id != 0xFF);
 
         if (check_ready) {
-            neighbors_mask &= 0x11111110 | ((!neighbors.right.has_value()  || !block_merges_with(block.type, neighbors.right->type))  ? 0x00000001 : ((neighbors.right->merge_id  & 0x04) >> 2));
-            neighbors_mask &= 0x11111101 | ((!neighbors.top.has_value()    || !block_merges_with(block.type, neighbors.top->type))    ? 0x00000010 : ((neighbors.top->merge_id    & 0x08) << 1));
-            neighbors_mask &= 0x11111011 | ((!neighbors.left.has_value()   || !block_merges_with(block.type, neighbors.left->type))   ? 0x00000100 : ((neighbors.left->merge_id   & 0x01) << 8));
-            neighbors_mask &= 0x11110111 | ((!neighbors.bottom.has_value() || !block_merges_with(block.type, neighbors.bottom->type)) ? 0x00001000 : ((neighbors.bottom->merge_id & 0x02) << 11));
-            block.is_merged = true;
+            neighbors_mask &= 0x11111110 | ((!neighbors.right.has_value()  || !tile_merges_with(tile.type, neighbors.right->type))  ? 0x00000001 : ((neighbors.right->merge_id  & 0x04) >> 2));
+            neighbors_mask &= 0x11111101 | ((!neighbors.top.has_value()    || !tile_merges_with(tile.type, neighbors.top->type))    ? 0x00000010 : ((neighbors.top->merge_id    & 0x08) << 1));
+            neighbors_mask &= 0x11111011 | ((!neighbors.left.has_value()   || !tile_merges_with(tile.type, neighbors.left->type))   ? 0x00000100 : ((neighbors.left->merge_id   & 0x01) << 8));
+            neighbors_mask &= 0x11110111 | ((!neighbors.bottom.has_value() || !tile_merges_with(tile.type, neighbors.bottom->type)) ? 0x00001000 : ((neighbors.bottom->merge_id & 0x02) << 11));
+            tile.is_merged = true;
         }
     }
 
     uint32_t bucket_id = ((neighbors_mask & 0x00001000) >> 9) + ((neighbors_mask & 0x00000100) >> 6) + ((neighbors_mask & 0x00000010) >> 3) + (neighbors_mask & 0x00000001);
 
-    std::optional<BlockType> merge_with = block_merge_with(block.type);
+    std::optional<TileType> merge_with = tile_merge_with(tile.type);
 
     TextureAtlasPos index;
 
-    if (block.type == BlockType::Grass) {
+    if (tile.type == TileType::Grass) {
         bool found = false;
         for (const TileRule& rule : state.grass_rules[bucket_id]) {
             if (rule.matches_relaxed(neighbors_mask, blend_mask)) {
-                index = rule.indexes[block.variant];
+                index = rule.indexes[tile.variant];
                 found = true;
                 break;
             }
@@ -323,7 +385,7 @@ void update_block_sprite_index(Block& block, const Neighbors<Block>& neighbors) 
             bucket_id = ((neighbors_mask & 0x00001000) >> 9) + ((neighbors_mask & 0x00000100) >> 6) + ((neighbors_mask & 0x00000010) >> 3) + (neighbors_mask & 0x00000001);
             for (const TileRule& rule : state.base_rules[bucket_id]) {
                 if (rule.matches(neighbors_mask, blend_mask)) {
-                    index = rule.indexes[block.variant];
+                    index = rule.indexes[tile.variant];
                     break;
                 }
             }
@@ -340,21 +402,21 @@ void update_block_sprite_index(Block& block, const Neighbors<Block>& neighbors) 
 
         for (const TileRule& rule : state.blend_rules[bucket_id]) {
             if (rule.matches(neighbors_mask, blend_mask)) {
-                index = rule.indexes[block.variant];
+                index = rule.indexes[tile.variant];
                 break;
             }
         }
     } else {
         for (const TileRule& rule : state.base_rules[bucket_id]) {
             if (rule.matches(neighbors_mask, blend_mask)) {
-                index = rule.indexes[block.variant];
+                index = rule.indexes[tile.variant];
                 break;
             }
         }
     }
 
-    block.merge_id = MERGE_VALIDATION[index.y][index.x];
-    block.atlas_pos = index;
+    tile.merge_id = MERGE_VALIDATION[index.y][index.x];
+    tile.atlas_pos = index;
 }
 
 void update_wall_sprite_index(Wall& wall, const Neighbors<Wall>& neighbors) {
@@ -387,11 +449,11 @@ void reset_tiles(const TilePos& initial_pos, World& world) {
     for (int y = initial_pos.y - 3; y < initial_pos.y + 3; ++y) {
         for (int x = initial_pos.x - 3; x < initial_pos.x + 3; ++x) {
             auto pos = TilePos(x, y);
-            Block* block = world.get_block_mut(pos);
+            Tile* tile = world.get_tile_mut(pos);
 
-            if (block != nullptr) {
-                block->is_merged = false;
-                block->merge_id = 0xFF;
+            if (tile != nullptr) {
+                tile->is_merged = false;
+                tile->merge_id = 0xFF;
             }
         }
     }

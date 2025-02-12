@@ -72,17 +72,11 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
 
     const auto& context = state.renderer->Context();
 
-    const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Tiles).size());
-    const glm::vec2 wall_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Walls).size());
-
-    const glm::vec2 tile_padding = glm::vec2(Constants::TILE_TEXTURE_PADDING) / tile_tex_size;
-    const glm::vec2 wall_padding = glm::vec2(Constants::WALL_TEXTURE_PADDING) / wall_tex_size;
-
-    const ChunkVertex vertices[] = {
-        ChunkVertex(0.0, 0.0, wall_tex_size, tile_tex_size, wall_padding, tile_padding),
-        ChunkVertex(0.0, 1.0, wall_tex_size, tile_tex_size, wall_padding, tile_padding),
-        ChunkVertex(1.0, 0.0, wall_tex_size, tile_tex_size, wall_padding, tile_padding),
-        ChunkVertex(1.0, 1.0, wall_tex_size, tile_tex_size, wall_padding, tile_padding),
+    const Vertex vertices[] = {
+        Vertex(0.0, 0.0),
+        Vertex(0.0, 1.0),
+        Vertex(1.0, 0.0),
+        Vertex(1.0, 1.0),
     };
 
     state.chunk_vertex_buffer = state.renderer->CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex), "WorldRenderer VertexBuffer");

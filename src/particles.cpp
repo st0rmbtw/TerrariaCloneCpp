@@ -151,7 +151,7 @@ void ParticleManager::Draw() {
         const float scale = state.scale[i]; 
         const Particle::Type type = state.type[i];
         const uint8_t variant = state.variant[i];
-        const bool world = check_bitflag(state.flags[i], ParticleFlags::InWorldLayer);
+        const bool world = BITFLAG_CHECK(state.flags[i], ParticleFlags::InWorldLayer);
 
         GameRenderer::DrawParticle(position, rotation, scale, type, variant, world ? world_depth : main_depth, world);
     }
@@ -161,7 +161,7 @@ void ParticleManager::Update(World& world) {
     ZoneScopedN("ParticleManager::Update");
 
     for (size_t i = 0; i < state.active_count; ++i) {
-        const bool gravity = check_bitflag(state.flags[i], ParticleFlags::Gravity);
+        const bool gravity = BITFLAG_CHECK(state.flags[i], ParticleFlags::Gravity);
         float& velocity_y = state.velocity[i * 2 + 1];
 
         if (gravity) {
@@ -238,7 +238,7 @@ void ParticleManager::Update(World& world) {
 #endif
 
     for (size_t i = 0; i < state.active_count; ++i) {
-        const bool emits_light = check_bitflag(state.flags[i], ParticleFlags::EmitsLight);
+        const bool emits_light = BITFLAG_CHECK(state.flags[i], ParticleFlags::EmitsLight);
         if (!emits_light) continue;
 
         const glm::vec3 light_color = glm::vec3(
@@ -264,11 +264,11 @@ void ParticleManager::DeleteExpired() {
 
     while (state.active_count > 0) {
         const float lifetime = state.lifetime[i];
-        bool active = check_bitflag(state.flags[i], ParticleFlags::Active);
+        bool active = BITFLAG_CHECK(state.flags[i], ParticleFlags::Active);
         if (!active) break;
 
         if (lifetime <= 0.0f) {
-            state.flags[i] = remove_bitflag(state.flags[i], ParticleFlags::Active);
+            state.flags[i] = BITFLAG_REMOVE(state.flags[i], ParticleFlags::Active);
             state.active_count--;
             std::swap(state.position[i * 2], state.position[state.active_count * 2]);
             std::swap(state.position[i * 2 + 1], state.position[state.active_count * 2 + 1]);

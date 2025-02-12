@@ -104,11 +104,13 @@ void fixed_update() {
     constexpr bool handle_input = true;
 #endif
 
-    g.player.fixed_update(g.world, handle_input);
+    g.player.fixed_update(g.camera, g.world, handle_input);
 
     UI::FixedUpdate();
 
     GameRenderer::UpdateLight();
+
+    ParticleManager::Update(g.world);
 }
 
 void update() {
@@ -147,7 +149,7 @@ void update() {
     
     UI::Update(g.player.inventory());
     
-    g.player.update(g.camera, g.world);
+    g.player.update(g.world);
 
     if (Input::Pressed(Key::K)) {
         const glm::vec2 position = g.camera.screen_to_world(Input::MouseScreenPosition());
@@ -162,10 +164,6 @@ void update() {
             );
         }
     }
-}
-
-void fixed_post_update() {
-    ParticleManager::Update(g.world);
 }
 
 void post_update() {
@@ -252,7 +250,6 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     Engine::SetUpdateCallback(update);
     Engine::SetPostUpdateCallback(post_update);
     Engine::SetFixedUpdateCallback(fixed_update);
-    Engine::SetFixedPostUpdateCallback(fixed_post_update);
     Engine::SetRenderCallback(render);
     Engine::SetPostRenderCallback(post_render);
     Engine::SetDestroyCallback(destroy);

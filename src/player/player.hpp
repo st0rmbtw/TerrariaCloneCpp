@@ -93,8 +93,8 @@ public:
     void init();
 
     void pre_update();
-    void fixed_update(const World& world, bool handle_input);
-    void update(const Camera& camera, World& world);
+    void fixed_update(const Camera& camera, World& world, bool handle_input);
+    void update(World& world);
     void draw() const;
 
     void set_position(const World& world, const glm::vec2& position);
@@ -130,6 +130,7 @@ private:
     [[nodiscard]] float get_fall_distance() const;
 
     void use_item(const Camera& camera, World& world);
+    void interact(const Camera& camera, World& world);
 
 private:
     glm::vec2 m_position;
@@ -152,7 +153,7 @@ private:
     bool m_swing_anim = false;
     bool m_using_item_visible = false;
     bool m_prev_grounded = false;
-    std::optional<BlockType> m_stand_on_block = std::nullopt;
+    std::optional<TileType> m_stand_on_tile = std::nullopt;
 
     MovementState m_movement_state;
 

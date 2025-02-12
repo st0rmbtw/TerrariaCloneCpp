@@ -9,7 +9,12 @@
 #include <glm/glm.hpp>
 #include <list>
 
+#include <optional>
+
 #include "types/tile_pos.hpp"
+
+#define BITFLAG_CHECK(_DATA, _FLAG) ((_DATA & _FLAG) == _FLAG)
+#define BITFLAG_REMOVE(_DATA, _FLAG) (_DATA & ~_FLAG)
 
 #define ARRAY_LEN(array) (sizeof(array)/sizeof(array[0]))
 
@@ -35,14 +40,10 @@ static inline TilePos get_lightmap_pos(glm::vec2 pos) {
     return glm::ivec2(pos * static_cast<float>(Constants::SUBDIVISION) / Constants::TILE_SIZE);
 }
 
-template <typename T>
-static inline constexpr bool check_bitflag(T data, T flag) {
-    return (data & flag) == flag;
-}
-
-template <typename T>
-static inline constexpr T remove_bitflag(T data, T flag) {
-    return data & ~flag;
+template <typename T, class F>
+static inline auto map(std::optional<T> a, F&& func) -> std::optional<decltype(func(a.value()))> {
+    if (!a.has_value()) return std::nullopt;
+    return func(a.value());
 }
 
 #endif

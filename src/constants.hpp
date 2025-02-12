@@ -10,6 +10,7 @@ namespace Constants {
     constexpr double FIXED_UPDATE_INTERVAL = 1.0 / 60.0;
     constexpr float TILE_SIZE = 16.0f;
     constexpr float WALL_SIZE = 32.0f;
+    constexpr float TORCH_SIZE = 20.0f;
     constexpr float PARTICLE_SIZE = 8.0f;
     constexpr float WORLD_BOUNDARY_OFFSET = 4.0f;
     constexpr size_t MAX_PARTICLES_COUNT = 10 * 100000;
@@ -25,7 +26,7 @@ namespace Constants {
     constexpr float WALL_TEXTURE_PADDING = 4.0f;
 
     constexpr float RENDER_CHUNK_SIZE = 50.0f;
-    constexpr uint32_t RENDER_CHUNK_SIZE_U = 50u;
+    constexpr uint8_t RENDER_CHUNK_SIZE_U = 50u;
     constexpr int SUBDIVISION = 8;
     constexpr float LIGHT_EPSILON = 0.0185;
     
