@@ -53,10 +53,8 @@ uint32_t next_utf8_codepoint(const char* text, size_t& index) {
     return c;
 }
 
-glm::vec2 calculate_text_bounds(const char* text, size_t length, float size, FontAsset key) {
+glm::vec2 calculate_text_bounds(const char* text, size_t length, float size, const Font& font) {
     ZoneScopedN("Utils::calculate_text_bounds");
-
-    const Font& font = Assets::GetFont(key);
 
     auto bounds = glm::vec2(0.0f);
     float prev_x = 0.0f;

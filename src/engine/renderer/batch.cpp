@@ -2,7 +2,7 @@
 
 #include <tracy/Tracy.hpp>
 
-#include "../../ui/utils.hpp"
+#include "../utils.hpp"
 
 uint32_t Batch::DrawAtlasSprite(const TextureAtlasSprite& sprite, Order custom_order) {
     const math::Rect& rect = sprite.atlas().get_rect(sprite.index());

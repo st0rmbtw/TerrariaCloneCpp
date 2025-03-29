@@ -267,12 +267,16 @@ void Renderer::UpdateBatchBuffers(
     uint32_t ninepatch_vertex_offset = 0;
     uint32_t ninepatch_remaining = batch.ninepatch_count();
 
-    uint32_t prev_order = draw_commands[begin].order();
-
     size_t i = 0;
     for (i = begin; i < draw_commands.size(); ++i) {
         if (m_batch_instance_count >= MAX_QUADS) {
             break;
+        }
+
+        uint32_t next_order = draw_commands[i].order();
+
+        if (i < draw_commands.size() - 1) {
+            next_order = draw_commands[i + 1].order();
         }
 
         const batch_internal::DrawCommand& draw_command = draw_commands[i];
@@ -290,16 +294,14 @@ void Renderer::UpdateBatchBuffers(
             const uint32_t prev_texture_id = sprite_prev_texture.id();
             const uint32_t curr_texture_id = sprite_data.texture.id();
 
-            const uint32_t new_order = sprite_data.order;
+            const uint32_t current_order = sprite_data.order;
 
-            const bool needs_flush = prev_texture_id != curr_texture_id || prev_order != new_order;
-
-            if (sprite_count > 0 && needs_flush) {
+            if (sprite_count > 0 && prev_texture_id != curr_texture_id) {
                 flush_queue.push_back(FlushData {
                     .texture = sprite_prev_texture,
                     .offset = sprite_vertex_offset,
                     .count = sprite_count,
-                    .order = prev_order,
+                    .order = current_order,
                     .type = FlushDataType::Sprite
                 });
                 sprite_count = 0;
@@ -323,7 +325,7 @@ void Renderer::UpdateBatchBuffers(
             ++sprite_total_count;
             --sprite_remaining;
 
-            if (sprite_remaining == 0) {
+            if (sprite_remaining == 0 || current_order != next_order) {
                 flush_queue.push_back(FlushData {
                     .texture = sprite_data.texture,
                     .offset = sprite_vertex_offset,
@@ -332,10 +334,10 @@ void Renderer::UpdateBatchBuffers(
                     .type = FlushDataType::Sprite
                 });
                 sprite_count = 0;
+                sprite_vertex_offset = sprite_total_count;
             }
 
             sprite_prev_texture = sprite_data.texture;
-            prev_order = new_order;
         } break;
         case DrawCommand::DrawGlyph: {
             const DrawCommandGlyph& glyph_data = draw_command.glyph_data();
@@ -346,16 +348,14 @@ void Renderer::UpdateBatchBuffers(
                 glyph_prev_texture = glyph_data.texture;
             }
 
-            const uint32_t new_order = glyph_data.order;
+            const uint32_t current_order = glyph_data.order;
 
-            const bool needs_flush = glyph_prev_texture.id() != glyph_data.texture.id() || prev_order != new_order;
-
-            if (glyph_count > 0 && needs_flush) {
+            if (glyph_count > 0 && glyph_prev_texture.id() != glyph_data.texture.id()) {
                 flush_queue.push_back(FlushData {
                     .texture = glyph_prev_texture,
                     .offset = glyph_vertex_offset,
                     .count = glyph_count,
-                    .order = prev_order,
+                    .order = current_order,
                     .type = FlushDataType::Glyph
                 });
                 glyph_count = 0;
@@ -373,7 +373,7 @@ void Renderer::UpdateBatchBuffers(
             ++glyph_total_count;
             --glyph_remaining;
 
-            if (glyph_remaining == 0) {
+            if (glyph_remaining == 0 || current_order != next_order) {
                 flush_queue.push_back(FlushData {
                     .texture = glyph_data.texture,
                     .offset = glyph_vertex_offset,
@@ -382,10 +382,10 @@ void Renderer::UpdateBatchBuffers(
                     .type = FlushDataType::Glyph
                 });
                 glyph_count = 0;
+                glyph_vertex_offset = glyph_total_count;
             }
 
             glyph_prev_texture = glyph_data.texture;
-            prev_order = new_order;
         } break;
         case DrawCommand::DrawNinePatch: {
             const DrawCommandNinePatch& ninepatch_data = draw_command.ninepatch_data();
@@ -399,16 +399,14 @@ void Renderer::UpdateBatchBuffers(
             const uint32_t prev_texture_id = ninepatch_prev_texture.id();
             const uint32_t curr_texture_id = ninepatch_data.texture.id();
 
-            const uint32_t new_order = ninepatch_data.order;
+            const uint32_t current_order = ninepatch_data.order;
 
-            const bool needs_flush = prev_texture_id != curr_texture_id || prev_order != new_order;
-
-            if (ninepatch_count > 0 && needs_flush) {
+            if (ninepatch_count > 0 && prev_texture_id != curr_texture_id) {
                 flush_queue.push_back(FlushData {
                     .texture = ninepatch_prev_texture,
                     .offset = ninepatch_vertex_offset,
                     .count = ninepatch_count,
-                    .order = prev_order,
+                    .order = current_order,
                     .type = FlushDataType::NinePatch
                 });
                 ninepatch_count = 0;
@@ -431,19 +429,19 @@ void Renderer::UpdateBatchBuffers(
             ++ninepatch_total_count;
             --ninepatch_remaining;
 
-            if (ninepatch_remaining == 0) {
+            if (ninepatch_remaining == 0 || current_order != next_order) {
                 flush_queue.push_back(FlushData {
                     .texture = ninepatch_data.texture,
                     .offset = ninepatch_vertex_offset,
                     .count = ninepatch_count,
                     .order = ninepatch_data.order,
-                    .type = FlushDataType::NinePatch
+                    .type = FlushDataType::NinePatch,
                 });
                 ninepatch_count = 0;
+                ninepatch_vertex_offset = ninepatch_total_count;
             }
 
             ninepatch_prev_texture = ninepatch_data.texture;
-            prev_order = new_order;
         } break;
         }
 
@@ -453,7 +451,7 @@ void Renderer::UpdateBatchBuffers(
                     .texture = sprite_prev_texture,
                     .offset = sprite_vertex_offset,
                     .count = sprite_count,
-                    .order = prev_order,
+                    .order = draw_command.order(),
                     .type = FlushDataType::Sprite
                 });
             }
@@ -463,7 +461,7 @@ void Renderer::UpdateBatchBuffers(
                     .texture = glyph_prev_texture,
                     .offset = glyph_vertex_offset,
                     .count = glyph_count,
-                    .order = prev_order,
+                    .order = draw_command.order(),
                     .type = FlushDataType::Glyph
                 });
             }
@@ -473,7 +471,7 @@ void Renderer::UpdateBatchBuffers(
                     .texture = ninepatch_prev_texture,
                     .offset = ninepatch_vertex_offset,
                     .count = ninepatch_count,
-                    .order = prev_order,
+                    .order = draw_command.order(),
                     .type = FlushDataType::NinePatch
                 });
             }
@@ -583,6 +581,23 @@ Texture Renderer::CreateTexture(LLGL::TextureType type, LLGL::ImageFormat image_
     uint32_t id = m_texture_index++;
 
     return Texture(id, sampler, glm::uvec2(width, height), m_context->CreateTexture(texture_desc, &image_view));
+}
+
+static bool FileExists(const char *path) {
+#ifdef PLATFORM_WINDOWS
+    FILE *file = NULL;
+    fopen_s(&file, path, "r");
+#else
+    FILE *file = fopen(path, "r");
+#endif
+
+    const bool exists = file != nullptr;
+
+    if (exists) {
+        fclose(file);
+    }
+
+    return exists;
 }
 
 LLGL::Shader* Renderer::LoadShader(const ShaderPath& shader_path, const std::vector<ShaderDef>& shader_defs, const std::vector<LLGL::VertexAttribute>& vertex_attributes) {

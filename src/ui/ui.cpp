@@ -13,8 +13,6 @@
 #include "../renderer/renderer.hpp"
 #include "../assets.hpp"
 
-#include "utils.hpp"
-
 static constexpr float INVENTORY_TITLE_SIZE = 22.0f;
 static constexpr float MIN_CURSOR_SCALE = 1.2;
 static constexpr float MAX_CURSOR_SCALE = MIN_CURSOR_SCALE + 0.1;
@@ -411,7 +409,9 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
         const std::string_view& title = item_slot.has_item() ? item_slot.item->name : "Items";
         const RichText text = rich_text(title, INVENTORY_TITLE_SIZE, glm::vec3(0.8f));
 
-        const glm::vec2 bounds = calculate_text_bounds(text, FontAsset::AndyBold);
+        const Font& font = Assets::GetFont(FontAsset::AndyBold);
+        const glm::vec2 bounds = calculate_text_bounds(text, font);
+        
         const glm::vec2 position = glm::vec2((offset.x - bounds.x) * 0.5f, TITLE_OFFSET);
         GameRenderer::DrawTextUI(text, position, FontAsset::AndyBold, text_index);
     }
