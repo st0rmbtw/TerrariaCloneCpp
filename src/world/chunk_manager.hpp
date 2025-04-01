@@ -8,8 +8,8 @@
 #include <deque>
 #include <glm/vec2.hpp>
 
-#include "../engine/renderer/camera.hpp"
-#include "../engine/utils.hpp"
+#include <SGE/renderer/camera.hpp>
+#include <SGE/utils.hpp>
 #include "../renderer/types.hpp"
 #include "../types/tile_pos.hpp"
 
@@ -20,11 +20,11 @@ class ChunkManager {
 public:
     ChunkManager() {
         using Constants::RENDER_CHUNK_SIZE_U;
-        m_block_data_arena = checked_alloc<ChunkInstance>(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U);
-        m_wall_data_arena = checked_alloc<ChunkInstance>(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U);
+        m_block_data_arena = sge::checked_alloc<ChunkInstance>(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U);
+        m_wall_data_arena = sge::checked_alloc<ChunkInstance>(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U);
     }
 
-    void manage_chunks(const WorldData& world, const Camera& camera);
+    void manage_chunks(const WorldData& world, const sge::Camera& camera);
 
     void set_blocks_changed(TilePos tile_pos);
     void set_walls_changed(TilePos tile_pos);

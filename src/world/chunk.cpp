@@ -5,12 +5,12 @@
 #include "../types/block.hpp"
 #include "../types/texture_atlas_pos.hpp"
 #include "../renderer/types.hpp"
-#include "../engine/engine.hpp"
-#include "../engine/renderer/macros.hpp"
+#include <SGE/engine.hpp>
+#include <SGE/renderer/macros.hpp>
 
 #include "../renderer/renderer.hpp"
 
-#include "../engine/defines.hpp"
+#include <SGE/defines.hpp>
 
 #define TILE_TYPE_BLOCK 0
 #define TILE_TYPE_WALL 1
@@ -23,10 +23,10 @@ using Constants::RENDER_CHUNK_SIZE_U;
 void RenderChunk::destroy() {
     ZoneScopedN("WorldChunk::destroy");
 
-    const auto& context = Engine::Renderer().Context();
+    const auto& context = sge::Engine::Renderer().Context();
 
-    RESOURCE_RELEASE(block_instance_buffer);
-    RESOURCE_RELEASE(wall_instance_buffer);
+    SGE_RESOURCE_RELEASE(block_instance_buffer);
+    SGE_RESOURCE_RELEASE(wall_instance_buffer);
 }
 
 static inline LLGL::BufferDescriptor GetBufferDescriptor() {
@@ -38,12 +38,12 @@ static inline LLGL::BufferDescriptor GetBufferDescriptor() {
     return buffer_desc;
 }
 
-static FORCE_INLINE uint16_t pack_tile_data(uint16_t tile_id, uint8_t tile_type) {
+static SGE_FORCE_INLINE uint16_t pack_tile_data(uint16_t tile_id, uint8_t tile_type) {
     // 6 bits for tile_type and 10 bits for tile_id
     return (tile_type & 0x3f) | (tile_id << 6);
 }
 
-static FORCE_INLINE uint16_t pack_position(uint8_t x, uint8_t y) {
+static SGE_FORCE_INLINE uint16_t pack_position(uint8_t x, uint8_t y) {
     return (y << 8) | x;
 }
 
@@ -117,7 +117,7 @@ void RenderChunk::build_mesh(
     block_count = fill_block_buffer(world, block_data_arena, index, world_pos);
     wall_count = fill_wall_buffer(world, wall_data_arena, index, world_pos);
 
-    const auto& context = Engine::Renderer().Context();
+    const auto& context = sge::Engine::Renderer().Context();
 
     {
         const size_t size = block_count * sizeof(ChunkInstance);
@@ -148,7 +148,7 @@ void RenderChunk::rebuild_mesh(
 ) {
     ZoneScopedN("WorldChunk::rebuild_mesh");
 
-    const auto& context = Engine::Renderer().Context();
+    const auto& context = sge::Engine::Renderer().Context();
 
     if (blocks_dirty) {
         block_count = fill_block_buffer(world, block_data_arena, index, world_pos);

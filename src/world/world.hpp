@@ -5,8 +5,8 @@
 
 #include <cstdint>
 
-#include "../engine/math/rect.hpp"
-#include "../engine/renderer/camera.hpp"
+#include <SGE/math/rect.hpp>
+#include <SGE/renderer/camera.hpp>
 
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
@@ -47,7 +47,7 @@ public:
 
     void update_tile_sprite_index(TilePos pos);
 
-    void update(const Camera& camera);
+    void update(const sge::Camera& camera);
     
     void draw() const;
 
@@ -72,8 +72,8 @@ public:
     [[nodiscard]] inline Neighbors<Wall> get_wall_neighbors(TilePos pos) const { return m_data.get_wall_neighbors(pos); }
     [[nodiscard]] inline Neighbors<Wall*> get_wall_neighbors_mut(TilePos pos) { return m_data.get_wall_neighbors_mut(pos); }
 
-    [[nodiscard]] inline const math::IRect& area() const { return m_data.area; }
-    [[nodiscard]] inline const math::IRect& playable_area() const { return m_data.playable_area; }
+    [[nodiscard]] inline const sge::IRect& area() const { return m_data.area; }
+    [[nodiscard]] inline const sge::IRect& playable_area() const { return m_data.playable_area; }
     [[nodiscard]] inline const glm::uvec2& spawn_point() const { return m_data.spawn_point; }
     [[nodiscard]] inline const Layers& layers() const { return m_data.layers; }
 

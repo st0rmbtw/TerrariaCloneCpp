@@ -7,9 +7,9 @@
 #include <LLGL/BufferArray.h>
 #include <LLGL/PipelineState.h>
 
-#include "../engine/types/texture_atlas.hpp"
-#include "../engine/renderer/renderer.hpp"
-#include "../engine/types/order.hpp"
+#include <SGE/types/texture_atlas.hpp>
+#include <SGE/renderer/renderer.hpp>
+#include <SGE/types/order.hpp>
 
 #include "../particles.hpp"
 
@@ -25,11 +25,11 @@ public:
     void prepare();
     void reset();
 
-    void draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Order order);
-    void draw_particle_world(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Order order);
+    void draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, sge::Order order);
+    void draw_particle_world(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, sge::Order order);
 
 private:
-    Renderer* m_renderer = nullptr;
+    sge::Renderer* m_renderer = nullptr;
 
     LLGL::PipelineState* m_pipeline = nullptr;
     LLGL::PipelineState* m_compute_pipeline = nullptr;
@@ -61,7 +61,7 @@ private:
     float* m_scale_buffer_data = nullptr;
     float* m_scale_buffer_data_ptr = nullptr;
 
-    TextureAtlas m_atlas;
+    sge::TextureAtlas m_atlas;
 
     uint32_t m_particle_count;
     uint32_t m_world_particle_count;

@@ -7,11 +7,12 @@
 #include <LLGL/Utils/VertexFormat.h>
 #include <glm/glm.hpp>
 
-#include "engine/types/texture_atlas.hpp"
-#include "engine/types/texture.hpp"
-#include "engine/types/shader_pipeline.hpp"
-#include "engine/types/font.hpp"
-#include "engine/types/sampler.hpp"
+#include <SGE/types/texture_atlas.hpp>
+#include <SGE/types/texture.hpp>
+#include <SGE/types/shader_pipeline.hpp>
+#include <SGE/types/font.hpp>
+#include <SGE/types/sampler.hpp>
+#include <SGE/types/shader_def.hpp>
 
 enum class TextureAsset : uint8_t {
     Stub = 0,
@@ -103,22 +104,12 @@ enum class VertexFormatAsset : uint8_t {
     StaticLightMapVertex,
 };
 
-struct ShaderDef {
-    std::string name;
-    std::string value;
-    
-    ShaderDef(std::string name, std::string value) :
-        name(std::move(name)),
-        value(std::move(value)) {}
-};
-
 constexpr uint32_t PARTICLES_ATLAS_COLUMNS = 100;
 
 namespace Assets {
     bool Load();
-    bool LoadShaders(const std::vector<ShaderDef>& shader_defs);
+    bool LoadShaders(const std::vector<sge::ShaderDef>& shader_defs);
     bool LoadFonts();
-    bool InitSamplers();
     void InitVertexFormats();
 
     void DestroyTextures();
@@ -126,18 +117,14 @@ namespace Assets {
     void DestroySamplers();
     void DestroyFonts();
 
-    const Texture& GetTexture(TextureAsset key);
-    const TextureAtlas& GetTextureAtlas(TextureAsset key);
-    const Font& GetFont(FontAsset key);
-    const Texture& GetItemTexture(uint16_t index);
-    const ShaderPipeline& GetShader(ShaderAsset key);
+    const sge::Texture& GetTexture(TextureAsset key);
+    const sge::TextureAtlas& GetTextureAtlas(TextureAsset key);
+    const sge::Font& GetFont(FontAsset key);
+    const sge::Texture& GetItemTexture(uint16_t index);
+    const sge::ShaderPipeline& GetShader(ShaderAsset key);
     LLGL::Shader* GetComputeShader(ComputeShaderAsset key);
-    const Sampler& GetSampler(size_t index);
+    const sge::Sampler& GetSampler(size_t index);
     const LLGL::VertexFormat& GetVertexFormat(VertexFormatAsset key);
-
-    inline const Sampler& GetSampler(const Texture& texture) {
-        return GetSampler(texture.sampler());
-    }
 };
 
 #endif

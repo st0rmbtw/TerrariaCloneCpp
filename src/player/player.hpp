@@ -8,9 +8,9 @@
 #include <optional>
 #include <glm/glm.hpp>
 
-#include "../engine/renderer/camera.hpp"
-#include "../engine/types/sprite.hpp"
-#include "../engine/time/timer.hpp"
+#include <SGE/renderer/camera.hpp>
+#include <SGE/types/sprite.hpp>
+#include <SGE/time/timer.hpp>
 
 #include "../world/world.hpp"
 
@@ -45,19 +45,15 @@ struct UseItemAnimation {
 };
 
 struct PlayerSprite {
-    TextureAtlasSprite sprite;
+    sge::TextureAtlasSprite sprite;
     WalkAnimation walk_animation;
     FlyAnimation fly_animation;
     IdleAnimation idle_animation;
     UseItemAnimation use_item_animation;
+    
+    PlayerSprite() = default;
 
-    PlayerSprite() :
-        walk_animation(),
-        fly_animation(),
-        idle_animation(),
-        use_item_animation() {}
-
-    PlayerSprite(TextureAtlasSprite sprite, WalkAnimation walk_anim = {}, FlyAnimation fly_anim = {}, IdleAnimation idle_anim = {}, UseItemAnimation use_item_anim = {}) :
+    PlayerSprite(sge::TextureAtlasSprite sprite, WalkAnimation walk_anim = {}, FlyAnimation fly_anim = {}, IdleAnimation idle_anim = {}, UseItemAnimation use_item_anim = {}) :
         sprite(std::move(sprite)),
         walk_animation(walk_anim),
         fly_animation(fly_anim),
@@ -93,7 +89,7 @@ public:
     void init();
 
     void pre_update();
-    void fixed_update(const Camera& camera, World& world, bool handle_input);
+    void fixed_update(const sge::Camera& camera, World& world, bool handle_input);
     void update(World& world);
     void draw() const;
 
@@ -129,16 +125,16 @@ private:
 
     [[nodiscard]] float get_fall_distance() const;
 
-    void use_item(const Camera& camera, World& world);
-    void interact(const Camera& camera, World& world);
+    void use_item(const sge::Camera& camera, World& world);
+    void interact(const sge::Camera& camera, World& world);
 
 private:
     glm::vec2 m_position;
     glm::vec2 m_velocity;
     Direction m_direction = Direction::Right;
     size_t m_walk_animation_index = 0;
-    Timer m_walk_anim_timer;
-    Timer m_walk_particles_timer;
+    sge::Timer m_walk_anim_timer;
+    sge::Timer m_walk_particles_timer;
     Collisions m_collisions;
     int m_jump = 0;
     float m_fall_start = -1;
@@ -166,7 +162,7 @@ private:
     PlayerSprite m_right_arm;
     PlayerSprite m_left_eye;
     PlayerSprite m_right_eye;
-    Sprite m_using_item;
+    sge::Sprite m_using_item;
 
     Inventory m_inventory;
 };

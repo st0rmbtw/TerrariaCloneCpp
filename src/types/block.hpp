@@ -7,8 +7,8 @@
 #include <optional>
 
 #include "texture_atlas_pos.hpp"
-#include "../assets.hpp"
 #include "neighbors.hpp"
+#include "../assets.hpp"
 #include "../utils.hpp"
 
 enum class TileType : uint8_t {

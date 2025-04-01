@@ -7,7 +7,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "engine/math/quat.hpp"
+#include <SGE/math/quat.hpp>
+
 #include "world/world.hpp"
 #include "types/block.hpp"
 

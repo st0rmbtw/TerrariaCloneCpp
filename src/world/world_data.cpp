@@ -6,7 +6,7 @@
 
 #include <tracy/Tracy.hpp>
 
-#include "../engine/defines.hpp"
+#include <SGE/defines.hpp>
 #include "lightmap.hpp"
 
 using Constants::SUBDIVISION;
@@ -105,7 +105,7 @@ Neighbors<Wall*> WorldData::get_wall_neighbors_mut(TilePos pos) {
     };
 }
 
-static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, const math::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
+static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, const sge::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
     ZoneScopedN("LightMap::init_area");
 
     const int min_y = area.min.y * SUBDIVISION;
@@ -175,7 +175,7 @@ static void blur(LightMap& lightmap, int index, glm::vec3& prev_light, float& pr
     prev_decay = Constants::LightDecay(lightmap.get_mask(index));
 }
 
-FORCE_INLINE static void blur_line(LightMap& lightmap, int start, int end, int stride, glm::vec3& prev_light, float& prev_decay, glm::vec3& prev_light2, float& prev_decay2) {
+SGE_FORCE_INLINE static void blur_line(LightMap& lightmap, int start, int end, int stride, glm::vec3& prev_light, float& prev_decay, glm::vec3& prev_light2, float& prev_decay2) {
     using Constants::LIGHT_EPSILON;
 
     int length = end - start;
@@ -185,7 +185,7 @@ FORCE_INLINE static void blur_line(LightMap& lightmap, int start, int end, int s
     }
 }
 
-FORCE_INLINE static void blur_horizontal(const WorldData& world, LightMap& lightmap, const math::IRect& area, TilePos offset) {
+SGE_FORCE_INLINE static void blur_horizontal(const WorldData& world, LightMap& lightmap, const sge::IRect& area, TilePos offset) {
     #pragma omp parallel for
     for (int y = area.min.y; y < area.max.y; ++y) {
         glm::vec3 prev_light = world.lightmap.get_color({offset.x + area.min.x, offset.y + y});
@@ -198,7 +198,7 @@ FORCE_INLINE static void blur_horizontal(const WorldData& world, LightMap& light
     }
 }
 
-FORCE_INLINE static void blur_vertical(const WorldData& world, LightMap& lightmap, const math::IRect& area, TilePos offset) {
+SGE_FORCE_INLINE static void blur_vertical(const WorldData& world, LightMap& lightmap, const sge::IRect& area, TilePos offset) {
     #pragma omp parallel for
     for (int x = area.min.x; x < area.max.x; ++x) {
         glm::vec3 prev_light = world.lightmap.get_color({offset.x + x, offset.y + area.min.y});
@@ -211,8 +211,8 @@ FORCE_INLINE static void blur_vertical(const WorldData& world, LightMap& lightma
     }
 }
 
-static void internal_lightmap_blur_area(WorldData& world, LightMap& lightmap, const math::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
-    const math::IRect lightmap_area = area * SUBDIVISION;
+static void internal_lightmap_blur_area(WorldData& world, LightMap& lightmap, const sge::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
+    const sge::IRect lightmap_area = area * SUBDIVISION;
     const TilePos offset = {tile_offset.x * SUBDIVISION, tile_offset.y * SUBDIVISION};
 
     blur_horizontal(world, lightmap, lightmap_area, offset);
@@ -224,10 +224,10 @@ static void internal_lightmap_blur_area(WorldData& world, LightMap& lightmap, co
     blur_horizontal(world, lightmap, lightmap_area, offset);
 }
 
-static void internal_lightmap_update_area_async(const std::shared_ptr<std::atomic<LightMapTaskResult>>& result, WorldData* world, const math::IRect& area) {
+static void internal_lightmap_update_area_async(const std::shared_ptr<std::atomic<LightMapTaskResult>>& result, WorldData* world, const sge::IRect& area) {
     LightMap lightmap(area.width(), area.height());
 
-    const math::IRect a = math::IRect::from_top_left(glm::ivec2(0), area.size());
+    const sge::IRect a = sge::IRect::from_top_left(glm::ivec2(0), area.size());
 
     internal_lightmap_init_area(*world, lightmap, a, area.min);
     internal_lightmap_blur_area(*world, lightmap, a, area.min);
@@ -246,15 +246,15 @@ static void internal_lightmap_update_area_async(const std::shared_ptr<std::atomi
     lightmap.masks = nullptr;
 }
 
-void WorldData::lightmap_blur_area_sync(const math::IRect& area) {
+void WorldData::lightmap_blur_area_sync(const sge::IRect& area) {
     internal_lightmap_blur_area(*this, this->lightmap, area);
 }
 
-void WorldData::lightmap_update_area_async(math::IRect area) {
+void WorldData::lightmap_update_area_async(sge::IRect area) {
     std::shared_ptr<std::atomic<LightMapTaskResult>> result = std::make_shared<std::atomic<LightMapTaskResult>>();
     lightmap_tasks.emplace_back(std::thread(internal_lightmap_update_area_async, result, this, area), result);
 }
 
-void WorldData::lightmap_init_area(const math::IRect& area) {
+void WorldData::lightmap_init_area(const sge::IRect& area) {
     internal_lightmap_init_area(*this, this->lightmap, area);
 }

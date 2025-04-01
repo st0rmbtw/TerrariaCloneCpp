@@ -6,13 +6,13 @@
 #include <tracy/Tracy.hpp>
 
 #include "renderer/renderer.hpp"
-#include "engine/defines.hpp"
-#include "engine/time/time.hpp"
+#include <SGE/defines.hpp>
+#include <SGE/time/time.hpp>
 
 #include "constants.hpp"
 #include "utils.hpp"
 
-#ifdef PLATFORM_WINDOWS
+#if SGE_PLATFORM_WINDOWS
     #include <corecrt_malloc.h>
     #define ALIGNED_ALLOC(size, alignment) _aligned_malloc((size), (alignment))
     #define ALIGNED_FREE(ptr) _aligned_free((ptr))
@@ -53,7 +53,7 @@ template <typename T>
 static T* checked_aligned_alloc(size_t count, size_t alignment) {
     T* _ptr = (T*) ALIGNED_ALLOC(count * sizeof(T), alignment);
     if (_ptr == nullptr && count > 0) {
-        LOG_ERROR("Out of memory");
+        SGE_LOG_ERROR("Out of memory");
         abort();
     }
     return _ptr;
@@ -69,20 +69,20 @@ void ParticleManager::Init() {
     state.rotation       = checked_aligned_alloc<float>(MAX_PARTICLES_COUNT * 4, sizeof(__m256));
     state.rotation_speed = checked_aligned_alloc<float>(MAX_PARTICLES_COUNT * 4, sizeof(__m256));
 #else
-    state.position       = checked_alloc<float>(MAX_PARTICLES_COUNT * 2);
-    state.velocity       = checked_alloc<float>(MAX_PARTICLES_COUNT * 2);
-    state.lifetime       = checked_alloc<float>(MAX_PARTICLES_COUNT);
-    state.rotation       = checked_alloc<float>(MAX_PARTICLES_COUNT * 4);
-    state.rotation_speed = checked_alloc<float>(MAX_PARTICLES_COUNT * 4);
+    state.position       = sge::checked_alloc<float>(MAX_PARTICLES_COUNT * 2);
+    state.velocity       = sge::checked_alloc<float>(MAX_PARTICLES_COUNT * 2);
+    state.lifetime       = sge::checked_alloc<float>(MAX_PARTICLES_COUNT);
+    state.rotation       = sge::checked_alloc<float>(MAX_PARTICLES_COUNT * 4);
+    state.rotation_speed = sge::checked_alloc<float>(MAX_PARTICLES_COUNT * 4);
 #endif
-    state.max_lifetime        = checked_alloc<float>(MAX_PARTICLES_COUNT);
-    state.custom_scale        = checked_alloc<float>(MAX_PARTICLES_COUNT);
-    state.scale               = checked_alloc<float>(MAX_PARTICLES_COUNT);
-    state.initial_light_color = checked_alloc<float>(MAX_PARTICLES_COUNT * 3);
-    state.light_color         = checked_alloc<float>(MAX_PARTICLES_COUNT * 3);
-    state.flags               = checked_alloc<uint8_t>(MAX_PARTICLES_COUNT);
-    state.type                = checked_alloc<Particle::Type>(MAX_PARTICLES_COUNT);
-    state.variant             = checked_alloc<uint8_t>(MAX_PARTICLES_COUNT);
+    state.max_lifetime        = sge::checked_alloc<float>(MAX_PARTICLES_COUNT);
+    state.custom_scale        = sge::checked_alloc<float>(MAX_PARTICLES_COUNT);
+    state.scale               = sge::checked_alloc<float>(MAX_PARTICLES_COUNT);
+    state.initial_light_color = sge::checked_alloc<float>(MAX_PARTICLES_COUNT * 3);
+    state.light_color         = sge::checked_alloc<float>(MAX_PARTICLES_COUNT * 3);
+    state.flags               = sge::checked_alloc<uint8_t>(MAX_PARTICLES_COUNT);
+    state.type                = sge::checked_alloc<Particle::Type>(MAX_PARTICLES_COUNT);
+    state.variant             = sge::checked_alloc<uint8_t>(MAX_PARTICLES_COUNT);
 
     memset(state.flags, 0, MAX_PARTICLES_COUNT * sizeof(uint8_t));
 }
@@ -153,7 +153,7 @@ void ParticleManager::Draw() {
         const uint8_t variant = state.variant[i];
         const bool world = BITFLAG_CHECK(state.flags[i], ParticleFlags::InWorldLayer);
 
-        GameRenderer::DrawParticle(position, rotation, scale, type, variant, world ? world_depth : main_depth, world);
+        GameRenderer::DrawParticle(position, rotation, scale, type, variant, sge::Order(world ? world_depth : main_depth), world);
     }
 }
 
@@ -169,7 +169,7 @@ void ParticleManager::Update(World& world) {
         }
     }
 
-    const float dt = Time::fixed_delta_seconds();
+    const float dt = sge::Time::FixedDeltaSeconds();
     
 #if defined(__AVX__)
     // The size of a float type is 32 bit, so it can be packed as 8 into 256 bit vector.

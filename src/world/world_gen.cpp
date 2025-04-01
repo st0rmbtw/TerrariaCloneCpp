@@ -2,10 +2,10 @@
 
 #include <stdint.h>
 #include <vector>
-#include <FastNoiseLite.hpp>
+#include <FastNoiseLite/FastNoiseLite.hpp>
 #include <time.h>
 
-#include "../engine/log.hpp"
+#include <SGE/log.hpp>
 #include "../types/wall.hpp"
 #include "../math/math.hpp"
 
@@ -585,8 +585,8 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
 
     srand(seed);
 
-    const math::IRect area = math::IRect::from_corners(glm::vec2(0), glm::ivec2(width, height) + glm::ivec2(16));
-    const math::IRect playable_area = area.inset(-8);
+    const sge::IRect area = sge::IRect::from_corners(glm::vec2(0), glm::ivec2(width, height) + glm::ivec2(16));
+    const sge::IRect playable_area = area.inset(-8);
 
     const int surface_level = playable_area.min.y;
     const int underground_level = surface_level + 350;
@@ -600,11 +600,11 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
         .dirt_height = dirt_height
     };
 
-    LOG_DEBUG("World Layers:");
-    LOG_DEBUG("  Surface: %u", layers.surface);
-    LOG_DEBUG("  Underground: %u", layers.underground);
-    LOG_DEBUG("  Cavern: %u", layers.cavern);
-    LOG_DEBUG("  Dirt Height: %u", layers.dirt_height);
+    SGE_LOG_DEBUG("World Layers:");
+    SGE_LOG_DEBUG("  Surface: %u", layers.surface);
+    SGE_LOG_DEBUG("  Underground: %u", layers.underground);
+    SGE_LOG_DEBUG("  Cavern: %u", layers.cavern);
+    SGE_LOG_DEBUG("  Dirt Height: %u", layers.dirt_height);
 
     world.blocks = new std::optional<Tile>[area.width() * area.height()];
     world.walls = new std::optional<Wall>[area.width() * area.height()];

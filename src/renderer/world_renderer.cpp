@@ -18,8 +18,9 @@
 #include "../world/chunk.hpp"
 #include "../utils.hpp"
 #include "../world/utils.hpp"
-#include "../engine/engine.hpp"
-#include "../engine/renderer/macros.hpp"
+#include <SGE/engine.hpp>
+#include <SGE/renderer/macros.hpp>
+#include <SGE/defines.hpp>
 
 #include "types.hpp"
 
@@ -31,7 +32,7 @@ static constexpr float LIGHTMAP_TO_WORLD = Constants::TILE_SIZE / Constants::SUB
 static constexpr float TILE_DEPTH = 0.3f;
 static constexpr float WALL_DEPTH = 0.1f;
 
-struct ALIGN(16) TileTextureData {
+struct SGE_ALIGN(16) TileTextureData {
     glm::vec2 tex_size;
     glm::vec2 tex_padding;
     glm::vec2 size;
@@ -46,10 +47,10 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
     using Constants::WALL_SIZE;
     using Constants::TORCH_SIZE;
 
-    m_renderer = &Engine::Renderer();
+    m_renderer = &sge::Engine::Renderer();
 
     const auto& context = m_renderer->Context();
-    const RenderBackend backend = m_renderer->Backend();
+    const sge::RenderBackend backend = m_renderer->Backend();
 
     {
         const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Tiles).size());
@@ -93,7 +94,7 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
             LLGL::BindingDescriptor("u_texture_array", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4)),
         };
         pipelineLayoutDesc.staticSamplers = {
-            LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, 5, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
+            LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, 5, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
         };
         pipelineLayoutDesc.combinedTextureSamplers = {
             LLGL::CombinedTextureSamplerDescriptor{ "u_texture_array", "u_texture_array", "u_sampler", 4 }
@@ -107,7 +108,7 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
 
         m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
 
-        const ShaderPipeline& tilemap_shader = Assets::GetShader(ShaderAsset::TilemapShader);
+        const sge::ShaderPipeline& tilemap_shader = Assets::GetShader(ShaderAsset::TilemapShader);
 
         LLGL::GraphicsPipelineDescriptor pipelineDesc;
         pipelineDesc.debugName = "World Pipeline";
@@ -265,7 +266,7 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
             ),
         };
         lightmapPipelineLayoutDesc.staticSamplers = {
-            LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4), Assets::GetSampler(TextureSampler::Nearest).descriptor())
+            LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4), Assets::GetSampler(sge::TextureSampler::Nearest).descriptor())
         };
         lightmapPipelineLayoutDesc.combinedTextureSamplers = {
             LLGL::CombinedTextureSamplerDescriptor{ "u_texture", "u_texture", "u_sampler", 3 }
@@ -279,7 +280,7 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
 
         m_lightmap_resource_heap = context->CreateResourceHeap(lightmapPipelineLayout, lightmapResourceViews);
 
-        const ShaderPipeline lightmap_shader = Assets::GetShader(ShaderAsset::StaticLightMapShader);
+        const sge::ShaderPipeline lightmap_shader = Assets::GetShader(ShaderAsset::StaticLightMapShader);
 
         LLGL::GraphicsPipelineDescriptor lightPipelineDesc;
         lightPipelineDesc.debugName = "WorldStaticLightMapPipeline";
@@ -308,11 +309,11 @@ void WorldRenderer::init_textures(const WorldData& world) {
     using Constants::SUBDIVISION;
 
     auto& context = m_renderer->Context();
-    const RenderBackend backend = m_renderer->Backend();
+    const sge::RenderBackend backend = m_renderer->Backend();
 
-    RESOURCE_RELEASE(m_light_texture);
-    RESOURCE_RELEASE(m_tile_texture);
-    RESOURCE_RELEASE(m_light_texture_target);
+    SGE_RESOURCE_RELEASE(m_light_texture);
+    SGE_RESOURCE_RELEASE(m_tile_texture);
+    SGE_RESOURCE_RELEASE(m_light_texture_target);
 
     {
         LLGL::TextureDescriptor light_texture_desc;
@@ -405,7 +406,7 @@ void WorldRenderer::init_lightmap_chunks(const WorldData& world) {
             texture_desc.mipLevels = 1;
             texture_desc.miscFlags = LLGL::MiscFlags::DynamicUsage;
 
-            Color* buffer = checked_alloc<Color>(chunk_size.x * chunk_size.y);
+            Color* buffer = sge::checked_alloc<Color>(chunk_size.x * chunk_size.y);
             for (uint32_t y = 0; y < chunk_size.y; ++y) {
                 memcpy(&buffer[y * chunk_size.x], &lightmap.colors[(j * LIGHTMAP_CHUNK_SIZE + y) * m_lightmap_width + i * LIGHTMAP_CHUNK_SIZE], chunk_size.x * sizeof(Color));
             }
@@ -449,7 +450,7 @@ void WorldRenderer::init_lightmap_chunks(const WorldData& world) {
     }
 }
 
-FORCE_INLINE static void internal_update_world_lightmap(const WorldData& world, const LightMapTaskResult& result) {
+SGE_FORCE_INLINE static void internal_update_world_lightmap(const WorldData& world, const LightMapTaskResult& result) {
     for (int y = 0; y < result.height; ++y) {
         memcpy(&world.lightmap.colors[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.data[y * result.width], result.width * sizeof(Color));
         memcpy(&world.lightmap.masks[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.mask[y * result.width], result.width * sizeof(LightMask));
@@ -547,8 +548,8 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
 
     commands->SetPipelineState(*m_pipeline);
 
-    const Texture& walls_texture = Assets::GetTexture(TextureAsset::Walls);
-    const Texture& tiles_texture = Assets::GetTexture(TextureAsset::Tiles);
+    const sge::Texture& walls_texture = Assets::GetTexture(TextureAsset::Walls);
+    const sge::Texture& tiles_texture = Assets::GetTexture(TextureAsset::Tiles);
 
     for (const glm::uvec2& pos : chunk_manager.visible_chunks()) {
         const RenderChunk& chunk = chunk_manager.render_chunks().find(pos)->second;
@@ -571,7 +572,7 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
     }
 }
 
-static math::URect get_chunk_range(const math::Rect& camera_fov, glm::uvec2 lightmap_size) {
+static sge::URect get_chunk_range(const sge::Rect& camera_fov, glm::uvec2 lightmap_size) {
     using Constants::SUBDIVISION;
     using Constants::TILE_SIZE;
 
@@ -601,9 +602,9 @@ static math::URect get_chunk_range(const math::Rect& camera_fov, glm::uvec2 ligh
     return {glm::uvec2(left, top), glm::uvec2(right, bottom)};
 }
 
-void WorldRenderer::render_lightmap(const Camera& camera) {
-    const math::Rect camera_fov = utils::get_camera_fov(camera);
-    const math::URect chunk_range = get_chunk_range(camera_fov, glm::uvec2(m_lightmap_width, m_lightmap_height));
+void WorldRenderer::render_lightmap(const sge::Camera& camera) {
+    const sge::Rect camera_fov = utils::get_camera_fov(camera);
+    const sge::URect chunk_range = get_chunk_range(camera_fov, glm::uvec2(m_lightmap_width, m_lightmap_height));
 
     auto* const commands = m_renderer->CommandBuffer();
 
@@ -623,7 +624,7 @@ void WorldRenderer::render_lightmap(const Camera& camera) {
     }
 }
 
-void WorldRenderer::compute_light(const Camera& camera, const World& world) {
+void WorldRenderer::compute_light(const sge::Camera& camera, const World& world) {
     ZoneScopedN("WorldRenderer::compute_light");
 
     if (world.light_count() == 0) return;
@@ -638,7 +639,7 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
     const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / Constants::TILE_SIZE) - static_cast<int>(WORKGROUP);
     const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / Constants::TILE_SIZE) + static_cast<int>(WORKGROUP);
 
-    const math::URect blur_area = math::URect(
+    const sge::URect blur_area = sge::URect(
         glm::uvec2(glm::max(proj_area_min * Constants::SUBDIVISION, glm::ivec2(0))),
         glm::uvec2(glm::max(proj_area_max * Constants::SUBDIVISION, glm::ivec2(0)))
     );
@@ -693,15 +694,15 @@ void WorldRenderer::compute_light(const Camera& camera, const World& world) {
 void WorldRenderer::terminate() {
     const auto& context = m_renderer->Context();
 
-    RESOURCE_RELEASE(m_pipeline);
-    RESOURCE_RELEASE(m_light_set_light_sources_pipeline);
-    RESOURCE_RELEASE(m_light_vertical_pipeline);
-    RESOURCE_RELEASE(m_light_horizontal_pipeline);
-    RESOURCE_RELEASE(m_light_init_resource_heap);
-    RESOURCE_RELEASE(m_light_blur_resource_heap);
-    RESOURCE_RELEASE(m_resource_heap);
-    RESOURCE_RELEASE(m_tile_texture_data_buffer);
-    RESOURCE_RELEASE(m_light_texture);
-    RESOURCE_RELEASE(m_light_texture_target);
-    RESOURCE_RELEASE(m_tile_texture);
+    SGE_RESOURCE_RELEASE(m_pipeline);
+    SGE_RESOURCE_RELEASE(m_light_set_light_sources_pipeline);
+    SGE_RESOURCE_RELEASE(m_light_vertical_pipeline);
+    SGE_RESOURCE_RELEASE(m_light_horizontal_pipeline);
+    SGE_RESOURCE_RELEASE(m_light_init_resource_heap);
+    SGE_RESOURCE_RELEASE(m_light_blur_resource_heap);
+    SGE_RESOURCE_RELEASE(m_resource_heap);
+    SGE_RESOURCE_RELEASE(m_tile_texture_data_buffer);
+    SGE_RESOURCE_RELEASE(m_light_texture);
+    SGE_RESOURCE_RELEASE(m_light_texture_target);
+    SGE_RESOURCE_RELEASE(m_tile_texture);
 }

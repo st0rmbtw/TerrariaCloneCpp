@@ -15,9 +15,11 @@
 
 #include <tracy/Tracy.hpp>
 
+#include <SGE/engine.hpp>
+#include <SGE/renderer/macros.hpp>
+#include <SGE/renderer/batch.hpp>
+
 #include "../assets.hpp"
-#include "../engine/engine.hpp"
-#include "../engine/renderer/macros.hpp"
 #include "../utils.hpp"
 
 #include "world_renderer.hpp"
@@ -28,18 +30,16 @@ static constexpr int CAMERA_FRUSTUM = 0;
 static constexpr int NOZOOM_CAMERA_FRUSTUM = 1;
 
 static struct RendererState {
-    Batch main_batch;
-    Batch world_batch;
-    Batch ui_batch;
+    sge::Batch main_batch;
+    sge::Batch world_batch;
+    sge::Batch ui_batch;
 
-    math::Rect camera_frustums[2];
-    math::Rect ui_frustum;
+    sge::Rect camera_frustums[2];
+    sge::Rect ui_frustum;
 
     ParticleRenderer particle_renderer;
     BackgroundRenderer background_renderer;
     WorldRenderer world_renderer;
-
-    Renderer* renderer = nullptr;
 
     LLGL::ResourceHeap* resource_heap = nullptr;
 
@@ -66,20 +66,19 @@ uint32_t GameRenderer::GetWorldOrderIndex() { return state.world_batch.order(); 
 LLGL::Buffer* GameRenderer::ChunkVertexBuffer() { return state.chunk_vertex_buffer; }
 
 bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
-    state.renderer = &Engine::Renderer();
+    sge::Renderer& renderer = sge::Engine::Renderer();
+    const auto& context = renderer.Context();
 
     ResizeTextures(resolution);
 
-    const auto& context = state.renderer->Context();
-
-    const Vertex vertices[] = {
-        Vertex(0.0, 0.0),
-        Vertex(0.0, 1.0),
-        Vertex(1.0, 0.0),
-        Vertex(1.0, 1.0),
+    const sge::Vertex vertices[] = {
+        sge::Vertex(0.0, 0.0),
+        sge::Vertex(0.0, 1.0),
+        sge::Vertex(1.0, 0.0),
+        sge::Vertex(1.0, 1.0),
     };
 
-    state.chunk_vertex_buffer = state.renderer->CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex), "WorldRenderer VertexBuffer");
+    state.chunk_vertex_buffer = renderer.CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex), "WorldRenderer VertexBuffer");
 
     {
         LLGL::TextureDescriptor lightmap_texture_desc;
@@ -106,10 +105,10 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.staticSamplers = {   
-        LLGL::StaticSamplerDescriptor("u_background_sampler", LLGL::StageFlags::FragmentStage, 4, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
-        LLGL::StaticSamplerDescriptor("u_world_sampler", LLGL::StageFlags::FragmentStage, 6, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
-        LLGL::StaticSamplerDescriptor("u_lightmap_sampler", LLGL::StageFlags::FragmentStage, 8, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
-        LLGL::StaticSamplerDescriptor("u_light_sampler", LLGL::StageFlags::FragmentStage, 10, Assets::GetSampler(TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("u_background_sampler", LLGL::StageFlags::FragmentStage, 4, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("u_world_sampler", LLGL::StageFlags::FragmentStage, 6, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("u_lightmap_sampler", LLGL::StageFlags::FragmentStage, 8, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("u_light_sampler", LLGL::StageFlags::FragmentStage, 10, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
     };
     pipelineLayoutDesc.combinedTextureSamplers =
     {
@@ -136,7 +135,7 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
     const LLGL::ResourceViewDescriptor resource_views[] = {
-        state.renderer->GlobalUniformBuffer(),
+        renderer.GlobalUniformBuffer(),
         state.background_render_texture,
         state.world_render_texture,
         state.static_lightmap_texture,
@@ -144,7 +143,7 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
     };
     state.resource_heap = context->CreateResourceHeap(LLGL::ResourceHeapDescriptor(pipelineLayout, ARRAY_LEN(resource_views)), resource_views);
 
-    const ShaderPipeline& postprocess_shader = Assets::GetShader(ShaderAsset::PostProcessShader);
+    const sge::ShaderPipeline& postprocess_shader = Assets::GetShader(ShaderAsset::PostProcessShader);
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
     pipelineDesc.debugName = "LightMap Pipeline";
@@ -168,18 +167,19 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
 }
 
 void GameRenderer::ResizeTextures(LLGL::Extent2D resolution) {
-    const auto& context = state.renderer->Context();
-    const auto* swap_chain = state.renderer->SwapChain();
+    sge::Renderer& renderer = sge::Engine::Renderer();
+    const auto& context = renderer.Context();
+    const auto* swap_chain = renderer.SwapChain();
 
-    RESOURCE_RELEASE(state.world_render_target);
-    RESOURCE_RELEASE(state.world_render_texture);
-    RESOURCE_RELEASE(state.world_depth_texture);
+    SGE_RESOURCE_RELEASE(state.world_render_target);
+    SGE_RESOURCE_RELEASE(state.world_render_texture);
+    SGE_RESOURCE_RELEASE(state.world_depth_texture);
 
-    RESOURCE_RELEASE(state.background_render_target);
-    RESOURCE_RELEASE(state.background_render_texture);
+    SGE_RESOURCE_RELEASE(state.background_render_target);
+    SGE_RESOURCE_RELEASE(state.background_render_texture);
 
-    RESOURCE_RELEASE(state.static_lightmap_target);
-    RESOURCE_RELEASE(state.static_lightmap_texture);
+    SGE_RESOURCE_RELEASE(state.static_lightmap_target);
+    SGE_RESOURCE_RELEASE(state.static_lightmap_texture);
 
     LLGL::TextureDescriptor texture_desc;
     texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
@@ -237,9 +237,10 @@ void GameRenderer::InitWorldRenderer(const WorldData &world) {
     using Constants::SUBDIVISION;
     using Constants::TILE_SIZE;
 
-    const auto& context = state.renderer->Context();
+    sge::Renderer& renderer = sge::Engine::Renderer();
+    const auto& context = renderer.Context();
 
-    RESOURCE_RELEASE(state.fullscreen_triangle_vertex_buffer);
+    SGE_RESOURCE_RELEASE(state.fullscreen_triangle_vertex_buffer);
 
     const glm::vec2 world_size = glm::vec2(world.area.size()) * TILE_SIZE;
 
@@ -248,7 +249,7 @@ void GameRenderer::InitWorldRenderer(const WorldData &world) {
         glm::vec2(3.0f,  1.0f),  glm::vec2(2.0f, 0.0f), world_size,
         glm::vec2(-1.0f, -3.0f), glm::vec2(0.0f, 2.0f), world_size,
     };
-    state.fullscreen_triangle_vertex_buffer = state.renderer->CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::PostProcessVertex));
+    state.fullscreen_triangle_vertex_buffer = renderer.CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::PostProcessVertex));
 
     state.world_renderer.init_textures(world);
     context->WriteResourceHeap(*state.resource_heap, 4, {state.world_renderer.light_texture()});
@@ -260,18 +261,20 @@ void GameRenderer::UpdateLight() {
     state.update_light = true;
 }
 
-void GameRenderer::Begin(const Camera& camera, WorldData& world) {
+void GameRenderer::Begin(const sge::Camera& camera, WorldData& world) {
     ZoneScopedN("Renderer::Begin");
 
-    const math::Rect camera_frustum = math::Rect::from_corners(
+    sge::Renderer& renderer = sge::Engine::Renderer();
+
+    const sge::Rect camera_frustum = sge::Rect::from_corners(
         camera.position() + camera.get_projection_area().min,
         camera.position() + camera.get_projection_area().max
     );
-    const math::Rect nozoom_camera_frustum = math::Rect::from_corners(
+    const sge::Rect nozoom_camera_frustum = sge::Rect::from_corners(
         camera.position() + camera.get_nozoom_projection_area().min,
         camera.position() + camera.get_nozoom_projection_area().max
     );
-    const math::Rect ui_frustum = math::Rect::from_corners(glm::vec2(0.0), camera.viewport());
+    const sge::Rect ui_frustum = sge::Rect::from_corners(glm::vec2(0.0), camera.viewport());
 
     state.camera_frustums[CAMERA_FRUSTUM] = camera_frustum;
     state.camera_frustums[NOZOOM_CAMERA_FRUSTUM] = nozoom_camera_frustum;
@@ -280,63 +283,56 @@ void GameRenderer::Begin(const Camera& camera, WorldData& world) {
     state.world_renderer.update_lightmap_texture(world);
     state.world_renderer.update_tile_texture(world);
 
-    state.renderer->Begin(camera);
+    renderer.Begin(camera);
 
     state.main_batch.Reset();
     state.world_batch.Reset();
     state.ui_batch.Reset();
 }
 
-void GameRenderer::Render(const Camera& camera, const World& world) {
+void GameRenderer::Render(const sge::Camera& camera, const World& world) {
     ZoneScopedN("Renderer::Render");
 
-    auto* const commands = state.renderer->CommandBuffer();
-    auto* const swap_chain = state.renderer->SwapChain();
+    sge::Renderer& renderer = sge::Engine::Renderer();
+    auto* const commands = renderer.CommandBuffer();
 
     state.particle_renderer.compute();
     state.particle_renderer.prepare();
 
     LLGL::ClearValue clear_value = LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
-    state.renderer->PrepareBatch(state.main_batch);
-    state.renderer->PrepareBatch(state.world_batch);
-    state.renderer->PrepareBatch(state.ui_batch);
+    renderer.PrepareBatch(state.main_batch);
+    renderer.PrepareBatch(state.world_batch);
+    renderer.PrepareBatch(state.ui_batch);
 
-    state.renderer->UploadBatchData();
+    renderer.UploadBatchData();
 
     if (state.update_light) {
-        commands->BeginRenderPass(*state.world_renderer.light_texture_target());
-            commands->Clear(LLGL::ClearFlags::Color, clear_value);
-        commands->EndRenderPass();
+        renderer.BeginPass(*state.world_renderer.light_texture_target(), clear_value, LLGL::ClearFlags::Color);
+        renderer.EndPass();
 
         state.world_renderer.compute_light(camera, world);
 
-        commands->BeginRenderPass(*state.static_lightmap_target);
-            commands->Clear(LLGL::ClearFlags::Color, clear_value);
+        renderer.BeginPass(*state.static_lightmap_target, clear_value, LLGL::ClearFlags::Color);
             state.world_renderer.render_lightmap(camera);
-        commands->EndRenderPass();
+        renderer.EndPass();
 
         state.update_light = false;
     }
 
-    commands->BeginRenderPass(*state.background_render_target);
-        commands->Clear(LLGL::ClearFlags::ColorDepth, clear_value);
+    renderer.BeginPass(*state.background_render_target, clear_value, LLGL::ClearFlags::ColorDepth);
         state.background_renderer.render();
-    commands->EndRenderPass();
+    renderer.EndPass();
 
-    commands->BeginRenderPass(*state.world_render_target);
-        commands->Clear(LLGL::ClearFlags::ColorDepth, clear_value);
+    renderer.BeginPass(*state.world_render_target, clear_value, LLGL::ClearFlags::ColorDepth);
         state.background_renderer.render_world();
         state.world_renderer.render(world.chunk_manager());
         state.particle_renderer.render_world();
 
-        state.renderer->RenderBatch(state.world_batch);
+        renderer.RenderBatch(state.world_batch);
+    renderer.EndPass();
 
-    commands->EndRenderPass();
-
-    commands->BeginRenderPass(*swap_chain);
-        commands->Clear(LLGL::ClearFlags::Color, LLGL::ClearValue(1.0f, 0.0f, 0.0f, 1.0f, 0.0f));
-
+    renderer.BeginMainPass(LLGL::ClearValue(1.0f, 0.0f, 0.0f, 1.0f, 0.0f));
         commands->SetVertexBuffer(*state.fullscreen_triangle_vertex_buffer);
         commands->SetPipelineState(*state.postprocess_pipeline);
         commands->SetResourceHeap(*state.resource_heap);
@@ -345,11 +341,11 @@ void GameRenderer::Render(const Camera& camera, const World& world) {
 
         state.particle_renderer.render();
 
-        state.renderer->RenderBatch(state.main_batch);
-        state.renderer->RenderBatch(state.ui_batch);
-    commands->EndRenderPass();
+        renderer.RenderBatch(state.main_batch);
+        renderer.RenderBatch(state.ui_batch);
+    renderer.EndPass();
 
-    state.renderer->End();
+    renderer.End();
 
     state.particle_renderer.reset();
 }
@@ -366,85 +362,85 @@ void GameRenderer::EndOrderMode() {
     state.ui_batch.EndOrderMode();
 }
 
-uint32_t GameRenderer::DrawSprite(const Sprite& sprite, Order order) {
+uint32_t GameRenderer::DrawSprite(const sge::Sprite& sprite, sge::Order order) {
     ZoneScopedN("Renderer::DrawSprite");
 
-    const math::Rect aabb = sprite.calculate_aabb();
+    const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
 
     return state.main_batch.DrawSprite(sprite, order);
 }
 
-uint32_t GameRenderer::DrawSpriteWorld(const Sprite& sprite, Order order) {
+uint32_t GameRenderer::DrawSpriteWorld(const sge::Sprite& sprite, sge::Order order) {
     ZoneScopedN("Renderer::DrawSprite");
 
-    const math::Rect aabb = sprite.calculate_aabb();
+    const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
 
     return state.world_batch.DrawSprite(sprite, order);
 }
 
-uint32_t GameRenderer::DrawSpriteUI(const Sprite& sprite, Order order) {
+uint32_t GameRenderer::DrawSpriteUI(const sge::Sprite& sprite, sge::Order order) {
     ZoneScopedN("Renderer::DrawSpriteUI");
 
-    const math::Rect aabb = sprite.calculate_aabb();
+    const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.ui_frustum.intersects(aabb)) return 0;
 
     return state.ui_batch.DrawSprite(sprite, order);
 }
 
-uint32_t GameRenderer::DrawAtlasSprite(const TextureAtlasSprite& sprite, Order order) {
+uint32_t GameRenderer::DrawAtlasSprite(const sge::TextureAtlasSprite& sprite, sge::Order order) {
     ZoneScopedN("Renderer::DrawAtlasSprite");
 
-    const math::Rect aabb = sprite.calculate_aabb();
+    const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
 
     return state.main_batch.DrawAtlasSprite(sprite, order);
 }
 
-uint32_t GameRenderer::DrawAtlasSpriteWorld(const TextureAtlasSprite& sprite, Order order) {
+uint32_t GameRenderer::DrawAtlasSpriteWorld(const sge::TextureAtlasSprite& sprite, sge::Order order) {
     ZoneScopedN("Renderer::DrawAtlasSprite");
 
-    const math::Rect aabb = sprite.calculate_aabb();
+    const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
 
     return state.world_batch.DrawAtlasSprite(sprite, order);
 }
 
-uint32_t GameRenderer::DrawAtlasSpriteUI(const TextureAtlasSprite& sprite, Order order) {
+uint32_t GameRenderer::DrawAtlasSpriteUI(const sge::TextureAtlasSprite& sprite, sge::Order order) {
     ZoneScopedN("Renderer::DrawAtlasSpriteUI");
 
-    const math::Rect aabb = sprite.calculate_aabb();
+    const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.ui_frustum.intersects(aabb)) return 0;
 
     return state.ui_batch.DrawAtlasSprite(sprite, order);
 }
 
-uint32_t GameRenderer::DrawNinePatchUI(const NinePatch& ninepatch, Order order) {
+uint32_t GameRenderer::DrawNinePatchUI(const sge::NinePatch& ninepatch, sge::Order order) {
     ZoneScopedN("Renderer::DrawNinePatchUI");
 
-    const math::Rect aabb = ninepatch.calculate_aabb();
+    const sge::Rect aabb = ninepatch.calculate_aabb();
     if (!state.ui_frustum.intersects(aabb)) return 0;
 
     return state.ui_batch.DrawNinePatch(ninepatch, order);
 }
 
-uint32_t GameRenderer::DrawText(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset key, Order order) {
+uint32_t GameRenderer::DrawText(const sge::RichTextSection* sections, size_t size, const glm::vec2& position, const sge::Font& font, sge::Order order) {
     ZoneScopedN("Renderer::DrawText");
 
-    return state.main_batch.DrawText(sections, size, position, key, order);
+    return state.main_batch.DrawText(sections, size, position, font, order);
 }
 
-uint32_t GameRenderer::DrawTextUI(const RichTextSection* sections, size_t size, const glm::vec2& position, FontAsset key, Order order) {
+uint32_t GameRenderer::DrawTextUI(const sge::RichTextSection* sections, size_t size, const glm::vec2& position, const sge::Font& font, sge::Order order) {
     ZoneScopedN("Renderer::DrawTextUI");
 
-    return state.ui_batch.DrawText(sections, size, position, key, order);
+    return state.ui_batch.DrawText(sections, size, position, font, order);
 }
 
 void GameRenderer::DrawBackground(const BackgroundLayer& layer) {
     ZoneScopedN("Renderer::DrawBackground");
 
-    const math::Rect aabb = math::Rect::from_top_left(layer.position() - layer.anchor().to_vec2() * layer.size(), layer.size());
+    const sge::Rect aabb = sge::Rect::from_top_left(layer.position() - layer.anchor().to_vec2() * layer.size(), layer.size());
     if (!state.camera_frustums[layer.nonscale()].intersects(aabb)) return;
 
     if (layer.is_world()) {
@@ -454,7 +450,7 @@ void GameRenderer::DrawBackground(const BackgroundLayer& layer) {
     }
 }
 
-void GameRenderer::DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Order order, bool world) {
+void GameRenderer::DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, sge::Order order, bool world) {
     ZoneScopedN("Renderer::DrawParticle");
 
     if (world)

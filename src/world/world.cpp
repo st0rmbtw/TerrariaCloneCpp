@@ -6,7 +6,7 @@
 
 #include <tracy/Tracy.hpp>
 
-#include "../engine/time/time.hpp"
+#include <SGE/time/time.hpp>
 
 #include "../types/block.hpp"
 #include "../world/world_gen.h"
@@ -26,7 +26,7 @@ void World::set_tile(TilePos pos, const Tile& tile) {
     m_changed = true;
     m_lightmap_changed = true;
 
-    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
+    const sge::IRect light_area = sge::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
         .clamp(m_data.playable_area);
     m_data.lightmap_update_area_async(light_area);
 
@@ -51,7 +51,7 @@ void World::set_tile(TilePos pos, TileType tile_type) {
     m_changed = true;
     m_lightmap_changed = true;
 
-    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
+    const sge::IRect light_area = sge::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
         .clamp(m_data.playable_area);
     m_data.lightmap_update_area_async(light_area);
     m_data.changed_tiles.emplace_back(pos, 1);
@@ -74,7 +74,7 @@ void World::remove_tile(TilePos pos) {
     m_changed = true;
     m_lightmap_changed = true;
 
-    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
+    const sge::IRect light_area = sge::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
         .clamp(m_data.playable_area);
     m_data.lightmap_update_area_async(light_area);
     m_data.changed_tiles.emplace_back(pos, 0);
@@ -110,7 +110,7 @@ void World::set_wall(TilePos pos, WallType wall_type) {
     m_changed = true;
     m_lightmap_changed = true;
 
-    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
+    const sge::IRect light_area = sge::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
         .clamp(m_data.playable_area);
     m_data.lightmap_update_area_async(light_area);
 
@@ -134,7 +134,7 @@ void World::remove_wall(TilePos pos) {
     m_changed = true;
     m_lightmap_changed = true;
 
-    const math::IRect light_area = math::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
+    const sge::IRect light_area = sge::IRect::from_center_half_size({pos.x, pos.y}, {LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS})
         .clamp(m_data.playable_area);
     m_data.lightmap_update_area_async(light_area);
     m_data.changed_tiles.emplace_back(pos, 0);
@@ -167,7 +167,7 @@ void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
     }
 }
 
-void World::update(const Camera& camera) {
+void World::update(const sge::Camera& camera) {
     ZoneScopedN("World::update");
 
     m_changed = false;
@@ -182,7 +182,7 @@ void World::update(const Camera& camera) {
             continue;
         }
 
-        anim.progress += 7.0f * Time::delta_seconds();
+        anim.progress += 7.0f * sge::Time::DeltaSeconds();
 
         if (anim.progress >= 0.5f) {
             anim.scale = 1.0f - anim.progress;
@@ -198,7 +198,7 @@ void World::draw() const {
     ZoneScopedN("World::draw");
 
     for (const auto& [pos, cracks] : m_tile_cracks) {
-        TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));
+        sge::TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));
         sprite.set_position(pos.to_world_pos_center());
         sprite.set_index(cracks.cracks_index);
         sprite.set_z(0.4f);
@@ -207,7 +207,7 @@ void World::draw() const {
     }
 
     for (const auto& [pos, cracks] : m_wall_cracks) {
-        TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));
+        sge::TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));
         sprite.set_position(pos.to_world_pos_center());
         sprite.set_index(cracks.cracks_index);
         sprite.set_z(0.2f);
@@ -219,14 +219,14 @@ void World::draw() const {
         const glm::vec2 scale = glm::vec2(1.0f + anim.scale * 0.5f);
         const glm::vec2 position = anim.tile_pos.to_world_pos_center();
 
-        TextureAtlasSprite sprite(Assets::GetTextureAtlas(tile_texture_asset(anim.tile_type)), position, scale);
+        sge::TextureAtlasSprite sprite(Assets::GetTextureAtlas(tile_texture_asset(anim.tile_type)), position, scale);
         sprite.set_index(anim.atlas_pos.x, anim.atlas_pos.y);
 
         GameRenderer::DrawAtlasSpriteWorld(sprite);
 
         const auto cracks = m_tile_cracks.find(anim.tile_pos);
         if (cracks != m_tile_cracks.end()) {
-            TextureAtlasSprite cracks_sprites(Assets::GetTextureAtlas(TextureAsset::TileCracks), position, scale);
+            sge::TextureAtlasSprite cracks_sprites(Assets::GetTextureAtlas(TextureAsset::TileCracks), position, scale);
             cracks_sprites.set_index(cracks->second.cracks_index);
 
             GameRenderer::DrawAtlasSpriteWorld(cracks_sprites);

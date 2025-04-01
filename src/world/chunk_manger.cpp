@@ -8,7 +8,7 @@ using Constants::TILE_SIZE;
 using Constants::RENDER_CHUNK_SIZE;
 using Constants::RENDER_CHUNK_SIZE_U;
 
-static math::URect get_chunk_range(const math::Rect& camera_fov, const glm::uvec2& world_size, uint32_t expand = 0) {
+static sge::URect get_chunk_range(const sge::Rect& camera_fov, const glm::uvec2& world_size, uint32_t expand = 0) {
     uint32_t left = 0;
     uint32_t right = 0;
     uint32_t bottom = 0;
@@ -37,12 +37,12 @@ static math::URect get_chunk_range(const math::Rect& camera_fov, const glm::uvec
     return {glm::uvec2(left, top), glm::uvec2(right, bottom)};
 }
 
-void ChunkManager::manage_chunks(const WorldData& world, const Camera& camera) {
+void ChunkManager::manage_chunks(const WorldData& world, const sge::Camera& camera) {
     ZoneScopedN("ChunkManager::manage_chunks");
 
-    const math::Rect camera_fov = utils::get_camera_fov(camera);
-    const math::URect chunk_range = get_chunk_range(camera_fov, world.area.size(), 2);
-    const math::URect render_chunk_range = get_chunk_range(camera_fov, world.area.size());
+    const sge::Rect camera_fov = utils::get_camera_fov(camera);
+    const sge::URect chunk_range = get_chunk_range(camera_fov, world.area.size(), 2);
+    const sge::URect render_chunk_range = get_chunk_range(camera_fov, world.area.size());
 
     for (auto it = m_render_chunks.begin(); it != m_render_chunks.end();) {
         if (!chunk_range.contains(it->first)) {

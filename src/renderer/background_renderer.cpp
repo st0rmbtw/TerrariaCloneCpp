@@ -5,9 +5,9 @@
 
 #include <tracy/Tracy.hpp>
 
-#include "../engine/log.hpp"
-#include "../engine/engine.hpp"
-#include "../engine/renderer/macros.hpp"
+#include <SGE/log.hpp>
+#include <SGE/engine.hpp>
+#include <SGE/renderer/macros.hpp>
 
 #include "types.hpp"
 
@@ -22,13 +22,13 @@ namespace BackgroundFlags {
 void BackgroundRenderer::init() {
     ZoneScopedN("BackgroundRenderer::init");
 
-    m_renderer = &Engine::Renderer();
+    m_renderer = &sge::Engine::Renderer();
 
-    const RenderBackend backend = m_renderer->Backend();
+    const sge::RenderBackend backend = m_renderer->Backend();
     const auto& context = m_renderer->Context();
     const auto* swap_chain = m_renderer->SwapChain();
 
-    const Texture& backgrounds_texture = Assets::GetTexture(TextureAsset::Backgrounds);
+    const sge::Texture& backgrounds_texture = Assets::GetTexture(TextureAsset::Backgrounds);
 
     m_buffer = new BackgroundInstance[MAX_QUADS];
     m_buffer_ptr = m_buffer;
@@ -68,7 +68,7 @@ void BackgroundRenderer::init() {
         LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
     };
     pipelineLayoutDesc.staticSamplers = {
-        LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4), Assets::GetSampler(backgrounds_texture.sampler()).descriptor()),
+        LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4), backgrounds_texture.sampler().descriptor()),
     };
     pipelineLayoutDesc.combinedTextureSamplers = {
         LLGL::CombinedTextureSamplerDescriptor{ "u_texture", "u_texture", "u_sampler", 3 }
@@ -81,7 +81,7 @@ void BackgroundRenderer::init() {
     };
     m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
 
-    const ShaderPipeline& background_shader = Assets::GetShader(ShaderAsset::BackgroundShader);
+    const sge::ShaderPipeline& background_shader = Assets::GetShader(ShaderAsset::BackgroundShader);
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
     pipelineLayoutDesc.debugName = "BackgroundRenderer Pipeline";
@@ -96,7 +96,7 @@ void BackgroundRenderer::init() {
     m_pipeline = context->CreatePipelineState(pipelineDesc);
 
     if (const LLGL::Report* report = m_pipeline->GetReport()) {
-        if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
+        if (report->HasErrors()) SGE_LOG_ERROR("%s", report->GetText());
     }
 }
 
@@ -165,12 +165,12 @@ void BackgroundRenderer::render_world() {
 void BackgroundRenderer::terminate() {
     const auto& context = m_renderer->Context();
 
-    RESOURCE_RELEASE(m_vertex_buffer);
-    RESOURCE_RELEASE(m_instance_buffer);
-    RESOURCE_RELEASE(m_world_instance_buffer);
-    RESOURCE_RELEASE(m_world_buffer_array);
-    RESOURCE_RELEASE(m_buffer_array);
-    RESOURCE_RELEASE(m_pipeline);
+    SGE_RESOURCE_RELEASE(m_vertex_buffer);
+    SGE_RESOURCE_RELEASE(m_instance_buffer);
+    SGE_RESOURCE_RELEASE(m_world_instance_buffer);
+    SGE_RESOURCE_RELEASE(m_world_buffer_array);
+    SGE_RESOURCE_RELEASE(m_buffer_array);
+    SGE_RESOURCE_RELEASE(m_pipeline);
 
     delete[] m_buffer;
     delete[] m_world_buffer;

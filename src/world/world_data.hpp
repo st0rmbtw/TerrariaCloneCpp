@@ -11,7 +11,7 @@
 #include "../types/tile_pos.hpp"
 #include "../types/neighbors.hpp"
 
-#include "../engine/math/rect.hpp"
+#include <SGE/math/rect.hpp>
 
 #include "lightmap.hpp"
 
@@ -26,8 +26,8 @@ struct WorldData {
     std::optional<Tile>* blocks;
     std::optional<Wall>* walls;
     LightMap lightmap;
-    math::IRect area;
-    math::IRect playable_area;
+    sge::IRect area;
+    sge::IRect playable_area;
     Layers layers;
     glm::uvec2 spawn_point;
     std::vector<LightMapTask> lightmap_tasks;
@@ -118,9 +118,9 @@ struct WorldData {
         return block.value() == block_type;
     }
 
-    void lightmap_update_area_async(math::IRect area);
-    void lightmap_blur_area_sync(const math::IRect& area);
-    void lightmap_init_area(const math::IRect& area);
+    void lightmap_update_area_async(sge::IRect area);
+    void lightmap_blur_area_sync(const sge::IRect& area);
+    void lightmap_init_area(const sge::IRect& area);
 
     inline void lightmap_tasks_wait() {
         for (LightMapTask& task : lightmap_tasks) {

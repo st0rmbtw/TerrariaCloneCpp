@@ -1,1 +1,1 @@
-#include "../include/FastNoiseLite.hpp"
+#include <FastNoiseLite/FastNoiseLite.hpp>

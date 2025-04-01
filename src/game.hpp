@@ -3,11 +3,11 @@
 
 #pragma once
 
-#include "engine/types/backend.hpp"
-#include "engine/types/config.hpp"
+#include <SGE/types/backend.hpp>
+#include <SGE/types/config.hpp>
 
 namespace Game {
-    bool Init(RenderBackend backend, GameConfig config);
+    bool Init(sge::RenderBackend backend, sge::AppConfig config);
     void Run();
     void Destroy();
 };

@@ -4,13 +4,13 @@
 #include <LLGL/PipelineLayoutFlags.h>
 #include <LLGL/ShaderFlags.h>
 
+#include <SGE/engine.hpp>
+#include <SGE/log.hpp>
+#include <SGE/renderer/macros.hpp>
+
 #include <tracy/Tracy.hpp>
 
 #include "types.hpp"
-
-#include "../engine/engine.hpp"
-#include "../engine/log.hpp"
-#include "../engine/renderer/macros.hpp"
 
 #include "../assets.hpp"
 
@@ -18,7 +18,7 @@ using Constants::PARTICLE_SIZE;
 using Constants::MAX_PARTICLES_COUNT;
 
 static inline constexpr size_t get_particle_index(Particle::Type type, uint8_t variant) {
-    ASSERT(variant <= 2, "Variant must be in range from 0 to 3");
+    SGE_ASSERT(variant <= 2, "Variant must be in range from 0 to 3");
 
     const size_t index = static_cast<uint8_t>(type);
     const size_t y = index / PARTICLES_ATLAS_COLUMNS;
@@ -29,9 +29,9 @@ static inline constexpr size_t get_particle_index(Particle::Type type, uint8_t v
 void ParticleRenderer::init() {
     ZoneScopedN("ParticleRenderer::init");
 
-    m_renderer = &Engine::Renderer();
+    m_renderer = &sge::Engine::Renderer();
 
-    const RenderBackend backend = m_renderer->Backend();
+    const sge::RenderBackend backend = m_renderer->Backend();
     const auto& context = m_renderer->Context();
     const auto* swap_chain = m_renderer->SwapChain();
 
@@ -120,7 +120,7 @@ void ParticleRenderer::init() {
         LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
     };
     pipelineLayoutDesc.staticSamplers = {
-        LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4), Assets::GetSampler(m_atlas.texture()).descriptor())
+        LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4), m_atlas.texture().sampler().descriptor())
     };
     pipelineLayoutDesc.combinedTextureSamplers = {
         LLGL::CombinedTextureSamplerDescriptor{ "u_texture", "u_texture", "u_sampler", 3 }
@@ -135,7 +135,7 @@ void ParticleRenderer::init() {
         m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
     }
 
-    const ShaderPipeline& particle_shader = Assets::GetShader(ShaderAsset::ParticleShader);
+    const sge::ShaderPipeline& particle_shader = Assets::GetShader(ShaderAsset::ParticleShader);
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
     pipelineLayoutDesc.debugName = "ParticleRenderer Pipeline";
@@ -167,7 +167,7 @@ void ParticleRenderer::init() {
 
     m_pipeline = context->CreatePipelineState(pipelineDesc);
     if (const LLGL::Report* report = m_pipeline->GetReport()) {
-        if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
+        if (report->HasErrors()) SGE_LOG_ERROR("%s", report->GetText());
     }
 
     LLGL::PipelineLayoutDescriptor compute_pipeline_layout_desc;
@@ -225,7 +225,7 @@ void ParticleRenderer::init() {
 
     m_compute_pipeline = context->CreatePipelineState(compute_pipeline_desc);
     if (const LLGL::Report* report = m_compute_pipeline->GetReport()) {
-        if (report->HasErrors()) LOG_ERROR("%s", report->GetText());
+        if (report->HasErrors()) SGE_LOG_ERROR("%s", report->GetText());
     }
 
     m_is_metal = backend.IsMetal();
@@ -233,10 +233,10 @@ void ParticleRenderer::init() {
     reset();
 }
 
-void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Order order) {
+void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, sge::Order) {
     ZoneScopedN("ParticleRenderer::draw_particle");
 
-    const math::Rect& rect = m_atlas.get_rect(get_particle_index(type, variant));
+    const sge::Rect& rect = m_atlas.get_rect(get_particle_index(type, variant));
 
     *m_position_buffer_data_ptr = position;
     m_position_buffer_data_ptr++;
@@ -256,10 +256,10 @@ void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat&
     m_particle_count++;
 }
 
-void ParticleRenderer::draw_particle_world(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, Order order) {
+void ParticleRenderer::draw_particle_world(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, sge::Order) {
     ZoneScopedN("ParticleRenderer::draw_particle");
 
-    const math::Rect& rect = m_atlas.get_rect(get_particle_index(type, variant));
+    const sge::Rect& rect = m_atlas.get_rect(get_particle_index(type, variant));
 
     *m_position_buffer_data_ptr = position;
     m_position_buffer_data_ptr++;
@@ -396,16 +396,16 @@ void ParticleRenderer::reset() {
 void ParticleRenderer::terminate() {
     const auto& context = m_renderer->Context();
 
-    RESOURCE_RELEASE(m_buffer_array);
-    RESOURCE_RELEASE(m_instance_buffer);
-    RESOURCE_RELEASE(m_vertex_buffer);
+    SGE_RESOURCE_RELEASE(m_buffer_array);
+    SGE_RESOURCE_RELEASE(m_instance_buffer);
+    SGE_RESOURCE_RELEASE(m_vertex_buffer);
 
-    RESOURCE_RELEASE(m_position_buffer);
-    RESOURCE_RELEASE(m_rotation_buffer);
-    RESOURCE_RELEASE(m_scale_buffer);
+    SGE_RESOURCE_RELEASE(m_position_buffer);
+    SGE_RESOURCE_RELEASE(m_rotation_buffer);
+    SGE_RESOURCE_RELEASE(m_scale_buffer);
 
-    RESOURCE_RELEASE(m_transform_buffer);
+    SGE_RESOURCE_RELEASE(m_transform_buffer);
 
-    RESOURCE_RELEASE(m_pipeline);
-    RESOURCE_RELEASE(m_compute_pipeline);
+    SGE_RESOURCE_RELEASE(m_pipeline);
+    SGE_RESOURCE_RELEASE(m_compute_pipeline);
 }

@@ -4,12 +4,14 @@
 #include <LLGL/Types.h>
 #include <glm/gtc/random.hpp>
 
-#include "engine/defines.hpp"
-#include "engine/engine.hpp"
-#include "engine/input.hpp"
-#include "engine/renderer/camera.hpp"
-#include "engine/types/window_settings.hpp"
-#include "engine/time/time.hpp"
+#include <SGE/defines.hpp>
+#include <SGE/engine.hpp>
+#include <SGE/input.hpp>
+#include <SGE/renderer/camera.hpp>
+#include <SGE/types/window_settings.hpp>
+#include <SGE/time/time.hpp>
+
+#include "SGE/types/config.hpp"
 #include "renderer/renderer.hpp"
 #include "ui/ui.hpp"
 #include "world/autotile.hpp"
@@ -26,7 +28,7 @@
 static struct GameState {
     Player player;
     World world;
-    Camera camera;
+    sge::Camera camera;
     bool free_camera = false;
 } g;
 
@@ -35,8 +37,8 @@ static glm::vec2 camera_follow_player() {
 
     glm::vec2 position = g.player.draw_position();
 
-    const math::Rect area = g.world.playable_area() * Constants::TILE_SIZE;
-    const math::Rect& camera_area = g.camera.get_projection_area();
+    const sge::Rect area = g.world.playable_area() * Constants::TILE_SIZE;
+    const sge::Rect& camera_area = g.camera.get_projection_area();
     
     const float left = camera_area.min.x;
     const float right = camera_area.max.x;
@@ -55,20 +57,20 @@ static glm::vec2 camera_follow_player() {
 
 #if DEBUG
 static glm::vec2 camera_free() {
-    const float dt = Time::delta_seconds();
+    const float dt = sge::Time::DeltaSeconds();
     glm::vec2 position = g.camera.position();
 
     float speed = 2000.0f;
 
-    if (Input::Pressed(Key::LeftShift)) speed *= 2.0f;
-    if (Input::Pressed(Key::LeftAlt)) speed /= 5.0f;
+    if (sge::Input::Pressed(sge::Key::LeftShift)) speed *= 2.0f;
+    if (sge::Input::Pressed(sge::Key::LeftAlt)) speed /= 5.0f;
 
-    if (Input::Pressed(Key::A)) position.x -= speed * dt;
-    if (Input::Pressed(Key::D)) position.x += speed * dt;
-    if (Input::Pressed(Key::W)) position.y -= speed * dt;
-    if (Input::Pressed(Key::S)) position.y += speed * dt;
+    if (sge::Input::Pressed(sge::Key::A)) position.x -= speed * dt;
+    if (sge::Input::Pressed(sge::Key::D)) position.x += speed * dt;
+    if (sge::Input::Pressed(sge::Key::W)) position.y -= speed * dt;
+    if (sge::Input::Pressed(sge::Key::S)) position.y += speed * dt;
 
-    const math::Rect& camera_area = g.camera.get_projection_area();
+    const sge::Rect& camera_area = g.camera.get_projection_area();
 
     if (position.y + camera_area.min.y < 0.0f) position.y = 0.0f - camera_area.min.y;
 
@@ -80,8 +82,8 @@ void pre_update() {
     ZoneScopedN("Game::pre_update");
 
 #if DEBUG
-    if (Input::JustPressed(Key::B)) {
-        DEBUG_BREAK();
+    if (sge::Input::JustPressed(sge::Key::B)) {
+        SGE_DEBUG_BREAK();
     }
 #endif
 
@@ -92,7 +94,7 @@ void pre_update() {
     g.player.pre_update();
     g.world.clear_lights();
 
-    if (Input::JustPressed(Key::F)) g.free_camera = !g.free_camera;
+    if (sge::Input::JustPressed(sge::Key::F)) g.free_camera = !g.free_camera;
 }
 
 void fixed_update() {
@@ -118,22 +120,22 @@ void update() {
 
     float scale_speed = 2.f;
 
-    if (Input::Pressed(Key::LeftShift)) scale_speed *= 4.f;
-    if (Input::Pressed(Key::LeftAlt)) scale_speed /= 4.f;
+    if (sge::Input::Pressed(sge::Key::LeftShift)) scale_speed *= 4.f;
+    if (sge::Input::Pressed(sge::Key::LeftAlt)) scale_speed /= 4.f;
 
-    if (Input::Pressed(Key::Minus)) {
-        const float zoom = g.camera.zoom() + scale_speed * Time::delta_seconds();
+    if (sge::Input::Pressed(sge::Key::Minus)) {
+        const float zoom = g.camera.zoom() + scale_speed * sge::Time::DeltaSeconds();
         g.camera.set_zoom(glm::clamp(zoom, Constants::CAMERA_MAX_ZOOM, Constants::CAMERA_MIN_ZOOM));
     }
 
-    if (Input::Pressed(Key::Equals)) {
-        const float zoom = g.camera.zoom() - scale_speed * Time::delta_seconds();
+    if (sge::Input::Pressed(sge::Key::Equals)) {
+        const float zoom = g.camera.zoom() - scale_speed * sge::Time::DeltaSeconds();
         g.camera.set_zoom(glm::clamp(zoom, Constants::CAMERA_MAX_ZOOM, Constants::CAMERA_MIN_ZOOM));
     }
 
 #if DEBUG
-    if (g.free_camera && Input::Pressed(MouseButton::Right)) {
-        g.player.set_position(g.world, g.camera.screen_to_world(Input::MouseScreenPosition()));
+    if (g.free_camera && sge::Input::Pressed(sge::MouseButton::Right)) {
+        g.player.set_position(g.world, g.camera.screen_to_world(sge::Input::MouseScreenPosition()));
     }
     const glm::vec2 position = g.free_camera ? camera_free() : camera_follow_player();
 #else
@@ -151,8 +153,8 @@ void update() {
     
     g.player.update(g.world);
 
-    if (Input::Pressed(Key::K)) {
-        const glm::vec2 position = g.camera.screen_to_world(Input::MouseScreenPosition());
+    if (sge::Input::Pressed(sge::Key::K)) {
+        const glm::vec2 position = g.camera.screen_to_world(sge::Input::MouseScreenPosition());
 
         for (int i = 0; i < 500; ++i) {
             const glm::vec2 velocity = glm::diskRand(1.5f);
@@ -194,13 +196,13 @@ void post_render() {
     ZoneScopedN("Game::post_render");
 
     if (g.world.chunk_manager().any_chunks_to_destroy()) {
-        Engine::Renderer().CommandQueue()->WaitIdle();
+        sge::Engine::Renderer().CommandQueue()->WaitIdle();
         g.world.chunk_manager().destroy_hidden_chunks();
     }
 
 #if DEBUG
-    if (Input::Pressed(Key::C)) {
-        Engine::Renderer().PrintDebugInfo();
+    if (sge::Input::Pressed(sge::Key::C)) {
+        sge::Engine::Renderer().PrintDebugInfo();
     }
 #endif
 }
@@ -221,14 +223,13 @@ void window_resized(uint32_t width, uint32_t height, uint32_t scaled_width, uint
 bool load_assets() {
     if (!Assets::Load()) return false;
     if (!Assets::LoadFonts()) return false;
-    if (!Assets::InitSamplers()) return false;
 
-    const std::vector<ShaderDef> shader_defs = {
-        ShaderDef("TILE_SIZE", std::to_string(Constants::TILE_SIZE)),
-        ShaderDef("WALL_SIZE", std::to_string(Constants::WALL_SIZE)),
-        ShaderDef("DEF_SUBDIVISION", std::to_string(Constants::SUBDIVISION)),
-        ShaderDef("DEF_SOLID_DECAY", std::to_string(Constants::LightDecay(true))),
-        ShaderDef("DEF_AIR_DECAY", std::to_string(Constants::LightDecay(false))),
+    const std::vector<sge::ShaderDef> shader_defs = {
+        sge::ShaderDef("TILE_SIZE", std::to_string(Constants::TILE_SIZE)),
+        sge::ShaderDef("WALL_SIZE", std::to_string(Constants::WALL_SIZE)),
+        sge::ShaderDef("DEF_SUBDIVISION", std::to_string(Constants::SUBDIVISION)),
+        sge::ShaderDef("DEF_SOLID_DECAY", std::to_string(Constants::LightDecay(true))),
+        sge::ShaderDef("DEF_AIR_DECAY", std::to_string(Constants::LightDecay(false))),
     };
 
     if (!Assets::LoadShaders(shader_defs)) return false;
@@ -242,33 +243,33 @@ void destroy() {
     ParticleManager::Terminate();
 }
 
-bool Game::Init(RenderBackend backend, GameConfig config) {
+bool Game::Init(sge::RenderBackend backend, sge::AppConfig config) {
     ZoneScopedN("Game::Init");
 
-    Engine::SetLoadAssetsCallback(load_assets);
-    Engine::SetPreUpdateCallback(pre_update);
-    Engine::SetUpdateCallback(update);
-    Engine::SetPostUpdateCallback(post_update);
-    Engine::SetFixedUpdateCallback(fixed_update);
-    Engine::SetRenderCallback(render);
-    Engine::SetPostRenderCallback(post_render);
-    Engine::SetDestroyCallback(destroy);
-    Engine::SetWindowResizeCallback(window_resized);
+    sge::Engine::SetLoadAssetsCallback(load_assets);
+    sge::Engine::SetPreUpdateCallback(pre_update);
+    sge::Engine::SetUpdateCallback(update);
+    sge::Engine::SetPostUpdateCallback(post_update);
+    sge::Engine::SetFixedUpdateCallback(fixed_update);
+    sge::Engine::SetRenderCallback(render);
+    sge::Engine::SetPostRenderCallback(post_render);
+    sge::Engine::SetDestroyCallback(destroy);
+    sge::Engine::SetWindowResizeCallback(window_resized);
 
-    WindowSettings settings;
+    sge::WindowSettings settings;
     settings.width = 1280;
     settings.height = 720;
     settings.fullscreen = config.fullscreen;
     settings.hidden = true;
 
     LLGL::Extent2D resolution;
-    if (!Engine::Init(backend, config.vsync, settings, resolution)) return false;
+    if (!sge::Engine::Init(backend, config.vsync, settings, resolution)) return false;
 
     if (!GameRenderer::Init(resolution)) return false;
 
-    Time::set_fixed_timestep_seconds(Constants::FIXED_UPDATE_INTERVAL);
+    sge::Time::SetFixedTimestepSeconds(Constants::FIXED_UPDATE_INTERVAL);
 
-    Engine::HideCursor();
+    sge::Engine::HideCursor();
 
     init_tile_rules();
 
@@ -298,15 +299,15 @@ bool Game::Init(RenderBackend backend, GameConfig config) {
     inventory.set_item(6, ITEM_TORCH.with_max_stack());
     inventory.set_item(7, ITEM_WOOD_WALL.with_max_stack());
 
-    Engine::ShowWindow();
+    sge::Engine::ShowWindow();
 
     return true;
 }
 
 void Game::Run() {
-    Engine::Run();
+    sge::Engine::Run();
 }
 
 void Game::Destroy() {
-    Engine::Destroy();
+    sge::Engine::Destroy();
 }

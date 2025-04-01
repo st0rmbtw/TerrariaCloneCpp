@@ -5,7 +5,7 @@
 
 #include <LLGL/LLGL.h>
 
-#include "../engine/renderer/renderer.hpp"
+#include <SGE/renderer/renderer.hpp>
 
 #include "../world/world_data.hpp"
 #include "../world/world.hpp"
@@ -28,10 +28,10 @@ public:
 
     void update_tile_texture(WorldData& world);
 
-    void compute_light(const Camera& camera, const World& world);
+    void compute_light(const sge::Camera& camera, const World& world);
 
     void render(const ChunkManager& chunk_manager);
-    void render_lightmap(const Camera& camera);
+    void render_lightmap(const sge::Camera& camera);
     void terminate();
 
     inline LLGL::Texture* light_texture() { return m_light_texture; }
@@ -40,7 +40,7 @@ public:
 private:
     std::unordered_map<glm::uvec2, LightMapChunk> m_lightmap_chunks;
 
-    Renderer* m_renderer = nullptr;
+    sge::Renderer* m_renderer = nullptr;
 
     LLGL::Buffer* m_tile_texture_data_buffer = nullptr;
     LLGL::PipelineState* m_pipeline = nullptr;

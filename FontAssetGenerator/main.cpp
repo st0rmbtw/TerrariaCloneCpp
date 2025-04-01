@@ -5,7 +5,7 @@
 #include <freetype/freetype.h>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <STB/stb_image_write.h>
+#include "stb_image_write.h"
 
 #include <string>
 #include <vector>

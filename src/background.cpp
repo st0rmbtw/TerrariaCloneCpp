@@ -4,7 +4,7 @@
 
 #include <tracy/Tracy.hpp>
 
-#include "engine/types/anchor.hpp"
+#include <SGE/types/anchor.hpp>
 
 #include "types/background_layer.hpp"
 #include "renderer/renderer.hpp"
@@ -64,7 +64,7 @@ void Background::SetupWorldBackground(const World& world) {
         BackgroundLayer(BackgroundAsset::Background93, 2.0f)
             .set_speed(0.05f, 0.1f)
             .set_y(world_layers.underground * TILE_SIZE + 600.0f)
-            .set_anchor(Anchor::BottomCenter)
+            .set_anchor(sge::Anchor::BottomCenter)
             .set_fill_screen_width(true)
             .set_surface_layer(true)
     );
@@ -73,7 +73,7 @@ void Background::SetupWorldBackground(const World& world) {
         BackgroundLayer(BackgroundAsset::Background114, 2.0f)
             .set_speed(0.1f, 0.15f)
             .set_y(world_layers.underground * TILE_SIZE + 600.0f)
-            .set_anchor(Anchor::BottomCenter)
+            .set_anchor(sge::Anchor::BottomCenter)
             .set_fill_screen_width(true)
             .set_surface_layer(true)
     );
@@ -82,7 +82,7 @@ void Background::SetupWorldBackground(const World& world) {
         BackgroundLayer(BackgroundAsset::Background55, 2.3f)
             .set_speed(0.15f, 0.3f)
             .set_y(world_layers.underground * TILE_SIZE + 300.0f)
-            .set_anchor(Anchor::BottomCenter)
+            .set_anchor(sge::Anchor::BottomCenter)
             .set_fill_screen_width(true)
             .set_surface_layer(true)
     );
@@ -90,7 +90,7 @@ void Background::SetupWorldBackground(const World& world) {
     setup_cavern_background(world);
 }
 
-void Background::Update(const Camera &camera, const World& world) {
+void Background::Update(const sge::Camera &camera, const World& world) {
     ZoneScopedN("Background::Update");
 
     const float offset = (camera.viewport().y - 600.0f) * 0.5f;
@@ -126,7 +126,7 @@ void Background::Draw() {
 static void setup_sky_background(float y, bool fill_screen_height) {
     state.layers.push_back(
         BackgroundLayer(BackgroundAsset::Background0, 2.0f)
-            .set_anchor(Anchor::TopCenter)
+            .set_anchor(sge::Anchor::TopCenter)
             .set_speed(0.0f, 0.08f)
             .set_y(y)
             .set_fill_screen_height(fill_screen_height)
@@ -147,7 +147,7 @@ static void setup_cavern_background(const World& world) {
     state.layers.push_back(
         BackgroundLayer(BackgroundAsset::Background77, 1.0f)
             .set_speed(speed_x, 1.0f)
-            .set_anchor(Anchor::BottomLeft)
+            .set_anchor(sge::Anchor::BottomLeft)
             .set_x(world.playable_area().left() * TILE_SIZE)
             .set_y(underground_level)
             .set_width(world_width)
@@ -159,7 +159,7 @@ static void setup_cavern_background(const World& world) {
     state.layers.push_back(
         BackgroundLayer(BackgroundAsset::Background78, 1.0f)
             .set_speed(speed_x, 1.0f) 
-            .set_anchor(Anchor::TopLeft)
+            .set_anchor(sge::Anchor::TopLeft)
             .set_x(world.playable_area().left() * TILE_SIZE)
             .set_y(underground_level)
             .set_width(world_width)

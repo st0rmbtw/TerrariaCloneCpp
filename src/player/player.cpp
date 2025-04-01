@@ -4,11 +4,12 @@
 
 #include <tracy/Tracy.hpp>
 
-#include "../engine/math/quat.hpp"
-#include "../engine/math/rect.hpp"
-#include "../engine/input.hpp"
-#include "../engine/time/time.hpp"
-#include "../engine/time/timer.hpp"
+#include <SGE/math/quat.hpp>
+#include <SGE/math/rect.hpp>
+#include <SGE/input.hpp>
+#include <SGE/time/time.hpp>
+#include <SGE/time/timer.hpp>
+#include <SGE/time/stopwatch.hpp>
 
 #include "../assets.hpp"
 #include "../constants.hpp"
@@ -70,17 +71,17 @@ void spawn_particles_on_dig(const glm::vec2& position, Particle::Type particle, 
 void Player::init() {
     ZoneScopedN("Player::init");
 
-    m_hair = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerHair));
-    m_head = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerHead));
-    m_body = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerChest));
-    m_legs = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerLegs));
-    m_left_hand = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerLeftHand));
-    m_left_shoulder = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerLeftShoulder));
-    m_right_arm = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerRightArm));
-    m_left_eye = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerLeftEye));
-    m_right_eye = TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerRightEye));
-    m_walk_anim_timer = Timer::zero(TimerMode::Repeating);
-    m_walk_particles_timer = Timer::from_seconds(1.0f / 20.0f, TimerMode::Repeating);
+    m_hair = sge::TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerHair));
+    m_head = sge::TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerHead));
+    m_body = sge::TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerChest));
+    m_legs = sge::TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerLegs));
+    m_left_hand = sge::TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerLeftHand));
+    m_left_shoulder = sge::TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerLeftShoulder));
+    m_right_arm = sge::TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerRightArm));
+    m_left_eye = sge::TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerLeftEye));
+    m_right_eye = sge::TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerRightEye));
+    m_walk_anim_timer = sge::Timer::zero(sge::TimerMode::Repeating);
+    m_walk_particles_timer = sge::Timer::from_seconds(1.0f / 20.0f, sge::TimerMode::Repeating);
     m_walk_animation_index = 0;
 
     m_legs.set_walk_animation({ .offset = 6 });
@@ -102,21 +103,21 @@ void Player::init() {
     m_right_eye.set_walk_animation({ .offset = 6, .length = 14 });
 
     m_head.sprite
-        .set_color(glm::vec4(0.92, 0.45, 0.32, 1.0));
+        .set_color(sge::LinearRgba(0.92, 0.45, 0.32));
     m_right_arm.sprite
-        .set_color(glm::vec4(0.92, 0.45, 0.32, 1.0));
+        .set_color(sge::LinearRgba(0.92, 0.45, 0.32));
     m_right_eye.sprite
-        .set_color(glm::vec4(89.0 / 255.0, 76.0 / 255.0, 64.0 / 255.0, 1.0));
+        .set_color(sge::LinearRgba(89.0 / 255.0, 76.0 / 255.0, 64.0 / 255.0));
     m_hair.sprite
-        .set_color(glm::vec4(0.55, 0.23, 0.14, 1.0));
+        .set_color(sge::LinearRgba(0.55, 0.23, 0.14));
     m_body.sprite
-        .set_color(glm::vec4(0.58, 0.55, 0.47, 1.0));
+        .set_color(sge::LinearRgba(0.58, 0.55, 0.47));
     m_legs.sprite
-        .set_color(glm::vec4(190.0 / 255.0, 190.0 / 255.0, 156.0 / 255.0, 1.0));
+        .set_color(sge::LinearRgba(190.0 / 255.0, 190.0 / 255.0, 156.0 / 255.0));
     m_left_hand.sprite
-        .set_color(glm::vec4(0.92, 0.45, 0.32, 1.0));
+        .set_color(sge::LinearRgba(0.92, 0.45, 0.32));
     m_left_shoulder.sprite
-        .set_color(glm::vec4(0.58, 0.55, 0.47, 1.0));
+        .set_color(sge::LinearRgba(0.58, 0.55, 0.47));
 }
 
 void Player::set_position(const World& world, const glm::vec2& position) {
@@ -132,8 +133,8 @@ void Player::horizontal_movement(bool handle_input) {
 
     int8_t dir = 0;
 
-    if (handle_input && Input::Pressed(Key::A)) { dir -= 1; }
-    if (handle_input && Input::Pressed(Key::D)) { dir += 1; }
+    if (handle_input && sge::Input::Pressed(sge::Key::A)) { dir -= 1; }
+    if (handle_input && sge::Input::Pressed(sge::Key::D)) { dir += 1; }
 
     if (dir > 0) {
         m_direction = Direction::Right;
@@ -163,7 +164,7 @@ void Player::vertical_movement(bool handle_input) {
         m_jumping = true;
     }
 
-    if (handle_input && Input::Pressed(Key::Space)) {
+    if (handle_input && sge::Input::Pressed(sge::Key::Space)) {
         if (m_jump > 0) {
             if (m_velocity.y == 0) {
                 m_jump = 0;
@@ -196,7 +197,7 @@ glm::vec2 Player::check_collisions(const World& world) {
     glm::vec2 result = m_velocity;
     const glm::vec2 pos = m_position;
     const glm::vec2 next_pos = m_position + m_velocity;
-    const math::IRect& area = world.playable_area();
+    const sge::IRect& area = world.playable_area();
 
     int left = static_cast<int>((m_position.x - PLAYER_WIDTH_HALF) / TILE_SIZE) - 1;
     int right = static_cast<int>((m_position.x + PLAYER_WIDTH_HALF) / TILE_SIZE) + 2;
@@ -291,8 +292,8 @@ glm::vec2 Player::check_collisions(const World& world) {
                 if (!world.solid_tile_exists(TilePos(x, y))) continue;
 
                 const glm::vec2 tile_pos = glm::vec2(x * TILE_SIZE, y * TILE_SIZE);
-                const math::Rect player_rect = math::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
-                const math::Rect tile_rect = math::Rect::from_top_left(glm::vec2(tile_pos.x, tile_pos.y - TILE_SIZE - 1.0f), glm::vec2(TILE_SIZE));
+                const sge::Rect player_rect = sge::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
+                const sge::Rect tile_rect = sge::Rect::from_top_left(glm::vec2(tile_pos.x, tile_pos.y - TILE_SIZE - 1.0f), glm::vec2(TILE_SIZE));
 
                 if (player_rect.intersects(tile_rect) && tile_pos.y < c) {
                     step_down_y = tile_pos.y;
@@ -336,7 +337,7 @@ void Player::update_walk_anim_timer() {
 
     if (m_velocity.x != 0.0) {
         const uint32_t time = glm::abs(100.0 / glm::abs(m_velocity.x));
-        m_walk_anim_timer.set_duration(Duration::Millis(glm::max(time, 1u)));
+        m_walk_anim_timer.set_duration(sge::Duration::Millis(glm::max(time, 1u)));
     }
 }
 
@@ -368,7 +369,7 @@ void Player::update_using_item_anim() {
 
     m_using_item.set_position(item_position);
     m_using_item.set_rotation(Quat::from_rotation_z(rotation * direction * ITEM_ROTATION + direction * 0.5f));
-    m_using_item.set_anchor(m_direction == Direction::Left ? Anchor::BottomRight : Anchor::BottomLeft);
+    m_using_item.set_anchor(m_direction == Direction::Left ? sge::Anchor::BottomRight : sge::Anchor::BottomLeft);
     m_using_item.set_flip_x(m_direction == Direction::Left);
     
     m_using_item_visible = true;
@@ -384,7 +385,7 @@ void Player::update_hold_item() {
     if (hold_style == HoldStyle::None) return;
 
     m_using_item.set_texture(Assets::GetItemTexture(selected_item->id));
-    m_using_item.set_anchor(m_direction == Direction::Left ? Anchor::BottomRight : Anchor::BottomLeft);
+    m_using_item.set_anchor(m_direction == Direction::Left ? sge::Anchor::BottomRight : sge::Anchor::BottomLeft);
     m_using_item.set_flip_x(m_direction == Direction::Left);
     m_using_item.set_rotation(glm::identity<glm::quat>());
 
@@ -412,7 +413,7 @@ void Player::update_sprites_index() {
 
     switch (m_movement_state) {
     case MovementState::Walking: {
-        if (m_walk_anim_timer.tick(Time::fixed_delta()).just_finished()) {
+        if (m_walk_anim_timer.tick(sge::Time::FixedDelta()).just_finished()) {
             m_walk_animation_index = (m_walk_animation_index + 1) % WALK_ANIMATION_LENGTH;
 
             if (hold_style == HoldStyle::None) {
@@ -485,7 +486,7 @@ void Player::update_movement_state() {
 void Player::pre_update() {
     ZoneScopedN("Player::pre_update");
 
-    if (Input::JustPressed(Key::Space)) {
+    if (sge::Input::JustPressed(sge::Key::Space)) {
         do_jump = true;
     }
 }
@@ -545,16 +546,16 @@ void Player::spawn_particles_grounded() const {
     }
 }
 
-void Player::fixed_update(const Camera& camera, World& world, bool handle_input) {
+void Player::fixed_update(const sge::Camera& camera, World& world, bool handle_input) {
     ZoneScopedN("Player::fixed_update");
 
     m_using_item_visible = false;
 
-    if (Input::Pressed(MouseButton::Left) && !Input::IsMouseOverUi()) {
+    if (sge::Input::Pressed(sge::MouseButton::Left) && !sge::Input::IsMouseOverUi()) {
         use_item(camera, world);
     }
 
-    if (Input::Pressed(MouseButton::Right) && !Input::IsMouseOverUi()) {
+    if (sge::Input::Pressed(sge::MouseButton::Right) && !sge::Input::IsMouseOverUi()) {
         interact(camera, world);
     }
 
@@ -592,7 +593,7 @@ void Player::fixed_update(const Camera& camera, World& world, bool handle_input)
         m_swing_anim = false;
     }
 
-    if (m_walk_particles_timer.tick(Time::fixed_delta()).just_finished()) {
+    if (m_walk_particles_timer.tick(sge::Time::FixedDelta()).just_finished()) {
         spawn_particles_on_walk();
     }
 
@@ -625,7 +626,7 @@ void Player::keep_in_world_bounds(const World& world) {
 
     static constexpr float OFFSET = Constants::WORLD_BOUNDARY_OFFSET;
 
-    const math::Rect area = world.playable_area() * TILE_SIZE;
+    const sge::Rect area = world.playable_area() * TILE_SIZE;
 
     if (m_position.x - PLAYER_WIDTH_HALF < area.min.x + OFFSET) m_position.x = area.min.x + PLAYER_WIDTH_HALF + OFFSET;
     if (m_position.x + PLAYER_WIDTH_HALF > area.max.x - OFFSET) m_position.x = area.max.x - PLAYER_WIDTH_HALF - OFFSET;
@@ -700,7 +701,7 @@ void Player::draw() const {
     GameRenderer::EndOrderMode();
 }
 
-void Player::use_item(const Camera& camera, World& world) {
+void Player::use_item(const sge::Camera& camera, World& world) {
     ZoneScopedN("Player::use_item");
 
     const ItemSlot taken_item = m_inventory.taken_item();
@@ -721,7 +722,7 @@ void Player::use_item(const Camera& camera, World& world) {
     if (m_use_cooldown > 0) return;
     m_use_cooldown = item->use_cooldown;
     
-    const glm::vec2& screen_pos = Input::MouseScreenPosition();
+    const glm::vec2& screen_pos = sge::Input::MouseScreenPosition();
     const glm::vec2 world_pos = camera.screen_to_world(screen_pos);
 
     const TilePos tile_pos = TilePos::from_world_pos(world_pos);
@@ -779,8 +780,8 @@ void Player::use_item(const Camera& camera, World& world) {
         used = true;
     } else if (item->places_tile.has_value()) {
         if (item->places_tile->type == PlacesTile::Block && !world.tile_exists(tile_pos)) {
-            const math::Rect player_rect = math::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
-            const math::Rect tile_rect = math::Rect::from_center_size(tile_pos.to_world_pos_center(), glm::vec2(TILE_SIZE));
+            const sge::Rect player_rect = sge::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
+            const sge::Rect tile_rect = sge::Rect::from_center_size(tile_pos.to_world_pos_center(), glm::vec2(TILE_SIZE));
 
             if (!player_rect.intersects(tile_rect)) {
                 const Neighbors<TileType> neighbors = world.get_tile_type_neighbors(tile_pos);
@@ -799,8 +800,8 @@ void Player::use_item(const Camera& camera, World& world) {
     if (used) m_inventory.consume_item(item_slot.index);
 }
 
-void Player::interact(const Camera& camera, World& world) {
-    const glm::vec2& screen_pos = Input::MouseScreenPosition();
+void Player::interact(const sge::Camera& camera, World& world) {
+    const glm::vec2& screen_pos = sge::Input::MouseScreenPosition();
     const glm::vec2 world_pos = camera.screen_to_world(screen_pos);
     const TilePos tile_pos = TilePos::from_world_pos(world_pos);
 

@@ -5,7 +5,7 @@
 
 #include <glm/glm.hpp>
 
-#include "../engine/types/anchor.hpp"
+#include <SGE/types/anchor.hpp>
 #include "../assets.hpp"
 
 class BackgroundLayer {
@@ -13,7 +13,7 @@ public:
     BackgroundLayer(BackgroundAsset key, float scale) {
         const uint16_t id = static_cast<uint16_t>(key);
 
-        const TextureAtlas& atlas = Assets::GetTextureAtlas(TextureAsset::Backgrounds);
+        const sge::TextureAtlas& atlas = Assets::GetTextureAtlas(TextureAsset::Backgrounds);
         const glm::vec2 rect_size = atlas.rects()[id].size();
         const glm::vec2 size = id == 0 ? glm::vec2(rect_size.y, rect_size.x) : rect_size;
 
@@ -29,7 +29,7 @@ public:
     inline BackgroundLayer& set_speed(float x, float y) { m_speed = glm::vec2(x, y); return *this; }
     inline BackgroundLayer& set_x(float x) { m_x = x; return *this; }
     inline BackgroundLayer& set_y(float y) { m_y = y; m_position.y = y; return *this; }
-    inline BackgroundLayer& set_anchor(const Anchor anchor) { m_anchor = anchor; return *this; }
+    inline BackgroundLayer& set_anchor(const sge::Anchor anchor) { m_anchor = anchor; return *this; }
     inline BackgroundLayer& set_nonscale(bool nonscale) { m_nonscale = nonscale; return *this; }
     inline BackgroundLayer& set_follow_camera(bool follow) { m_follow_camera = follow; return *this; }
     inline BackgroundLayer& set_fill_screen_height(bool fill) { m_fill_screen_height = fill; return *this; }
@@ -46,7 +46,7 @@ public:
     [[nodiscard]] inline float scale() const { return m_scale; }
     [[nodiscard]] inline float x() const { return m_x; }
     [[nodiscard]] inline float y() const { return m_y; }
-    [[nodiscard]] inline Anchor anchor() const { return m_anchor; }
+    [[nodiscard]] inline sge::Anchor anchor() const { return m_anchor; }
     [[nodiscard]] inline bool nonscale() const { return m_nonscale; }
     [[nodiscard]] inline bool follow_camera() const { return m_follow_camera; }
     [[nodiscard]] inline bool fill_screen_height() const { return m_fill_screen_height; }
@@ -64,7 +64,7 @@ private:
     float m_scale = 0.0f;
     float m_x;
     float m_y;
-    Anchor m_anchor;
+    sge::Anchor m_anchor;
     bool m_nonscale = true;
     bool m_follow_camera = true;
     bool m_fill_screen_height = false;

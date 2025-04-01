@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <glm/glm.hpp>
 
-#include "../engine/defines.hpp"
+#include <SGE/defines.hpp>
 #include "../constants.hpp"
 
 enum class TileOffset: uint8_t {
@@ -79,15 +79,15 @@ struct TilePos {
     }
 };
 
-constexpr FORCE_INLINE TilePos operator+(const TilePos& lhs, const glm::ivec2& rhs) {
+constexpr SGE_FORCE_INLINE TilePos operator+(const TilePos& lhs, const glm::ivec2& rhs) {
     return TilePos(lhs.x + rhs.x, lhs.y + rhs.y);
 }
 
-constexpr FORCE_INLINE TilePos operator+(const glm::ivec2& lhs, const TilePos& rhs) {
+constexpr SGE_FORCE_INLINE TilePos operator+(const glm::ivec2& lhs, const TilePos& rhs) {
     return TilePos(lhs.x + rhs.x, lhs.y + rhs.y);
 }
 
-constexpr FORCE_INLINE bool operator==(const TilePos a, const TilePos b) {
+constexpr SGE_FORCE_INLINE bool operator==(const TilePos a, const TilePos b) {
     return a.x == b.x && a.y == b.y;
 }
 

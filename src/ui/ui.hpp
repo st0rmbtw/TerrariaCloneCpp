@@ -3,7 +3,8 @@
 
 #pragma once
 
-#include "../engine/renderer/camera.hpp"
+#include <SGE/renderer/camera.hpp>
+
 #include "../player/inventory.hpp"
 #include "../player/player.hpp"
 
@@ -13,7 +14,7 @@ namespace UI {
     void PreUpdate(Inventory& inventory);
     void Update(Inventory& inventory);
     void PostUpdate();
-    void Draw(const Camera& camera, const Player& player);
+    void Draw(const sge::Camera& camera, const Player& player);
 };
 
 #endif

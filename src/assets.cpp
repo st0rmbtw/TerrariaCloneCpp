@@ -13,11 +13,11 @@
 #include <STB/stb_image.h>
 #include <freetype/freetype.h>
 
-#include "engine/engine.hpp"
-#include "engine/types/shader_pipeline.hpp"
-#include "engine/types/texture.hpp"
-#include "engine/log.hpp"
-#include "engine/utils.hpp"
+#include <SGE/engine.hpp>
+#include <SGE/types/shader_pipeline.hpp>
+#include <SGE/types/texture.hpp>
+#include <SGE/log.hpp>
+#include <SGE/utils.hpp>
 #include "renderer/types.hpp"
 #include "types/block.hpp"
 #include "types/wall.hpp"
@@ -45,7 +45,7 @@ struct AssetTexture {
     std::string path;
     int sampler;
 
-    explicit AssetTexture(std::string path, int sampler = TextureSampler::Nearest) :
+    explicit AssetTexture(std::string path, int sampler = sge::TextureSampler::Nearest) :
         path(std::move(path)),
         sampler(sampler) {}
 };
@@ -101,13 +101,13 @@ static const std::pair<TextureAsset, AssetTexture> TEXTURE_ASSETS[] = {
     { TextureAsset::PlayerLeftEye,      AssetTexture("assets/sprites/player/Player_0_1.png") },
     { TextureAsset::PlayerRightEye,     AssetTexture("assets/sprites/player/Player_0_2.png") },
 
-    { TextureAsset::UiCursorForeground,    AssetTexture("assets/sprites/ui/Cursor_0.png", TextureSampler::Linear) },
-    { TextureAsset::UiCursorBackground,    AssetTexture("assets/sprites/ui/Cursor_11.png", TextureSampler::Linear) },
-    { TextureAsset::UiInventoryBackground, AssetTexture("assets/sprites/ui/Inventory_Back.png", TextureSampler::Linear) },
-    { TextureAsset::UiInventorySelected,   AssetTexture("assets/sprites/ui/Inventory_Back14.png", TextureSampler::Linear) },
-    { TextureAsset::UiInventoryHotbar,     AssetTexture("assets/sprites/ui/Inventory_Back9.png", TextureSampler::Linear) },
+    { TextureAsset::UiCursorForeground,    AssetTexture("assets/sprites/ui/Cursor_0.png", sge::TextureSampler::Linear) },
+    { TextureAsset::UiCursorBackground,    AssetTexture("assets/sprites/ui/Cursor_11.png", sge::TextureSampler::Linear) },
+    { TextureAsset::UiInventoryBackground, AssetTexture("assets/sprites/ui/Inventory_Back.png", sge::TextureSampler::Linear) },
+    { TextureAsset::UiInventorySelected,   AssetTexture("assets/sprites/ui/Inventory_Back14.png", sge::TextureSampler::Linear) },
+    { TextureAsset::UiInventoryHotbar,     AssetTexture("assets/sprites/ui/Inventory_Back9.png", sge::TextureSampler::Linear) },
 
-    { TextureAsset::TileCracks, AssetTexture("assets/sprites/tiles/TileCracks.png", TextureSampler::Nearest) },
+    { TextureAsset::TileCracks, AssetTexture("assets/sprites/tiles/TileCracks.png", sge::TextureSampler::Nearest) },
 
     { TextureAsset::Particles, AssetTexture("assets/sprites/Particles.png") }
 };
@@ -200,153 +200,24 @@ const std::pair<ComputeShaderAsset, AssetComputeShader> COMPUTE_SHADER_ASSETS[] 
 };
 
 static struct AssetsState {
-    std::unordered_map<uint16_t, Texture> items;
-    std::unordered_map<TextureAsset, Texture> textures;
-    std::unordered_map<TextureAsset, TextureAtlas> textures_atlases;
-    std::unordered_map<ShaderAsset, ShaderPipeline> shaders;
+    std::unordered_map<uint16_t, sge::Texture> items;
+    std::unordered_map<TextureAsset, sge::Texture> textures;
+    std::unordered_map<TextureAsset, sge::TextureAtlas> textures_atlases;
+    std::unordered_map<ShaderAsset, sge::ShaderPipeline> shaders;
     std::unordered_map<ComputeShaderAsset, LLGL::Shader*> compute_shaders;
-    std::unordered_map<FontAsset, Font> fonts;
+    std::unordered_map<FontAsset, sge::Font> fonts;
     std::unordered_map<VertexFormatAsset, LLGL::VertexFormat> vertex_formats;
-    std::vector<Sampler> samplers;
+    std::vector<sge::Sampler> samplers;
 } state;
 
-static bool load_font(Font& font, const char* meta_file_path, const char* atlas_file_path);
-static bool load_texture(const char* path, int sampler, Texture* texture);
+static bool load_font(sge::Font& font, const char* meta_file_path, const char* atlas_file_path);
+static bool load_texture(const char* path, int sampler, sge::Texture* texture);
 
 template <size_t T>
-static Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*, glm::uvec2>, T>& assets, int sampler, bool generate_mip_maps = false);
+static sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*, glm::uvec2>, T>& assets, int sampler, bool generate_mip_maps = false);
 
-bool Assets::Load() {
-    Renderer& renderer = Engine::Renderer();
-
-    const uint8_t data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
-    state.textures[TextureAsset::Stub] = renderer.CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, 1, 1, 1, TextureSampler::Nearest, data);
-
-    for (const auto& [key, asset] : TEXTURE_ASSETS) {
-        Texture texture;
-        if (!load_texture(asset.path.c_str(), asset.sampler, &texture)) {
-            return false;
-        }
-        state.textures[key] = texture;
-    }
-
-    for (const auto& [block_type, asset_key, path, size] : BLOCK_ASSETS) {
-        Texture texture;
-        if (!load_texture(path, TextureSampler::Nearest, &texture)) {
-            return false;
-        }
-        state.textures[asset_key] = texture;
-        state.textures_atlases[asset_key] = TextureAtlas::from_grid(texture, size, (texture.width() - (texture.width() / 16) * 2) / 16 + 1, (texture.height() - (texture.height() / 16) * 2) / 16 + 1, glm::uvec2(2));
-    }
-
-    std::vector<math::Rect> background_rects(static_cast<size_t>(BackgroundAsset::Count));
-    for (const auto& [id, asset_key, path, _] : BACKGROUND_ASSETS) {
-        int width;
-        int height;
-
-        stbi_info(path, &width, &height, nullptr);
-
-        background_rects[id] = math::URect::from_top_left(glm::uvec2(0), glm::uvec2(width, height));
-    }
-    state.textures_atlases[TextureAsset::Backgrounds] = TextureAtlas(Assets::GetTexture(TextureAsset::Stub), std::move(background_rects), glm::vec2(0.0f), 0, 0);
-
-    for (const auto& [key, asset] : TEXTURE_ATLAS_ASSETS) {
-        state.textures_atlases[key] = TextureAtlas::from_grid(Assets::GetTexture(key), asset.tile_size, asset.columns, asset.rows, asset.padding, asset.offset);
-    }
-    
-    for (const auto& [key, asset] : ITEM_ASSETS) {
-        Texture texture;
-        if (!load_texture(asset.c_str(), TextureSampler::Nearest, &texture)) {
-            return false;
-        }
-        state.items[key] = texture;
-    }
-
-    // There is some glitches in mipmaps on Metal
-    const bool mip_maps = !renderer.Backend().IsMetal();
-
-    state.textures[TextureAsset::Tiles] = load_texture_array(BLOCK_ASSETS, mip_maps ? TextureSampler::NearestMips : TextureSampler::Nearest, mip_maps);
-    state.textures[TextureAsset::Walls] = load_texture_array(WALL_ASSETS, TextureSampler::Nearest);
-    state.textures[TextureAsset::Backgrounds] = load_texture_array(BACKGROUND_ASSETS, TextureSampler::Nearest);
-
-    return true;
-}
-
-bool Assets::LoadShaders(const std::vector<ShaderDef>& shader_defs) {
-    InitVertexFormats();
-    
-    Renderer& renderer = Engine::Renderer();
-
-    RenderBackend backend = renderer.Backend();
-
-    for (const auto& [key, asset] : SHADER_ASSETS) {
-        ShaderPipeline shader_pipeline;
-
-        std::vector<LLGL::VertexAttribute> attributes;
-
-        for (const VertexFormatAsset asset : asset.vertex_format_assets) {
-            const LLGL::VertexFormat& vertex_format = Assets::GetVertexFormat(asset);
-            attributes.insert(attributes.end(), vertex_format.attributes.begin(), vertex_format.attributes.end());
-        }
-
-        if (BITFLAG_CHECK(asset.stages, ShaderStages::Vertex)) {
-            if (!(shader_pipeline.vs = renderer.LoadShader(ShaderPath(ShaderType::Vertex, asset.file_name), shader_defs, attributes)))
-                return false;
-        }
-        
-        if (BITFLAG_CHECK(asset.stages, ShaderStages::Fragment)) {
-            if (!(shader_pipeline.ps = renderer.LoadShader(ShaderPath(ShaderType::Fragment, asset.file_name), shader_defs)))
-                return false;
-        }
-
-        if (BITFLAG_CHECK(asset.stages, ShaderStages::Geometry)) {
-            if (!(shader_pipeline.gs = renderer.LoadShader(ShaderPath(ShaderType::Geometry, asset.file_name), shader_defs)))
-                return false;
-        }
-
-        state.shaders[key] = shader_pipeline;
-    }
-
-    for (const auto& [key, asset] : COMPUTE_SHADER_ASSETS) {
-        const std::string& file_name = backend.IsGLSL() ? asset.glsl_file_name : asset.file_name;
-
-        if (!(state.compute_shaders[key] = renderer.LoadShader(ShaderPath(ShaderType::Compute, file_name, asset.func_name), shader_defs)))
-            return false;
-    }
-
-    return true;
-};
-
-bool Assets::LoadFonts() {
-    for (const auto& [key, name] : FONT_ASSETS) {
-        const fs::path fonts_folder = fs::path("assets") / "fonts";
-        const fs::path meta_file = fonts_folder / fs::path(name).concat(".meta");
-        const fs::path atlas_file = fonts_folder / fs::path(name).concat(".png");
-
-        const std::string meta_file_str = meta_file.string();
-        const std::string atlas_file_str = atlas_file.string();
-
-        if (!FileExists(meta_file_str.c_str())) {
-            LOG_ERROR("Failed to find the font meta file '%s'", meta_file_str.c_str());
-            return false;
-        }
-
-        if (!FileExists(atlas_file_str.c_str())) {
-            LOG_ERROR("Failed to find the font atlas file '%s'", atlas_file_str.c_str());
-            return false;
-        }
-
-        Font font;
-        if (!load_font(font, meta_file_str.c_str(), atlas_file_str.c_str())) return false;
-
-        state.fonts[key] = font;
-    }
-
-    return true;
-}
-
-bool Assets::InitSamplers() {
-    Renderer& renderer = Engine::Renderer();
+void InitSamplers() {
+    sge::Renderer& renderer = sge::Engine::Renderer();
     const auto& context = renderer.Context();
 
     state.samplers.resize(4);
@@ -363,7 +234,7 @@ bool Assets::InitSamplers() {
         sampler_desc.mipMapEnabled = false;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[TextureSampler::Linear] = Sampler(context->CreateSampler(sampler_desc), sampler_desc);
+        state.samplers[sge::TextureSampler::Linear] = sge::Sampler(context->CreateSampler(sampler_desc), sampler_desc);
     }
     {
         LLGL::SamplerDescriptor sampler_desc;
@@ -378,7 +249,7 @@ bool Assets::InitSamplers() {
         sampler_desc.mipMapEnabled = true;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[TextureSampler::LinearMips] = Sampler(context->CreateSampler(sampler_desc), sampler_desc);
+        state.samplers[sge::TextureSampler::LinearMips] = sge::Sampler(context->CreateSampler(sampler_desc), sampler_desc);
     }
     {
         LLGL::SamplerDescriptor sampler_desc;
@@ -393,7 +264,7 @@ bool Assets::InitSamplers() {
         sampler_desc.mipMapEnabled = false;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[TextureSampler::Nearest] = Sampler(context->CreateSampler(sampler_desc), sampler_desc);
+        state.samplers[sge::TextureSampler::Nearest] = sge::Sampler(context->CreateSampler(sampler_desc), sampler_desc);
     }
     {
         LLGL::SamplerDescriptor sampler_desc;
@@ -408,16 +279,145 @@ bool Assets::InitSamplers() {
         sampler_desc.mipMapEnabled = true;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[TextureSampler::NearestMips] = Sampler(context->CreateSampler(sampler_desc), sampler_desc);
+        state.samplers[sge::TextureSampler::NearestMips] = sge::Sampler(context->CreateSampler(sampler_desc), sampler_desc);
+    }
+}
+
+bool Assets::Load() {
+    InitSamplers();
+
+    sge::Renderer& renderer = sge::Engine::Renderer();
+
+    const uint8_t data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
+    state.textures[TextureAsset::Stub] = renderer.CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, 1, 1, 1, Assets::GetSampler(sge::TextureSampler::Nearest), data);
+
+    for (const auto& [key, asset] : TEXTURE_ASSETS) {
+        sge::Texture texture;
+        if (!load_texture(asset.path.c_str(), asset.sampler, &texture)) {
+            return false;
+        }
+        state.textures[key] = texture;
+    }
+
+    for (const auto& [block_type, asset_key, path, size] : BLOCK_ASSETS) {
+        sge::Texture texture;
+        if (!load_texture(path, sge::TextureSampler::Nearest, &texture)) {
+            return false;
+        }
+        state.textures[asset_key] = texture;
+        state.textures_atlases[asset_key] = sge::TextureAtlas::from_grid(texture, size, (texture.width() - (texture.width() / 16) * 2) / 16 + 1, (texture.height() - (texture.height() / 16) * 2) / 16 + 1, glm::uvec2(2));
+    }
+
+    std::vector<sge::Rect> background_rects(static_cast<size_t>(BackgroundAsset::Count));
+    for (const auto& [id, asset_key, path, _] : BACKGROUND_ASSETS) {
+        int width;
+        int height;
+
+        stbi_info(path, &width, &height, nullptr);
+
+        background_rects[id] = sge::URect::from_top_left(glm::uvec2(0), glm::uvec2(width, height));
+    }
+    state.textures_atlases[TextureAsset::Backgrounds] = sge::TextureAtlas(Assets::GetTexture(TextureAsset::Stub), std::move(background_rects), glm::vec2(0.0f), 0, 0);
+
+    for (const auto& [key, asset] : TEXTURE_ATLAS_ASSETS) {
+        state.textures_atlases[key] = sge::TextureAtlas::from_grid(Assets::GetTexture(key), asset.tile_size, asset.columns, asset.rows, asset.padding, asset.offset);
+    }
+    
+    for (const auto& [key, asset] : ITEM_ASSETS) {
+        sge::Texture texture;
+        if (!load_texture(asset.c_str(), sge::TextureSampler::Nearest, &texture)) {
+            return false;
+        }
+        state.items[key] = texture;
+    }
+
+    // There is some glitches in mipmaps on Metal
+    const bool mip_maps = !renderer.Backend().IsMetal();
+
+    state.textures[TextureAsset::Tiles] = load_texture_array(BLOCK_ASSETS, mip_maps ? sge::TextureSampler::NearestMips : sge::TextureSampler::Nearest, mip_maps);
+    state.textures[TextureAsset::Walls] = load_texture_array(WALL_ASSETS, sge::TextureSampler::Nearest);
+    state.textures[TextureAsset::Backgrounds] = load_texture_array(BACKGROUND_ASSETS, sge::TextureSampler::Nearest);
+
+    return true;
+}
+
+bool Assets::LoadShaders(const std::vector<sge::ShaderDef>& shader_defs) {
+    InitVertexFormats();
+    
+    sge::Renderer& renderer = sge::Engine::Renderer();
+
+    sge::RenderBackend backend = renderer.Backend();
+
+    for (const auto& [key, asset] : SHADER_ASSETS) {
+        sge::ShaderPipeline shader_pipeline;
+
+        std::vector<LLGL::VertexAttribute> attributes;
+
+        for (const VertexFormatAsset asset : asset.vertex_format_assets) {
+            const LLGL::VertexFormat& vertex_format = Assets::GetVertexFormat(asset);
+            attributes.insert(attributes.end(), vertex_format.attributes.begin(), vertex_format.attributes.end());
+        }
+
+        if (BITFLAG_CHECK(asset.stages, ShaderStages::Vertex)) {
+            if (!(shader_pipeline.vs = renderer.LoadShader(sge::ShaderPath(sge::ShaderType::Vertex, asset.file_name), shader_defs, attributes)))
+                return false;
+        }
+        
+        if (BITFLAG_CHECK(asset.stages, ShaderStages::Fragment)) {
+            if (!(shader_pipeline.ps = renderer.LoadShader(sge::ShaderPath(sge::ShaderType::Fragment, asset.file_name), shader_defs)))
+                return false;
+        }
+
+        if (BITFLAG_CHECK(asset.stages, ShaderStages::Geometry)) {
+            if (!(shader_pipeline.gs = renderer.LoadShader(sge::ShaderPath(sge::ShaderType::Geometry, asset.file_name), shader_defs)))
+                return false;
+        }
+
+        state.shaders[key] = shader_pipeline;
+    }
+
+    for (const auto& [key, asset] : COMPUTE_SHADER_ASSETS) {
+        const std::string& file_name = backend.IsGLSL() ? asset.glsl_file_name : asset.file_name;
+
+        if (!(state.compute_shaders[key] = renderer.LoadShader(sge::ShaderPath(sge::ShaderType::Compute, file_name, asset.func_name), shader_defs)))
+            return false;
+    }
+
+    return true;
+};
+
+bool Assets::LoadFonts() {
+    for (const auto& [key, name] : FONT_ASSETS) {
+        const fs::path fonts_folder = fs::path("assets") / "fonts";
+        const fs::path meta_file = fonts_folder / fs::path(name).concat(".meta");
+        const fs::path atlas_file = fonts_folder / fs::path(name).concat(".png");
+
+        const std::string meta_file_str = meta_file.string();
+        const std::string atlas_file_str = atlas_file.string();
+
+        if (!sge::FileExists(meta_file_str.c_str())) {
+            SGE_LOG_ERROR("Failed to find the font meta file '%s'", meta_file_str.c_str());
+            return false;
+        }
+
+        if (!sge::FileExists(atlas_file_str.c_str())) {
+            SGE_LOG_ERROR("Failed to find the font atlas file '%s'", atlas_file_str.c_str());
+            return false;
+        }
+
+        sge::Font font;
+        if (!load_font(font, meta_file_str.c_str(), atlas_file_str.c_str())) return false;
+
+        state.fonts[key] = font;
     }
 
     return true;
 }
 
 void Assets::InitVertexFormats() {
-    Renderer& renderer = Engine::Renderer();
+    sge::Renderer& renderer = sge::Engine::Renderer();
 
-    const RenderBackend backend = renderer.Backend();
+    const sge::RenderBackend backend = renderer.Backend();
 
     LLGL::VertexFormat sprite_vertex_format;
     LLGL::VertexFormat sprite_instance_format;
@@ -435,111 +435,111 @@ void Assets::InitVertexFormats() {
     LLGL::VertexFormat static_lightmap_vertex_format;
 
     if (backend.IsGLSL()) {
-        sprite_vertex_format.AppendAttribute({ "a_position", LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 });
+        sprite_vertex_format.AppendAttribute({ "a_position", LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 });
     } else if (backend.IsHLSL()) {
-        sprite_vertex_format.AppendAttribute({ "Position",   LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 });
+        sprite_vertex_format.AppendAttribute({ "Position",   LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 });
     } else {
-        sprite_vertex_format.AppendAttribute({ "position",   LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 });
+        sprite_vertex_format.AppendAttribute({ "position",   LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 });
     }
 
     if (backend.IsGLSL()) {
         sprite_instance_format.attributes = {
-            {"i_position",           LLGL::Format::RGB32Float,  1,  offsetof(SpriteInstance,position),          sizeof(SpriteInstance), 1, 1 },
-            {"i_rotation",           LLGL::Format::RGBA32Float, 2,  offsetof(SpriteInstance,rotation),          sizeof(SpriteInstance), 1, 1 },
-            {"i_size",               LLGL::Format::RG32Float,   3,  offsetof(SpriteInstance,size),              sizeof(SpriteInstance), 1, 1 },
-            {"i_offset",             LLGL::Format::RG32Float,   4,  offsetof(SpriteInstance,offset),            sizeof(SpriteInstance), 1, 1 },
-            {"i_uv_offset_scale",    LLGL::Format::RGBA32Float, 5,  offsetof(SpriteInstance,uv_offset_scale),   sizeof(SpriteInstance), 1, 1 },
-            {"i_color",              LLGL::Format::RGBA32Float, 6,  offsetof(SpriteInstance,color),             sizeof(SpriteInstance), 1, 1 },
-            {"i_outline_color",      LLGL::Format::RGBA32Float, 7,  offsetof(SpriteInstance,outline_color),     sizeof(SpriteInstance), 1, 1 },
-            {"i_outline_thickness",  LLGL::Format::R32Float,    8,  offsetof(SpriteInstance,outline_thickness), sizeof(SpriteInstance), 1, 1 },
-            {"i_flags",              LLGL::Format::R32SInt,     9,  offsetof(SpriteInstance,flags),             sizeof(SpriteInstance), 1, 1 },
+            {"i_position",           LLGL::Format::RGB32Float,  1,  offsetof(sge::SpriteInstance,position),          sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_rotation",           LLGL::Format::RGBA32Float, 2,  offsetof(sge::SpriteInstance,rotation),          sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_size",               LLGL::Format::RG32Float,   3,  offsetof(sge::SpriteInstance,size),              sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_offset",             LLGL::Format::RG32Float,   4,  offsetof(sge::SpriteInstance,offset),            sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_uv_offset_scale",    LLGL::Format::RGBA32Float, 5,  offsetof(sge::SpriteInstance,uv_offset_scale),   sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_color",              LLGL::Format::RGBA32Float, 6,  offsetof(sge::SpriteInstance,color),             sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_outline_color",      LLGL::Format::RGBA32Float, 7,  offsetof(sge::SpriteInstance,outline_color),     sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_outline_thickness",  LLGL::Format::R32Float,    8,  offsetof(sge::SpriteInstance,outline_thickness), sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_flags",              LLGL::Format::R32SInt,     9,  offsetof(sge::SpriteInstance,flags),             sizeof(sge::SpriteInstance), 1, 1 },
         };
     } else if (backend.IsHLSL()) {
         sprite_instance_format.attributes = {
-            {"I_Position",         LLGL::Format::RGB32Float,  1,  offsetof(SpriteInstance,position),          sizeof(SpriteInstance), 1, 1 },
-            {"I_Rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(SpriteInstance,rotation),          sizeof(SpriteInstance), 1, 1 },
-            {"I_Size",             LLGL::Format::RG32Float,   3,  offsetof(SpriteInstance,size),              sizeof(SpriteInstance), 1, 1 },
-            {"I_Offset",           LLGL::Format::RG32Float,   4,  offsetof(SpriteInstance,offset),            sizeof(SpriteInstance), 1, 1 },
-            {"I_UvOffsetScale",    LLGL::Format::RGBA32Float, 5,  offsetof(SpriteInstance,uv_offset_scale),   sizeof(SpriteInstance), 1, 1 },
-            {"I_Color",            LLGL::Format::RGBA32Float, 6,  offsetof(SpriteInstance,color),             sizeof(SpriteInstance), 1, 1 },
-            {"I_OutlineColor",     LLGL::Format::RGBA32Float, 7,  offsetof(SpriteInstance,outline_color),     sizeof(SpriteInstance), 1, 1 },
-            {"I_OutlineThickness", LLGL::Format::R32Float,    8,  offsetof(SpriteInstance,outline_thickness), sizeof(SpriteInstance), 1, 1 },
-            {"I_Flags",            LLGL::Format::R32SInt,     9,  offsetof(SpriteInstance,flags),             sizeof(SpriteInstance), 1, 1 },
+            {"I_Position",         LLGL::Format::RGB32Float,  1,  offsetof(sge::SpriteInstance,position),          sizeof(sge::SpriteInstance), 1, 1 },
+            {"I_Rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(sge::SpriteInstance,rotation),          sizeof(sge::SpriteInstance), 1, 1 },
+            {"I_Size",             LLGL::Format::RG32Float,   3,  offsetof(sge::SpriteInstance,size),              sizeof(sge::SpriteInstance), 1, 1 },
+            {"I_Offset",           LLGL::Format::RG32Float,   4,  offsetof(sge::SpriteInstance,offset),            sizeof(sge::SpriteInstance), 1, 1 },
+            {"I_UvOffsetScale",    LLGL::Format::RGBA32Float, 5,  offsetof(sge::SpriteInstance,uv_offset_scale),   sizeof(sge::SpriteInstance), 1, 1 },
+            {"I_Color",            LLGL::Format::RGBA32Float, 6,  offsetof(sge::SpriteInstance,color),             sizeof(sge::SpriteInstance), 1, 1 },
+            {"I_OutlineColor",     LLGL::Format::RGBA32Float, 7,  offsetof(sge::SpriteInstance,outline_color),     sizeof(sge::SpriteInstance), 1, 1 },
+            {"I_OutlineThickness", LLGL::Format::R32Float,    8,  offsetof(sge::SpriteInstance,outline_thickness), sizeof(sge::SpriteInstance), 1, 1 },
+            {"I_Flags",            LLGL::Format::R32SInt,     9,  offsetof(sge::SpriteInstance,flags),             sizeof(sge::SpriteInstance), 1, 1 },
         };
     } else {
         sprite_instance_format.attributes = {
-            {"i_position",           LLGL::Format::RGB32Float,  1,  offsetof(SpriteInstance,position),          sizeof(SpriteInstance), 1, 1 },
-            {"i_rotation",           LLGL::Format::RGBA32Float, 2,  offsetof(SpriteInstance,rotation),          sizeof(SpriteInstance), 1, 1 },
-            {"i_size",               LLGL::Format::RG32Float,   3,  offsetof(SpriteInstance,size),              sizeof(SpriteInstance), 1, 1 },
-            {"i_offset",             LLGL::Format::RG32Float,   4,  offsetof(SpriteInstance,offset),            sizeof(SpriteInstance), 1, 1 },
-            {"i_uv_offset_scale",    LLGL::Format::RGBA32Float, 5,  offsetof(SpriteInstance,uv_offset_scale),   sizeof(SpriteInstance), 1, 1 },
-            {"i_color",              LLGL::Format::RGBA32Float, 6,  offsetof(SpriteInstance,color),             sizeof(SpriteInstance), 1, 1 },
-            {"i_outline_color",      LLGL::Format::RGBA32Float, 7,  offsetof(SpriteInstance,outline_color),     sizeof(SpriteInstance), 1, 1 },
-            {"i_outline_thickness",  LLGL::Format::R32Float,    8,  offsetof(SpriteInstance,outline_thickness), sizeof(SpriteInstance), 1, 1 },
-            {"i_flags",              LLGL::Format::R32SInt,     9,  offsetof(SpriteInstance,flags),             sizeof(SpriteInstance), 1, 1 },
+            {"i_position",           LLGL::Format::RGB32Float,  1,  offsetof(sge::SpriteInstance,position),          sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_rotation",           LLGL::Format::RGBA32Float, 2,  offsetof(sge::SpriteInstance,rotation),          sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_size",               LLGL::Format::RG32Float,   3,  offsetof(sge::SpriteInstance,size),              sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_offset",             LLGL::Format::RG32Float,   4,  offsetof(sge::SpriteInstance,offset),            sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_uv_offset_scale",    LLGL::Format::RGBA32Float, 5,  offsetof(sge::SpriteInstance,uv_offset_scale),   sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_color",              LLGL::Format::RGBA32Float, 6,  offsetof(sge::SpriteInstance,color),             sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_outline_color",      LLGL::Format::RGBA32Float, 7,  offsetof(sge::SpriteInstance,outline_color),     sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_outline_thickness",  LLGL::Format::R32Float,    8,  offsetof(sge::SpriteInstance,outline_thickness), sizeof(sge::SpriteInstance), 1, 1 },
+            {"i_flags",              LLGL::Format::R32SInt,     9,  offsetof(sge::SpriteInstance,flags),             sizeof(sge::SpriteInstance), 1, 1 },
         };
     }
 
     if (backend.IsGLSL()) {
-        ninepatch_vertex_format.AppendAttribute({ "a_position", LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 });
+        ninepatch_vertex_format.AppendAttribute({ "a_position", LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 });
     } else if (backend.IsHLSL()) {
-        ninepatch_vertex_format.AppendAttribute({ "Position",   LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 });
+        ninepatch_vertex_format.AppendAttribute({ "Position",   LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 });
     } else {
-        ninepatch_vertex_format.AppendAttribute({ "position",   LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 });
+        ninepatch_vertex_format.AppendAttribute({ "position",   LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 });
     }
 
     if (backend.IsGLSL()) {
         ninepatch_instance_format.attributes = {
-            {"i_position",         LLGL::Format::RG32Float,   1,  offsetof(NinePatchInstance,position),          sizeof(NinePatchInstance), 1, 1 },
-            {"i_rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(NinePatchInstance,rotation),          sizeof(NinePatchInstance), 1, 1 },
-            {"i_size",             LLGL::Format::RG32Float,   3,  offsetof(NinePatchInstance,size),              sizeof(NinePatchInstance), 1, 1 },
-            {"i_offset",           LLGL::Format::RG32Float,   4,  offsetof(NinePatchInstance,offset),            sizeof(NinePatchInstance), 1, 1 },
-            {"i_source_size",      LLGL::Format::RG32Float,   5,  offsetof(NinePatchInstance,source_size),       sizeof(NinePatchInstance), 1, 1 },
-            {"i_output_size",      LLGL::Format::RG32Float,   6,  offsetof(NinePatchInstance,output_size),       sizeof(NinePatchInstance), 1, 1 },
-            {"i_margin",           LLGL::Format::RGBA32UInt,  7,  offsetof(NinePatchInstance,margin),            sizeof(NinePatchInstance), 1, 1 },
-            {"i_uv_offset_scale",  LLGL::Format::RGBA32Float, 8,  offsetof(NinePatchInstance,uv_offset_scale),   sizeof(NinePatchInstance), 1, 1 },
-            {"i_color",            LLGL::Format::RGBA32Float, 9,  offsetof(NinePatchInstance,color),             sizeof(NinePatchInstance), 1, 1 },
-            {"i_flags",            LLGL::Format::R32SInt,     10, offsetof(NinePatchInstance,flags),             sizeof(NinePatchInstance), 1, 1 },
+            {"i_position",         LLGL::Format::RG32Float,   1,  offsetof(sge::NinePatchInstance,position),          sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(sge::NinePatchInstance,rotation),          sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_size",             LLGL::Format::RG32Float,   3,  offsetof(sge::NinePatchInstance,size),              sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_offset",           LLGL::Format::RG32Float,   4,  offsetof(sge::NinePatchInstance,offset),            sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_source_size",      LLGL::Format::RG32Float,   5,  offsetof(sge::NinePatchInstance,source_size),       sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_output_size",      LLGL::Format::RG32Float,   6,  offsetof(sge::NinePatchInstance,output_size),       sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_margin",           LLGL::Format::RGBA32UInt,  7,  offsetof(sge::NinePatchInstance,margin),            sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_uv_offset_scale",  LLGL::Format::RGBA32Float, 8,  offsetof(sge::NinePatchInstance,uv_offset_scale),   sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_color",            LLGL::Format::RGBA32Float, 9,  offsetof(sge::NinePatchInstance,color),             sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_flags",            LLGL::Format::R32SInt,     10, offsetof(sge::NinePatchInstance,flags),             sizeof(sge::NinePatchInstance), 1, 1 },
         };
     } else if (backend.IsHLSL()) {
         ninepatch_instance_format.attributes = {
-            {"I_Position",         LLGL::Format::RG32Float,   1,  offsetof(NinePatchInstance,position),          sizeof(NinePatchInstance), 1, 1 },
-            {"I_Rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(NinePatchInstance,rotation),          sizeof(NinePatchInstance), 1, 1 },
-            {"I_Size",             LLGL::Format::RG32Float,   3,  offsetof(NinePatchInstance,size),              sizeof(NinePatchInstance), 1, 1 },
-            {"I_Offset",           LLGL::Format::RG32Float,   4,  offsetof(NinePatchInstance,offset),            sizeof(NinePatchInstance), 1, 1 },
-            {"I_SourceSize",       LLGL::Format::RG32Float,   5,  offsetof(NinePatchInstance,source_size),       sizeof(NinePatchInstance), 1, 1 },
-            {"I_OutputSize",       LLGL::Format::RG32Float,   6,  offsetof(NinePatchInstance,output_size),       sizeof(NinePatchInstance), 1, 1 },
-            {"I_Margin",           LLGL::Format::RGBA32UInt,  7,  offsetof(NinePatchInstance,margin),            sizeof(NinePatchInstance), 1, 1 },
-            {"I_UvOffsetScale",    LLGL::Format::RGBA32Float, 8,  offsetof(NinePatchInstance,uv_offset_scale),   sizeof(NinePatchInstance), 1, 1 },
-            {"I_Color",            LLGL::Format::RGBA32Float, 9,  offsetof(NinePatchInstance,color),             sizeof(NinePatchInstance), 1, 1 },
-            {"I_Flags",            LLGL::Format::R32SInt,     10, offsetof(NinePatchInstance,flags),             sizeof(NinePatchInstance), 1, 1 },
+            {"I_Position",         LLGL::Format::RG32Float,   1,  offsetof(sge::NinePatchInstance,position),          sizeof(sge::NinePatchInstance), 1, 1 },
+            {"I_Rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(sge::NinePatchInstance,rotation),          sizeof(sge::NinePatchInstance), 1, 1 },
+            {"I_Size",             LLGL::Format::RG32Float,   3,  offsetof(sge::NinePatchInstance,size),              sizeof(sge::NinePatchInstance), 1, 1 },
+            {"I_Offset",           LLGL::Format::RG32Float,   4,  offsetof(sge::NinePatchInstance,offset),            sizeof(sge::NinePatchInstance), 1, 1 },
+            {"I_SourceSize",       LLGL::Format::RG32Float,   5,  offsetof(sge::NinePatchInstance,source_size),       sizeof(sge::NinePatchInstance), 1, 1 },
+            {"I_OutputSize",       LLGL::Format::RG32Float,   6,  offsetof(sge::NinePatchInstance,output_size),       sizeof(sge::NinePatchInstance), 1, 1 },
+            {"I_Margin",           LLGL::Format::RGBA32UInt,  7,  offsetof(sge::NinePatchInstance,margin),            sizeof(sge::NinePatchInstance), 1, 1 },
+            {"I_UvOffsetScale",    LLGL::Format::RGBA32Float, 8,  offsetof(sge::NinePatchInstance,uv_offset_scale),   sizeof(sge::NinePatchInstance), 1, 1 },
+            {"I_Color",            LLGL::Format::RGBA32Float, 9,  offsetof(sge::NinePatchInstance,color),             sizeof(sge::NinePatchInstance), 1, 1 },
+            {"I_Flags",            LLGL::Format::R32SInt,     10, offsetof(sge::NinePatchInstance,flags),             sizeof(sge::NinePatchInstance), 1, 1 },
         };
     } else {
         ninepatch_instance_format.attributes = {
-            {"i_position",         LLGL::Format::RG32Float,   1,  offsetof(NinePatchInstance,position),          sizeof(NinePatchInstance), 1, 1 },
-            {"i_rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(NinePatchInstance,rotation),          sizeof(NinePatchInstance), 1, 1 },
-            {"i_size",             LLGL::Format::RG32Float,   3,  offsetof(NinePatchInstance,size),              sizeof(NinePatchInstance), 1, 1 },
-            {"i_offset",           LLGL::Format::RG32Float,   4,  offsetof(NinePatchInstance,offset),            sizeof(NinePatchInstance), 1, 1 },
-            {"i_source_size",      LLGL::Format::RG32Float,   5,  offsetof(NinePatchInstance,source_size),       sizeof(NinePatchInstance), 1, 1 },
-            {"i_output_size",      LLGL::Format::RG32Float,   6,  offsetof(NinePatchInstance,output_size),       sizeof(NinePatchInstance), 1, 1 },
-            {"i_margin",           LLGL::Format::RGBA32UInt,  7,  offsetof(NinePatchInstance,margin),            sizeof(NinePatchInstance), 1, 1 },
-            {"i_uv_offset_scale",  LLGL::Format::RGBA32Float, 8,  offsetof(NinePatchInstance,uv_offset_scale),   sizeof(NinePatchInstance), 1, 1 },
-            {"i_color",            LLGL::Format::RGBA32Float, 9,  offsetof(NinePatchInstance,color),             sizeof(NinePatchInstance), 1, 1 },
-            {"i_flags",            LLGL::Format::R32SInt,     10, offsetof(NinePatchInstance,flags),             sizeof(NinePatchInstance), 1, 1 },
+            {"i_position",         LLGL::Format::RG32Float,   1,  offsetof(sge::NinePatchInstance,position),          sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(sge::NinePatchInstance,rotation),          sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_size",             LLGL::Format::RG32Float,   3,  offsetof(sge::NinePatchInstance,size),              sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_offset",           LLGL::Format::RG32Float,   4,  offsetof(sge::NinePatchInstance,offset),            sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_source_size",      LLGL::Format::RG32Float,   5,  offsetof(sge::NinePatchInstance,source_size),       sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_output_size",      LLGL::Format::RG32Float,   6,  offsetof(sge::NinePatchInstance,output_size),       sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_margin",           LLGL::Format::RGBA32UInt,  7,  offsetof(sge::NinePatchInstance,margin),            sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_uv_offset_scale",  LLGL::Format::RGBA32Float, 8,  offsetof(sge::NinePatchInstance,uv_offset_scale),   sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_color",            LLGL::Format::RGBA32Float, 9,  offsetof(sge::NinePatchInstance,color),             sizeof(sge::NinePatchInstance), 1, 1 },
+            {"i_flags",            LLGL::Format::R32SInt,     10, offsetof(sge::NinePatchInstance,flags),             sizeof(sge::NinePatchInstance), 1, 1 },
         };
     }
 
     if (backend.IsGLSL()) {
         tilemap_vertex_format.attributes = {
-            {"a_position", LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 },
+            {"a_position", LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 },
         };
     } else if (backend.IsHLSL()) {
         tilemap_vertex_format.attributes = {
-            {"Position", LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 },
+            {"Position", LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 },
         };
     } else {
         tilemap_vertex_format.attributes = {
-            {"position", LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0 }
+            {"position", LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 }
         };
     }
 
@@ -567,36 +567,36 @@ void Assets::InitVertexFormats() {
     }
 
     if (backend.IsGLSL()) {
-        font_vertex_format.AppendAttribute({"a_position", LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0});
+        font_vertex_format.AppendAttribute({"a_position", LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0});
     } else if (backend.IsHLSL()) {
-        font_vertex_format.AppendAttribute({"Position",   LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0});
+        font_vertex_format.AppendAttribute({"Position",   LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0});
     } else {
-        font_vertex_format.AppendAttribute({"position",   LLGL::Format::RG32Float, 0, 0, sizeof(Vertex), 0, 0});
+        font_vertex_format.AppendAttribute({"position",   LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0});
     }
 
     if (backend.IsGLSL()) {
         font_instance_format.attributes = {
-            {"i_color",     LLGL::Format::RGB32Float, 1, offsetof(GlyphInstance,color),    sizeof(GlyphInstance), 1, 1},
-            {"i_position",  LLGL::Format::RGB32Float, 2, offsetof(GlyphInstance,pos),      sizeof(GlyphInstance), 1, 1},
-            {"i_size",      LLGL::Format::RG32Float,  3, offsetof(GlyphInstance,size),     sizeof(GlyphInstance), 1, 1},
-            {"i_tex_size",  LLGL::Format::RG32Float,  4, offsetof(GlyphInstance,tex_size), sizeof(GlyphInstance), 1, 1},
-            {"i_uv",        LLGL::Format::RG32Float,  5, offsetof(GlyphInstance,uv),       sizeof(GlyphInstance), 1, 1},
+            {"i_color",     LLGL::Format::RGB32Float, 1, offsetof(sge::GlyphInstance,color),    sizeof(sge::GlyphInstance), 1, 1},
+            {"i_position",  LLGL::Format::RGB32Float, 2, offsetof(sge::GlyphInstance,pos),      sizeof(sge::GlyphInstance), 1, 1},
+            {"i_size",      LLGL::Format::RG32Float,  3, offsetof(sge::GlyphInstance,size),     sizeof(sge::GlyphInstance), 1, 1},
+            {"i_tex_size",  LLGL::Format::RG32Float,  4, offsetof(sge::GlyphInstance,tex_size), sizeof(sge::GlyphInstance), 1, 1},
+            {"i_uv",        LLGL::Format::RG32Float,  5, offsetof(sge::GlyphInstance,uv),       sizeof(sge::GlyphInstance), 1, 1},
         };
     } else if (backend.IsHLSL()) {
         font_instance_format.attributes = {
-            {"I_Color",    LLGL::Format::RGB32Float, 1, offsetof(GlyphInstance,color),    sizeof(GlyphInstance), 1, 1},
-            {"I_Position", LLGL::Format::RG32Float,  2, offsetof(GlyphInstance,pos),      sizeof(GlyphInstance), 1, 1},
-            {"I_Size",     LLGL::Format::RG32Float,  3, offsetof(GlyphInstance,size),     sizeof(GlyphInstance), 1, 1},
-            {"I_TexSize",  LLGL::Format::RG32Float,  4, offsetof(GlyphInstance,tex_size), sizeof(GlyphInstance), 1, 1},
-            {"I_UV",       LLGL::Format::RG32Float,  5, offsetof(GlyphInstance,uv),       sizeof(GlyphInstance), 1, 1},
+            {"I_Color",    LLGL::Format::RGB32Float, 1, offsetof(sge::GlyphInstance,color),    sizeof(sge::GlyphInstance), 1, 1},
+            {"I_Position", LLGL::Format::RG32Float,  2, offsetof(sge::GlyphInstance,pos),      sizeof(sge::GlyphInstance), 1, 1},
+            {"I_Size",     LLGL::Format::RG32Float,  3, offsetof(sge::GlyphInstance,size),     sizeof(sge::GlyphInstance), 1, 1},
+            {"I_TexSize",  LLGL::Format::RG32Float,  4, offsetof(sge::GlyphInstance,tex_size), sizeof(sge::GlyphInstance), 1, 1},
+            {"I_UV",       LLGL::Format::RG32Float,  5, offsetof(sge::GlyphInstance,uv),       sizeof(sge::GlyphInstance), 1, 1},
         };
     } else {
         font_instance_format.attributes = {
-            {"i_color",     LLGL::Format::RGB32Float, 1, offsetof(GlyphInstance,color),    sizeof(GlyphInstance), 1, 1},
-            {"i_position",  LLGL::Format::RGB32Float, 2, offsetof(GlyphInstance,pos),      sizeof(GlyphInstance), 1, 1},
-            {"i_size",      LLGL::Format::RG32Float,  3, offsetof(GlyphInstance,size),     sizeof(GlyphInstance), 1, 1},
-            {"i_tex_size",  LLGL::Format::RG32Float,  4, offsetof(GlyphInstance,tex_size), sizeof(GlyphInstance), 1, 1},
-            {"i_uv",        LLGL::Format::RG32Float,  5, offsetof(GlyphInstance,uv),       sizeof(GlyphInstance), 1, 1},
+            {"i_color",     LLGL::Format::RGB32Float, 1, offsetof(sge::GlyphInstance,color),    sizeof(sge::GlyphInstance), 1, 1},
+            {"i_position",  LLGL::Format::RGB32Float, 2, offsetof(sge::GlyphInstance,pos),      sizeof(sge::GlyphInstance), 1, 1},
+            {"i_size",      LLGL::Format::RG32Float,  3, offsetof(sge::GlyphInstance,size),     sizeof(sge::GlyphInstance), 1, 1},
+            {"i_tex_size",  LLGL::Format::RG32Float,  4, offsetof(sge::GlyphInstance,tex_size), sizeof(sge::GlyphInstance), 1, 1},
+            {"i_uv",        LLGL::Format::RG32Float,  5, offsetof(sge::GlyphInstance,uv),       sizeof(sge::GlyphInstance), 1, 1},
         };
     }
 
@@ -737,7 +737,7 @@ void Assets::InitVertexFormats() {
 }
 
 void Assets::DestroyTextures() {
-    const auto& context = Engine::Renderer().Context();
+    const auto& context = sge::Engine::Renderer().Context();
 
     for (auto& entry : state.textures) {
         context->Release(entry.second);
@@ -745,7 +745,7 @@ void Assets::DestroyTextures() {
 }
 
 void Assets::DestroySamplers() {
-    const auto& context = Engine::Renderer().Context();
+    const auto& context = sge::Engine::Renderer().Context();
 
     for (auto& sampler : state.samplers) {
         context->Release(sampler);
@@ -753,70 +753,70 @@ void Assets::DestroySamplers() {
 }
 
 void Assets::DestroyShaders() {
-    const auto& context = Engine::Renderer().Context();
+    const auto& context = sge::Engine::Renderer().Context();
 
     for (auto& entry : state.shaders) {
         entry.second.Unload(context);
     }
 }
 
-const Texture& Assets::GetTexture(TextureAsset key) {
+const sge::Texture& Assets::GetTexture(TextureAsset key) {
     const auto entry = std::as_const(state.textures).find(key);
-    ASSERT(entry != state.textures.cend(), "Texture not found: %u", static_cast<uint32_t>(key));
+    SGE_ASSERT(entry != state.textures.cend(), "Texture not found: %u", static_cast<uint32_t>(key));
     return entry->second;
 }
 
-const TextureAtlas& Assets::GetTextureAtlas(TextureAsset key) {
+const sge::TextureAtlas& Assets::GetTextureAtlas(TextureAsset key) {
     const auto entry = std::as_const(state.textures_atlases).find(key);
-    ASSERT(entry != state.textures_atlases.cend(), "TextureAtlas not found: %u", static_cast<uint32_t>(key));
+    SGE_ASSERT(entry != state.textures_atlases.cend(), "TextureAtlas not found: %u", static_cast<uint32_t>(key));
     return entry->second;
 }
 
-const Font& Assets::GetFont(FontAsset key) {
+const sge::Font& Assets::GetFont(FontAsset key) {
     const auto entry = std::as_const(state.fonts).find(key);
-    ASSERT(entry != state.fonts.cend(), "Font not found: %u", static_cast<uint32_t>(key));
+    SGE_ASSERT(entry != state.fonts.cend(), "Font not found: %u", static_cast<uint32_t>(key));
     return entry->second;
 }
 
-const Texture& Assets::GetItemTexture(uint16_t index) {
+const sge::Texture& Assets::GetItemTexture(uint16_t index) {
     const auto entry = std::as_const(state.items).find(index);
-    ASSERT(entry != state.items.cend(), "Item not found: %u", index);
+    SGE_ASSERT(entry != state.items.cend(), "Item not found: %u", index);
     return entry->second;
 }
 
-const ShaderPipeline& Assets::GetShader(ShaderAsset key) {
+const sge::ShaderPipeline& Assets::GetShader(ShaderAsset key) {
     const auto entry = std::as_const(state.shaders).find(key);
-    ASSERT(entry != state.shaders.cend(), "Shader not found: %u", static_cast<uint32_t>(key));
+    SGE_ASSERT(entry != state.shaders.cend(), "Shader not found: %u", static_cast<uint32_t>(key));
     return entry->second;
 }
 
 LLGL::Shader* Assets::GetComputeShader(ComputeShaderAsset key) {
     const auto entry = std::as_const(state.compute_shaders).find(key);
-    ASSERT(entry != state.compute_shaders.cend(), "ComputeShader not found: %u", static_cast<uint32_t>(key));
+    SGE_ASSERT(entry != state.compute_shaders.cend(), "ComputeShader not found: %u", static_cast<uint32_t>(key));
     return entry->second;
 }
 
-const Sampler& Assets::GetSampler(size_t index) {
-    ASSERT(index < state.samplers.size(), "Index is out of bounds: %zu", index);
+const sge::Sampler& Assets::GetSampler(size_t index) {
+    SGE_ASSERT(index < state.samplers.size(), "Index is out of bounds: %zu", index);
     return state.samplers[index];
 }
 
 const LLGL::VertexFormat& Assets::GetVertexFormat(VertexFormatAsset key) {
     const auto entry = std::as_const(state.vertex_formats).find(key);
-    ASSERT(entry != state.vertex_formats.cend(), "VertexFormat not found: %u", static_cast<uint32_t>(key));
+    SGE_ASSERT(entry != state.vertex_formats.cend(), "VertexFormat not found: %u", static_cast<uint32_t>(key));
     return entry->second;
 }
 
-static bool load_texture(const char* path, int sampler, Texture* texture) {
+static bool load_texture(const char* path, int sampler, sge::Texture* texture) {
     int width, height;
 
     uint8_t* data = stbi_load(path, &width, &height, nullptr, 4);
     if (data == nullptr) {
-        LOG_ERROR("Couldn't load asset: %s", path);
+        SGE_LOG_ERROR("Couldn't load asset: %s", path);
         return false;
     }
 
-    *texture = Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, width, height, 1, sampler, data);
+    *texture = sge::Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, width, height, 1, Assets::GetSampler(sampler), data);
 
     stbi_image_free(data);
 
@@ -824,7 +824,7 @@ static bool load_texture(const char* path, int sampler, Texture* texture) {
 }
 
 template <size_t T>
-Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*, glm::uvec2>, T>& assets, int sampler, bool generate_mip_maps) {
+sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*, glm::uvec2>, T>& assets, int sampler, bool generate_mip_maps) {
     uint32_t width = 0;
     uint32_t height = 0;
     uint32_t layers_count = 0;
@@ -844,7 +844,7 @@ Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, c
         int w, h;
         uint8_t* layer_data = stbi_load(path, &w, &h, nullptr, 4);
         if (layer_data == nullptr) {
-            LOG_ERROR("Couldn't load asset: %s", path);
+            SGE_LOG_ERROR("Couldn't load asset: %s", path);
             continue;
         }
 
@@ -870,7 +870,7 @@ Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, c
         stbi_image_free(layer_data.data);
     }
     
-    return Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2DArray, LLGL::ImageFormat::RGBA, width, height, layers_count, sampler, image_data, generate_mip_maps);
+    return sge::Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2DArray, LLGL::ImageFormat::RGBA, LLGL::DataType::UInt8, width, height, layers_count, Assets::GetSampler(sampler), image_data, generate_mip_maps);
 }
 
 template <typename T>
@@ -880,11 +880,11 @@ static T read(std::ifstream& file) {
     return data;
 }
 
-static bool load_font(Font& font, const char* meta_file_path, const char* atlas_file_path) {
+static bool load_font(sge::Font& font, const char* meta_file_path, const char* atlas_file_path) {
     std::ifstream meta_file(meta_file_path, std::ios::in | std::ios::binary);
 
     if (!meta_file.good()) {
-        LOG_ERROR("Failed to open file %s", meta_file_path);
+        SGE_LOG_ERROR("Failed to open file %s", meta_file_path);
         return false;
     }
 
@@ -908,7 +908,7 @@ static bool load_font(Font& font, const char* meta_file_path, const char* atlas_
 
         const glm::ivec2 size = glm::ivec2(bitmap_width, bitmap_rows);
         
-        const Glyph glyph = {
+        const sge::Glyph glyph = {
             .size = size,
             .tex_size = glm::vec2(size) / texture_size,
             .bearing = glm::ivec2(bitmap_left, bitmap_top),
@@ -923,7 +923,9 @@ static bool load_font(Font& font, const char* meta_file_path, const char* atlas_
 
     int w, h;
     stbi_uc* data = stbi_load(atlas_file_path, &w, &h, nullptr, 1);
-    font.texture = Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::R, texture_width, texture_height, 1, TextureSampler::Linear, data);
+
+    const sge::Sampler& linear_sampler = Assets::GetSampler(sge::TextureSampler::Linear);
+    font.texture = sge::Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::R, LLGL::DataType::UInt8, texture_width, texture_height, 1, linear_sampler, data);
     stbi_image_free(data);
 
     font.font_size = font_size;

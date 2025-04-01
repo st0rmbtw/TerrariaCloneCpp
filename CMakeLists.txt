@@ -93,18 +93,14 @@ endif()
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 
-add_subdirectory(thirdparty/LLGL)
-add_subdirectory(thirdparty/glm)
-add_subdirectory(thirdparty/glfw)
-add_subdirectory(thirdparty/STB)
-add_subdirectory(thirdparty/FastNoiseLite)
-add_subdirectory(shader_compiler)
-add_subdirectory(font_asset_generator)
-add_subdirectory(thirdparty/freetype-2.13.2)
-add_subdirectory(thirdparty/tracy-0.11.1)
-
 unset(EXECUTABLE_OUTPUT_PATH CACHE)
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR} CACHE STRING "" FORCE)
+set(LLGL_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE STRING "" FORCE)
+
+add_subdirectory(thirdparty/SGE)
+add_subdirectory(thirdparty/FastNoiseLite)
+add_subdirectory(ShaderCompiler)
+add_subdirectory(FontAssetGenerator)
 
 file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.mm")
 if (APPLE)
@@ -132,7 +128,7 @@ if(OpenMP_CXX_FOUND)
     target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE glm STB glfw LLGL FastNoiseLite freetype TracyClient)
+target_link_libraries(${PROJECT_NAME} PRIVATE SGE FastNoiseLite)
 
 # ========================= Copy Assets =========================
 
@@ -175,7 +171,7 @@ foreach(shader ${VULKAN_SHADERS})
         OUTPUT
             assets/shaders/vulkan/${shader_name}.spv
         COMMAND
-            ${CMAKE_CURRENT_BINARY_DIR}/shader_compiler/ShaderCompiler${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${shader}
+            ${CMAKE_CURRENT_BINARY_DIR}/ShaderCompiler/ShaderCompiler${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${shader}
         DEPENDS
             ${shader} ShaderCompiler
     )
@@ -199,7 +195,7 @@ foreach(font ${FONT_FILES})
         OUTPUT
             ${font_output_path} ${font_meta_output_path}
         COMMAND
-            ${CMAKE_CURRENT_BINARY_DIR}/font_asset_generator/FontAssetGenerator${CMAKE_EXECUTABLE_SUFFIX} ${font} ${CMAKE_CURRENT_BINARY_DIR}/${font_output_path}
+            ${CMAKE_CURRENT_BINARY_DIR}/FontAssetGenerator/FontAssetGenerator${CMAKE_EXECUTABLE_SUFFIX} ${font} ${CMAKE_CURRENT_BINARY_DIR}/${font_output_path}
         DEPENDS
             ${font} FontAssetGenerator
     )
