@@ -10,8 +10,8 @@
 #include <SGE/renderer/camera.hpp>
 #include <SGE/types/window_settings.hpp>
 #include <SGE/time/time.hpp>
+#include <SGE/types/config.hpp>
 
-#include "SGE/types/config.hpp"
 #include "renderer/renderer.hpp"
 #include "ui/ui.hpp"
 #include "world/autotile.hpp"
@@ -78,7 +78,7 @@ static glm::vec2 camera_free() {
 }
 #endif
 
-void pre_update() {
+static void pre_update() {
     ZoneScopedN("Game::pre_update");
 
 #if DEBUG
@@ -97,7 +97,7 @@ void pre_update() {
     if (sge::Input::JustPressed(sge::Key::F)) g.free_camera = !g.free_camera;
 }
 
-void fixed_update() {
+static void fixed_update() {
     ZoneScopedN("Game::fixed_update");
 
 #if DEBUG
@@ -115,7 +115,7 @@ void fixed_update() {
     ParticleManager::Update(g.world);
 }
 
-void update() {
+static void update() {
     ZoneScopedN("Game::update");
 
     float scale_speed = 2.f;
@@ -168,13 +168,13 @@ void update() {
     }
 }
 
-void post_update() {
+static void post_update() {
     ZoneScopedN("Game::post_update");
 
     UI::PostUpdate();
 }
 
-void render() {
+static void render() {
     ZoneScopedN("Game::render");
 
     GameRenderer::Begin(g.camera, g.world.data());
@@ -192,7 +192,7 @@ void render() {
     GameRenderer::Render(g.camera, g.world);
 }
 
-void post_render() {
+static void post_render() {
     ZoneScopedN("Game::post_render");
 
     if (g.world.chunk_manager().any_chunks_to_destroy()) {
@@ -207,7 +207,7 @@ void post_render() {
 #endif
 }
 
-void window_resized(uint32_t width, uint32_t height, uint32_t scaled_width, uint32_t scaled_height) {
+static void window_resized(uint32_t width, uint32_t height, uint32_t scaled_width, uint32_t scaled_height) {
     GameRenderer::ResizeTextures(LLGL::Extent2D(scaled_width, scaled_height));
 
     g.camera.set_viewport(glm::uvec2(width, height));
@@ -237,7 +237,7 @@ bool load_assets() {
     return true;
 }
 
-void destroy() {
+static void destroy() {
     g.world.data().lightmap_tasks_wait();
     g.world.chunk_manager().destroy();
     ParticleManager::Terminate();
@@ -269,7 +269,7 @@ bool Game::Init(sge::RenderBackend backend, sge::AppConfig config) {
 
     sge::Time::SetFixedTimestepSeconds(Constants::FIXED_UPDATE_INTERVAL);
 
-    sge::Engine::HideCursor();
+    sge::Engine::SetCursorMode(CursorMode::Hidden);
 
     init_tile_rules();
 

@@ -12,8 +12,6 @@ struct Constants
     float4x4 inv_view_proj;
     float2 camera_position;
     float2 window_size;
-    float max_depth;
-    float max_world_depth;
 };
 
 struct VertexIn
@@ -23,6 +21,8 @@ struct VertexIn
     float2 tex_size     [[attribute(2)]];
     float2 i_uv         [[attribute(3)]];
     float  i_depth      [[attribute(4)]];
+    uint   i_id         [[attribute(5)]];
+    uint   i_is_world   [[attribute(6)]];
 };
 
 struct VertexOut
@@ -46,6 +46,8 @@ vertex VertexOut VS(
     );
 
     float2 uv = inp.i_uv / inp.tex_size;
+
+    const bool is_world = inp.i_is_world > 0;
 
     VertexOut outp;
     outp.position = mvp * float4(position, 0.0, 1.0);

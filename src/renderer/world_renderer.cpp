@@ -83,7 +83,7 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
                 LLGL::BindingSlot(2)
             ),
             LLGL::BindingDescriptor(
-                "TileTextureDataBuffer",
+                "TileDataBuffer",
                 LLGL::ResourceType::Buffer,
                 LLGL::BindFlags::ConstantBuffer,
                 LLGL::StageFlags::VertexStage,

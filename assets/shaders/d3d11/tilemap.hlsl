@@ -62,7 +62,7 @@ VSOutput VS(VSInput inp)
     const float2 tex_size = size / tile_data.tex_size;
     const float2 start_uv = inp.i_atlas_pos * (tex_size + tile_data.tex_padding);
     const float2 tex_dims = tile_data.tex_size;
-    const float2 offset = tile_data.offset;;
+    const float2 offset = tile_data.offset;
 
     const float4x4 transform = float4x4(
         float4(1.0, 0.0, 0.0, world_pos.x),

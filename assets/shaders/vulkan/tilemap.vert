@@ -5,7 +5,7 @@ layout(location = 1) in vec2 a_wall_tex_size;
 layout(location = 2) in vec2 a_tile_tex_size;
 layout(location = 3) in vec2 a_wall_padding;
 layout(location = 4) in vec2 a_tile_padding;
-layout(location = 5) in vec2 i_position;
+layout(location = 5) in uint i_position;
 layout(location = 6) in vec2 i_atlas_pos;
 layout(location = 7) in vec2 i_world_pos;
 layout(location = 8) in uint i_tile_data;
@@ -21,15 +21,26 @@ layout(binding = 2) uniform GlobalUniformBuffer {
     vec2 window_size;
 } global_ubo;
 
-layout(binding = 3) uniform DepthBuffer {
-    float tile_depth;
-    float wall_depth;
-} depth_ubo;
+struct TileData {
+    vec2 tex_size;
+    vec2 tex_padding;
+    vec2 size;
+    vec2 offset;
+    float depth;
+};
 
-const uint TILE_TYPE_WALL = 1u;
+layout(binding = 3) uniform TileDataBuffer {
+    TileData data[3];
+} tile_data_buffer;
 
 layout(location = 0) out vec2 v_uv;
 layout(location = 1) flat out uint v_tile_id;
+
+vec2 unpack_position(uint position) {
+    uint x = position & 0xFF;
+    uint y = (position >> 8) & 0xFF;
+    return vec2(float(x), float(y));
+}
 
 void main() {
     // Extract last 6 bits
@@ -37,21 +48,13 @@ void main() {
     // Extract other 10 bits
     uint tile_id = (i_tile_data >> 6) & 0x3ffu;
 
-    float order = depth_ubo.tile_depth;
-    vec2 size = vec2(TILE_SIZE, TILE_SIZE);
-    vec2 tex_size = size / a_tile_tex_size;
-    vec2 start_uv = i_atlas_pos * (tex_size + a_tile_padding);
-    vec2 tex_dims = a_tile_tex_size;
-    vec2 offset   = vec2(0.0);
-
-    if (tile_type == TILE_TYPE_WALL) {
-        order = depth_ubo.wall_depth;
-        size = vec2(WALL_SIZE, WALL_SIZE);
-        tex_size = size / a_wall_tex_size;
-        start_uv = i_atlas_pos * (tex_size + a_wall_padding);
-        tex_dims = a_wall_tex_size;
-        offset = vec2(-TILE_SIZE * 0.5, -TILE_SIZE * 0.5);
-    }
+    TileData tile_data = tile_data_buffer.data[tile_type];
+    float depth = tile_data.depth;
+    vec2 size = tile_data.size;
+    vec2 tex_size = size / tile_data.tex_size;
+    vec2 start_uv = i_atlas_pos * (tex_size + tile_data.tex_padding);
+    vec2 tex_dims = tile_data.tex_size;
+    vec2 offset = tile_data.offset;
 
     mat4 transform = mat4(
         vec4(1.0, 0.0, 0.0, 0.0),
@@ -61,7 +64,7 @@ void main() {
     );
 
     mat4 mvp = global_ubo.view_projection * transform;
-    vec2 position = i_position * 16.0 + a_position * size + offset;
+    vec2 position = unpack_position(i_position) * 16.0 + a_position * size + offset;
     vec2 uv = start_uv + a_position * tex_size;
 
     vec2 pixel_offset = vec2(0.1 / tex_dims.x, 0.1 / tex_dims.y);
@@ -69,5 +72,5 @@ void main() {
     v_uv = uv + pixel_offset * (vec2(1.0, 1.0) - a_position * 2.0);
     v_tile_id = tile_id;
     gl_Position = mvp * vec4(position, 0.0, 1.0);
-    gl_Position.z = order;
+    gl_Position.z = depth;
 }

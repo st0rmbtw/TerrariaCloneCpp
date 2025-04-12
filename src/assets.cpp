@@ -182,13 +182,7 @@ const std::pair<ShaderAsset, AssetShader> SHADER_ASSETS[] = {
     { ShaderAsset::BackgroundShader,     AssetShader("background",   ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::BackgroundVertex, VertexFormatAsset::BackgroundInstance }) },
     { ShaderAsset::PostProcessShader,    AssetShader("postprocess",  ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::PostProcessVertex) },
     { ShaderAsset::TilemapShader,        AssetShader("tilemap",      ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::TilemapVertex,   VertexFormatAsset::TilemapInstance   }) },
-    { ShaderAsset::FontShader,           AssetShader("font",         ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::FontVertex,      VertexFormatAsset::FontInstance      }) },
-    { ShaderAsset::UiFontShader,         AssetShader("ui_font",      ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::FontVertex,      VertexFormatAsset::FontInstance      }) },
-    { ShaderAsset::SpriteShader,         AssetShader("sprite",       ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::SpriteVertex,    VertexFormatAsset::SpriteInstance    }) },
-    { ShaderAsset::UiSpriteShader,       AssetShader("ui_sprite",    ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::SpriteVertex,    VertexFormatAsset::SpriteInstance    }) },
     { ShaderAsset::ParticleShader,       AssetShader("particle",     ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::ParticleVertex,  VertexFormatAsset::ParticleInstance  }) },
-    { ShaderAsset::NinePatchShader,      AssetShader("ninepatch",    ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::NinePatchVertex, VertexFormatAsset::NinePatchInstance }) },
-    { ShaderAsset::UiNinePatchShader,    AssetShader("ui_ninepatch", ShaderStages::Vertex | ShaderStages::Fragment, { VertexFormatAsset::NinePatchVertex, VertexFormatAsset::NinePatchInstance }) },
     { ShaderAsset::StaticLightMapShader, AssetShader("lightmap",     ShaderStages::Vertex | ShaderStages::Fragment, VertexFormatAsset::StaticLightMapVertex ) },
 };
 

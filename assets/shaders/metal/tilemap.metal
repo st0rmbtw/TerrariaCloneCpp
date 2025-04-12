@@ -13,27 +13,28 @@ struct Constants
     float4x4 inv_view_proj;
     float2 camera_position;
     float2 window_size;
-    float max_depth;
-    float max_world_depth;
 };
 
-struct Depth {
-    float tile_depth;
-    float wall_depth;
+struct TileData {
+    float2 tex_size;
+    float2 tex_padding;
+    float2 size;
+    float2 offset;
+    float depth;
 };
+
+struct TileDataBuffer {
+    TileData tile_data[3];
+}
 
 struct VertexIn
 {
     float2 position      [[attribute(0)]];
-    float2 wall_tex_size [[attribute(1)]];
-    float2 tile_tex_size [[attribute(2)]];
-    float2 wall_padding  [[attribute(3)]];
-    float2 tile_padding  [[attribute(4)]];
 
-    float2 i_position    [[attribute(5)]];
-    float2 i_atlas_pos   [[attribute(6)]];
-    float2 i_world_pos   [[attribute(7)]];
-    uint   i_tile_data   [[attribute(8)]];
+    uint   i_position    [[attribute(1)]];
+    float2 i_atlas_pos   [[attribute(2)]];
+    float2 i_world_pos   [[attribute(3)]];
+    uint   i_tile_data   [[attribute(4)]];
 };
 
 struct VertexOut
@@ -43,36 +44,40 @@ struct VertexOut
     uint tile_id [[flat]];
 };
 
-constant constexpr uint TILE_TYPE_WALL = 1;
+constant constexpr uint TILE_TYPE_WALL = 1u;
+constant constexpr uint TILE_TYPE_TORCH = 2u;
+
+static float2 unpack_position(uint position) {
+    uint x = position & 0xFF;
+    uint y = (position >> 8) & 0xFF;
+    return float2(float(x), float(y));
+}
 
 vertex VertexOut VS(
     VertexIn inp [[stage_in]],
     constant Constants& constants [[buffer(2)]],
-    constant Depth& depth [[buffer(3)]]
+    constant TileDataBuffer& tile_data_buffer [[buffer(3)]]
 ) {
     const float2 world_pos = inp.i_world_pos;
-    const uint tile_data = inp.i_tile_data;
 
     // Extract last 6 bits
-    const uint tile_type = tile_data & 0x3f;
+    const uint tile_type = inp.i_tile_data & 0x3f;
     // Extract other 10 bits
-    const uint tile_id = (tile_data >> 6) & 0x3ff;
+    const uint tile_id = (inp.i_tile_data >> 6) & 0x3ff;
+
+    const TileData tile_data = tile_data_buffer[tile_type];
+    const float depth = tile_data.depth;
+    const float2 size = tile_data.size;
+    const float2 tex_size = size / tile_data.tex_size;
+    const float2 start_uv = inp.i_atlas_pos * (tex_size + tile_data.tex_padding);
+    const float2 tex_dims = tile_data.tex_size;
+    const float2 offset = tile_data.offset;
 
     float order = depth.tile_depth;
     float2 size = float2(TILE_SIZE, TILE_SIZE);
     float2 tex_size = size / inp.tile_tex_size;
     float2 start_uv = inp.i_atlas_pos * (tex_size + inp.tile_padding);
     float2 tex_dims = inp.tile_tex_size;
-
-    if (tile_type == TILE_TYPE_WALL) {
-        order = depth.wall_depth;
-        size = float2(WALL_SIZE, WALL_SIZE);
-        tex_size = size / inp.wall_tex_size;
-        start_uv = inp.i_atlas_pos * (tex_size + inp.wall_padding);
-        tex_dims = inp.wall_tex_size;
-    }
-
-    order /= constants.max_world_depth;
 
     const float4x4 transform = float4x4(
         float4(1.0, 0.0, 0.0, 0.0),
@@ -82,16 +87,16 @@ vertex VertexOut VS(
     );
 
     const float4x4 mvp = constants.view_projection * transform;
-    const float2 position = inp.i_position * 16.0 + inp.position * size;
+    const float2 position = unpack_position(inp.i_position) * 16.0 + inp.position * size + offset;
     const float2 uv = start_uv + inp.position * tex_size;
 
     const float2 pixel_offset = float2(0.1 / tex_dims.x, 0.1 / tex_dims.y);
 
 	VertexOut output;
-    output.position = mvp * float4(position, 0.0, 1.0);
-    output.position.z = order;
     output.uv = uv + pixel_offset * (float2(1.0, 1.0) - inp.position * 2.0);
     output.tile_id = tile_id;
+    output.position = mvp * float4(position, 0.0, 1.0);
+    output.position.z = depth;
 
 	return output;
 }

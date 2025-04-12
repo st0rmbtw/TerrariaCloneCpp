@@ -72,7 +72,12 @@ vertex VertexOut VS(
     outp.speed = inp.i_speed;
     outp.offset = offset;
     outp.id = inp.i_id;
-    outp.nonscale = flags & IGNORE_CAMERA_ZOOM_FLAG;
+    outp.nonscale = ignore_camera_zoom;
+
+    if (inp.i_id == 0) {
+        outp.texture_size.x = inp.texture_size.y;
+        outp.texture_size.y = inp.texture_size.x;
+    }
 
     return outp;
 }
