@@ -413,115 +413,14 @@ void Assets::InitVertexFormats() {
 
     const sge::RenderBackend backend = renderer.Backend();
 
-    LLGL::VertexFormat sprite_vertex_format;
-    LLGL::VertexFormat sprite_instance_format;
-    LLGL::VertexFormat ninepatch_vertex_format;
-    LLGL::VertexFormat ninepatch_instance_format;
     LLGL::VertexFormat tilemap_vertex_format;
     LLGL::VertexFormat tilemap_instance_format;
-    LLGL::VertexFormat font_vertex_format;
-    LLGL::VertexFormat font_instance_format;
     LLGL::VertexFormat background_vertex_format;
     LLGL::VertexFormat background_instance_format;
     LLGL::VertexFormat particle_vertex_format;
     LLGL::VertexFormat particle_instance_format;
     LLGL::VertexFormat postprocess_vertex_format;
     LLGL::VertexFormat static_lightmap_vertex_format;
-
-    if (backend.IsGLSL()) {
-        sprite_vertex_format.AppendAttribute({ "a_position", LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 });
-    } else if (backend.IsHLSL()) {
-        sprite_vertex_format.AppendAttribute({ "Position",   LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 });
-    } else {
-        sprite_vertex_format.AppendAttribute({ "position",   LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 });
-    }
-
-    if (backend.IsGLSL()) {
-        sprite_instance_format.attributes = {
-            {"i_position",           LLGL::Format::RGB32Float,  1,  offsetof(sge::SpriteInstance,position),          sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_rotation",           LLGL::Format::RGBA32Float, 2,  offsetof(sge::SpriteInstance,rotation),          sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_size",               LLGL::Format::RG32Float,   3,  offsetof(sge::SpriteInstance,size),              sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_offset",             LLGL::Format::RG32Float,   4,  offsetof(sge::SpriteInstance,offset),            sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_uv_offset_scale",    LLGL::Format::RGBA32Float, 5,  offsetof(sge::SpriteInstance,uv_offset_scale),   sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_color",              LLGL::Format::RGBA32Float, 6,  offsetof(sge::SpriteInstance,color),             sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_outline_color",      LLGL::Format::RGBA32Float, 7,  offsetof(sge::SpriteInstance,outline_color),     sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_outline_thickness",  LLGL::Format::R32Float,    8,  offsetof(sge::SpriteInstance,outline_thickness), sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_flags",              LLGL::Format::R32SInt,     9,  offsetof(sge::SpriteInstance,flags),             sizeof(sge::SpriteInstance), 1, 1 },
-        };
-    } else if (backend.IsHLSL()) {
-        sprite_instance_format.attributes = {
-            {"I_Position",         LLGL::Format::RGB32Float,  1,  offsetof(sge::SpriteInstance,position),          sizeof(sge::SpriteInstance), 1, 1 },
-            {"I_Rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(sge::SpriteInstance,rotation),          sizeof(sge::SpriteInstance), 1, 1 },
-            {"I_Size",             LLGL::Format::RG32Float,   3,  offsetof(sge::SpriteInstance,size),              sizeof(sge::SpriteInstance), 1, 1 },
-            {"I_Offset",           LLGL::Format::RG32Float,   4,  offsetof(sge::SpriteInstance,offset),            sizeof(sge::SpriteInstance), 1, 1 },
-            {"I_UvOffsetScale",    LLGL::Format::RGBA32Float, 5,  offsetof(sge::SpriteInstance,uv_offset_scale),   sizeof(sge::SpriteInstance), 1, 1 },
-            {"I_Color",            LLGL::Format::RGBA32Float, 6,  offsetof(sge::SpriteInstance,color),             sizeof(sge::SpriteInstance), 1, 1 },
-            {"I_OutlineColor",     LLGL::Format::RGBA32Float, 7,  offsetof(sge::SpriteInstance,outline_color),     sizeof(sge::SpriteInstance), 1, 1 },
-            {"I_OutlineThickness", LLGL::Format::R32Float,    8,  offsetof(sge::SpriteInstance,outline_thickness), sizeof(sge::SpriteInstance), 1, 1 },
-            {"I_Flags",            LLGL::Format::R32SInt,     9,  offsetof(sge::SpriteInstance,flags),             sizeof(sge::SpriteInstance), 1, 1 },
-        };
-    } else {
-        sprite_instance_format.attributes = {
-            {"i_position",           LLGL::Format::RGB32Float,  1,  offsetof(sge::SpriteInstance,position),          sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_rotation",           LLGL::Format::RGBA32Float, 2,  offsetof(sge::SpriteInstance,rotation),          sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_size",               LLGL::Format::RG32Float,   3,  offsetof(sge::SpriteInstance,size),              sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_offset",             LLGL::Format::RG32Float,   4,  offsetof(sge::SpriteInstance,offset),            sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_uv_offset_scale",    LLGL::Format::RGBA32Float, 5,  offsetof(sge::SpriteInstance,uv_offset_scale),   sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_color",              LLGL::Format::RGBA32Float, 6,  offsetof(sge::SpriteInstance,color),             sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_outline_color",      LLGL::Format::RGBA32Float, 7,  offsetof(sge::SpriteInstance,outline_color),     sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_outline_thickness",  LLGL::Format::R32Float,    8,  offsetof(sge::SpriteInstance,outline_thickness), sizeof(sge::SpriteInstance), 1, 1 },
-            {"i_flags",              LLGL::Format::R32SInt,     9,  offsetof(sge::SpriteInstance,flags),             sizeof(sge::SpriteInstance), 1, 1 },
-        };
-    }
-
-    if (backend.IsGLSL()) {
-        ninepatch_vertex_format.AppendAttribute({ "a_position", LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 });
-    } else if (backend.IsHLSL()) {
-        ninepatch_vertex_format.AppendAttribute({ "Position",   LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 });
-    } else {
-        ninepatch_vertex_format.AppendAttribute({ "position",   LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 });
-    }
-
-    if (backend.IsGLSL()) {
-        ninepatch_instance_format.attributes = {
-            {"i_position",         LLGL::Format::RG32Float,   1,  offsetof(sge::NinePatchInstance,position),          sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(sge::NinePatchInstance,rotation),          sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_size",             LLGL::Format::RG32Float,   3,  offsetof(sge::NinePatchInstance,size),              sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_offset",           LLGL::Format::RG32Float,   4,  offsetof(sge::NinePatchInstance,offset),            sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_source_size",      LLGL::Format::RG32Float,   5,  offsetof(sge::NinePatchInstance,source_size),       sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_output_size",      LLGL::Format::RG32Float,   6,  offsetof(sge::NinePatchInstance,output_size),       sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_margin",           LLGL::Format::RGBA32UInt,  7,  offsetof(sge::NinePatchInstance,margin),            sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_uv_offset_scale",  LLGL::Format::RGBA32Float, 8,  offsetof(sge::NinePatchInstance,uv_offset_scale),   sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_color",            LLGL::Format::RGBA32Float, 9,  offsetof(sge::NinePatchInstance,color),             sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_flags",            LLGL::Format::R32SInt,     10, offsetof(sge::NinePatchInstance,flags),             sizeof(sge::NinePatchInstance), 1, 1 },
-        };
-    } else if (backend.IsHLSL()) {
-        ninepatch_instance_format.attributes = {
-            {"I_Position",         LLGL::Format::RG32Float,   1,  offsetof(sge::NinePatchInstance,position),          sizeof(sge::NinePatchInstance), 1, 1 },
-            {"I_Rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(sge::NinePatchInstance,rotation),          sizeof(sge::NinePatchInstance), 1, 1 },
-            {"I_Size",             LLGL::Format::RG32Float,   3,  offsetof(sge::NinePatchInstance,size),              sizeof(sge::NinePatchInstance), 1, 1 },
-            {"I_Offset",           LLGL::Format::RG32Float,   4,  offsetof(sge::NinePatchInstance,offset),            sizeof(sge::NinePatchInstance), 1, 1 },
-            {"I_SourceSize",       LLGL::Format::RG32Float,   5,  offsetof(sge::NinePatchInstance,source_size),       sizeof(sge::NinePatchInstance), 1, 1 },
-            {"I_OutputSize",       LLGL::Format::RG32Float,   6,  offsetof(sge::NinePatchInstance,output_size),       sizeof(sge::NinePatchInstance), 1, 1 },
-            {"I_Margin",           LLGL::Format::RGBA32UInt,  7,  offsetof(sge::NinePatchInstance,margin),            sizeof(sge::NinePatchInstance), 1, 1 },
-            {"I_UvOffsetScale",    LLGL::Format::RGBA32Float, 8,  offsetof(sge::NinePatchInstance,uv_offset_scale),   sizeof(sge::NinePatchInstance), 1, 1 },
-            {"I_Color",            LLGL::Format::RGBA32Float, 9,  offsetof(sge::NinePatchInstance,color),             sizeof(sge::NinePatchInstance), 1, 1 },
-            {"I_Flags",            LLGL::Format::R32SInt,     10, offsetof(sge::NinePatchInstance,flags),             sizeof(sge::NinePatchInstance), 1, 1 },
-        };
-    } else {
-        ninepatch_instance_format.attributes = {
-            {"i_position",         LLGL::Format::RG32Float,   1,  offsetof(sge::NinePatchInstance,position),          sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_rotation",         LLGL::Format::RGBA32Float, 2,  offsetof(sge::NinePatchInstance,rotation),          sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_size",             LLGL::Format::RG32Float,   3,  offsetof(sge::NinePatchInstance,size),              sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_offset",           LLGL::Format::RG32Float,   4,  offsetof(sge::NinePatchInstance,offset),            sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_source_size",      LLGL::Format::RG32Float,   5,  offsetof(sge::NinePatchInstance,source_size),       sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_output_size",      LLGL::Format::RG32Float,   6,  offsetof(sge::NinePatchInstance,output_size),       sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_margin",           LLGL::Format::RGBA32UInt,  7,  offsetof(sge::NinePatchInstance,margin),            sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_uv_offset_scale",  LLGL::Format::RGBA32Float, 8,  offsetof(sge::NinePatchInstance,uv_offset_scale),   sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_color",            LLGL::Format::RGBA32Float, 9,  offsetof(sge::NinePatchInstance,color),             sizeof(sge::NinePatchInstance), 1, 1 },
-            {"i_flags",            LLGL::Format::R32SInt,     10, offsetof(sge::NinePatchInstance,flags),             sizeof(sge::NinePatchInstance), 1, 1 },
-        };
-    }
 
     if (backend.IsGLSL()) {
         tilemap_vertex_format.attributes = {
@@ -539,58 +438,24 @@ void Assets::InitVertexFormats() {
 
     if (backend.IsGLSL()) {
         tilemap_instance_format.attributes = {
-            {"i_position",  LLGL::Format::R16UInt,    5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
-            {"i_atlas_pos", LLGL::Format::RG32Float,  6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
-            {"i_world_pos", LLGL::Format::RG32Float,  7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
-            {"i_tile_data", LLGL::Format::R32UInt,    8, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
+            {"i_position",  LLGL::Format::R16UInt,    1, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
+            {"i_atlas_pos", LLGL::Format::RG32Float,  2, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
+            {"i_world_pos", LLGL::Format::RG32Float,  3, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
+            {"i_tile_data", LLGL::Format::R32UInt,    4, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
         };
     } else if (backend.IsHLSL()) {
         tilemap_instance_format.attributes = {
-            {"I_Position",  LLGL::Format::R16UInt,    5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
-            {"I_AtlasPos",  LLGL::Format::RG32Float,  6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
-            {"I_WorldPos",  LLGL::Format::RG32Float,  7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
-            {"I_TileData",  LLGL::Format::R16UInt,    8, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
+            {"I_Position",  LLGL::Format::R16UInt,    1, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
+            {"I_AtlasPos",  LLGL::Format::RG32Float,  2, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
+            {"I_WorldPos",  LLGL::Format::RG32Float,  3, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
+            {"I_TileData",  LLGL::Format::R16UInt,    4, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
         };
     } else {
         tilemap_instance_format.attributes = {
-            {"i_position",  LLGL::Format::R16UInt,    5, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
-            {"i_atlas_pos", LLGL::Format::RG32Float,  6, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
-            {"i_world_pos", LLGL::Format::RG32Float,  7, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
-            {"i_tile_data", LLGL::Format::R32UInt,    8, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
-        };
-    }
-
-    if (backend.IsGLSL()) {
-        font_vertex_format.AppendAttribute({"a_position", LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0});
-    } else if (backend.IsHLSL()) {
-        font_vertex_format.AppendAttribute({"Position",   LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0});
-    } else {
-        font_vertex_format.AppendAttribute({"position",   LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0});
-    }
-
-    if (backend.IsGLSL()) {
-        font_instance_format.attributes = {
-            {"i_color",     LLGL::Format::RGB32Float, 1, offsetof(sge::GlyphInstance,color),    sizeof(sge::GlyphInstance), 1, 1},
-            {"i_position",  LLGL::Format::RGB32Float, 2, offsetof(sge::GlyphInstance,pos),      sizeof(sge::GlyphInstance), 1, 1},
-            {"i_size",      LLGL::Format::RG32Float,  3, offsetof(sge::GlyphInstance,size),     sizeof(sge::GlyphInstance), 1, 1},
-            {"i_tex_size",  LLGL::Format::RG32Float,  4, offsetof(sge::GlyphInstance,tex_size), sizeof(sge::GlyphInstance), 1, 1},
-            {"i_uv",        LLGL::Format::RG32Float,  5, offsetof(sge::GlyphInstance,uv),       sizeof(sge::GlyphInstance), 1, 1},
-        };
-    } else if (backend.IsHLSL()) {
-        font_instance_format.attributes = {
-            {"I_Color",    LLGL::Format::RGB32Float, 1, offsetof(sge::GlyphInstance,color),    sizeof(sge::GlyphInstance), 1, 1},
-            {"I_Position", LLGL::Format::RG32Float,  2, offsetof(sge::GlyphInstance,pos),      sizeof(sge::GlyphInstance), 1, 1},
-            {"I_Size",     LLGL::Format::RG32Float,  3, offsetof(sge::GlyphInstance,size),     sizeof(sge::GlyphInstance), 1, 1},
-            {"I_TexSize",  LLGL::Format::RG32Float,  4, offsetof(sge::GlyphInstance,tex_size), sizeof(sge::GlyphInstance), 1, 1},
-            {"I_UV",       LLGL::Format::RG32Float,  5, offsetof(sge::GlyphInstance,uv),       sizeof(sge::GlyphInstance), 1, 1},
-        };
-    } else {
-        font_instance_format.attributes = {
-            {"i_color",     LLGL::Format::RGB32Float, 1, offsetof(sge::GlyphInstance,color),    sizeof(sge::GlyphInstance), 1, 1},
-            {"i_position",  LLGL::Format::RGB32Float, 2, offsetof(sge::GlyphInstance,pos),      sizeof(sge::GlyphInstance), 1, 1},
-            {"i_size",      LLGL::Format::RG32Float,  3, offsetof(sge::GlyphInstance,size),     sizeof(sge::GlyphInstance), 1, 1},
-            {"i_tex_size",  LLGL::Format::RG32Float,  4, offsetof(sge::GlyphInstance,tex_size), sizeof(sge::GlyphInstance), 1, 1},
-            {"i_uv",        LLGL::Format::RG32Float,  5, offsetof(sge::GlyphInstance,uv),       sizeof(sge::GlyphInstance), 1, 1},
+            {"i_position",  LLGL::Format::R16UInt,    1, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
+            {"i_atlas_pos", LLGL::Format::RG32Float,  2, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
+            {"i_world_pos", LLGL::Format::RG32Float,  3, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
+            {"i_tile_data", LLGL::Format::R32UInt,    4, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
         };
     }
 
@@ -714,14 +579,8 @@ void Assets::InitVertexFormats() {
         };
     }
 
-    state.vertex_formats[VertexFormatAsset::SpriteVertex] = sprite_vertex_format;
-    state.vertex_formats[VertexFormatAsset::SpriteInstance] = sprite_instance_format;
-    state.vertex_formats[VertexFormatAsset::NinePatchVertex] = ninepatch_vertex_format;
-    state.vertex_formats[VertexFormatAsset::NinePatchInstance] = ninepatch_instance_format;
     state.vertex_formats[VertexFormatAsset::TilemapVertex] = tilemap_vertex_format;
     state.vertex_formats[VertexFormatAsset::TilemapInstance] = tilemap_instance_format;
-    state.vertex_formats[VertexFormatAsset::FontVertex] = font_vertex_format;
-    state.vertex_formats[VertexFormatAsset::FontInstance] = font_instance_format;
     state.vertex_formats[VertexFormatAsset::BackgroundVertex] = background_vertex_format;
     state.vertex_formats[VertexFormatAsset::BackgroundInstance] = background_instance_format;
     state.vertex_formats[VertexFormatAsset::ParticleVertex] = particle_vertex_format;

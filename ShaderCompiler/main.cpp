@@ -256,7 +256,6 @@ bool CompileVulkanShader(const std::string& executable, const std::string& stage
 
         execl(executable.c_str(),
             executable.c_str(),
-            GLSLANG_FLAGS,
             "--quiet",
             "-V",
             "--enhanced-msgs",

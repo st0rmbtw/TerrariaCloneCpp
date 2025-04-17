@@ -14,8 +14,8 @@
 
 using Constants::TILE_SIZE;
 
-void setup_cavern_background(const World& world);
-void setup_sky_background(float y, bool fill_screen_height);
+static void setup_cavern_background(const World& world);
+static void setup_sky_background(float y, bool fill_screen_height);
 
 static struct BackgroundState {
     std::vector<BackgroundLayer> layers;

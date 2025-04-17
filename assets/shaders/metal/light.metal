@@ -31,8 +31,10 @@ static float get_decay(uint tile, uint2 pos) {
     return tile == 1u ? DEF_SOLID_DECAY : DEF_AIR_DECAY;
 }
 
-static float4 blur(uint2 pos, float3& prev_light, float prev_decay, const float4& this_light) {
-    prev_light = prev_light < LIGHT_EPSILON ? 0.0 : prev_light;
+static float4 blur(uint2 pos, float3 prev_light, float prev_decay, float4 this_light) {
+    prev_light.x = prev_light.x < LIGHT_EPSILON ? 0.0 : prev_light.x;
+    prev_light.y = prev_light.y < LIGHT_EPSILON ? 0.0 : prev_light.y;
+    prev_light.z = prev_light.z < LIGHT_EPSILON ? 0.0 : prev_light.z;
     
     if (prev_light.x < this_light.x) {
         prev_light.x = this_light.x;
@@ -61,7 +63,7 @@ kernel void CSComputeLightSetLightSources(
     constant Constants& constants                  [[buffer(2)]],
     const device Light* light_buffer               [[buffer(4)]],
     texture2d<uint> tile_texture                   [[texture(5)]],
-    texture2d<float4, access::write> light_texture [[texture(6)]],
+    texture2d<float, access::write> light_texture [[texture(6)]],
     uint3 thread_id [[thread_position_in_grid]]
 ) {
     const Light light = light_buffer[thread_id.x];
@@ -79,7 +81,7 @@ kernel void CSComputeLightHorizontal(
     constant Uniforms& uniforms                    [[buffer(1)]],
     constant Constants& constants                  [[buffer(2)]],
     texture2d<uint> tile_texture                   [[texture(5)]],
-    texture2d<float4, access::read_write> light_texture [[texture(6)]],
+    texture2d<float, access::read_write> light_texture [[texture(6)]],
     uint3 thread_id [[thread_position_in_grid]]
 ) {
     const uint x = uniforms.min.x + thread_id.x;
@@ -93,22 +95,25 @@ kernel void CSComputeLightHorizontal(
     const uint height = uniforms.max.y - uniforms.min.y;
 
     uint2 pos;
+    uint tile;
     for (uint y = 0; y < height; ++y) {
         pos = uint2(x, uniforms.min.y + y);
         light_texture.write(blur(pos, prev_light, prev_decay, light_texture.read(pos)), pos);
-        prev_decay = get_decay(tile_texture.read(pos / DEF_SUBDIVISION), pos);
+        tile = tile_texture.read(pos / DEF_SUBDIVISION).r;
+        prev_decay = get_decay(tile, pos);
 
         pos = uint2(x, uniforms.max.y - 1 - y);
         light_texture.write(blur(pos, prev_light2, prev_decay2, light_texture.read(pos)), pos);
-        prev_decay2 = get_decay(tile_texture.read(pos / DEF_SUBDIVISION), pos);
+        tile = tile_texture.read(pos / DEF_SUBDIVISION).r;
+        prev_decay2 = get_decay(tile, pos);
     }
 }
 
-kernel void CSComputeLightHorizontal(
+kernel void CSComputeLightVertical(
     constant Uniforms& uniforms                    [[buffer(1)]],
     constant Constants& constants                  [[buffer(2)]],
     texture2d<uint> tile_texture                   [[texture(5)]],
-    texture2d<float4, access::read_write> light_texture [[texture(6)]],
+    texture2d<float, access::read_write> light_texture [[texture(6)]],
     uint3 thread_id [[thread_position_in_grid]]
 ) {
     const uint y = uniforms.min.y + thread_id.x;
@@ -122,13 +127,16 @@ kernel void CSComputeLightHorizontal(
     const uint width = uniforms.max.x - uniforms.min.x;
 
     uint2 pos;
+    uint tile;
     for (uint x = 0; x < width; ++x) {
         pos = uint2(uniforms.min.x + x, y);
         light_texture.write(blur(pos, prev_light, prev_decay, light_texture.read(pos)), pos);
-        prev_decay = get_decay(tile_texture.read(pos / DEF_SUBDIVISION), pos);
+        tile = tile_texture.read(pos / DEF_SUBDIVISION).r;
+        prev_decay = get_decay(tile, pos);
 
-        pos = uint2(uniforms.max.x - 1 - x, y)
+        pos = uint2(uniforms.max.x - 1 - x, y);
         light_texture.write(blur(pos, prev_light2, prev_decay2, light_texture.read(pos)), pos);
-        prev_decay2 = get_decay(tile_texture.read(pos / DEF_SUBDIVISION), pos);
+        tile = tile_texture.read(pos / DEF_SUBDIVISION).r;
+        prev_decay2 = get_decay(tile, pos);
     }
 }

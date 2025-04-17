@@ -24,8 +24,8 @@ struct TileData {
 };
 
 struct TileDataBuffer {
-    TileData tile_data[3];
-}
+    TileData data[3];
+};
 
 struct VertexIn
 {
@@ -65,19 +65,13 @@ vertex VertexOut VS(
     // Extract other 10 bits
     const uint tile_id = (inp.i_tile_data >> 6) & 0x3ff;
 
-    const TileData tile_data = tile_data_buffer[tile_type];
+    const TileData tile_data = tile_data_buffer.data[tile_type];
     const float depth = tile_data.depth;
     const float2 size = tile_data.size;
     const float2 tex_size = size / tile_data.tex_size;
     const float2 start_uv = inp.i_atlas_pos * (tex_size + tile_data.tex_padding);
     const float2 tex_dims = tile_data.tex_size;
     const float2 offset = tile_data.offset;
-
-    float order = depth.tile_depth;
-    float2 size = float2(TILE_SIZE, TILE_SIZE);
-    float2 tex_size = size / inp.tile_tex_size;
-    float2 start_uv = inp.i_atlas_pos * (tex_size + inp.tile_padding);
-    float2 tex_dims = inp.tile_tex_size;
 
     const float4x4 transform = float4x4(
         float4(1.0, 0.0, 0.0, 0.0),

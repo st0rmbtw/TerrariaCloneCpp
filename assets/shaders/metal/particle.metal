@@ -51,7 +51,7 @@ vertex VertexOut VS(
 
     VertexOut outp;
     outp.position = mvp * float4(position, 0.0, 1.0);
-    outp.position.z = inp.i_depth / constants.max_depth;
+    outp.position.z = inp.i_depth;
     outp.uv = uv + position * inp.inv_tex_size;
 
     return outp;

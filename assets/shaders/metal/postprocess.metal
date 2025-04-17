@@ -55,19 +55,6 @@ float4 blend(float4 foreground, float4 background) {
     return foreground * foreground.a + background * (1.0 - foreground.a);
 }
 
-
-Texture2D BackgroundTexture : register(t3); 
-SamplerState BackgroundTextureSampler : register(s4);
-
-Texture2D WorldTexture : register(t5);
-SamplerState WorldTextureSampler : register(s6);
-
-Texture2D LightMap : register(t7);
-SamplerState LightMapSampler : register(s8);
-
-Texture2D Light : register(t9);
-SamplerState LightSampler : register(s10);
-
 fragment float4 PS(
     VertexOut inp [[stage_in]],
     texture2d<float> background_texture [[texture(3)]],
@@ -76,14 +63,14 @@ fragment float4 PS(
     texture2d<float> world_texture [[texture(5)]],
     sampler world_texture_sampler [[sampler(6)]],
 
-    texture2d<float> lightmap [[texture(7)]],
+    texture2d<float> lightmap_texture [[texture(7)]],
     sampler lightmap_sampler [[sampler(8)]],
 
-    texture2d<float> light [[texture(7)]],
-    sampler light_sampler [[sampler(8)]]
+    texture2d<float> light_texture [[texture(9)]],
+    sampler light_sampler [[sampler(10)]]
 ) {
-    const float4 light = float4(light.sample(light_sampler, inp.light_uv).rgb, 1.0);
-    const float4 lightmap = float4(lightmap.sample(lightmap_sampler, inp.uv).rgb, 1.0);
+    const float3 light = light_texture.sample(light_sampler, inp.light_uv).rgb;
+    const float3 lightmap = lightmap_texture.sample(lightmap_sampler, inp.uv).rgb;
 
     const float4 final_light = float4(max(lightmap, light), 1.0);
 
