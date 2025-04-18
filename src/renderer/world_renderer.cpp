@@ -358,7 +358,9 @@ void WorldRenderer::init_target(LLGL::Extent2D resolution) {
         render_pass.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
         render_pass.colorAttachments[0].format = texture_desc.format;
         render_pass.depthAttachment.format = swap_chain->GetDepthStencilFormat();
+        render_pass.depthAttachment.storeOp = LLGL::AttachmentStoreOp::Store;
         render_pass.stencilAttachment.format = swap_chain->GetDepthStencilFormat();
+        render_pass.stencilAttachment.storeOp = LLGL::AttachmentStoreOp::Store;
         m_render_pass = context->CreateRenderPass(render_pass);
     }
 
