@@ -40,6 +40,16 @@ struct SGE_ALIGN(16) TileTextureData {
     float depth;
 };
 
+static SGE_FORCE_INLINE void blur_dispatch(LLGL::CommandBuffer* commands, uint32_t width) {
+    commands->Dispatch(width, 1, 1);
+}
+
+static SGE_FORCE_INLINE void blur_dispatch_metal(LLGL::CommandBuffer* commands, uint32_t width) {
+    const uint32_t h = (width + 512 - 1) / 512;
+    const uint32_t w = std::min(512u, width);
+    commands->Dispatch(w, h, 1);
+}
+
 void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
     ZoneScopedN("WorldRenderer::init");
 
@@ -51,6 +61,13 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
 
     const auto& context = m_renderer->Context();
     const sge::RenderBackend backend = m_renderer->Backend();
+
+    if (backend.IsMetal()) {
+        m_workgroup_size = 1;
+        m_dispatch_func = blur_dispatch_metal;
+    } else {
+        m_dispatch_func = blur_dispatch;
+    }
 
     {
         const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Tiles).size());
@@ -116,6 +133,7 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
         pipelineDesc.fragmentShader = tilemap_shader.ps;
         pipelineDesc.geometryShader = tilemap_shader.gs;
         pipelineDesc.pipelineLayout = pipelineLayout;
+        pipelineDesc.renderPass = m_render_pass;
         pipelineDesc.indexFormat = LLGL::Format::R16UInt;
         pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
         pipelineDesc.rasterizer.frontCCW = true;
@@ -303,6 +321,56 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
     }
 }
 
+void WorldRenderer::init_target(LLGL::Extent2D resolution) {
+    const auto& context = m_renderer->Context();
+    const LLGL::SwapChain* swap_chain = m_renderer->SwapChain();
+
+    SGE_RESOURCE_RELEASE(m_target);
+    SGE_RESOURCE_RELEASE(m_target_texture);
+    SGE_RESOURCE_RELEASE(m_depth_texture);
+
+    LLGL::TextureDescriptor texture_desc;
+    texture_desc.extent.width = resolution.width;
+    texture_desc.extent.height = resolution.height;
+    texture_desc.extent.depth = 1;
+    texture_desc.format = swap_chain->GetColorFormat();
+    texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
+    texture_desc.miscFlags = 0;
+    texture_desc.cpuAccessFlags = 0;
+    texture_desc.mipLevels = 1;
+
+    LLGL::TextureDescriptor depth_texture_desc;
+    depth_texture_desc.extent.width = resolution.width;
+    depth_texture_desc.extent.height = resolution.height;
+    depth_texture_desc.extent.depth = 1;
+    depth_texture_desc.format = swap_chain->GetDepthStencilFormat();
+    depth_texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::DepthStencilAttachment;
+    depth_texture_desc.miscFlags = 0;
+    depth_texture_desc.cpuAccessFlags = 0;
+    depth_texture_desc.mipLevels = 1;
+
+    m_depth_texture = context->CreateTexture(depth_texture_desc);
+    m_target_texture = context->CreateTexture(texture_desc);
+
+    if (m_render_pass == nullptr) {
+        LLGL::RenderPassDescriptor render_pass;
+        render_pass.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Load;
+        render_pass.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
+        render_pass.colorAttachments[0].format = texture_desc.format;
+        render_pass.depthAttachment.format = swap_chain->GetDepthStencilFormat();
+        render_pass.stencilAttachment.format = swap_chain->GetDepthStencilFormat();
+        m_render_pass = context->CreateRenderPass(render_pass);
+    }
+
+    LLGL::RenderTargetDescriptor render_target_desc;
+    render_target_desc.resolution.width = resolution.width;
+    render_target_desc.resolution.height = resolution.height;
+    render_target_desc.colorAttachments[0].texture = m_target_texture;
+    render_target_desc.depthStencilAttachment.texture = m_depth_texture;
+    render_target_desc.renderPass = m_render_pass;
+    m_target = context->CreateRenderTarget(render_target_desc);
+}
+
 void WorldRenderer::init_textures(const WorldData& world) {
     ZoneScopedN("WorldRenderer::init_textures");
 
@@ -368,7 +436,8 @@ void WorldRenderer::init_textures(const WorldData& world) {
     context->WriteResourceHeap(*m_light_blur_resource_heap, 1, {m_tile_texture, m_light_texture});
 
     LLGL::RenderTargetDescriptor lightTextureRenderTarget;
-    lightTextureRenderTarget.resolution = LLGL::Extent2D(world.lightmap.width, world.lightmap.height);
+    lightTextureRenderTarget.resolution.width = world.lightmap.width;
+    lightTextureRenderTarget.resolution.height = world.lightmap.height;
     lightTextureRenderTarget.colorAttachments[0].texture = m_light_texture;
 
     m_light_texture_target = context->CreateRenderTarget(lightTextureRenderTarget);
@@ -634,18 +703,16 @@ void WorldRenderer::compute_light(const sge::Camera& camera, const World& world)
     const size_t size = world.light_count() * sizeof(Light);
     commands->UpdateBuffer(*m_light_buffer, 0, world.lights(), size);
 
-    constexpr uint32_t WORKGROUP = 16;
-
-    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / Constants::TILE_SIZE) - static_cast<int>(WORKGROUP);
-    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / Constants::TILE_SIZE) + static_cast<int>(WORKGROUP);
+    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / Constants::TILE_SIZE) - static_cast<int>(m_workgroup_size);
+    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / Constants::TILE_SIZE) + static_cast<int>(m_workgroup_size);
 
     const sge::URect blur_area = sge::URect(
         glm::uvec2(glm::max(proj_area_min * Constants::SUBDIVISION, glm::ivec2(0))),
         glm::uvec2(glm::max(proj_area_max * Constants::SUBDIVISION, glm::ivec2(0)))
     );
 
-    const uint32_t grid_w = blur_area.width() / WORKGROUP;
-    const uint32_t grid_h = blur_area.height() / WORKGROUP;
+    const uint32_t grid_w = blur_area.width() / m_workgroup_size;
+    const uint32_t grid_h = blur_area.height() / m_workgroup_size;
 
     if (grid_w * grid_h == 0) return;
 
@@ -664,7 +731,7 @@ void WorldRenderer::compute_light(const sge::Camera& camera, const World& world)
             commands->SetResourceHeap(*m_light_blur_resource_heap);
             commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
             commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
-            commands->Dispatch(grid_w, 1, 1);
+            m_dispatch_func(commands, grid_w);
         }
         commands->PopDebugGroup();
     };
@@ -676,7 +743,7 @@ void WorldRenderer::compute_light(const sge::Camera& camera, const World& world)
             commands->SetResourceHeap(*m_light_blur_resource_heap);
             commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
             commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
-            commands->Dispatch(grid_h, 1, 1);
+            m_dispatch_func(commands, grid_h);
         }
         commands->PopDebugGroup();
     };

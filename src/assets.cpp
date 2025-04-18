@@ -722,8 +722,12 @@ sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAss
         }
         stbi_image_free(layer_data.data);
     }
+
+    const sge::Texture texture = sge::Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2DArray, LLGL::ImageFormat::RGBA, LLGL::DataType::UInt8, width, height, layers_count, Assets::GetSampler(sampler), image_data, generate_mip_maps);
     
-    return sge::Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2DArray, LLGL::ImageFormat::RGBA, LLGL::DataType::UInt8, width, height, layers_count, Assets::GetSampler(sampler), image_data, generate_mip_maps);
+    delete[] image_data;
+
+    return texture;
 }
 
 template <typename T>

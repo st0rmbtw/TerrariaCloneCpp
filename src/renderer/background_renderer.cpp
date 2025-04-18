@@ -74,28 +74,55 @@ void BackgroundRenderer::init() {
         LLGL::CombinedTextureSamplerDescriptor{ "u_texture", "u_texture", "u_sampler", 3 }
     };
 
-    LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
+    m_pipeline_layout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
     const LLGL::ResourceViewDescriptor resource_views[] = {
         m_renderer->GlobalUniformBuffer(), backgrounds_texture
     };
-    m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
+    m_resource_heap = context->CreateResourceHeap(m_pipeline_layout, resource_views);
 
     const sge::ShaderPipeline& background_shader = Assets::GetShader(ShaderAsset::BackgroundShader);
 
+    LLGL::RenderPassDescriptor render_pass;
+    render_pass.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Load;
+    render_pass.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
+    render_pass.colorAttachments[0].format = swap_chain->GetColorFormat();
+
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
-    pipelineLayoutDesc.debugName = "BackgroundRenderer Pipeline";
+    pipelineDesc.debugName = "BackgroundRenderer Pipeline";
     pipelineDesc.vertexShader = background_shader.vs;
     pipelineDesc.fragmentShader = background_shader.ps;
-    pipelineDesc.pipelineLayout = pipelineLayout;
+    pipelineDesc.pipelineLayout = m_pipeline_layout;
     pipelineDesc.indexFormat = LLGL::Format::R16UInt;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
-    pipelineDesc.renderPass = swap_chain->GetRenderPass();
+    pipelineDesc.renderPass = context->CreateRenderPass(render_pass);
     pipelineDesc.rasterizer.frontCCW = true;
 
     m_pipeline = context->CreatePipelineState(pipelineDesc);
 
     if (const LLGL::Report* report = m_pipeline->GetReport()) {
+        if (report->HasErrors()) SGE_LOG_ERROR("%s", report->GetText());
+    }
+}
+
+void BackgroundRenderer::init_world(WorldRenderer& world_renderer) {
+    const auto& context = m_renderer->Context();
+
+    const sge::ShaderPipeline& background_shader = Assets::GetShader(ShaderAsset::BackgroundShader);
+
+    LLGL::GraphicsPipelineDescriptor pipelineDesc;
+    pipelineDesc.debugName = "BackgroundRenderer Pipeline World";
+    pipelineDesc.vertexShader = background_shader.vs;
+    pipelineDesc.fragmentShader = background_shader.ps;
+    pipelineDesc.pipelineLayout = m_pipeline_layout;
+    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
+    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
+    pipelineDesc.renderPass = world_renderer.render_pass();
+    pipelineDesc.rasterizer.frontCCW = true;
+
+    m_pipeline_world = context->CreatePipelineState(pipelineDesc);
+
+    if (const LLGL::Report* report = m_pipeline_world->GetReport()) {
         if (report->HasErrors()) SGE_LOG_ERROR("%s", report->GetText());
     }
 }
@@ -153,7 +180,7 @@ void BackgroundRenderer::render_world() {
     
     commands->SetVertexBufferArray(*m_world_buffer_array);
 
-    commands->SetPipelineState(*m_pipeline);
+    commands->SetPipelineState(*m_pipeline_world);
     commands->SetResourceHeap(*m_resource_heap);
 
     commands->DrawInstanced(4, 0, m_world_layer_count);

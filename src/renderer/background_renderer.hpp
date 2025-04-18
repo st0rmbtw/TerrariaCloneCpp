@@ -1,12 +1,15 @@
 #ifndef _RENDERER_BACKGROUND_RENDERER_HPP_
 #define _RENDERER_BACKGROUND_RENDERER_HPP_
 
+#include "LLGL/PipelineLayout.h"
 #pragma once
 
 #include <LLGL/Buffer.h>
 #include <LLGL/PipelineState.h>
 
 #include <SGE/renderer/renderer.hpp>
+
+#include "world_renderer.hpp"
 
 #include "types.hpp"
 
@@ -19,6 +22,7 @@ struct LayerData {
 class BackgroundRenderer {
 public:
     void init();
+    void init_world(WorldRenderer& renderer);
     void render();
     void render_world();
     void terminate();
@@ -42,7 +46,9 @@ private:
 
     sge::Renderer* m_renderer = nullptr;
     
+    LLGL::PipelineLayout* m_pipeline_layout = nullptr;
     LLGL::PipelineState* m_pipeline = nullptr;
+    LLGL::PipelineState* m_pipeline_world = nullptr;
     LLGL::ResourceHeap* m_resource_heap = nullptr;
     LLGL::Buffer* m_vertex_buffer = nullptr;
     

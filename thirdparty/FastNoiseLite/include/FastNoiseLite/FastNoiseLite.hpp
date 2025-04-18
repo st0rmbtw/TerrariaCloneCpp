@@ -111,7 +111,7 @@ public:
     /// <summary>
     /// Create new FastNoise object with optional seed
     /// </summary>
-    FastNoiseLite(int seed = 1337)
+    FastNoiseLite(long long seed = 1337)
     {
         mSeed = seed;
         mFrequency = 0.01f;
@@ -143,7 +143,7 @@ public:
     /// <remarks>
     /// Default: 1337
     /// </remarks>
-    void SetSeed(int seed) { mSeed = seed; }
+    void SetSeed(long long seed) { mSeed = seed; }
 
     /// <summary>
     /// Sets frequency for all noise types
@@ -194,7 +194,7 @@ public:
     /// <remarks>
     /// Default: 3
     /// </remarks>
-    void SetFractalOctaves(int octaves)
+    void SetFractalOctaves(long long octaves)
     {
         mOctaves = octaves;
         CalculateFractalBounding();
@@ -405,14 +405,14 @@ private:
         TransformType3D_DefaultOpenSimplex2
     };
 
-    int mSeed;
+    long long mSeed;
     float mFrequency;
     NoiseType mNoiseType;
     RotationType3D mRotationType3D;
     TransformType3D mTransformType3D;
 
     FractalType mFractalType;
-    int mOctaves;
+    long long mOctaves;
     float mLacunarity;
     float mGain;
     float mWeightedStrength;
@@ -447,10 +447,10 @@ private:
     static float FastSqrt(float f) { return sqrtf(f); }
 
     template <typename FNfloat>
-    static int FastFloor(FNfloat f) { return f >= 0 ? (int)f : (int)f - 1; }
+    static long long FastFloor(FNfloat f) { return f >= 0 ? (long long)f : (long long)f - 1; }
 
     template <typename FNfloat>
-    static int FastRound(FNfloat f) { return f >= 0 ? (int)(f + 0.5f) : (int)(f - 0.5f); }
+    static long long FastRound(FNfloat f) { return f >= 0 ? (long long)(f + 0.5f) : (long long)(f - 0.5f); }
 
     static float Lerp(float a, float b, float t) { return a + t * (b - a); }
 
@@ -466,7 +466,7 @@ private:
 
     static float PingPong(float t)
     {
-        t -= (int)(t * 0.5f) * 2;
+        t -= (long long)(t * 0.5f) * 2;
         return t < 1 ? t : 2 - t;
     }
 
@@ -475,7 +475,7 @@ private:
         float gain = FastAbs(mGain);
         float amp = gain;
         float ampFractal = 1.0f;
-        for (int i = 1; i < mOctaves; i++)
+        for (long long i = 1; i < mOctaves; i++)
         {
             ampFractal += amp;
             amp *= gain;
@@ -484,31 +484,31 @@ private:
     }
 
     // Hashing
-    static const int PrimeX = 501125321;
-    static const int PrimeY = 1136930381;
-    static const int PrimeZ = 1720413743;
+    static const long long PrimeX = 501125321;
+    static const long long PrimeY = 1136930381;
+    static const long long PrimeZ = 1720413743;
 
-    static int Hash(int seed, int xPrimed, int yPrimed)
+    static long long Hash(long long seed, long long xPrimed, long long yPrimed)
     {
-        int hash = seed ^ xPrimed ^ yPrimed;
+        long long hash = seed ^ xPrimed ^ yPrimed;
 
         hash *= 0x27d4eb2d;
         return hash;
     }
 
 
-    static int Hash(int seed, int xPrimed, int yPrimed, int zPrimed)
+    static long long Hash(long long seed, long long xPrimed, long long yPrimed, long long zPrimed)
     {
-        int hash = seed ^ xPrimed ^ yPrimed ^ zPrimed;
+        long long hash = seed ^ xPrimed ^ yPrimed ^ zPrimed;
 
         hash *= 0x27d4eb2d;
         return hash;
     }
 
 
-    static float ValCoord(int seed, int xPrimed, int yPrimed)
+    static float ValCoord(long long seed, long long xPrimed, long long yPrimed)
     {
-        int hash = Hash(seed, xPrimed, yPrimed);
+        long long hash = Hash(seed, xPrimed, yPrimed);
 
         hash *= hash;
         hash ^= hash << 19;
@@ -516,9 +516,9 @@ private:
     }
 
 
-    static float ValCoord(int seed, int xPrimed, int yPrimed, int zPrimed)
+    static float ValCoord(long long seed, long long xPrimed, long long yPrimed, long long zPrimed)
     {
-        int hash = Hash(seed, xPrimed, yPrimed, zPrimed);
+        long long hash = Hash(seed, xPrimed, yPrimed, zPrimed);
 
         hash *= hash;
         hash ^= hash << 19;
@@ -526,9 +526,9 @@ private:
     }
 
 
-    float GradCoord(int seed, int xPrimed, int yPrimed, float xd, float yd) const
+    float GradCoord(long long seed, long long xPrimed, long long yPrimed, float xd, float yd) const
     {
-        int hash = Hash(seed, xPrimed, yPrimed);
+        long long hash = Hash(seed, xPrimed, yPrimed);
         hash ^= hash >> 15;
         hash &= 127 << 1;
 
@@ -539,9 +539,9 @@ private:
     }
 
 
-    float GradCoord(int seed, int xPrimed, int yPrimed, int zPrimed, float xd, float yd, float zd) const
+    float GradCoord(long long seed, long long xPrimed, long long yPrimed, long long zPrimed, float xd, float yd, float zd) const
     {
-        int hash = Hash(seed, xPrimed, yPrimed, zPrimed);
+        long long hash = Hash(seed, xPrimed, yPrimed, zPrimed);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
@@ -553,18 +553,18 @@ private:
     }
 
 
-    void GradCoordOut(int seed, int xPrimed, int yPrimed, float& xo, float& yo) const
+    void GradCoordOut(long long seed, long long xPrimed, long long yPrimed, float& xo, float& yo) const
     {
-        int hash = Hash(seed, xPrimed, yPrimed) & (255 << 1);
+        long long hash = Hash(seed, xPrimed, yPrimed) & (255 << 1);
 
         xo = Lookup<float>::RandVecs2D[hash];
         yo = Lookup<float>::RandVecs2D[hash | 1];
     }
 
 
-    void GradCoordOut(int seed, int xPrimed, int yPrimed, int zPrimed, float& xo, float& yo, float& zo) const
+    void GradCoordOut(long long seed, long long xPrimed, long long yPrimed, long long zPrimed, float& xo, float& yo, float& zo) const
     {
-        int hash = Hash(seed, xPrimed, yPrimed, zPrimed) & (255 << 2);
+        long long hash = Hash(seed, xPrimed, yPrimed, zPrimed) & (255 << 2);
 
         xo = Lookup<float>::RandVecs3D[hash];
         yo = Lookup<float>::RandVecs3D[hash | 1];
@@ -572,11 +572,11 @@ private:
     }
 
 
-    void GradCoordDual(int seed, int xPrimed, int yPrimed, float xd, float yd, float& xo, float& yo) const
+    void GradCoordDual(long long seed, long long xPrimed, long long yPrimed, float xd, float yd, float& xo, float& yo) const
     {
-        int hash = Hash(seed, xPrimed, yPrimed);
-        int index1 = hash & (127 << 1);
-        int index2 = (hash >> 7) & (255 << 1);
+        long long hash = Hash(seed, xPrimed, yPrimed);
+        long long index1 = hash & (127 << 1);
+        long long index2 = (hash >> 7) & (255 << 1);
 
         float xg = Lookup<float>::Gradients2D[index1];
         float yg = Lookup<float>::Gradients2D[index1 | 1];
@@ -590,11 +590,11 @@ private:
     }
 
 
-    void GradCoordDual(int seed, int xPrimed, int yPrimed, int zPrimed, float xd, float yd, float zd, float& xo, float& yo, float& zo) const
+    void GradCoordDual(long long seed, long long xPrimed, long long yPrimed, long long zPrimed, float xd, float yd, float zd, float& xo, float& yo, float& zo) const
     {
-        int hash = Hash(seed, xPrimed, yPrimed, zPrimed);
-        int index1 = hash & (63 << 2);
-        int index2 = (hash >> 6) & (255 << 2);
+        long long hash = Hash(seed, xPrimed, yPrimed, zPrimed);
+        long long index1 = hash & (63 << 2);
+        long long index2 = (hash >> 6) & (255 << 2);
 
         float xg = Lookup<float>::Gradients3D[index1];
         float yg = Lookup<float>::Gradients3D[index1 | 1];
@@ -614,7 +614,7 @@ private:
     // Generic noise gen
 
     template <typename FNfloat>
-    float GenNoiseSingle(int seed, FNfloat x, FNfloat y) const
+    float GenNoiseSingle(long long seed, FNfloat x, FNfloat y) const
     {
         switch (mNoiseType)
         {
@@ -636,7 +636,7 @@ private:
     }
 
     template <typename FNfloat>
-    float GenNoiseSingle(int seed, FNfloat x, FNfloat y, FNfloat z) const
+    float GenNoiseSingle(long long seed, FNfloat x, FNfloat y, FNfloat z) const
     {
         switch (mNoiseType)
         {
@@ -844,11 +844,11 @@ private:
     template <typename FNfloat>
     float GenFractalFBm(FNfloat x, FNfloat y) const
     {
-        int seed = mSeed;
+        long long seed = mSeed;
         float sum = 0;
         float amp = mFractalBounding;
 
-        for (int i = 0; i < mOctaves; i++)
+        for (long long i = 0; i < mOctaves; i++)
         {
             float noise = GenNoiseSingle(seed++, x, y);
             sum += noise * amp;
@@ -865,11 +865,11 @@ private:
     template <typename FNfloat>
     float GenFractalFBm(FNfloat x, FNfloat y, FNfloat z) const
     {
-        int seed = mSeed;
+        long long seed = mSeed;
         float sum = 0;
         float amp = mFractalBounding;
 
-        for (int i = 0; i < mOctaves; i++)
+        for (long long i = 0; i < mOctaves; i++)
         {
             float noise = GenNoiseSingle(seed++, x, y, z);
             sum += noise * amp;
@@ -890,11 +890,11 @@ private:
     template <typename FNfloat>
     float GenFractalRidged(FNfloat x, FNfloat y) const
     {
-        int seed = mSeed;
+        long long seed = mSeed;
         float sum = 0;
         float amp = mFractalBounding;
 
-        for (int i = 0; i < mOctaves; i++)
+        for (long long i = 0; i < mOctaves; i++)
         {
             float noise = FastAbs(GenNoiseSingle(seed++, x, y));
             sum += (noise * -2 + 1) * amp;
@@ -911,11 +911,11 @@ private:
     template <typename FNfloat>
     float GenFractalRidged(FNfloat x, FNfloat y, FNfloat z) const
     {
-        int seed = mSeed;
+        long long seed = mSeed;
         float sum = 0;
         float amp = mFractalBounding;
 
-        for (int i = 0; i < mOctaves; i++)
+        for (long long i = 0; i < mOctaves; i++)
         {
             float noise = FastAbs(GenNoiseSingle(seed++, x, y, z));
             sum += (noise * -2 + 1) * amp;
@@ -936,11 +936,11 @@ private:
     template <typename FNfloat>
     float GenFractalPingPong(FNfloat x, FNfloat y) const
     {
-        int seed = mSeed;
+        long long seed = mSeed;
         float sum = 0;
         float amp = mFractalBounding;
 
-        for (int i = 0; i < mOctaves; i++)
+        for (long long i = 0; i < mOctaves; i++)
         {
             float noise = PingPong((GenNoiseSingle(seed++, x, y) + 1) * mPingPongStrength);
             sum += (noise - 0.5f) * 2 * amp;
@@ -957,11 +957,11 @@ private:
     template <typename FNfloat>
     float GenFractalPingPong(FNfloat x, FNfloat y, FNfloat z) const
     {
-        int seed = mSeed;
+        long long seed = mSeed;
         float sum = 0;
         float amp = mFractalBounding;
 
-        for (int i = 0; i < mOctaves; i++)
+        for (long long i = 0; i < mOctaves; i++)
         {
             float noise = PingPong((GenNoiseSingle(seed++, x, y, z) + 1) * mPingPongStrength);
             sum += (noise - 0.5f) * 2 * amp;
@@ -980,7 +980,7 @@ private:
     // Simplex/OpenSimplex2 Noise
 
     template <typename FNfloat>
-    float SingleSimplex(int seed, FNfloat x, FNfloat y) const
+    float SingleSimplex(long long seed, FNfloat x, FNfloat y) const
     {
         // 2D OpenSimplex2 case uses the same algorithm as ordinary Simplex.
 
@@ -994,8 +994,8 @@ private:
          * x += s; y += s;
         */
 
-        int i = FastFloor(x);
-        int j = FastFloor(y);
+        long long i = FastFloor(x);
+        long long j = FastFloor(y);
         float xi = (float)(x - i);
         float yi = (float)(y - j);
 
@@ -1051,7 +1051,7 @@ private:
     }
 
     template <typename FNfloat>
-    float SingleOpenSimplex2(int seed, FNfloat x, FNfloat y, FNfloat z) const
+    float SingleOpenSimplex2(long long seed, FNfloat x, FNfloat y, FNfloat z) const
     {
         // 3D OpenSimplex2 case uses two offset rotated cube grids.
 
@@ -1062,16 +1062,16 @@ private:
          * x = r - x; y = r - y; z = r - z;
         */
 
-        int i = FastRound(x);
-        int j = FastRound(y);
-        int k = FastRound(z);
+        long long i = FastRound(x);
+        long long j = FastRound(y);
+        long long k = FastRound(z);
         float x0 = (float)(x - i);
         float y0 = (float)(y - j);
         float z0 = (float)(z - k);
 
-        int xNSign = (int)(-1.0f - x0) | 1;
-        int yNSign = (int)(-1.0f - y0) | 1;
-        int zNSign = (int)(-1.0f - z0) | 1;
+        long long xNSign = (long long)(-1.0f - x0) | 1;
+        long long yNSign = (long long)(-1.0f - y0) | 1;
+        long long zNSign = (long long)(-1.0f - z0) | 1;
 
         float ax0 = xNSign * -x0;
         float ay0 = yNSign * -y0;
@@ -1084,7 +1084,7 @@ private:
         float value = 0;
         float a = (0.6f - x0 * x0) - (y0 * y0 + z0 * z0);
 
-        for (int l = 0; ; l++)
+        for (long long l = 0; ; l++)
         {
             if (a > 0)
             {
@@ -1092,9 +1092,9 @@ private:
             }
 
             float b = a + 1;
-            int i1 = i;
-            int j1 = j;
-            int k1 = k;
+            long long i1 = i;
+            long long j1 = j;
+            long long k1 = k;
             float x1 = x0;
             float y1 = y0;
             float z1 = z0;
@@ -1153,7 +1153,7 @@ private:
     // OpenSimplex2S Noise
 
     template <typename FNfloat>
-    float SingleOpenSimplex2S(int seed, FNfloat x, FNfloat y) const
+    float SingleOpenSimplex2S(long long seed, FNfloat x, FNfloat y) const
     {
         // 2D OpenSimplex2S case is a modified 2D simplex noise.
 
@@ -1167,15 +1167,15 @@ private:
          * x += s; y += s;
         */
 
-        int i = FastFloor(x);
-        int j = FastFloor(y);
+        long long i = FastFloor(x);
+        long long j = FastFloor(y);
         float xi = (float)(x - i);
         float yi = (float)(y - j);
 
         i *= PrimeX;
         j *= PrimeY;
-        int i1 = i + PrimeX;
-        int j1 = j + PrimeY;
+        long long i1 = i + PrimeX;
+        long long j1 = j + PrimeY;
 
         float t = (xi + yi) * (float)G2;
         float x0 = xi - t;
@@ -1284,7 +1284,7 @@ private:
     }
 
     template <typename FNfloat>
-    float SingleOpenSimplex2S(int seed, FNfloat x, FNfloat y, FNfloat z) const
+    float SingleOpenSimplex2S(long long seed, FNfloat x, FNfloat y, FNfloat z) const
     {
         // 3D OpenSimplex2S case uses two offset rotated cube grids.
 
@@ -1295,9 +1295,9 @@ private:
          * x = r - x; y = r - y; z = r - z;
         */
 
-        int i = FastFloor(x);
-        int j = FastFloor(y);
-        int k = FastFloor(z);
+        long long i = FastFloor(x);
+        long long j = FastFloor(y);
+        long long k = FastFloor(z);
         float xi = (float)(x - i);
         float yi = (float)(y - j);
         float zi = (float)(z - k);
@@ -1305,11 +1305,11 @@ private:
         i *= PrimeX;
         j *= PrimeY;
         k *= PrimeZ;
-        int seed2 = seed + 1293373;
+        long long seed2 = seed + 1293373;
 
-        int xNMask = (int)(-0.5f - xi);
-        int yNMask = (int)(-0.5f - yi);
-        int zNMask = (int)(-0.5f - zi);
+        long long xNMask = (long long)(-0.5f - xi);
+        long long yNMask = (long long)(-0.5f - yi);
+        long long zNMask = (long long)(-0.5f - zi);
 
         float x0 = xi + xNMask;
         float y0 = yi + yNMask;
@@ -1480,33 +1480,33 @@ private:
     // Cellular Noise
 
     template <typename FNfloat>
-    float SingleCellular(int seed, FNfloat x, FNfloat y) const
+    float SingleCellular(long long seed, FNfloat x, FNfloat y) const
     {
-        int xr = FastRound(x);
-        int yr = FastRound(y);
+        long long xr = FastRound(x);
+        long long yr = FastRound(y);
 
         float distance0 = 1e10f;
         float distance1 = 1e10f;
-        int closestHash = 0;
+        long long closestHash = 0;
 
         float cellularJitter = 0.43701595f * mCellularJitterModifier;
 
-        int xPrimed = (xr - 1) * PrimeX;
-        int yPrimedBase = (yr - 1) * PrimeY;
+        long long xPrimed = (xr - 1) * PrimeX;
+        long long yPrimedBase = (yr - 1) * PrimeY;
 
         switch (mCellularDistanceFunction)
         {
         default:
         case CellularDistanceFunction_Euclidean:
         case CellularDistanceFunction_EuclideanSq:
-            for (int xi = xr - 1; xi <= xr + 1; xi++)
+            for (long long xi = xr - 1; xi <= xr + 1; xi++)
             {
-                int yPrimed = yPrimedBase;
+                long long yPrimed = yPrimedBase;
 
-                for (int yi = yr - 1; yi <= yr + 1; yi++)
+                for (long long yi = yr - 1; yi <= yr + 1; yi++)
                 {
-                    int hash = Hash(seed, xPrimed, yPrimed);
-                    int idx = hash & (255 << 1);
+                    long long hash = Hash(seed, xPrimed, yPrimed);
+                    long long idx = hash & (255 << 1);
 
                     float vecX = (float)(xi - x) + Lookup<float>::RandVecs2D[idx] * cellularJitter;
                     float vecY = (float)(yi - y) + Lookup<float>::RandVecs2D[idx | 1] * cellularJitter;
@@ -1525,14 +1525,14 @@ private:
             }
             break;
         case CellularDistanceFunction_Manhattan:
-            for (int xi = xr - 1; xi <= xr + 1; xi++)
+            for (long long xi = xr - 1; xi <= xr + 1; xi++)
             {
-                int yPrimed = yPrimedBase;
+                long long yPrimed = yPrimedBase;
 
-                for (int yi = yr - 1; yi <= yr + 1; yi++)
+                for (long long yi = yr - 1; yi <= yr + 1; yi++)
                 {
-                    int hash = Hash(seed, xPrimed, yPrimed);
-                    int idx = hash & (255 << 1);
+                    long long hash = Hash(seed, xPrimed, yPrimed);
+                    long long idx = hash & (255 << 1);
 
                     float vecX = (float)(xi - x) + Lookup<float>::RandVecs2D[idx] * cellularJitter;
                     float vecY = (float)(yi - y) + Lookup<float>::RandVecs2D[idx | 1] * cellularJitter;
@@ -1551,14 +1551,14 @@ private:
             }
             break;
         case CellularDistanceFunction_Hybrid:
-            for (int xi = xr - 1; xi <= xr + 1; xi++)
+            for (long long xi = xr - 1; xi <= xr + 1; xi++)
             {
-                int yPrimed = yPrimedBase;
+                long long yPrimed = yPrimedBase;
 
-                for (int yi = yr - 1; yi <= yr + 1; yi++)
+                for (long long yi = yr - 1; yi <= yr + 1; yi++)
                 {
-                    int hash = Hash(seed, xPrimed, yPrimed);
-                    int idx = hash & (255 << 1);
+                    long long hash = Hash(seed, xPrimed, yPrimed);
+                    long long idx = hash & (255 << 1);
 
                     float vecX = (float)(xi - x) + Lookup<float>::RandVecs2D[idx] * cellularJitter;
                     float vecY = (float)(yi - y) + Lookup<float>::RandVecs2D[idx | 1] * cellularJitter;
@@ -1610,38 +1610,38 @@ private:
     }
 
     template <typename FNfloat>
-    float SingleCellular(int seed, FNfloat x, FNfloat y, FNfloat z) const
+    float SingleCellular(long long seed, FNfloat x, FNfloat y, FNfloat z) const
     {
-        int xr = FastRound(x);
-        int yr = FastRound(y);
-        int zr = FastRound(z);
+        long long xr = FastRound(x);
+        long long yr = FastRound(y);
+        long long zr = FastRound(z);
 
         float distance0 = 1e10f;
         float distance1 = 1e10f;
-        int closestHash = 0;
+        long long closestHash = 0;
 
         float cellularJitter = 0.39614353f * mCellularJitterModifier;
 
-        int xPrimed = (xr - 1) * PrimeX;
-        int yPrimedBase = (yr - 1) * PrimeY;
-        int zPrimedBase = (zr - 1) * PrimeZ;
+        long long xPrimed = (xr - 1) * PrimeX;
+        long long yPrimedBase = (yr - 1) * PrimeY;
+        long long zPrimedBase = (zr - 1) * PrimeZ;
 
         switch (mCellularDistanceFunction)
         {
         case CellularDistanceFunction_Euclidean:
         case CellularDistanceFunction_EuclideanSq:
-            for (int xi = xr - 1; xi <= xr + 1; xi++)
+            for (long long xi = xr - 1; xi <= xr + 1; xi++)
             {
-                int yPrimed = yPrimedBase;
+                long long yPrimed = yPrimedBase;
 
-                for (int yi = yr - 1; yi <= yr + 1; yi++)
+                for (long long yi = yr - 1; yi <= yr + 1; yi++)
                 {
-                    int zPrimed = zPrimedBase;
+                    long long zPrimed = zPrimedBase;
 
-                    for (int zi = zr - 1; zi <= zr + 1; zi++)
+                    for (long long zi = zr - 1; zi <= zr + 1; zi++)
                     {
-                        int hash = Hash(seed, xPrimed, yPrimed, zPrimed);
-                        int idx = hash & (255 << 2);
+                        long long hash = Hash(seed, xPrimed, yPrimed, zPrimed);
+                        long long idx = hash & (255 << 2);
 
                         float vecX = (float)(xi - x) + Lookup<float>::RandVecs3D[idx] * cellularJitter;
                         float vecY = (float)(yi - y) + Lookup<float>::RandVecs3D[idx | 1] * cellularJitter;
@@ -1663,18 +1663,18 @@ private:
             }
             break;
         case CellularDistanceFunction_Manhattan:
-            for (int xi = xr - 1; xi <= xr + 1; xi++)
+            for (long long xi = xr - 1; xi <= xr + 1; xi++)
             {
-                int yPrimed = yPrimedBase;
+                long long yPrimed = yPrimedBase;
 
-                for (int yi = yr - 1; yi <= yr + 1; yi++)
+                for (long long yi = yr - 1; yi <= yr + 1; yi++)
                 {
-                    int zPrimed = zPrimedBase;
+                    long long zPrimed = zPrimedBase;
 
-                    for (int zi = zr - 1; zi <= zr + 1; zi++)
+                    for (long long zi = zr - 1; zi <= zr + 1; zi++)
                     {
-                        int hash = Hash(seed, xPrimed, yPrimed, zPrimed);
-                        int idx = hash & (255 << 2);
+                        long long hash = Hash(seed, xPrimed, yPrimed, zPrimed);
+                        long long idx = hash & (255 << 2);
 
                         float vecX = (float)(xi - x) + Lookup<float>::RandVecs3D[idx] * cellularJitter;
                         float vecY = (float)(yi - y) + Lookup<float>::RandVecs3D[idx | 1] * cellularJitter;
@@ -1696,18 +1696,18 @@ private:
             }
             break;
         case CellularDistanceFunction_Hybrid:
-            for (int xi = xr - 1; xi <= xr + 1; xi++)
+            for (long long xi = xr - 1; xi <= xr + 1; xi++)
             {
-                int yPrimed = yPrimedBase;
+                long long yPrimed = yPrimedBase;
 
-                for (int yi = yr - 1; yi <= yr + 1; yi++)
+                for (long long yi = yr - 1; yi <= yr + 1; yi++)
                 {
-                    int zPrimed = zPrimedBase;
+                    long long zPrimed = zPrimedBase;
 
-                    for (int zi = zr - 1; zi <= zr + 1; zi++)
+                    for (long long zi = zr - 1; zi <= zr + 1; zi++)
                     {
-                        int hash = Hash(seed, xPrimed, yPrimed, zPrimed);
-                        int idx = hash & (255 << 2);
+                        long long hash = Hash(seed, xPrimed, yPrimed, zPrimed);
+                        long long idx = hash & (255 << 2);
 
                         float vecX = (float)(xi - x) + Lookup<float>::RandVecs3D[idx] * cellularJitter;
                         float vecY = (float)(yi - y) + Lookup<float>::RandVecs3D[idx | 1] * cellularJitter;
@@ -1767,10 +1767,10 @@ private:
     // Perlin Noise
 
     template <typename FNfloat>
-    float SinglePerlin(int seed, FNfloat x, FNfloat y) const
+    float SinglePerlin(long long seed, FNfloat x, FNfloat y) const
     {
-        int x0 = FastFloor(x);
-        int y0 = FastFloor(y);
+        long long x0 = FastFloor(x);
+        long long y0 = FastFloor(y);
 
         float xd0 = (float)(x - x0);
         float yd0 = (float)(y - y0);
@@ -1782,8 +1782,8 @@ private:
 
         x0 *= PrimeX;
         y0 *= PrimeY;
-        int x1 = x0 + PrimeX;
-        int y1 = y0 + PrimeY;
+        long long x1 = x0 + PrimeX;
+        long long y1 = y0 + PrimeY;
 
         float xf0 = Lerp(GradCoord(seed, x0, y0, xd0, yd0), GradCoord(seed, x1, y0, xd1, yd0), xs);
         float xf1 = Lerp(GradCoord(seed, x0, y1, xd0, yd1), GradCoord(seed, x1, y1, xd1, yd1), xs);
@@ -1792,11 +1792,11 @@ private:
     }
 
     template <typename FNfloat>
-    float SinglePerlin(int seed, FNfloat x, FNfloat y, FNfloat z) const
+    float SinglePerlin(long long seed, FNfloat x, FNfloat y, FNfloat z) const
     {
-        int x0 = FastFloor(x);
-        int y0 = FastFloor(y);
-        int z0 = FastFloor(z);
+        long long x0 = FastFloor(x);
+        long long y0 = FastFloor(y);
+        long long z0 = FastFloor(z);
 
         float xd0 = (float)(x - x0);
         float yd0 = (float)(y - y0);
@@ -1812,9 +1812,9 @@ private:
         x0 *= PrimeX;
         y0 *= PrimeY;
         z0 *= PrimeZ;
-        int x1 = x0 + PrimeX;
-        int y1 = y0 + PrimeY;
-        int z1 = z0 + PrimeZ;
+        long long x1 = x0 + PrimeX;
+        long long y1 = y0 + PrimeY;
+        long long z1 = z0 + PrimeZ;
 
         float xf00 = Lerp(GradCoord(seed, x0, y0, z0, xd0, yd0, zd0), GradCoord(seed, x1, y0, z0, xd1, yd0, zd0), xs);
         float xf10 = Lerp(GradCoord(seed, x0, y1, z0, xd0, yd1, zd0), GradCoord(seed, x1, y1, z0, xd1, yd1, zd0), xs);
@@ -1831,22 +1831,22 @@ private:
     // Value Cubic Noise
 
     template <typename FNfloat>
-    float SingleValueCubic(int seed, FNfloat x, FNfloat y) const
+    float SingleValueCubic(long long seed, FNfloat x, FNfloat y) const
     {
-        int x1 = FastFloor(x);
-        int y1 = FastFloor(y);
+        long long x1 = FastFloor(x);
+        long long y1 = FastFloor(y);
 
         float xs = (float)(x - x1);
         float ys = (float)(y - y1);
 
         x1 *= PrimeX;
         y1 *= PrimeY;
-        int x0 = x1 - PrimeX;
-        int y0 = y1 - PrimeY;
-        int x2 = x1 + PrimeX;
-        int y2 = y1 + PrimeY;
-        int x3 = x1 + (int)((long)PrimeX << 1);
-        int y3 = y1 + (int)((long)PrimeY << 1);
+        long long x0 = x1 - PrimeX;
+        long long y0 = y1 - PrimeY;
+        long long x2 = x1 + PrimeX;
+        long long y2 = y1 + PrimeY;
+        long long x3 = x1 + (long long)((long)PrimeX << 1);
+        long long y3 = y1 + (long long)((long)PrimeY << 1);
 
         return CubicLerp(
             CubicLerp(ValCoord(seed, x0, y0), ValCoord(seed, x1, y0), ValCoord(seed, x2, y0), ValCoord(seed, x3, y0),
@@ -1861,11 +1861,11 @@ private:
     }
 
     template <typename FNfloat>
-    float SingleValueCubic(int seed, FNfloat x, FNfloat y, FNfloat z) const
+    float SingleValueCubic(long long seed, FNfloat x, FNfloat y, FNfloat z) const
     {
-        int x1 = FastFloor(x);
-        int y1 = FastFloor(y);
-        int z1 = FastFloor(z);
+        long long x1 = FastFloor(x);
+        long long y1 = FastFloor(y);
+        long long z1 = FastFloor(z);
 
         float xs = (float)(x - x1);
         float ys = (float)(y - y1);
@@ -1875,15 +1875,15 @@ private:
         y1 *= PrimeY;
         z1 *= PrimeZ;
 
-        int x0 = x1 - PrimeX;
-        int y0 = y1 - PrimeY;
-        int z0 = z1 - PrimeZ;
-        int x2 = x1 + PrimeX;
-        int y2 = y1 + PrimeY;
-        int z2 = z1 + PrimeZ;
-        int x3 = x1 + (int)((long)PrimeX << 1);
-        int y3 = y1 + (int)((long)PrimeY << 1);
-        int z3 = z1 + (int)((long)PrimeZ << 1);
+        long long x0 = x1 - PrimeX;
+        long long y0 = y1 - PrimeY;
+        long long z0 = z1 - PrimeZ;
+        long long x2 = x1 + PrimeX;
+        long long y2 = y1 + PrimeY;
+        long long z2 = z1 + PrimeZ;
+        long long x3 = x1 + (long long)((long)PrimeX << 1);
+        long long y3 = y1 + (long long)((long)PrimeY << 1);
+        long long z3 = z1 + (long long)((long)PrimeZ << 1);
 
 
         return CubicLerp(
@@ -1918,18 +1918,18 @@ private:
     // Value Noise
 
     template <typename FNfloat>
-    float SingleValue(int seed, FNfloat x, FNfloat y) const
+    float SingleValue(long long seed, FNfloat x, FNfloat y) const
     {
-        int x0 = FastFloor(x);
-        int y0 = FastFloor(y);
+        long long x0 = FastFloor(x);
+        long long y0 = FastFloor(y);
 
         float xs = InterpHermite((float)(x - x0));
         float ys = InterpHermite((float)(y - y0));
 
         x0 *= PrimeX;
         y0 *= PrimeY;
-        int x1 = x0 + PrimeX;
-        int y1 = y0 + PrimeY;
+        long long x1 = x0 + PrimeX;
+        long long y1 = y0 + PrimeY;
 
         float xf0 = Lerp(ValCoord(seed, x0, y0), ValCoord(seed, x1, y0), xs);
         float xf1 = Lerp(ValCoord(seed, x0, y1), ValCoord(seed, x1, y1), xs);
@@ -1938,11 +1938,11 @@ private:
     }
 
     template <typename FNfloat>
-    float SingleValue(int seed, FNfloat x, FNfloat y, FNfloat z) const
+    float SingleValue(long long seed, FNfloat x, FNfloat y, FNfloat z) const
     {
-        int x0 = FastFloor(x);
-        int y0 = FastFloor(y);
-        int z0 = FastFloor(z);
+        long long x0 = FastFloor(x);
+        long long y0 = FastFloor(y);
+        long long z0 = FastFloor(z);
 
         float xs = InterpHermite((float)(x - x0));
         float ys = InterpHermite((float)(y - y0));
@@ -1951,9 +1951,9 @@ private:
         x0 *= PrimeX;
         y0 *= PrimeY;
         z0 *= PrimeZ;
-        int x1 = x0 + PrimeX;
-        int y1 = y0 + PrimeY;
-        int z1 = z0 + PrimeZ;
+        long long x1 = x0 + PrimeX;
+        long long y1 = y0 + PrimeY;
+        long long z1 = z0 + PrimeZ;
 
         float xf00 = Lerp(ValCoord(seed, x0, y0, z0), ValCoord(seed, x1, y0, z0), xs);
         float xf10 = Lerp(ValCoord(seed, x0, y1, z0), ValCoord(seed, x1, y1, z0), xs);
@@ -1970,7 +1970,7 @@ private:
     // Domain Warp
 
     template <typename FNfloat>
-    void DoSingleDomainWarp(int seed, float amp, float freq, FNfloat x, FNfloat y, FNfloat& xr, FNfloat& yr) const
+    void DoSingleDomainWarp(long long seed, float amp, float freq, FNfloat x, FNfloat y, FNfloat& xr, FNfloat& yr) const
     {
         switch (mDomainWarpType)
         {
@@ -1987,7 +1987,7 @@ private:
     }
 
     template <typename FNfloat>
-    void DoSingleDomainWarp(int seed, float amp, float freq, FNfloat x, FNfloat y, FNfloat z, FNfloat& xr, FNfloat& yr, FNfloat& zr) const
+    void DoSingleDomainWarp(long long seed, float amp, float freq, FNfloat x, FNfloat y, FNfloat z, FNfloat& xr, FNfloat& yr, FNfloat& zr) const
     {
         switch (mDomainWarpType)
         {
@@ -2009,7 +2009,7 @@ private:
     template <typename FNfloat>
     void DomainWarpSingle(FNfloat& x, FNfloat& y) const
     {
-        int seed = mSeed;
+        long long seed = mSeed;
         float amp = mDomainWarpAmp * mFractalBounding;
         float freq = mFrequency;
 
@@ -2023,7 +2023,7 @@ private:
     template <typename FNfloat>
     void DomainWarpSingle(FNfloat& x, FNfloat& y, FNfloat& z) const
     {
-        int seed = mSeed;
+        long long seed = mSeed;
         float amp = mDomainWarpAmp * mFractalBounding;
         float freq = mFrequency;
 
@@ -2041,11 +2041,11 @@ private:
     template <typename FNfloat>
     void DomainWarpFractalProgressive(FNfloat& x, FNfloat& y) const
     {
-        int seed = mSeed;
+        long long seed = mSeed;
         float amp = mDomainWarpAmp * mFractalBounding;
         float freq = mFrequency;
 
-        for (int i = 0; i < mOctaves; i++)
+        for (long long i = 0; i < mOctaves; i++)
         {
             FNfloat xs = x;
             FNfloat ys = y;
@@ -2062,11 +2062,11 @@ private:
     template <typename FNfloat>
     void DomainWarpFractalProgressive(FNfloat& x, FNfloat& y, FNfloat& z) const
     {
-        int seed = mSeed;
+        long long seed = mSeed;
         float amp = mDomainWarpAmp * mFractalBounding;
         float freq = mFrequency;
 
-        for (int i = 0; i < mOctaves; i++)
+        for (long long i = 0; i < mOctaves; i++)
         {
             FNfloat xs = x;
             FNfloat ys = y;
@@ -2091,11 +2091,11 @@ private:
         FNfloat ys = y;
         TransformDomainWarpCoordinate(xs, ys);
 
-        int seed = mSeed;
+        long long seed = mSeed;
         float amp = mDomainWarpAmp * mFractalBounding;
         float freq = mFrequency;
 
-        for (int i = 0; i < mOctaves; i++)
+        for (long long i = 0; i < mOctaves; i++)
         {
             DoSingleDomainWarp(seed, amp, freq, xs, ys, x, y);
 
@@ -2113,11 +2113,11 @@ private:
         FNfloat zs = z;
         TransformDomainWarpCoordinate(xs, ys, zs);
 
-        int seed = mSeed;
+        long long seed = mSeed;
         float amp = mDomainWarpAmp * mFractalBounding;
         float freq = mFrequency;
 
-        for (int i = 0; i < mOctaves; i++)
+        for (long long i = 0; i < mOctaves; i++)
         {
             DoSingleDomainWarp(seed, amp, freq, xs, ys, zs, x, y, z);
 
@@ -2131,24 +2131,24 @@ private:
     // Domain Warp Basic Grid
 
     template <typename FNfloat>
-    void SingleDomainWarpBasicGrid(int seed, float warpAmp, float frequency, FNfloat x, FNfloat y, FNfloat& xr, FNfloat& yr) const
+    void SingleDomainWarpBasicGrid(long long seed, float warpAmp, float frequency, FNfloat x, FNfloat y, FNfloat& xr, FNfloat& yr) const
     {
         FNfloat xf = x * frequency;
         FNfloat yf = y * frequency;
 
-        int x0 = FastFloor(xf);
-        int y0 = FastFloor(yf);
+        long long x0 = FastFloor(xf);
+        long long y0 = FastFloor(yf);
 
         float xs = InterpHermite((float)(xf - x0));
         float ys = InterpHermite((float)(yf - y0));
 
         x0 *= PrimeX;
         y0 *= PrimeY;
-        int x1 = x0 + PrimeX;
-        int y1 = y0 + PrimeY;
+        long long x1 = x0 + PrimeX;
+        long long y1 = y0 + PrimeY;
 
-        int hash0 = Hash(seed, x0, y0) & (255 << 1);
-        int hash1 = Hash(seed, x1, y0) & (255 << 1);
+        long long hash0 = Hash(seed, x0, y0) & (255 << 1);
+        long long hash1 = Hash(seed, x1, y0) & (255 << 1);
 
         float lx0x = Lerp(Lookup<float>::RandVecs2D[hash0], Lookup<float>::RandVecs2D[hash1], xs);
         float ly0x = Lerp(Lookup<float>::RandVecs2D[hash0 | 1], Lookup<float>::RandVecs2D[hash1 | 1], xs);
@@ -2164,15 +2164,15 @@ private:
     }
 
     template <typename FNfloat>
-    void SingleDomainWarpBasicGrid(int seed, float warpAmp, float frequency, FNfloat x, FNfloat y, FNfloat z, FNfloat& xr, FNfloat& yr, FNfloat& zr) const
+    void SingleDomainWarpBasicGrid(long long seed, float warpAmp, float frequency, FNfloat x, FNfloat y, FNfloat z, FNfloat& xr, FNfloat& yr, FNfloat& zr) const
     {
         FNfloat xf = x * frequency;
         FNfloat yf = y * frequency;
         FNfloat zf = z * frequency;
 
-        int x0 = FastFloor(xf);
-        int y0 = FastFloor(yf);
-        int z0 = FastFloor(zf);
+        long long x0 = FastFloor(xf);
+        long long y0 = FastFloor(yf);
+        long long z0 = FastFloor(zf);
 
         float xs = InterpHermite((float)(xf - x0));
         float ys = InterpHermite((float)(yf - y0));
@@ -2181,12 +2181,12 @@ private:
         x0 *= PrimeX;
         y0 *= PrimeY;
         z0 *= PrimeZ;
-        int x1 = x0 + PrimeX;
-        int y1 = y0 + PrimeY;
-        int z1 = z0 + PrimeZ;
+        long long x1 = x0 + PrimeX;
+        long long y1 = y0 + PrimeY;
+        long long z1 = z0 + PrimeZ;
 
-        int hash0 = Hash(seed, x0, y0, z0) & (255 << 2);
-        int hash1 = Hash(seed, x1, y0, z0) & (255 << 2);
+        long long hash0 = Hash(seed, x0, y0, z0) & (255 << 2);
+        long long hash1 = Hash(seed, x1, y0, z0) & (255 << 2);
 
         float lx0x = Lerp(Lookup<float>::RandVecs3D[hash0], Lookup<float>::RandVecs3D[hash1], xs);
         float ly0x = Lerp(Lookup<float>::RandVecs3D[hash0 | 1], Lookup<float>::RandVecs3D[hash1 | 1], xs);
@@ -2226,7 +2226,7 @@ private:
     // Domain Warp Simplex/OpenSimplex2
 
     template <typename FNfloat>
-    void SingleDomainWarpSimplexGradient(int seed, float warpAmp, float frequency, FNfloat x, FNfloat y, FNfloat& xr, FNfloat& yr, bool outGradOnly) const
+    void SingleDomainWarpSimplexGradient(long long seed, float warpAmp, float frequency, FNfloat x, FNfloat y, FNfloat& xr, FNfloat& yr, bool outGradOnly) const
     {
         const float SQRT3 = 1.7320508075688772935274463415059f;
         const float G2 = (3 - SQRT3) / 6;
@@ -2241,8 +2241,8 @@ private:
          * x += s; y += s;
         */
 
-        int i = FastFloor(x);
-        int j = FastFloor(y);
+        long long i = FastFloor(x);
+        long long j = FastFloor(y);
         float xi = (float)(x - i);
         float yi = (float)(y - j);
 
@@ -2324,7 +2324,7 @@ private:
     }
 
     template <typename FNfloat>
-    void SingleDomainWarpOpenSimplex2Gradient(int seed, float warpAmp, float frequency, FNfloat x, FNfloat y, FNfloat z, FNfloat& xr, FNfloat& yr, FNfloat& zr, bool outGradOnly) const
+    void SingleDomainWarpOpenSimplex2Gradient(long long seed, float warpAmp, float frequency, FNfloat x, FNfloat y, FNfloat z, FNfloat& xr, FNfloat& yr, FNfloat& zr, bool outGradOnly) const
     {
         x *= frequency;
         y *= frequency;
@@ -2337,16 +2337,16 @@ private:
          * x = r - x; y = r - y; z = r - z;
         */
 
-        int i = FastRound(x);
-        int j = FastRound(y);
-        int k = FastRound(z);
+        long long i = FastRound(x);
+        long long j = FastRound(y);
+        long long k = FastRound(z);
         float x0 = (float)x - i;
         float y0 = (float)y - j;
         float z0 = (float)z - k;
 
-        int xNSign = (int)(-x0 - 1.0f) | 1;
-        int yNSign = (int)(-y0 - 1.0f) | 1;
-        int zNSign = (int)(-z0 - 1.0f) | 1;
+        long long xNSign = (long long)(-x0 - 1.0f) | 1;
+        long long yNSign = (long long)(-y0 - 1.0f) | 1;
+        long long zNSign = (long long)(-z0 - 1.0f) | 1;
 
         float ax0 = xNSign * -x0;
         float ay0 = yNSign * -y0;
@@ -2360,7 +2360,7 @@ private:
         vx = vy = vz = 0;
 
         float a = (0.6f - x0 * x0) - (y0 * y0 + z0 * z0);
-        for (int l = 0; l < 2; l++)
+        for (long long l = 0; l < 2; l++)
         {
             if (a > 0)
             {
@@ -2376,9 +2376,9 @@ private:
             }
 
             float b = a + 1;
-            int i1 = i;
-            int j1 = j;
-            int k1 = k;
+            long long i1 = i;
+            long long j1 = j;
+            long long k1 = k;
             float x1 = x0;
             float y1 = y0;
             float z1 = z0;

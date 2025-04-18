@@ -44,9 +44,6 @@ static struct RendererState {
     LLGL::ResourceHeap* resource_heap = nullptr;
 
     LLGL::Buffer* chunk_vertex_buffer = nullptr;
-    LLGL::RenderTarget* world_render_target = nullptr;
-    LLGL::Texture* world_render_texture = nullptr;
-    LLGL::Texture* world_depth_texture = nullptr;
 
     LLGL::Texture* background_render_texture = nullptr;
     LLGL::RenderTarget* background_render_target = nullptr;
@@ -68,8 +65,7 @@ LLGL::Buffer* GameRenderer::ChunkVertexBuffer() { return state.chunk_vertex_buff
 bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
     sge::Renderer& renderer = sge::Engine::Renderer();
     const auto& context = renderer.Context();
-
-    ResizeTextures(resolution);
+    const LLGL::SwapChain* swap_chain = renderer.SwapChain();
 
     const sge::Vertex vertices[] = {
         sge::Vertex(0.0, 0.0),
@@ -81,27 +77,16 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
     state.chunk_vertex_buffer = renderer.CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex), "WorldRenderer VertexBuffer");
 
     {
-        LLGL::TextureDescriptor lightmap_texture_desc;
-        lightmap_texture_desc.type      = LLGL::TextureType::Texture2D;
-        lightmap_texture_desc.format    = LLGL::Format::RGBA8UNorm;
-        lightmap_texture_desc.extent    = LLGL::Extent3D(resolution.width, resolution.height, 1);
-        lightmap_texture_desc.miscFlags = 0;
-        lightmap_texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
-        lightmap_texture_desc.mipLevels = 1;
-
-        state.static_lightmap_texture = context->CreateTexture(lightmap_texture_desc);
-
-        LLGL::RenderTargetDescriptor render_target;
-        render_target.resolution = LLGL::Extent2D(resolution.width, resolution.height);
-        render_target.colorAttachments[0].texture = state.static_lightmap_texture;
-        state.static_lightmap_target = context->CreateRenderTarget(render_target);
-
         LLGL::RenderPassDescriptor static_lightmap_render_pass_desc;
         static_lightmap_render_pass_desc.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Undefined;
         static_lightmap_render_pass_desc.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
-        static_lightmap_render_pass_desc.colorAttachments[0].format = lightmap_texture_desc.format;
+        static_lightmap_render_pass_desc.colorAttachments[0].format = swap_chain->GetColorFormat();
         state.static_lightmap_render_pass = context->CreateRenderPass(static_lightmap_render_pass_desc);
     }
+
+    state.world_renderer.init(state.static_lightmap_render_pass);
+
+    ResizeTextures(resolution);
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.staticSamplers = {   
@@ -137,7 +122,7 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
     const LLGL::ResourceViewDescriptor resource_views[] = {
         renderer.GlobalUniformBuffer(),
         state.background_render_texture,
-        state.world_render_texture,
+        state.world_renderer.target_texture(),
         state.static_lightmap_texture,
         nullptr,
     };
@@ -156,8 +141,8 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
 
     state.postprocess_pipeline = context->CreatePipelineState(pipelineDesc);
 
-    state.world_renderer.init(state.static_lightmap_render_pass);
     state.background_renderer.init();
+    state.background_renderer.init_world(state.world_renderer);
     state.particle_renderer.init();
 
     state.world_batch.set_depth_enabled(true);
@@ -171,15 +156,13 @@ void GameRenderer::ResizeTextures(LLGL::Extent2D resolution) {
     const auto& context = renderer.Context();
     const auto* swap_chain = renderer.SwapChain();
 
-    SGE_RESOURCE_RELEASE(state.world_render_target);
-    SGE_RESOURCE_RELEASE(state.world_render_texture);
-    SGE_RESOURCE_RELEASE(state.world_depth_texture);
-
     SGE_RESOURCE_RELEASE(state.background_render_target);
     SGE_RESOURCE_RELEASE(state.background_render_texture);
 
     SGE_RESOURCE_RELEASE(state.static_lightmap_target);
     SGE_RESOURCE_RELEASE(state.static_lightmap_texture);
+
+    state.world_renderer.init_target(resolution);
 
     LLGL::TextureDescriptor texture_desc;
     texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
@@ -197,27 +180,15 @@ void GameRenderer::ResizeTextures(LLGL::Extent2D resolution) {
     depth_texture_desc.cpuAccessFlags = 0;
     depth_texture_desc.mipLevels = 1;
 
-    LLGL::Texture* world_depth_texture = context->CreateTexture(depth_texture_desc);
-    LLGL::Texture* world_render_texture = context->CreateTexture(texture_desc);
     LLGL::Texture* background_render_texture = context->CreateTexture(texture_desc);
     LLGL::Texture* static_lightmap_texture = context->CreateTexture(texture_desc);
 
-    state.world_depth_texture = world_depth_texture;
-    state.world_render_texture = world_render_texture;
     state.background_render_texture = background_render_texture;
     state.static_lightmap_texture = static_lightmap_texture;
-    
-    LLGL::RenderTargetDescriptor render_target_desc;
-    render_target_desc.resolution = resolution;
-    render_target_desc.colorAttachments[0] = world_render_texture;
-    render_target_desc.depthStencilAttachment = world_depth_texture;
-    render_target_desc.depthStencilAttachment.format = swap_chain->GetDepthStencilFormat();
-    state.world_render_target = context->CreateRenderTarget(render_target_desc);
     
     LLGL::RenderTargetDescriptor background_target_desc;
     background_target_desc.resolution = resolution;
     background_target_desc.colorAttachments[0] = background_render_texture;
-    background_target_desc.depthStencilAttachment.format = swap_chain->GetDepthStencilFormat();
     state.background_render_target = context->CreateRenderTarget(background_target_desc);
 
     LLGL::RenderTargetDescriptor static_lightmap_target_desc;
@@ -228,7 +199,7 @@ void GameRenderer::ResizeTextures(LLGL::Extent2D resolution) {
 
     if (state.resource_heap != nullptr) {
         context->WriteResourceHeap(*state.resource_heap, 1, {background_render_texture});
-        context->WriteResourceHeap(*state.resource_heap, 2, {world_render_texture});
+        context->WriteResourceHeap(*state.resource_heap, 2, {state.world_renderer.target_texture()});
         context->WriteResourceHeap(*state.resource_heap, 3, {static_lightmap_texture});
     }
 }
@@ -324,7 +295,7 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
         state.background_renderer.render();
     renderer.EndPass();
 
-    renderer.BeginPass(*state.world_render_target, clear_value, LLGL::ClearFlags::ColorDepth);
+    renderer.BeginPass(*state.world_renderer.target(), clear_value, LLGL::ClearFlags::ColorDepth);
         state.background_renderer.render_world();
         state.world_renderer.render(world.chunk_manager());
         state.particle_renderer.render_world();

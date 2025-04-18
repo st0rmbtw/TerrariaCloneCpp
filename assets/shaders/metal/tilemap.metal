@@ -16,15 +16,12 @@ struct Constants
 };
 
 struct TileData {
-    float2 tex_size;
-    float2 tex_padding;
-    float2 size;
-    float2 offset;
+    packed_float2 tex_size;
+    packed_float2 tex_padding;
+    packed_float2 size;
+    packed_float2 offset;
     float depth;
-};
-
-struct TileDataBuffer {
-    TileData data[3];
+    packed_float3 _padding;
 };
 
 struct VertexIn
@@ -44,9 +41,6 @@ struct VertexOut
     uint tile_id [[flat]];
 };
 
-constant constexpr uint TILE_TYPE_WALL = 1u;
-constant constexpr uint TILE_TYPE_TORCH = 2u;
-
 static float2 unpack_position(uint position) {
     uint x = position & 0xFF;
     uint y = (position >> 8) & 0xFF;
@@ -56,7 +50,7 @@ static float2 unpack_position(uint position) {
 vertex VertexOut VS(
     VertexIn inp [[stage_in]],
     constant Constants& constants [[buffer(2)]],
-    constant TileDataBuffer& tile_data_buffer [[buffer(3)]]
+    constant TileData* tile_data_buffer [[buffer(3)]]
 ) {
     const float2 world_pos = inp.i_world_pos;
 
@@ -65,7 +59,7 @@ vertex VertexOut VS(
     // Extract other 10 bits
     const uint tile_id = (inp.i_tile_data >> 6) & 0x3ff;
 
-    const TileData tile_data = tile_data_buffer.data[tile_type];
+    const TileData tile_data = tile_data_buffer[tile_type];
     const float depth = tile_data.depth;
     const float2 size = tile_data.size;
     const float2 tex_size = size / tile_data.tex_size;

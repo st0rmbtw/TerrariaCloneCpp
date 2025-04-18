@@ -72,25 +72,6 @@ add_compile_definitions(GLM_FORCE_INTRINSICS)
 
 option(ENABLE_TRACY "Enable Tracy profiler" OFF)
 
-set(LLGL_BUILD_RENDERER_NULL OFF CACHE BOOL "" FORCE)
-
-if (APPLE)
-    set(LLGL_BUILD_RENDERER_METAL ON CACHE BOOL "" FORCE)
-else()
-    set(LLGL_BUILD_RENDERER_METAL OFF CACHE BOOL "" FORCE)
-    set(LLGL_BUILD_RENDERER_VULKAN ON CACHE BOOL "" FORCE)
-    set(LLGL_VK_ENABLE_SPIRV_REFLECT ON CACHE BOOL "" FORCE)
-endif()
-
-if (WIN32)
-    set(LLGL_BUILD_RENDERER_DIRECT3D12 ON CACHE BOOL "" FORCE)
-    set(LLGL_BUILD_RENDERER_DIRECT3D11 ON CACHE BOOL "" FORCE)
-    set(LLGL_D3D11_ENABLE_FEATURELEVEL "Direct3D 11.1" CACHE STRING "" FORCE)
-else()
-    set(LLGL_BUILD_RENDERER_DIRECT3D12 OFF CACHE BOOL "" FORCE)
-    set(LLGL_BUILD_RENDERER_DIRECT3D11 OFF CACHE BOOL "" FORCE)
-endif()
-
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 
 unset(EXECUTABLE_OUTPUT_PATH CACHE)
@@ -171,7 +152,7 @@ foreach(shader ${VULKAN_SHADERS})
         OUTPUT
             assets/shaders/vulkan/${shader_name}.spv
         COMMAND
-            ${CMAKE_CURRENT_BINARY_DIR}/ShaderCompiler/ShaderCompiler${CMAKE_EXECUTABLE_SUFFIX} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${shader}
+            $<TARGET_FILE:ShaderCompiler> ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${shader}
         DEPENDS
             ${shader} ShaderCompiler
     )
@@ -195,7 +176,7 @@ foreach(font ${FONT_FILES})
         OUTPUT
             ${font_output_path} ${font_meta_output_path}
         COMMAND
-            ${CMAKE_CURRENT_BINARY_DIR}/FontAssetGenerator/FontAssetGenerator${CMAKE_EXECUTABLE_SUFFIX} ${font} ${CMAKE_CURRENT_BINARY_DIR}/${font_output_path}
+            $<TARGET_FILE:FontAssetGenerator> ${font} ${CMAKE_CURRENT_BINARY_DIR}/${font_output_path}
         DEPENDS
             ${font} FontAssetGenerator
     )

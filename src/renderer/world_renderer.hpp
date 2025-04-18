@@ -34,6 +34,13 @@ public:
     void render_lightmap(const sge::Camera& camera);
     void terminate();
 
+    void init_target(LLGL::Extent2D resolution);
+
+    inline LLGL::RenderTarget* target() { return m_target; }
+    inline LLGL::Texture* target_texture() { return m_target_texture; }
+    [[nodiscard]]
+    inline const LLGL::RenderPass* render_pass() const { return m_render_pass; }
+
     inline LLGL::Texture* light_texture() { return m_light_texture; }
     inline LLGL::RenderTarget* light_texture_target() { return m_light_texture_target; }
 
@@ -55,10 +62,19 @@ private:
     LLGL::Texture* m_light_texture = nullptr;
     LLGL::RenderTarget* m_light_texture_target = nullptr;
 
+    LLGL::Texture* m_target_texture = nullptr;
+    LLGL::Texture* m_depth_texture = nullptr;
+    LLGL::RenderTarget* m_target = nullptr;
+    LLGL::RenderPass* m_render_pass = nullptr;
+
     LLGL::PipelineState* m_light_set_light_sources_pipeline = nullptr;
     LLGL::PipelineState* m_light_vertical_pipeline = nullptr;
     LLGL::PipelineState* m_light_horizontal_pipeline = nullptr;
     LLGL::PipelineState* m_lightmap_pipeline = nullptr;
+
+    void (*m_dispatch_func)(LLGL::CommandBuffer*, uint32_t);
+
+    uint32_t m_workgroup_size = 16;
 
     uint32_t m_lightmap_width = 0;
     uint32_t m_lightmap_height = 0;
