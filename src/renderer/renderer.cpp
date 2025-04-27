@@ -18,6 +18,7 @@
 #include <SGE/engine.hpp>
 #include <SGE/renderer/macros.hpp>
 #include <SGE/renderer/batch.hpp>
+#include <SGE/types/binding_layout.hpp>
 
 #include "../assets.hpp"
 #include "../utils.hpp"
@@ -33,27 +34,21 @@ static struct RendererState {
     sge::Batch main_batch;
     sge::Batch world_batch;
     sge::Batch ui_batch;
+    sge::Batch premultiply_batch;
 
     sge::Rect camera_frustums[2];
     sge::Rect ui_frustum;
 
     ParticleRenderer particle_renderer;
-    BackgroundRenderer background_renderer;
     WorldRenderer world_renderer;
+    BackgroundRenderer background_renderer;
 
     LLGL::ResourceHeap* resource_heap = nullptr;
 
     LLGL::Buffer* chunk_vertex_buffer = nullptr;
 
-    LLGL::Texture* background_render_texture = nullptr;
-    LLGL::RenderTarget* background_render_target = nullptr;
-
-    LLGL::Texture* static_lightmap_texture = nullptr;
-    LLGL::RenderTarget* static_lightmap_target = nullptr;
-    LLGL::RenderPass* static_lightmap_render_pass = nullptr;
-
     LLGL::PipelineState* postprocess_pipeline = nullptr;
-    LLGL::Buffer* fullscreen_triangle_vertex_buffer = nullptr;
+    LLGL::Buffer* postprocess_vertex_buffer = nullptr;
 
     bool update_light = false;
 } state;
@@ -65,7 +60,6 @@ LLGL::Buffer* GameRenderer::ChunkVertexBuffer() { return state.chunk_vertex_buff
 bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
     sge::Renderer& renderer = sge::Engine::Renderer();
     const auto& context = renderer.Context();
-    const LLGL::SwapChain* swap_chain = renderer.SwapChain();
 
     const sge::Vertex vertices[] = {
         sge::Vertex(0.0, 0.0),
@@ -76,15 +70,8 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
 
     state.chunk_vertex_buffer = renderer.CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex), "WorldRenderer VertexBuffer");
 
-    {
-        LLGL::RenderPassDescriptor static_lightmap_render_pass_desc;
-        static_lightmap_render_pass_desc.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Undefined;
-        static_lightmap_render_pass_desc.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
-        static_lightmap_render_pass_desc.colorAttachments[0].format = swap_chain->GetColorFormat();
-        state.static_lightmap_render_pass = context->CreateRenderPass(static_lightmap_render_pass_desc);
-    }
-
-    state.world_renderer.init(state.static_lightmap_render_pass);
+    state.world_renderer.init();
+    state.background_renderer.init();
 
     ResizeTextures(resolution);
 
@@ -102,28 +89,24 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
         LLGL::CombinedTextureSamplerDescriptor{ "u_lightmap_texture", "u_lightmap_texture", "u_lightmap_sampler", 7 },
         LLGL::CombinedTextureSamplerDescriptor{ "u_light_texture", "u_light_texture", "u_light_sampler", 9 },
     };
-    pipelineLayoutDesc.heapBindings = {
-        LLGL::BindingDescriptor(
-            "GlobalUniformBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::ConstantBuffer,
-            LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(2)
-        ),
-
-        LLGL::BindingDescriptor("u_background_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 3),
-        LLGL::BindingDescriptor("u_world_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 5),
-        LLGL::BindingDescriptor("u_lightmap_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 7),
-        LLGL::BindingDescriptor("u_light_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, 9),
-    };
+    pipelineLayoutDesc.heapBindings = sge::BindingLayout(
+        LLGL::StageFlags::VertexStage | LLGL::StageFlags::FragmentStage,
+        {
+            sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer"),
+            sge::BindingLayoutItem::Texture(3, "u_background_texture"),
+            sge::BindingLayoutItem::Texture(5, "u_world_texture"),
+            sge::BindingLayoutItem::Texture(7, "u_lightmap_texture"),
+            sge::BindingLayoutItem::Texture(9, "u_light_texture"),
+        }
+    );
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
     const LLGL::ResourceViewDescriptor resource_views[] = {
         renderer.GlobalUniformBuffer(),
-        state.background_render_texture,
+        state.background_renderer.target_texture(),
         state.world_renderer.target_texture(),
-        state.static_lightmap_texture,
+        state.world_renderer.static_lightmap_texture(),
         nullptr,
     };
     state.resource_heap = context->CreateResourceHeap(LLGL::ResourceHeapDescriptor(pipelineLayout, ARRAY_LEN(resource_views)), resource_views);
@@ -141,12 +124,12 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
 
     state.postprocess_pipeline = context->CreatePipelineState(pipelineDesc);
 
-    state.background_renderer.init();
     state.background_renderer.init_world(state.world_renderer);
     state.particle_renderer.init();
 
-    state.world_batch.set_depth_enabled(true);
-    state.ui_batch.set_is_ui(true);
+    state.world_batch.SetDepthEnabled(true);
+    state.ui_batch.SetIsUi(true);
+    state.premultiply_batch.SetBlendMode(sge::BlendMode::PremultipliedAlpha);
 
     return true;
 }
@@ -154,53 +137,14 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
 void GameRenderer::ResizeTextures(LLGL::Extent2D resolution) {
     sge::Renderer& renderer = sge::Engine::Renderer();
     const auto& context = renderer.Context();
-    const auto* swap_chain = renderer.SwapChain();
 
-    SGE_RESOURCE_RELEASE(state.background_render_target);
-    SGE_RESOURCE_RELEASE(state.background_render_texture);
-
-    SGE_RESOURCE_RELEASE(state.static_lightmap_target);
-    SGE_RESOURCE_RELEASE(state.static_lightmap_texture);
-
-    state.world_renderer.init_target(resolution);
-
-    LLGL::TextureDescriptor texture_desc;
-    texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
-    texture_desc.format = swap_chain->GetColorFormat();
-    texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
-    texture_desc.miscFlags = 0;
-    texture_desc.cpuAccessFlags = 0;
-    texture_desc.mipLevels = 1;
-
-    LLGL::TextureDescriptor depth_texture_desc;
-    depth_texture_desc.extent = LLGL::Extent3D(resolution.width, resolution.height, 1);
-    depth_texture_desc.format = swap_chain->GetDepthStencilFormat();
-    depth_texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::DepthStencilAttachment;
-    depth_texture_desc.miscFlags = 0;
-    depth_texture_desc.cpuAccessFlags = 0;
-    depth_texture_desc.mipLevels = 1;
-
-    LLGL::Texture* background_render_texture = context->CreateTexture(texture_desc);
-    LLGL::Texture* static_lightmap_texture = context->CreateTexture(texture_desc);
-
-    state.background_render_texture = background_render_texture;
-    state.static_lightmap_texture = static_lightmap_texture;
-    
-    LLGL::RenderTargetDescriptor background_target_desc;
-    background_target_desc.resolution = resolution;
-    background_target_desc.colorAttachments[0] = background_render_texture;
-    state.background_render_target = context->CreateRenderTarget(background_target_desc);
-
-    LLGL::RenderTargetDescriptor static_lightmap_target_desc;
-    static_lightmap_target_desc.renderPass = state.static_lightmap_render_pass;
-    static_lightmap_target_desc.resolution = resolution;
-    static_lightmap_target_desc.colorAttachments[0] = static_lightmap_texture;
-    state.static_lightmap_target = context->CreateRenderTarget(static_lightmap_target_desc);
+    state.world_renderer.init_targets(resolution);
+    state.background_renderer.init_targets(resolution);
 
     if (state.resource_heap != nullptr) {
-        context->WriteResourceHeap(*state.resource_heap, 1, {background_render_texture});
+        context->WriteResourceHeap(*state.resource_heap, 1, {state.background_renderer.target_texture()});
         context->WriteResourceHeap(*state.resource_heap, 2, {state.world_renderer.target_texture()});
-        context->WriteResourceHeap(*state.resource_heap, 3, {static_lightmap_texture});
+        context->WriteResourceHeap(*state.resource_heap, 3, {state.world_renderer.static_lightmap_texture()});
     }
 }
 
@@ -211,7 +155,7 @@ void GameRenderer::InitWorldRenderer(const WorldData &world) {
     sge::Renderer& renderer = sge::Engine::Renderer();
     const auto& context = renderer.Context();
 
-    SGE_RESOURCE_RELEASE(state.fullscreen_triangle_vertex_buffer);
+    SGE_RESOURCE_RELEASE(state.postprocess_vertex_buffer);
 
     const glm::vec2 world_size = glm::vec2(world.area.size()) * TILE_SIZE;
 
@@ -220,7 +164,7 @@ void GameRenderer::InitWorldRenderer(const WorldData &world) {
         glm::vec2(3.0f,  1.0f),  glm::vec2(2.0f, 0.0f), world_size,
         glm::vec2(-1.0f, -3.0f), glm::vec2(0.0f, 2.0f), world_size,
     };
-    state.fullscreen_triangle_vertex_buffer = renderer.CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::PostProcessVertex));
+    state.postprocess_vertex_buffer = renderer.CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::PostProcessVertex));
 
     state.world_renderer.init_textures(world);
     context->WriteResourceHeap(*state.resource_heap, 4, {state.world_renderer.light_texture()});
@@ -259,6 +203,7 @@ void GameRenderer::Begin(const sge::Camera& camera, WorldData& world) {
     state.main_batch.Reset();
     state.world_batch.Reset();
     state.ui_batch.Reset();
+    state.premultiply_batch.Reset();
 }
 
 void GameRenderer::Render(const sge::Camera& camera, const World& world) {
@@ -275,27 +220,33 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
     renderer.PrepareBatch(state.main_batch);
     renderer.PrepareBatch(state.world_batch);
     renderer.PrepareBatch(state.ui_batch);
+    renderer.PrepareBatch(state.premultiply_batch);
 
     renderer.UploadBatchData();
 
     if (state.update_light) {
-        renderer.BeginPass(*state.world_renderer.light_texture_target(), clear_value, LLGL::ClearFlags::Color);
+        renderer.BeginPass(*state.world_renderer.light_texture_target());
+            renderer.Clear(clear_value, LLGL::ClearFlags::Color);
         renderer.EndPass();
 
         state.world_renderer.compute_light(camera, world);
 
-        renderer.BeginPass(*state.static_lightmap_target, clear_value, LLGL::ClearFlags::Color);
+        renderer.BeginPass(*state.world_renderer.static_lightmap_target());
+            renderer.Clear(clear_value, LLGL::ClearFlags::Color);
             state.world_renderer.render_lightmap(camera);
         renderer.EndPass();
 
         state.update_light = false;
     }
 
-    renderer.BeginPass(*state.background_render_target, clear_value, LLGL::ClearFlags::ColorDepth);
+    renderer.BeginPass(*state.background_renderer.target());
+        renderer.Clear(clear_value, LLGL::ClearFlags::Color);
         state.background_renderer.render();
     renderer.EndPass();
 
-    renderer.BeginPass(*state.world_renderer.target(), clear_value, LLGL::ClearFlags::ColorDepth);
+    renderer.BeginPass(*state.world_renderer.target());
+        renderer.Clear(clear_value, LLGL::ClearFlags::ColorDepth);
+
         state.background_renderer.render_world();
         state.world_renderer.render(world.chunk_manager());
         state.particle_renderer.render_world();
@@ -303,11 +254,12 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
         renderer.RenderBatch(state.world_batch);
     renderer.EndPass();
 
-    renderer.BeginMainPass(LLGL::ClearValue(1.0f, 0.0f, 0.0f, 1.0f, 0.0f));
-        commands->SetVertexBuffer(*state.fullscreen_triangle_vertex_buffer);
+    renderer.BeginMainPass();
+        renderer.Clear(clear_value);
+    
+        commands->SetVertexBuffer(*state.postprocess_vertex_buffer);
         commands->SetPipelineState(*state.postprocess_pipeline);
         commands->SetResourceHeap(*state.resource_heap);
-
         commands->Draw(3, 0);
 
         state.particle_renderer.render();
@@ -325,12 +277,26 @@ void GameRenderer::BeginOrderMode(int order, bool advance) {
     state.main_batch.BeginOrderMode(order, advance);
     state.world_batch.BeginOrderMode(order, advance);
     state.ui_batch.BeginOrderMode(order, advance);
+    state.premultiply_batch.BeginOrderMode(order, advance);
 }
 
 void GameRenderer::EndOrderMode() {
     state.main_batch.EndOrderMode();
     state.world_batch.EndOrderMode();
     state.ui_batch.EndOrderMode();
+    state.premultiply_batch.EndOrderMode();
+}
+
+void GameRenderer::BeginBlendMode(sge::BlendMode blend_mode) {
+    state.main_batch.BeginBlendMode(blend_mode);
+    state.world_batch.BeginBlendMode(blend_mode);
+    state.ui_batch.BeginBlendMode(blend_mode);
+}
+
+void GameRenderer::EndBlendMode() {
+    state.main_batch.EndBlendMode();
+    state.world_batch.EndBlendMode();
+    state.ui_batch.EndBlendMode();
 }
 
 uint32_t GameRenderer::DrawSprite(const sge::Sprite& sprite, sge::Order order) {
@@ -370,12 +336,21 @@ uint32_t GameRenderer::DrawAtlasSprite(const sge::TextureAtlasSprite& sprite, sg
 }
 
 uint32_t GameRenderer::DrawAtlasSpriteWorld(const sge::TextureAtlasSprite& sprite, sge::Order order) {
-    ZoneScopedN("Renderer::DrawAtlasSprite");
+    ZoneScopedN("Renderer::DrawAtlasSpriteWorld");
 
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
 
     return state.world_batch.DrawAtlasSprite(sprite, order);
+}
+
+uint32_t GameRenderer::DrawAtlasSpriteWorldPremultiplied(const sge::TextureAtlasSprite& sprite, sge::Order order) {
+    ZoneScopedN("Renderer::DrawAtlasSpriteWorldPremultiplied");
+
+    const sge::Rect aabb = sprite.calculate_aabb();
+    if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
+
+    return state.premultiply_batch.DrawAtlasSprite(sprite, order);
 }
 
 uint32_t GameRenderer::DrawAtlasSpriteUI(const sge::TextureAtlasSprite& sprite, sge::Order order) {

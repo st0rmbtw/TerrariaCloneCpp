@@ -9,6 +9,11 @@
 #include <LLGL/ResourceFlags.h>
 #include <LLGL/ShaderFlags.h>
 
+#include <SGE/engine.hpp>
+#include <SGE/renderer/macros.hpp>
+#include <SGE/types/binding_layout.hpp>
+#include <SGE/defines.hpp>
+
 #include <cstddef>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -18,9 +23,6 @@
 #include "../world/chunk.hpp"
 #include "../utils.hpp"
 #include "../world/utils.hpp"
-#include <SGE/engine.hpp>
-#include <SGE/renderer/macros.hpp>
-#include <SGE/defines.hpp>
 
 #include "types.hpp"
 
@@ -50,7 +52,7 @@ static SGE_FORCE_INLINE void blur_dispatch_metal(LLGL::CommandBuffer* commands, 
     commands->Dispatch(w, h, 1);
 }
 
-void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
+void WorldRenderer::init() {
     ZoneScopedN("WorldRenderer::init");
 
     using Constants::TILE_SIZE;
@@ -91,22 +93,13 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
 
     {
         LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
-        pipelineLayoutDesc.heapBindings = {
-            LLGL::BindingDescriptor(
-                "GlobalUniformBuffer",
-                LLGL::ResourceType::Buffer,
-                LLGL::BindFlags::ConstantBuffer,
-                LLGL::StageFlags::VertexStage,
-                LLGL::BindingSlot(2)
-            ),
-            LLGL::BindingDescriptor(
-                "TileDataBuffer",
-                LLGL::ResourceType::Buffer,
-                LLGL::BindFlags::ConstantBuffer,
-                LLGL::StageFlags::VertexStage,
-                LLGL::BindingSlot(3)
-            ),
-        };
+        pipelineLayoutDesc.heapBindings = sge::BindingLayout(
+            LLGL::StageFlags::VertexStage,
+            {
+                sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer"),
+                sge::BindingLayoutItem::ConstantBuffer(3, "TileDataBuffer"),
+            }
+        );
         pipelineLayoutDesc.bindings = {
             LLGL::BindingDescriptor("u_texture_array", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4)),
         };
@@ -167,29 +160,14 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
 
     {
         LLGL::PipelineLayoutDescriptor lightInitPipelineLayoutDesc;
-        lightInitPipelineLayoutDesc.heapBindings = {
-            LLGL::BindingDescriptor(
-                "GlobalUniformBuffer",
-                LLGL::ResourceType::Buffer,
-                LLGL::BindFlags::ConstantBuffer,
-                LLGL::StageFlags::ComputeStage,
-                LLGL::BindingSlot(3)
-            ),
-            LLGL::BindingDescriptor(
-                "LightBuffer",
-                LLGL::ResourceType::Buffer,
-                LLGL::BindFlags::Sampled,
-                LLGL::StageFlags::ComputeStage,
-                LLGL::BindingSlot(4)
-            ),
-            LLGL::BindingDescriptor(
-                "LightTexture",
-                LLGL::ResourceType::Texture,
-                LLGL::BindFlags::Storage,
-                LLGL::StageFlags::ComputeStage,
-                LLGL::BindingSlot(6)
-            ),
-        };
+        lightInitPipelineLayoutDesc.heapBindings = sge::BindingLayout(
+            LLGL::StageFlags::ComputeStage,
+            {
+                sge::BindingLayoutItem::ConstantBuffer(3, "GlobalUniformBuffer"),
+                sge::BindingLayoutItem::Buffer(4, "LightBuffer"),
+                sge::BindingLayoutItem::TextureStorage(6, "LightTexture")
+            }
+        );
 
         LLGL::PipelineLayout* lightInitPipelineLayout = context->CreatePipelineLayout(lightInitPipelineLayoutDesc);
 
@@ -212,29 +190,16 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
     }
     {
         LLGL::PipelineLayoutDescriptor lightBlurPipelineLayoutDesc;
-        lightBlurPipelineLayoutDesc.heapBindings = {
-            LLGL::BindingDescriptor(
-                "GlobalUniformBuffer",
-                LLGL::ResourceType::Buffer,
-                LLGL::BindFlags::ConstantBuffer,
-                LLGL::StageFlags::ComputeStage,
-                LLGL::BindingSlot(3)
-            ),
-            LLGL::BindingDescriptor(
-                "TileTexture",
-                LLGL::ResourceType::Texture,
-                backend.IsOpenGL() ? LLGL::BindFlags::Storage : LLGL::BindFlags::Sampled,
-                LLGL::StageFlags::ComputeStage,
-                LLGL::BindingSlot(5)
-            ),
-            LLGL::BindingDescriptor(
-                "LightTexture",
-                LLGL::ResourceType::Texture,
-                LLGL::BindFlags::Storage,
-                LLGL::StageFlags::ComputeStage,
-                LLGL::BindingSlot(6)
-            ),
-        };
+        lightBlurPipelineLayoutDesc.heapBindings = sge::BindingLayout(
+            LLGL::StageFlags::ComputeStage,
+            {
+                sge::BindingLayoutItem::ConstantBuffer(3, "GlobalUniformBuffer"),
+                backend.IsOpenGL()
+                    ? sge::BindingLayoutItem::TextureStorage(5, "TileTexture")
+                    : sge::BindingLayoutItem::Texture(5, "TileTexture"),
+                sge::BindingLayoutItem::TextureStorage(6, "LightTexture")
+            }
+        );
         lightBlurPipelineLayoutDesc.uniforms = {
             LLGL::UniformDescriptor("uniform_min", LLGL::UniformType::UInt2),
             LLGL::UniformDescriptor("uniform_max", LLGL::UniformType::UInt2),
@@ -265,24 +230,18 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
     }
     {
         LLGL::PipelineLayoutDescriptor lightmapPipelineLayoutDesc;
-        lightmapPipelineLayoutDesc.heapBindings = {
-            LLGL::BindingDescriptor(
-                "GlobalUniformBuffer",
-                LLGL::ResourceType::Buffer,
-                LLGL::BindFlags::ConstantBuffer,
-                LLGL::StageFlags::VertexStage,
-                LLGL::BindingSlot(2)
-            ),
-        };
-        lightmapPipelineLayoutDesc.bindings = {
-            LLGL::BindingDescriptor(
-                "u_texture",
-                LLGL::ResourceType::Texture,
-                LLGL::BindFlags::Sampled,
-                LLGL::StageFlags::FragmentStage,
-                LLGL::BindingSlot(3)
-            ),
-        };
+        lightmapPipelineLayoutDesc.heapBindings = sge::BindingLayout(
+            LLGL::StageFlags::VertexStage,
+            {
+                sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer")
+            }
+        );
+        lightmapPipelineLayoutDesc.bindings = sge::BindingLayout(
+            LLGL::StageFlags::FragmentStage,
+            {
+                sge::BindingLayoutItem::Texture(3, "u_texture")
+            }
+        );
         lightmapPipelineLayoutDesc.staticSamplers = {
             LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4), Assets::GetSampler(sge::TextureSampler::Nearest).descriptor())
         };
@@ -308,7 +267,7 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
         lightPipelineDesc.indexFormat = LLGL::Format::R16UInt;
         lightPipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
         lightPipelineDesc.rasterizer.frontCCW = true;
-        lightPipelineDesc.renderPass = static_lightmap_render_pass;
+        lightPipelineDesc.renderPass = m_static_lightmap_render_pass;
         lightPipelineDesc.blend = LLGL::BlendDescriptor {
             .targets = {
                 LLGL::BlendTargetDescriptor {
@@ -321,7 +280,7 @@ void WorldRenderer::init(const LLGL::RenderPass* static_lightmap_render_pass) {
     }
 }
 
-void WorldRenderer::init_target(LLGL::Extent2D resolution) {
+void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
     const auto& context = m_renderer->Context();
     const LLGL::SwapChain* swap_chain = m_renderer->SwapChain();
 
@@ -329,28 +288,28 @@ void WorldRenderer::init_target(LLGL::Extent2D resolution) {
     SGE_RESOURCE_RELEASE(m_target_texture);
     SGE_RESOURCE_RELEASE(m_depth_texture);
 
+    SGE_RESOURCE_RELEASE(m_static_lightmap_target);
+    SGE_RESOURCE_RELEASE(m_static_lightmap_texture);
+
     LLGL::TextureDescriptor texture_desc;
-    texture_desc.extent.width = resolution.width;
-    texture_desc.extent.height = resolution.height;
     texture_desc.extent.depth = 1;
-    texture_desc.format = swap_chain->GetColorFormat();
-    texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
     texture_desc.miscFlags = 0;
     texture_desc.cpuAccessFlags = 0;
     texture_desc.mipLevels = 1;
 
-    LLGL::TextureDescriptor depth_texture_desc;
+    texture_desc.extent.width = resolution.width;
+    texture_desc.extent.height = resolution.height;
+    texture_desc.format = swap_chain->GetColorFormat();
+    texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
+    m_target_texture = context->CreateTexture(texture_desc);
+    m_static_lightmap_texture = context->CreateTexture(texture_desc);
+
+    LLGL::TextureDescriptor depth_texture_desc = texture_desc;
     depth_texture_desc.extent.width = resolution.width;
     depth_texture_desc.extent.height = resolution.height;
-    depth_texture_desc.extent.depth = 1;
     depth_texture_desc.format = swap_chain->GetDepthStencilFormat();
     depth_texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::DepthStencilAttachment;
-    depth_texture_desc.miscFlags = 0;
-    depth_texture_desc.cpuAccessFlags = 0;
-    depth_texture_desc.mipLevels = 1;
-
     m_depth_texture = context->CreateTexture(depth_texture_desc);
-    m_target_texture = context->CreateTexture(texture_desc);
 
     if (m_render_pass == nullptr) {
         LLGL::RenderPassDescriptor render_pass;
@@ -364,6 +323,14 @@ void WorldRenderer::init_target(LLGL::Extent2D resolution) {
         m_render_pass = context->CreateRenderPass(render_pass);
     }
 
+    if (m_static_lightmap_render_pass == nullptr) {
+        LLGL::RenderPassDescriptor static_lightmap_render_pass_desc;
+        static_lightmap_render_pass_desc.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Undefined;
+        static_lightmap_render_pass_desc.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
+        static_lightmap_render_pass_desc.colorAttachments[0].format = swap_chain->GetColorFormat();
+        m_static_lightmap_render_pass = context->CreateRenderPass(static_lightmap_render_pass_desc);
+    }
+
     LLGL::RenderTargetDescriptor render_target_desc;
     render_target_desc.resolution.width = resolution.width;
     render_target_desc.resolution.height = resolution.height;
@@ -371,6 +338,12 @@ void WorldRenderer::init_target(LLGL::Extent2D resolution) {
     render_target_desc.depthStencilAttachment.texture = m_depth_texture;
     render_target_desc.renderPass = m_render_pass;
     m_target = context->CreateRenderTarget(render_target_desc);
+
+    LLGL::RenderTargetDescriptor static_lightmap_target_desc;
+    static_lightmap_target_desc.renderPass = m_static_lightmap_render_pass;
+    static_lightmap_target_desc.resolution = resolution;
+    static_lightmap_target_desc.colorAttachments[0] = m_static_lightmap_texture;
+    m_static_lightmap_target = context->CreateRenderTarget(static_lightmap_target_desc);
 }
 
 void WorldRenderer::init_textures(const WorldData& world) {

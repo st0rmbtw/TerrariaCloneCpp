@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <deque>
+#include <unordered_set>
 
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
@@ -31,6 +32,7 @@ struct WorldData {
     Layers layers;
     glm::uvec2 spawn_point;
     std::vector<LightMapTask> lightmap_tasks;
+    std::unordered_set<TilePos> torches;
     std::deque<std::pair<TilePos, int>> changed_tiles;
 
     [[nodiscard]]
@@ -44,25 +46,15 @@ struct WorldData {
     }
 
     [[nodiscard]]
-    std::optional<Tile> get_tile_by_index(uint32_t index) const {
-        if ((area.width() * area.height()) < index) return std::nullopt;
-        return this->blocks[index];
-    }
-
-    [[nodiscard]]
     std::optional<Tile> get_tile(TilePos pos) const {
-        return get_tile_by_index(get_tile_index(pos));
-    }
-
-    [[nodiscard]]
-    std::optional<Wall> get_wall_by_index(uint32_t index) const {
-        if ((area.width() * area.height()) < index) return std::nullopt;
-        return this->walls[index];
+        if (!is_tilepos_valid(pos)) return std::nullopt;
+        return this->blocks[get_tile_index(pos)];
     }
 
     [[nodiscard]]
     std::optional<Wall> get_wall(TilePos pos) const {
-        return get_wall_by_index(get_tile_index(pos));
+        if (!is_tilepos_valid(pos)) return std::nullopt;
+        return this->walls[get_tile_index(pos)];
     }
 
     [[nodiscard]]
@@ -74,7 +66,7 @@ struct WorldData {
     [[nodiscard]]
     inline bool tile_exists(TilePos pos) const {
         if (!is_tilepos_valid(pos)) return false;
-        return blocks[this->get_tile_index(pos)].has_value();
+        return blocks[get_tile_index(pos)].has_value();
     }
 
     [[nodiscard]]

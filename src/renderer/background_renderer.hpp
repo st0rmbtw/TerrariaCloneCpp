@@ -23,6 +23,7 @@ class BackgroundRenderer {
 public:
     void init();
     void init_world(WorldRenderer& renderer);
+    void init_targets(LLGL::Extent2D resolution);
     void render();
     void render_world();
     void terminate();
@@ -36,6 +37,10 @@ public:
         draw_layer_internal(layer, &m_world_buffer_ptr);
         m_world_layer_count++;
     }
+
+    [[nodiscard]]
+    LLGL::RenderTarget* target() { return m_background_render_target; }
+    LLGL::Texture* target_texture() { return m_background_render_texture; }
 
 private:
     static void draw_layer_internal(const BackgroundLayer& layer, BackgroundInstance** p_buffer);
@@ -63,6 +68,9 @@ private:
 
     BackgroundInstance* m_world_buffer = nullptr;
     BackgroundInstance* m_world_buffer_ptr = nullptr;
+
+    LLGL::RenderTarget* m_background_render_target;
+    LLGL::Texture* m_background_render_texture;
 };
 
 #endif

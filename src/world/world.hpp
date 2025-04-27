@@ -7,6 +7,7 @@
 
 #include <SGE/math/rect.hpp>
 #include <SGE/renderer/camera.hpp>
+#include <SGE/time/timer.hpp>
 
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
@@ -137,8 +138,12 @@ private:
     std::vector<TileDigAnimation> m_tile_dig_animations;
     std::unordered_map<TilePos, TileCracks> m_tile_cracks;
     std::unordered_map<TilePos, TileCracks> m_wall_cracks;
+    sge::Timer m_anim_timer = sge::Timer::from_seconds(1.0f / 15.0f, sge::TimerMode::Repeating);
     Light* m_lights = nullptr;
     uint32_t m_light_count = 0; 
+
+    glm::vec2 offsets[7];
+
     bool m_changed = false;
     bool m_lightmap_changed = false;
 };

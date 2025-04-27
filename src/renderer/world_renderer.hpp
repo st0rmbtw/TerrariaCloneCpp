@@ -20,7 +20,7 @@ class WorldRenderer {
 public:
     WorldRenderer() = default;
 
-    void init(const LLGL::RenderPass* static_lightmap_render_pass);
+    void init();
     void init_textures(const WorldData& world);
     void init_lightmap_chunks(const WorldData& world);
 
@@ -34,10 +34,14 @@ public:
     void render_lightmap(const sge::Camera& camera);
     void terminate();
 
-    void init_target(LLGL::Extent2D resolution);
+    void init_targets(LLGL::Extent2D resolution);
 
     inline LLGL::RenderTarget* target() { return m_target; }
     inline LLGL::Texture* target_texture() { return m_target_texture; }
+
+    inline LLGL::RenderTarget* static_lightmap_target() { return m_static_lightmap_target; }
+    inline LLGL::Texture* static_lightmap_texture() { return m_static_lightmap_texture; }
+
     [[nodiscard]]
     inline const LLGL::RenderPass* render_pass() const { return m_render_pass; }
 
@@ -61,6 +65,10 @@ private:
 
     LLGL::Texture* m_light_texture = nullptr;
     LLGL::RenderTarget* m_light_texture_target = nullptr;
+
+    LLGL::Texture* m_static_lightmap_texture = nullptr;
+    LLGL::RenderTarget* m_static_lightmap_target = nullptr;
+    LLGL::RenderPass* m_static_lightmap_render_pass = nullptr;
 
     LLGL::Texture* m_target_texture = nullptr;
     LLGL::Texture* m_depth_texture = nullptr;

@@ -8,6 +8,7 @@
 #include <SGE/log.hpp>
 #include <SGE/engine.hpp>
 #include <SGE/renderer/macros.hpp>
+#include <SGE/types/binding_layout.hpp>
 
 #include "types.hpp"
 
@@ -57,16 +58,13 @@ void BackgroundRenderer::init() {
     }
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
-    pipelineLayoutDesc.heapBindings = {
-        LLGL::BindingDescriptor(
-            "GlobalUniformBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::ConstantBuffer,
-            LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(2)
-        ),
-        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
-    };
+    pipelineLayoutDesc.heapBindings = sge::BindingLayout(
+        LLGL::StageFlags::VertexStage | LLGL::StageFlags::FragmentStage,
+        {
+            sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer"),
+            sge::BindingLayoutItem::Texture(3, "u_texture"),
+        }
+    );
     pipelineLayoutDesc.staticSamplers = {
         LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4), backgrounds_texture.sampler().descriptor()),
     };
@@ -103,6 +101,30 @@ void BackgroundRenderer::init() {
     if (const LLGL::Report* report = m_pipeline->GetReport()) {
         if (report->HasErrors()) SGE_LOG_ERROR("%s", report->GetText());
     }
+}
+
+void BackgroundRenderer::init_targets(LLGL::Extent2D resolution) {
+    const auto& context = m_renderer->Context();
+    const auto* swap_chain = m_renderer->SwapChain();
+
+    SGE_RESOURCE_RELEASE(m_background_render_target);
+    SGE_RESOURCE_RELEASE(m_background_render_texture);
+    
+    LLGL::TextureDescriptor texture_desc;
+    texture_desc.extent.width = resolution.width;
+    texture_desc.extent.height = resolution.height;
+    texture_desc.format = swap_chain->GetColorFormat();
+    texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
+    texture_desc.miscFlags = 0;
+    texture_desc.cpuAccessFlags = 0;
+    texture_desc.mipLevels = 1;
+
+    m_background_render_texture = context->CreateTexture(texture_desc);
+    
+    LLGL::RenderTargetDescriptor background_target_desc;
+    background_target_desc.resolution = resolution;
+    background_target_desc.colorAttachments[0] = m_background_render_texture;
+    m_background_render_target = context->CreateRenderTarget(background_target_desc);
 }
 
 void BackgroundRenderer::init_world(WorldRenderer& world_renderer) {

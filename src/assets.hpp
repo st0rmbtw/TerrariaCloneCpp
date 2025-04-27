@@ -42,22 +42,24 @@ enum class TextureAsset : uint8_t {
     Tiles1,
     Tiles2,
     Tiles4,
-    Tiles30
+    Tiles30,
+
+    Flames0
 };
 
 enum class BackgroundAsset : uint16_t {
     Background0 = 0,
-    Background7 = 7,
-    Background55 = 55,
-    Background74 = 74,
-    Background77 = 77,
-    Background78 = 78,
-    Background90 = 90,
-    Background91 = 91,
-    Background92 = 92,
-    Background93 = 93,
-    Background112 = 112,
-    Background114 = 114,
+    Background7,
+    Background55,
+    Background74,
+    Background77,
+    Background78,
+    Background90,
+    Background91,
+    Background92,
+    Background93,
+    Background112,
+    Background114,
     Count
 };
 

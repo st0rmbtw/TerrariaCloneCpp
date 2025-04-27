@@ -16,9 +16,9 @@
 #include <SGE/engine.hpp>
 #include <SGE/types/shader_pipeline.hpp>
 #include <SGE/types/texture.hpp>
+#include <SGE/types/attributes.hpp>
 #include <SGE/log.hpp>
 #include <SGE/utils.hpp>
-#include "renderer/types.hpp"
 #include "types/block.hpp"
 #include "types/wall.hpp"
 
@@ -109,7 +109,9 @@ static const std::pair<TextureAsset, AssetTexture> TEXTURE_ASSETS[] = {
 
     { TextureAsset::TileCracks, AssetTexture("assets/sprites/tiles/TileCracks.png", sge::TextureSampler::Nearest) },
 
-    { TextureAsset::Particles, AssetTexture("assets/sprites/Particles.png") }
+    { TextureAsset::Particles, AssetTexture("assets/sprites/Particles.png") },
+
+    { TextureAsset::Flames0, AssetTexture("assets/sprites/Flame_0.png") }
 };
 
 static const std::pair<TextureAsset, AssetTextureAtlas> TEXTURE_ATLAS_ASSETS[] = {
@@ -124,7 +126,9 @@ static const std::pair<TextureAsset, AssetTextureAtlas> TEXTURE_ATLAS_ASSETS[] =
     { TextureAsset::PlayerRightEye,     AssetTextureAtlas(1, 20, glm::uvec2(40, 64)) },
     { TextureAsset::Particles,          AssetTextureAtlas(PARTICLES_ATLAS_COLUMNS, 12, glm::uvec2(8), glm::uvec2(2)) },
 
-    { TextureAsset::TileCracks,         AssetTextureAtlas(6, 4, glm::uvec2(16)) }
+    { TextureAsset::TileCracks,         AssetTextureAtlas(6, 4, glm::uvec2(16)) },
+
+    { TextureAsset::Flames0,            AssetTextureAtlas(6, 24, glm::uvec2(20), glm::uvec2(0, 2)) }
 };
 
 #define BLOCK_ASSET(BLOCK_TYPE, TEXTURE_ASSET, PATH, SIZE) std::make_tuple(static_cast<uint16_t>(BLOCK_TYPE), TEXTURE_ASSET, PATH, SIZE)
@@ -422,162 +426,54 @@ void Assets::InitVertexFormats() {
     LLGL::VertexFormat postprocess_vertex_format;
     LLGL::VertexFormat static_lightmap_vertex_format;
 
-    if (backend.IsGLSL()) {
-        tilemap_vertex_format.attributes = {
-            {"a_position", LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 },
-        };
-    } else if (backend.IsHLSL()) {
-        tilemap_vertex_format.attributes = {
-            {"Position", LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 },
-        };
-    } else {
-        tilemap_vertex_format.attributes = {
-            {"position", LLGL::Format::RG32Float, 0, 0, sizeof(sge::Vertex), 0, 0 }
-        };
-    }
+    tilemap_vertex_format.attributes = sge::Attributes({
+        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_position", "Position"),
+    }).ToLLGL(backend);
 
-    if (backend.IsGLSL()) {
-        tilemap_instance_format.attributes = {
-            {"i_position",  LLGL::Format::R16UInt,    1, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
-            {"i_atlas_pos", LLGL::Format::RG32Float,  2, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
-            {"i_world_pos", LLGL::Format::RG32Float,  3, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
-            {"i_tile_data", LLGL::Format::R32UInt,    4, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
-        };
-    } else if (backend.IsHLSL()) {
-        tilemap_instance_format.attributes = {
-            {"I_Position",  LLGL::Format::R16UInt,    1, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
-            {"I_AtlasPos",  LLGL::Format::RG32Float,  2, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
-            {"I_WorldPos",  LLGL::Format::RG32Float,  3, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
-            {"I_TileData",  LLGL::Format::R16UInt,    4, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
-        };
-    } else {
-        tilemap_instance_format.attributes = {
-            {"i_position",  LLGL::Format::R16UInt,    1, offsetof(ChunkInstance,position),  sizeof(ChunkInstance), 1, 1},
-            {"i_atlas_pos", LLGL::Format::RG32Float,  2, offsetof(ChunkInstance,atlas_pos), sizeof(ChunkInstance), 1, 1},
-            {"i_world_pos", LLGL::Format::RG32Float,  3, offsetof(ChunkInstance,world_pos), sizeof(ChunkInstance), 1, 1},
-            {"i_tile_data", LLGL::Format::R32UInt,    4, offsetof(ChunkInstance,tile_data), sizeof(ChunkInstance), 1, 1},
-        };
-    }
+    tilemap_instance_format.attributes = sge::Attributes({
+        sge::Attribute::Instance(LLGL::Format::R16UInt, "i_position", "I_Position", 1),
+        sge::Attribute::Instance(LLGL::Format::RG32Float, "i_atlas_pos", "I_AtlasPos", 1),
+        sge::Attribute::Instance(LLGL::Format::RG32Float, "i_world_pos", "I_WorldPos", 1),
+        sge::Attribute::Instance(LLGL::Format::R32UInt, "i_tile_data", "I_TileData", 1),
+    }).ToLLGL(backend, 1);
 
-    if (backend.IsGLSL()) {
-        background_vertex_format.attributes = {
-            {"a_position",     LLGL::Format::RG32Float, 0, 0, sizeof(BackgroundVertex), 0, 0},
-            {"a_texture_size", LLGL::Format::RG32Float, 1, offsetof(BackgroundVertex,texture_size), sizeof(BackgroundVertex), 0, 0},
-        };
-    } else if (backend.IsHLSL()) {
-        background_vertex_format.attributes = {
-            {"Position",       LLGL::Format::RG32Float, 0, 0, sizeof(BackgroundVertex), 0, 0},
-            {"TextureSize",    LLGL::Format::RG32Float, 1, offsetof(BackgroundVertex,texture_size), sizeof(BackgroundVertex), 0, 0},
-        };
-    } else {
-        background_vertex_format.attributes = {
-            {"position",       LLGL::Format::RG32Float, 0, 0, sizeof(BackgroundVertex), 0, 0},
-            {"a_texture_size", LLGL::Format::RG32Float, 1, offsetof(BackgroundVertex,texture_size), sizeof(BackgroundVertex), 0, 0},
-        };
-    }
+    background_vertex_format.attributes = sge::Attributes({
+        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_position", "Position"),
+        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_texture_size", "TextureSize")
+    }).ToLLGL(backend);
 
-    if (backend.IsGLSL()) {
-        background_instance_format.attributes = {
-            {"i_position", LLGL::Format::RG32Float,  2, offsetof(BackgroundInstance, position), sizeof(BackgroundInstance), 1, 1},
-            {"i_size",     LLGL::Format::RG32Float,  3, offsetof(BackgroundInstance, size),     sizeof(BackgroundInstance), 1, 1},
-            {"i_tex_size", LLGL::Format::RG32Float,  4, offsetof(BackgroundInstance, tex_size), sizeof(BackgroundInstance), 1, 1},
-            {"i_speed",    LLGL::Format::RG32Float,  5, offsetof(BackgroundInstance, speed),    sizeof(BackgroundInstance), 1, 1},
-            {"i_id",       LLGL::Format::R32UInt,    6, offsetof(BackgroundInstance, id),       sizeof(BackgroundInstance), 1, 1},
-            {"i_flags",    LLGL::Format::R32SInt,    7, offsetof(BackgroundInstance, flags),    sizeof(BackgroundInstance), 1, 1},
-        };
-    } else if (backend.IsHLSL()) {
-        background_instance_format.attributes = {
-            {"I_Position", LLGL::Format::RG32Float,  2, offsetof(BackgroundInstance, position), sizeof(BackgroundInstance), 1, 1},
-            {"I_Size",     LLGL::Format::RG32Float,  3, offsetof(BackgroundInstance, size),     sizeof(BackgroundInstance), 1, 1},
-            {"I_TexSize",  LLGL::Format::RG32Float,  4, offsetof(BackgroundInstance, tex_size), sizeof(BackgroundInstance), 1, 1},
-            {"I_Speed",    LLGL::Format::RG32Float,  5, offsetof(BackgroundInstance, speed),    sizeof(BackgroundInstance), 1, 1},
-            {"I_ID",       LLGL::Format::R32UInt,    6, offsetof(BackgroundInstance, id),       sizeof(BackgroundInstance), 1, 1},
-            {"I_Flags",    LLGL::Format::R32SInt,    7, offsetof(BackgroundInstance, flags),    sizeof(BackgroundInstance), 1, 1},
-        };
-    } else {
-        background_instance_format.attributes = {
-            {"i_position", LLGL::Format::RG32Float,  2, offsetof(BackgroundInstance, position), sizeof(BackgroundInstance), 1, 1},
-            {"i_size",     LLGL::Format::RG32Float,  3, offsetof(BackgroundInstance, size),     sizeof(BackgroundInstance), 1, 1},
-            {"i_tex_size", LLGL::Format::RG32Float,  4, offsetof(BackgroundInstance, tex_size), sizeof(BackgroundInstance), 1, 1},
-            {"i_speed",    LLGL::Format::RG32Float,  5, offsetof(BackgroundInstance, speed),    sizeof(BackgroundInstance), 1, 1},
-            {"i_id",       LLGL::Format::R32UInt,    6, offsetof(BackgroundInstance, id),       sizeof(BackgroundInstance), 1, 1},
-            {"i_flags",    LLGL::Format::R32SInt,    7, offsetof(BackgroundInstance, flags),    sizeof(BackgroundInstance), 1, 1},
-        };
-    }
+    background_instance_format.attributes = sge::Attributes({
+        sge::Attribute::Instance(LLGL::Format::RG32Float, "i_position", "I_Position", 1),
+        sge::Attribute::Instance(LLGL::Format::RG32Float, "i_size", "I_Size", 1),
+        sge::Attribute::Instance(LLGL::Format::RG32Float, "i_tex_size", "I_TexSize", 1),
+        sge::Attribute::Instance(LLGL::Format::RG32Float, "i_speed", "I_Speed", 1),
+        sge::Attribute::Instance(LLGL::Format::R32UInt, "i_id", "I_ID", 1),
+        sge::Attribute::Instance(LLGL::Format::R32SInt, "i_flags", "I_Flags", 1),
+    }).ToLLGL(backend, 2);
 
-    if (backend.IsGLSL()) {
-        particle_vertex_format.attributes = {
-            { "a_position",      LLGL::Format::RG32Float, 0, 0,                                      sizeof(ParticleVertex), 0 },
-            { "a_inv_tex_size",  LLGL::Format::RG32Float, 1, offsetof(ParticleVertex, inv_tex_size), sizeof(ParticleVertex), 0 },
-            { "a_tex_size",      LLGL::Format::RG32Float, 2, offsetof(ParticleVertex, tex_size),     sizeof(ParticleVertex), 0 }
-        };
-    } else if (backend.IsHLSL()) {
-        particle_vertex_format.attributes = {
-            { "Position",   LLGL::Format::RG32Float, 0, 0,                                      sizeof(ParticleVertex), 0 },
-            { "InvTexSize", LLGL::Format::RG32Float, 1, offsetof(ParticleVertex, inv_tex_size), sizeof(ParticleVertex), 0 },
-            { "TexSize",    LLGL::Format::RG32Float, 2, offsetof(ParticleVertex, tex_size),     sizeof(ParticleVertex), 0 },
-        };
-    } else {
-        particle_vertex_format.attributes = {
-            { "position",     LLGL::Format::RG32Float, 0, 0,                                      sizeof(ParticleVertex), 0 },
-            { "inv_tex_size", LLGL::Format::RG32Float, 1, offsetof(ParticleVertex, inv_tex_size), sizeof(ParticleVertex), 0 },
-            { "tex_size",     LLGL::Format::RG32Float, 2, offsetof(ParticleVertex, tex_size),     sizeof(ParticleVertex), 0 }
-        };
-    }
+    particle_vertex_format.attributes = sge::Attributes({
+        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_position", "Position"),
+        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_inv_tex_size", "InvTexSize"),
+        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_tex_size", "TexSize"),
+    }).ToLLGL(backend);
 
-    if (backend.IsGLSL()) {
-        particle_instance_format.attributes = {
-            { "i_uv",       LLGL::Format::RG32Float, 3, offsetof(ParticleInstance, uv),       sizeof(ParticleInstance), 1, 1},
-            { "i_depth",    LLGL::Format::R32Float,  4, offsetof(ParticleInstance, depth),    sizeof(ParticleInstance), 1, 1},
-            { "i_id",       LLGL::Format::R32UInt,   5, offsetof(ParticleInstance, id),       sizeof(ParticleInstance), 1, 1 },
-            { "I_is_world", LLGL::Format::R32UInt,   6, offsetof(ParticleInstance, is_world), sizeof(ParticleInstance), 1, 1 }
-        };
-    } else if (backend.IsHLSL()) {
-        particle_instance_format.attributes = {
-            { "I_UV",      LLGL::Format::RG32Float, 3, offsetof(ParticleInstance, uv),       sizeof(ParticleInstance), 1, 1 },
-            { "I_Depth",   LLGL::Format::R32Float,  4, offsetof(ParticleInstance, depth),    sizeof(ParticleInstance), 1, 1 },
-            { "I_ID",      LLGL::Format::R32UInt,   5, offsetof(ParticleInstance, id),       sizeof(ParticleInstance), 1, 1 },
-            { "I_IsWorld", LLGL::Format::R32UInt,   6, offsetof(ParticleInstance, is_world), sizeof(ParticleInstance), 1, 1 }
-        };
-    } else {
-        particle_instance_format.attributes = {
-            { "i_uv",       LLGL::Format::RG32Float, 3, offsetof(ParticleInstance, uv),       sizeof(ParticleInstance), 1, 1 },
-            { "i_depth",    LLGL::Format::R32Float,  4, offsetof(ParticleInstance, depth),    sizeof(ParticleInstance), 1, 1 },
-            { "i_id",       LLGL::Format::R32UInt,   5, offsetof(ParticleInstance, id),       sizeof(ParticleInstance), 1, 1 },
-            { "I_is_world", LLGL::Format::R32UInt,   6, offsetof(ParticleInstance, is_world), sizeof(ParticleInstance), 1, 1 }
-        };
-    }
+    particle_instance_format.attributes = sge::Attributes({
+        sge::Attribute::Instance(LLGL::Format::RG32Float, "i_uv", "I_UV", 1),
+        sge::Attribute::Instance(LLGL::Format::R32Float, "i_depth", "I_Depth", 1),
+        sge::Attribute::Instance(LLGL::Format::R32UInt, "i_id", "I_ID", 1),
+        sge::Attribute::Instance(LLGL::Format::R32UInt, "I_is_world", "I_IsWorld", 1),
+    }).ToLLGL(backend, 3);
 
-    if (backend.IsGLSL()) {
-        postprocess_vertex_format.AppendAttribute({ "a_position",   LLGL::Format::RG32Float });
-        postprocess_vertex_format.AppendAttribute({ "a_uv",         LLGL::Format::RG32Float });
-        postprocess_vertex_format.AppendAttribute({ "a_world_size", LLGL::Format::RG32Float });
-    } else if (backend.IsHLSL()) {
-        postprocess_vertex_format.AppendAttribute({ "Position",  LLGL::Format::RG32Float });
-        postprocess_vertex_format.AppendAttribute({ "UV",        LLGL::Format::RG32Float });
-        postprocess_vertex_format.AppendAttribute({ "WorldSize", LLGL::Format::RG32Float });
-    } else {
-        postprocess_vertex_format.AppendAttribute({ "position",  LLGL::Format::RG32Float });
-        postprocess_vertex_format.AppendAttribute({ "uv",        LLGL::Format::RG32Float });
-        postprocess_vertex_format.AppendAttribute({ "world_size", LLGL::Format::RG32Float });
-    }
+    postprocess_vertex_format.attributes = sge::Attributes({
+        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_position", "Position"),
+        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_uv", "UV"),
+        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_world_size", "WorldSize"),
+    }).ToLLGL(backend);
 
-    if (backend.IsGLSL()) {
-        static_lightmap_vertex_format.attributes = {
-            { "a_position", LLGL::Format::RG32Float, 0, offsetof(StaticLightMapChunkVertex, position), sizeof(StaticLightMapChunkVertex), 0 },
-            { "a_uv",       LLGL::Format::RG32Float, 1, offsetof(StaticLightMapChunkVertex, uv),       sizeof(StaticLightMapChunkVertex), 0 },
-        };
-    } else if (backend.IsHLSL()) {
-        static_lightmap_vertex_format.attributes = {
-            { "Position", LLGL::Format::RG32Float, 0, offsetof(StaticLightMapChunkVertex, position), sizeof(StaticLightMapChunkVertex), 0 },
-            { "UV",       LLGL::Format::RG32Float, 1, offsetof(StaticLightMapChunkVertex, uv),       sizeof(StaticLightMapChunkVertex), 0 },
-        };
-    } else {
-        static_lightmap_vertex_format.attributes = {
-            { "position", LLGL::Format::RG32Float, 0, offsetof(StaticLightMapChunkVertex, position), sizeof(StaticLightMapChunkVertex), 0 },
-            { "uv",       LLGL::Format::RG32Float, 1, offsetof(StaticLightMapChunkVertex, uv),       sizeof(StaticLightMapChunkVertex), 0 },
-        };
-    }
+    static_lightmap_vertex_format.attributes = sge::Attributes({
+        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_position", "Position"),
+        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_uv", "UV"),
+    }).ToLLGL(backend);
 
     state.vertex_formats[VertexFormatAsset::TilemapVertex] = tilemap_vertex_format;
     state.vertex_formats[VertexFormatAsset::TilemapInstance] = tilemap_instance_format;
@@ -669,7 +565,8 @@ static bool load_texture(const char* path, int sampler, sge::Texture* texture) {
         return false;
     }
 
-    *texture = sge::Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, width, height, 1, Assets::GetSampler(sampler), data);
+    const bool generate_mips = sampler == sge::TextureSampler::NearestMips || sampler == sge::TextureSampler::LinearMips;
+    *texture = sge::Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, width, height, 1, Assets::GetSampler(sampler), data, generate_mips);
 
     stbi_image_free(data);
 

@@ -19,6 +19,9 @@ endif()
 
 set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
 
+option(ENABLE_TRACY "Enable Tracy profiler" OFF)
+option(ENABLE_DEBUG_TOOLS "Enable Debug Tools" OFF)
+
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(RELEASE_BUILD OFF)
 else()
@@ -54,6 +57,7 @@ else()
     endif()
     set(DISABLE_FORCE_DEBUG_POSTFIX OFF)
     set(LLGL_ENABLE_EXCEPTIONS ON CACHE BOOL "" FORCE)
+    set(ENABLE_DEBUG_TOOLS ON)
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
@@ -69,8 +73,6 @@ else()
 endif()
 
 add_compile_definitions(GLM_FORCE_INTRINSICS)
-
-option(ENABLE_TRACY "Enable Tracy profiler" OFF)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 
@@ -103,6 +105,12 @@ if(RELEASE_BUILD)
     target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG=0)
 else()
     target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG=1)
+endif()
+
+if(ENABLE_DEBUG_TOOLS)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG_TOOLS=1)
+else()
+    target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG_TOOLS=0)
 endif()
 
 if(OpenMP_CXX_FOUND)

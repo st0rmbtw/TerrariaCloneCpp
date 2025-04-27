@@ -14,6 +14,7 @@
 #include <SGE/types/rich_text.hpp>
 #include <SGE/renderer/camera.hpp>
 #include <SGE/types/color.hpp>
+#include <SGE/types/blend_mode.hpp>
 
 #include "../types/background_layer.hpp"
 
@@ -37,6 +38,8 @@ namespace GameRenderer {
     
     uint32_t DrawAtlasSprite(const sge::TextureAtlasSprite& sprite, sge::Order order = {});
     uint32_t DrawAtlasSpriteWorld(const sge::TextureAtlasSprite& sprite, sge::Order order = {});
+
+    uint32_t DrawAtlasSpriteWorldPremultiplied(const sge::TextureAtlasSprite& sprite, sge::Order order = {});
 
     uint32_t DrawSpriteUI(const sge::Sprite& sprite, sge::Order order = {});
     uint32_t DrawAtlasSpriteUI(const sge::TextureAtlasSprite& sprite, sge::Order order = {});
@@ -74,6 +77,9 @@ namespace GameRenderer {
     inline void BeginOrderMode(int order = -1) { BeginOrderMode(order, true); }
     inline void BeginOrderMode(bool advance) { BeginOrderMode(-1, advance); }
     void EndOrderMode();
+
+    void BeginBlendMode(sge::BlendMode blend_mode);
+    void EndBlendMode();
 
     void Terminate();
 

@@ -506,57 +506,12 @@ static void grassify_flood_fill(WorldData &world, TilePos start) {
         const TilePos pos = queue.back();
         queue.pop_back();
 
-        {
-            const TilePos new_pos = pos.offset(TileOffset::Right);
-            if (grassify_is_valid(world, new_pos)) {
-                set_block(world, new_pos, TileType::Grass);
-                queue.push_back(new_pos);
-            }
-        }
-        {
-            const TilePos new_pos = pos.offset(TileOffset::Left);
-            if (grassify_is_valid(world, new_pos)) {
-                set_block(world, new_pos, TileType::Grass);
-                queue.push_back(new_pos);
-            }
-        }
-        {
-            const TilePos new_pos = pos.offset(TileOffset::Top);
-            if (grassify_is_valid(world, new_pos)) {
-                set_block(world, new_pos, TileType::Grass);
-                queue.push_back(new_pos);
-            }
-        }
-        {
-            const TilePos new_pos = pos.offset(TileOffset::Bottom);
-            if (grassify_is_valid(world, new_pos)) {
-                set_block(world, new_pos, TileType::Grass);
-                queue.push_back(new_pos);
-            }
-        }
-        {
-            const TilePos new_pos = pos.offset(TileOffset::TopLeft);
-            if (grassify_is_valid(world, new_pos)) {
-                set_block(world, new_pos, TileType::Grass);
-                queue.push_back(new_pos);
-            }
-        }
-        {
-            const TilePos new_pos = pos.offset(TileOffset::TopRight);
-            if (grassify_is_valid(world, new_pos)) {
-                set_block(world, new_pos, TileType::Grass);
-                queue.push_back(new_pos);
-            }
-        }
-        {
-            const TilePos new_pos = pos.offset(TileOffset::BottomLeft);
-            if (grassify_is_valid(world, new_pos)) {
-                set_block(world, new_pos, TileType::Grass);
-                queue.push_back(new_pos);
-            }
-        }
-        {
-            const TilePos new_pos = pos.offset(TileOffset::BottomRight);
+        static const TileOffset DIRECTIONS[] = {
+            TileOffset::Right, TileOffset::Left, TileOffset::Top, TileOffset::Bottom, TileOffset::TopLeft, TileOffset::TopRight, TileOffset::BottomLeft, TileOffset::BottomRight
+        };
+        
+        for (const TileOffset offset : DIRECTIONS) {
+            const TilePos new_pos = pos.offset(offset);
             if (grassify_is_valid(world, new_pos)) {
                 set_block(world, new_pos, TileType::Grass);
                 queue.push_back(new_pos);
@@ -576,8 +531,8 @@ static void world_grassify(WorldData& world) {
 }
 
 static void world_generate_lightmap(WorldData& world) {
-    world.lightmap_init_area(world.playable_area);
-    world.lightmap_blur_area_sync(world.playable_area);
+    world.lightmap_init_area(world.area);
+    world.lightmap_blur_area_sync(world.area);
 }
 
 void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t seed) {

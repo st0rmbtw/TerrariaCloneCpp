@@ -27,6 +27,10 @@ static inline float rand_range(float from, float to) {
     return from + scale * (to - from); 
 }
 
+static inline int rand_int(int from, int to) {
+    return from + rand() / (RAND_MAX / (to - from + 1) + 1);
+}
+
 template <class T>
 static const T& list_at(const std::list<T>& list, int index) {
     auto it = list.cbegin();

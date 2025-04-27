@@ -7,6 +7,7 @@
 #include <SGE/engine.hpp>
 #include <SGE/log.hpp>
 #include <SGE/renderer/macros.hpp>
+#include <SGE/types/binding_layout.hpp>
 
 #include <tracy/Tracy.hpp>
 
@@ -102,23 +103,14 @@ void ParticleRenderer::init() {
     }
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
-    pipelineLayoutDesc.heapBindings = {
-        LLGL::BindingDescriptor(
-            "GlobalUniformBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::ConstantBuffer,
-            LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(2)
-        ),
-        LLGL::BindingDescriptor(
-            "TransformBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::Storage,
-            LLGL::StageFlags::VertexStage,
-            LLGL::BindingSlot(5)
-        ),
-        LLGL::BindingDescriptor("u_texture", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(3)),
-    };
+    pipelineLayoutDesc.heapBindings = sge::BindingLayout(
+        LLGL::StageFlags::VertexStage | LLGL::StageFlags::FragmentStage,
+        {
+            sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer"),
+            sge::BindingLayoutItem::StorageBuffer(5, "TransformBuffer"),
+            sge::BindingLayoutItem::Texture(3, "u_texture"),
+        }
+    );
     pipelineLayoutDesc.staticSamplers = {
         LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4), m_atlas.texture().sampler().descriptor())
     };
@@ -171,43 +163,16 @@ void ParticleRenderer::init() {
     }
 
     LLGL::PipelineLayoutDescriptor compute_pipeline_layout_desc;
-    compute_pipeline_layout_desc.heapBindings = {
-        LLGL::BindingDescriptor(
-            "GlobalUniformBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::ConstantBuffer,
-            LLGL::StageFlags::ComputeStage,
-            LLGL::BindingSlot(2)
-        ),
-        LLGL::BindingDescriptor(
-            "TransformBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::Storage,
-            LLGL::StageFlags::ComputeStage,
-            LLGL::BindingSlot(5)
-        ),
-        LLGL::BindingDescriptor(
-            "PositionBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::Sampled,
-            LLGL::StageFlags::ComputeStage,
-            LLGL::BindingSlot(6)
-        ),
-        LLGL::BindingDescriptor(
-            "RotationBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::Sampled,
-            LLGL::StageFlags::ComputeStage,
-            LLGL::BindingSlot(7)
-        ),
-        LLGL::BindingDescriptor(
-            "ScaleBuffer",
-            LLGL::ResourceType::Buffer,
-            LLGL::BindFlags::Sampled,
-            LLGL::StageFlags::ComputeStage,
-            LLGL::BindingSlot(8)
-        ),
-    };
+    compute_pipeline_layout_desc.heapBindings = sge::BindingLayout(
+        LLGL::StageFlags::ComputeStage,
+        {
+            sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer"),
+            sge::BindingLayoutItem::StorageBuffer(5, "TransformBuffer"),
+            sge::BindingLayoutItem::Buffer(6, "PositionBuffer"),
+            sge::BindingLayoutItem::Buffer(7, "RotationBuffer"),
+            sge::BindingLayoutItem::Buffer(8, "ScaleBuffer"),
+        }
+    );
 
     LLGL::PipelineLayout* compute_pipeline_layout = context->CreatePipelineLayout(compute_pipeline_layout_desc);
 

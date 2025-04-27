@@ -55,7 +55,7 @@ static glm::vec2 camera_follow_player() {
     return position;
 }
 
-#if DEBUG
+#if DEBUG_TOOLS
 static glm::vec2 camera_free() {
     const float dt = sge::Time::DeltaSeconds();
     glm::vec2 position = g.camera.position();
@@ -94,13 +94,15 @@ static void pre_update() {
     g.player.pre_update();
     g.world.clear_lights();
 
+#if DEBUG_TOOLS
     if (sge::Input::JustPressed(sge::Key::F)) g.free_camera = !g.free_camera;
+#endif
 }
 
 static void fixed_update() {
     ZoneScopedN("Game::fixed_update");
 
-#if DEBUG
+#if DEBUG_TOOLS
     const bool handle_input = !g.free_camera;
 #else
     constexpr bool handle_input = true;
@@ -133,7 +135,7 @@ static void update() {
         g.camera.set_zoom(glm::clamp(zoom, Constants::CAMERA_MAX_ZOOM, Constants::CAMERA_MIN_ZOOM));
     }
 
-#if DEBUG
+#if DEBUG_TOOLS
     if (g.free_camera && sge::Input::Pressed(sge::MouseButton::Right)) {
         g.player.set_position(g.world, g.camera.screen_to_world(sge::Input::MouseScreenPosition()));
     }
@@ -153,6 +155,7 @@ static void update() {
     
     g.player.update(g.world);
 
+#if DEBUG_TOOLS
     if (sge::Input::Pressed(sge::Key::K)) {
         const glm::vec2 position = g.camera.screen_to_world(sge::Input::MouseScreenPosition());
 
@@ -166,6 +169,7 @@ static void update() {
             );
         }
     }
+#endif
 }
 
 static void post_update() {
