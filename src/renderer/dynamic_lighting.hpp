@@ -30,9 +30,11 @@ public:
 
 private:
     ThreadPool m_thread_pool;
-    LightMap m_dynamic_lightmap;
 
-    std::vector<sge::IRect> m_areas;
+    std::vector<sge::IRect> m_dense_areas;
+    std::vector<sge::IRect> m_nondense_areas;
+
+    LightMap m_dynamic_lightmap;
 
     LLGL::Texture* m_light_texture = nullptr;
     sge::Renderer* m_renderer = nullptr;
@@ -69,7 +71,6 @@ private:
     LLGL::ResourceHeap* m_light_blur_resource_heap = nullptr;
 
     LLGL::Texture* m_light_texture = nullptr;
-    LLGL::RenderTarget* m_light_texture_target = nullptr;
 
     LLGL::PipelineState* m_light_set_light_sources_pipeline = nullptr;
     LLGL::PipelineState* m_light_vertical_pipeline = nullptr;

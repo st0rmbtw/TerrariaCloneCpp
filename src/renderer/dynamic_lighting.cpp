@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <tracy/Tracy.hpp>
 
 #include <SGE/engine.hpp>
@@ -42,22 +43,32 @@ static bool blur(LightMap& lightmap, int index, glm::vec3& prev_light, float& pr
     return this_light.r < LIGHT_EPSILON && this_light.g < LIGHT_EPSILON && this_light.b < LIGHT_EPSILON;
 }
 
-SGE_FORCE_INLINE static void blur_line_fwd(LightMap& lightmap, int start, int end, int stride, glm::vec3& prev_light, float& prev_decay) {
+static SGE_FORCE_INLINE uint32_t blur_line_fwd(LightMap& lightmap, int start, int stride, glm::vec3& prev_light, float& prev_decay) {
     using Constants::LIGHT_EPSILON;
 
-    int length = end - start;
-    for (int index = 0; index < length; index += stride) {
-        if (blur(lightmap, start + index, prev_light, prev_decay)) return;
+    uint32_t count = 0;
+    uint32_t index = start;
+    while (count < Constants::LIGHT_DECAY_STEPS) {
+        if (blur(lightmap, index, prev_light, prev_decay)) break;
+
+        index += stride;
+        count++;
     }
+    return count;
 }
 
-SGE_FORCE_INLINE static void blur_line_bwd(LightMap& lightmap, int start, int end, int stride, glm::vec3& prev_light, float& prev_decay) {
+static SGE_FORCE_INLINE uint32_t blur_line_bwd(LightMap& lightmap, int start, int stride, glm::vec3& prev_light, float& prev_decay) {
     using Constants::LIGHT_EPSILON;
 
-    int length = start - end;
-    for (int index = 0; index < length; index += stride) {
-        if (blur(lightmap, start - index, prev_light, prev_decay)) return;
+    uint32_t count = 0;
+    uint32_t index = start;
+    while (count < Constants::LIGHT_DECAY_STEPS) {
+        if (blur(lightmap, index, prev_light, prev_decay)) break;
+
+        index -= stride;
+        count++;
     }
+    return count;
 }
 
 DynamicLighting::DynamicLighting(const WorldData& world, LLGL::Texture* light_texture) : m_light_texture(light_texture) {
@@ -74,37 +85,40 @@ DynamicLighting::DynamicLighting(const WorldData& world, LLGL::Texture* light_te
     }
 }
 
+static SGE_FORCE_INLINE void blur_horizontal(LightMap& lightmap, sge::IRect area, TilePos light_pos, glm::vec3& prev_light, float& prev_decay) {
+    for (int y = 0; y < area.height(); ++y) {
+        prev_decay = Constants::LightDecay(lightmap.get_mask({light_pos.x + 1, y}));
+        blur_line_bwd(lightmap, (area.min.y + y) * lightmap.width + light_pos.x, 1, prev_light, prev_decay);
+
+        prev_decay = Constants::LightDecay(lightmap.get_mask({light_pos.x - 1, y}));
+        blur_line_fwd(lightmap, (area.min.y + y) * lightmap.width + light_pos.x, 1, prev_light, prev_decay);
+    }
+}
+
+static SGE_FORCE_INLINE void blur_vertical(LightMap& lightmap, sge::IRect area, TilePos light_pos, glm::vec3& prev_light, float& prev_decay) {
+    for (int x = 0; x < area.width(); ++x) {
+        prev_decay = Constants::LightDecay(lightmap.get_mask({x, light_pos.y + 1}));
+        blur_line_bwd(lightmap, light_pos.y * lightmap.width + area.min.x + x, lightmap.width, prev_light, prev_decay);
+
+        prev_decay = Constants::LightDecay(lightmap.get_mask({x, light_pos.y - 1}));
+        blur_line_fwd(lightmap, light_pos.y * lightmap.width + area.min.x + x, lightmap.width, prev_light, prev_decay);
+    }
+}
+
 void DynamicLighting::compute_light(const sge::Camera&, const World& world) {
     const uint32_t light_count = world.light_count();
     if (light_count == 0) return;
 
-    m_areas.clear();
-
     LightMap& lightmap = m_dynamic_lightmap;
 
-    sge::IRect process_area = sge::IRect::from_center_half_size(
-        glm::ivec2(world.lights()[0].pos.x, world.lights()[0].pos.y), glm::ivec2(Constants::LIGHT_DECAY_STEPS)
-    );
-
-    for (size_t i = 1; i < light_count; ++i) {
+    // Clear
+    for (size_t i = 0; i < light_count; ++i) {
         const Light& light = world.lights()[i];
-        
-        sge::IRect area = sge::IRect::from_center_half_size(
+
+        const sge::IRect area = sge::IRect::from_center_half_size(
             glm::ivec2(light.pos.x, light.pos.y), glm::ivec2(Constants::LIGHT_DECAY_STEPS)
         );
 
-        // if (area.intersects(process_area)) {
-        //     process_area = process_area.merge(area);
-        // } else {
-            m_areas.push_back(area.clamp(sge::IRect({0, 0}, {lightmap.width, lightmap.height})));
-            // process_area = area;
-        // }
-    }
-    
-    m_areas.push_back(process_area);
-    process_area = process_area.clamp(sge::IRect({0, 0}, {lightmap.width, lightmap.height}));
-
-    for (sge::IRect area : m_areas) {
         for (int y = area.min.y; y < area.max.y; ++y) {
             memset(&lightmap.colors[y * lightmap.width + area.min.x], 0, area.width() * sizeof(Color));
         }
@@ -112,61 +126,55 @@ void DynamicLighting::compute_light(const sge::Camera&, const World& world) {
 
     for (size_t i = 0; i < light_count; ++i) {
         const Light& light = world.lights()[i];
-        lightmap.set_color(light.pos, light.color);
-    }
 
-    for (sge::IRect area : m_areas) {
-        const glm::ivec2 center = area.center();
+        glm::vec3 prev_light = glm::vec3(0.0f);
+        float prev_decay = 0.0f;
+        int length = 0;
 
+        sge::IRect processed_area = sge::IRect::uninitialized();
+
+        // Init
+        for (int y = 0; y < light.size.y; ++y) {
+            for (int x = 0; x < light.size.x; ++x) {
+                lightmap.set_color(light.pos + TilePos(x, y), light.color);
+
+                prev_light = glm::vec3(0.0f);
+
+                // Horizontal
+                prev_decay = Constants::LightDecay(lightmap.get_mask({light.pos.x + x + 1, light.pos.y + y}));
+                length = blur_line_bwd(lightmap, (light.pos.y + y) * lightmap.width + light.pos.x + x, 1, prev_light, prev_decay);
+                processed_area.min.x = glm::min(processed_area.min.x, -length);
+
+                prev_decay = Constants::LightDecay(lightmap.get_mask({light.pos.x + x - 1, light.pos.y + y}));
+                length = blur_line_fwd(lightmap, (light.pos.y + y) * lightmap.width + light.pos.x + x, 1, prev_light, prev_decay);
+                processed_area.max.x = glm::max(processed_area.max.x, length);
+
+                prev_light = glm::vec3(0.0f);
+
+                // Vertical
+                prev_decay = Constants::LightDecay(lightmap.get_mask({light.pos.x + x, light.pos.y + y + 1}));
+                length = blur_line_bwd(lightmap, (light.pos.y + y) * lightmap.width + light.pos.x + x, lightmap.width, prev_light, prev_decay);
+                processed_area.min.y = glm::min(processed_area.min.y, -length);
+
+                prev_decay = Constants::LightDecay(lightmap.get_mask({light.pos.x + x, light.pos.y + y - 1}));
+                length = blur_line_fwd(lightmap, (light.pos.y + y) * lightmap.width + light.pos.x + x, lightmap.width, prev_light, prev_decay);
+                processed_area.max.y = glm::max(processed_area.max.y, length);
+            }
+        }
+
+        sge::IRect area = processed_area + glm::ivec2(light.pos.x, light.pos.y);
+        area = area.clamp(sge::IRect({0, 0}, {lightmap.width, lightmap.height}));
+
+        // Blur
         for (size_t i = 0; i < 2; ++i) {
-            // Horizontal
-            // m_thread_pool.start();
-            for (int y = 0; y < area.height(); ++y) {
-                // m_thread_pool.queue_job([&lightmap, y, center, &area] {
-                    glm::vec3 prev_light = glm::vec3(0.0f);
+            blur_horizontal(lightmap, area, light.pos, prev_light, prev_decay);
 
-                    float prev_decay = Constants::LightDecay(lightmap.get_mask({center.x + 1, y}));
-                    blur_line_bwd(lightmap, (area.min.y + y) * lightmap.width + center.x, (area.min.y + y) * lightmap.width, 1, prev_light, prev_decay);
-
-                    prev_decay = Constants::LightDecay(lightmap.get_mask({center.x - 1, y}));
-                    blur_line_fwd(lightmap, (area.min.y + y) * lightmap.width + center.x, (area.min.y + y) * lightmap.width + area.max.x - 1, 1, prev_light, prev_decay);
-                // });
-            }
-            // m_thread_pool.stop();
-
-            // Vertical
-            // m_thread_pool.start();
-            for (int x = 0; x < area.width(); ++x) {
-                // m_thread_pool.queue_job([&lightmap, x, center, &area] {
-                    glm::vec3 prev_light = glm::vec3(0.0f);
-                    
-                    float prev_decay = Constants::LightDecay(lightmap.get_mask({x, center.y + 1}));
-                    blur_line_bwd(lightmap, center.y * lightmap.width + area.min.x + x, area.min.y * lightmap.width + area.min.x + x, lightmap.width, prev_light, prev_decay);
-
-                    prev_decay = Constants::LightDecay(lightmap.get_mask({x, center.y - 1}));
-                    blur_line_fwd(lightmap, center.y * lightmap.width + area.min.x + x, (area.max.y - 1) * lightmap.width + area.min.x + x, lightmap.width, prev_light, prev_decay);
-                // });
-            }
-            // m_thread_pool.stop();
+            blur_vertical(lightmap, area, light.pos, prev_light, prev_decay);
         }
 
-        // Horizontal
-        // m_thread_pool.start();
-        for (int y = 0; y < area.height(); ++y) {
-            // m_thread_pool.queue_job([&lightmap, y, center, &area] {
-                glm::vec3 prev_light = glm::vec3(0.0f);
-
-                float prev_decay = Constants::LightDecay(lightmap.get_mask({center.x + 1, y}));
-                blur_line_bwd(lightmap, (area.min.y + y) * lightmap.width + center.x, (area.min.y + y) * lightmap.width, 1, prev_light, prev_decay);
-
-                prev_decay = Constants::LightDecay(lightmap.get_mask({center.x - 1, y}));
-                blur_line_fwd(lightmap, (area.min.y + y) * lightmap.width + center.x, (area.min.y + y) * lightmap.width + area.max.x - 1, 1, prev_light, prev_decay);
-            // });
-        }
-        // m_thread_pool.stop();
+        blur_horizontal(lightmap, area, light.pos, prev_light, prev_decay);
 
         const auto& context = m_renderer->Context();
-
         LLGL::ImageView image_view;
         image_view.format   = LLGL::ImageFormat::RGBA;
         image_view.dataType = LLGL::DataType::UInt8;
@@ -174,7 +182,6 @@ void DynamicLighting::compute_light(const sge::Camera&, const World& world) {
         image_view.dataSize = area.width() * area.height() * sizeof(Color);
         image_view.rowStride = lightmap.width * sizeof(Color);
         context->WriteTexture(*m_light_texture, LLGL::TextureRegion(LLGL::Offset3D(area.min.x, area.min.y, 0), LLGL::Extent3D(area.width(), area.height(), 1)), image_view);
-
     }
 }
 
