@@ -4,6 +4,7 @@
 #pragma once
 
 #include <stdint.h>
+
 #include "math/constexpr_math.hpp"
 
 namespace Constants {
@@ -47,6 +48,8 @@ namespace Constants {
     }
 
     constexpr int LIGHT_DECAY_STEPS = internal::LightDecaySteps();
+
+    static constexpr size_t WORLD_MAX_LIGHT_COUNT = 2000;
 };
 
 #endif

@@ -178,6 +178,8 @@ void World::update_wall(TilePos pos, WallType new_type, uint8_t new_variant) {
 void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
     ZoneScopedN("World::generate");
 
+    using Constants::WORLD_MAX_LIGHT_COUNT;
+
     world_generate(m_data, width, height, seed);
 
     m_light_count = 0;

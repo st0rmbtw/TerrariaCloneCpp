@@ -185,16 +185,16 @@ void WorldRenderer::init() {
 }
 
 void WorldRenderer::init_lighting(const WorldData& world) {
+#if 0
     const LLGL::RenderingFeatures& features = m_renderer->GetRenderingCaps().features;
 
-#if 0
     if (features.hasComputeShaders) {
-        m_dynamic_lighting = new AcceleratedDynamicLighting(world, m_light_texture);
+        m_dynamic_lighting = std::make_unique<AcceleratedDynamicLighting>(world, m_light_texture);
     } else {
-        m_dynamic_lighting = new DynamicLighting();
+        m_dynamic_lighting = std::make_unique<DynamicLighting>(world, m_light_texture);
     }
 #else
-    m_dynamic_lighting = new DynamicLighting(world, m_light_texture);
+    m_dynamic_lighting = std::make_unique<DynamicLighting>(world, m_light_texture);
 #endif
 }
 
@@ -387,8 +387,8 @@ SGE_FORCE_INLINE static void internal_update_world_lightmap(const WorldData& wor
     }
 }
 
-void WorldRenderer::update(WorldData& world) {
-    update_lightmap_texture(world);
+void WorldRenderer::update(World& world) {
+    update_lightmap_texture(world.data());
     m_dynamic_lighting->update(world);
 }
 

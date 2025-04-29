@@ -30,6 +30,7 @@ static struct GameState {
     World world;
     sge::Camera camera;
     bool free_camera = false;
+    std::vector<Light> lights;
 } g;
 
 static glm::vec2 camera_follow_player() {
@@ -160,6 +161,18 @@ static void update() {
         .pos = get_lightmap_pos(g.camera.screen_to_world(sge::Input::MouseScreenPosition())),
         .size = glm::uvec2(2)
     });
+
+    if (sge::Input::JustPressed(sge::Key::Q)) {
+        g.lights.push_back(Light {
+            .color = glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f)),
+            .pos = get_lightmap_pos(g.camera.screen_to_world(sge::Input::MouseScreenPosition())),
+            .size = glm::uvec2(2)
+        });
+    }
+
+    for (const Light& light : g.lights) {
+        g.world.add_light(light);
+    }
 
 #if DEBUG_TOOLS
     if (sge::Input::Pressed(sge::Key::K)) {

@@ -22,7 +22,7 @@ public:
     void init_textures(const WorldData& world);
     void init_lightmap_chunks(const WorldData& world);
     
-    void update(WorldData& world);
+    void update(World& world);
 
     void compute_light(const sge::Camera& camera, const World& world);
 
@@ -73,7 +73,7 @@ private:
     uint32_t m_lightmap_width = 0;
     uint32_t m_lightmap_height = 0;
 
-    IDynamicLighting* m_dynamic_lighting = nullptr;
+    std::unique_ptr<IDynamicLighting> m_dynamic_lighting = nullptr;
 };
 
 #endif

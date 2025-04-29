@@ -43,37 +43,11 @@ static bool blur(LightMap& lightmap, int index, glm::vec3& prev_light, float& pr
     return this_light.r < LIGHT_EPSILON && this_light.g < LIGHT_EPSILON && this_light.b < LIGHT_EPSILON;
 }
 
-static SGE_FORCE_INLINE uint32_t blur_line_fwd(LightMap& lightmap, int start, int stride, glm::vec3& prev_light, float& prev_decay) {
-    using Constants::LIGHT_EPSILON;
-
-    uint32_t count = 0;
-    uint32_t index = start;
-    while (count < Constants::LIGHT_DECAY_STEPS) {
-        if (blur(lightmap, index, prev_light, prev_decay)) break;
-
-        index += stride;
-        count++;
-    }
-    return count;
-}
-
-static SGE_FORCE_INLINE uint32_t blur_line_bwd(LightMap& lightmap, int start, int stride, glm::vec3& prev_light, float& prev_decay) {
-    using Constants::LIGHT_EPSILON;
-
-    uint32_t count = 0;
-    uint32_t index = start;
-    while (count < Constants::LIGHT_DECAY_STEPS) {
-        if (blur(lightmap, index, prev_light, prev_decay)) break;
-
-        index -= stride;
-        count++;
-    }
-    return count;
-}
-
 DynamicLighting::DynamicLighting(const WorldData& world, LLGL::Texture* light_texture) : m_light_texture(light_texture) {
     m_dynamic_lightmap = LightMap(world.area.width(), world.area.height());
     m_renderer = &sge::Engine::Renderer();
+
+    m_line = new Color[Constants::LIGHT_DECAY_STEPS];
 
     for (int y = 0; y < m_dynamic_lightmap.height; ++y) {
         for (int x = 0; x < m_dynamic_lightmap.width; ++x) {
@@ -85,96 +59,323 @@ DynamicLighting::DynamicLighting(const WorldData& world, LLGL::Texture* light_te
     }
 }
 
-static SGE_FORCE_INLINE void blur_horizontal(LightMap& lightmap, sge::IRect area, TilePos light_pos, glm::vec3& prev_light, float& prev_decay) {
-    for (int y = 0; y < area.height(); ++y) {
-        prev_decay = Constants::LightDecay(lightmap.get_mask({light_pos.x + 1, y}));
-        blur_line_bwd(lightmap, (area.min.y + y) * lightmap.width + light_pos.x, 1, prev_light, prev_decay);
+DynamicLighting::~DynamicLighting() {
+    delete[] m_line;
+}
 
-        prev_decay = Constants::LightDecay(lightmap.get_mask({light_pos.x - 1, y}));
-        blur_line_fwd(lightmap, (area.min.y + y) * lightmap.width + light_pos.x, 1, prev_light, prev_decay);
+SGE_FORCE_INLINE static void blur_line(LightMap& lightmap, int start, int end, int stride, glm::vec3& prev_light, float& prev_decay, glm::vec3& prev_light2, float& prev_decay2) {
+    using Constants::LIGHT_EPSILON;
+
+    int length = end - start;
+    for (int index = 0; index < length; index += stride) {
+        blur(lightmap, start + index, prev_light, prev_decay);
+        blur(lightmap, end - index, prev_light2, prev_decay2);
     }
 }
 
-static SGE_FORCE_INLINE void blur_vertical(LightMap& lightmap, sge::IRect area, TilePos light_pos, glm::vec3& prev_light, float& prev_decay) {
-    for (int x = 0; x < area.width(); ++x) {
-        prev_decay = Constants::LightDecay(lightmap.get_mask({x, light_pos.y + 1}));
-        blur_line_bwd(lightmap, light_pos.y * lightmap.width + area.min.x + x, lightmap.width, prev_light, prev_decay);
+static constexpr unsigned g_maxThreadCountStaticArray = 64;
 
-        prev_decay = Constants::LightDecay(lightmap.get_mask({x, light_pos.y - 1}));
-        blur_line_fwd(lightmap, light_pos.y * lightmap.width + area.min.x + x, lightmap.width, prev_light, prev_decay);
+static void DoConcurrentRangeInWorkerContainer(
+    const std::function<void(std::size_t begin, std::size_t end)>&  task,
+    std::size_t                                                     count,
+    std::size_t                                                     workerCount,
+    std::thread*                                                    workers)
+{
+    /* Distribute work to threads */
+    const std::size_t workSize          = count / workerCount;
+    const std::size_t workSizeRemain    = count % workerCount;
+
+    std::size_t offset = 0;
+
+    for (size_t i = 0; i < workerCount; ++i)
+    {
+        workers[i] = std::thread(task, offset, offset + workSize);
+        offset += workSize;
+    }
+
+    /* Execute task of remaining work on main thread */
+    if (workSizeRemain > 0)
+        task(offset, offset + workSizeRemain);
+
+    /* Join worker threads */
+    for (size_t i = 0; i < workerCount; ++i) workers[i].join();
+}
+
+static unsigned Log2Uint(unsigned n)
+{
+    unsigned nLog2 = 0;
+    while (n >>= 1)
+        ++nLog2;
+    return nLog2;
+}
+
+static unsigned ClampThreadCount(unsigned threadCount, std::size_t workSize, unsigned threadMinWorkSize)
+{
+    if (workSize > threadMinWorkSize)
+    {
+        if (threadCount == LLGL_MAX_THREAD_COUNT)
+        {
+            /* Compute number of threads automatically logarithmically to the workload */
+            threadCount = Log2Uint(static_cast<unsigned>(workSize / threadMinWorkSize));
+
+            /*
+            Clamp to maximum number of threads support by the CPU.
+            If this value is undefined or not comutable, the return value of the STL function is 0.
+            */
+            const unsigned maxThreadCount = std::thread::hardware_concurrency();
+            if (maxThreadCount > 0)
+                threadCount = std::min(threadCount, maxThreadCount);
+        }
+
+        /* Clamp final number of threads by the minimum workload per thread */
+        return std::min(threadCount, static_cast<unsigned>(workSize / threadMinWorkSize));
+    }
+    return 0;
+}
+
+LLGL_EXPORT void DoConcurrentRange(
+    const std::function<void(std::size_t begin, std::size_t end)>&  task,
+    std::size_t                                                     count,
+    unsigned                                                        threadCount,
+    unsigned                                                        threadMinWorkSize)
+{
+    threadCount = ClampThreadCount(threadCount, count, threadMinWorkSize);
+
+    if (threadCount <= 1)
+    {
+        /* Run single-threaded */
+        task(0, count);
+    }
+    else if (threadCount <= g_maxThreadCountStaticArray)
+    {
+        /* Launch worker threads in static array */
+        std::thread workers[g_maxThreadCountStaticArray];
+        DoConcurrentRangeInWorkerContainer(task, count, threadCount, workers);
+    }
+    else if (threadCount > 1)
+    {
+        /* Launch worker threads in dynamic array */
+        std::vector<std::thread> workers(threadCount);
+        DoConcurrentRangeInWorkerContainer(task, count, threadCount, workers.data());
     }
 }
 
-void DynamicLighting::compute_light(const sge::Camera&, const World& world) {
+LLGL_EXPORT void DoConcurrent(
+    const std::function<void(std::size_t index)>&   task,
+    std::size_t                                     count,
+    unsigned                                        threadCount = LLGL_MAX_THREAD_COUNT,
+    unsigned                                        threadMinWorkSize = 64)
+{
+    DoConcurrentRange(
+        [&task](std::size_t begin, std::size_t end)
+        {
+            for (size_t i = begin; i < end; ++i)
+                task(i);
+        },
+        count,
+        threadCount,
+        threadMinWorkSize
+    );
+}
+
+SGE_FORCE_INLINE static void blur_horizontal(LightMap& lightmap, const sge::IRect& area) {
+    #pragma omp parallel for
+    for (int y = area.min.y; y < area.max.y; ++y) {
+        glm::vec3 prev_light = lightmap.get_color({area.min.x, y});
+        float prev_decay = Constants::LightDecay(lightmap.get_mask({(area.min.x) - 1, y}));
+
+        glm::vec3 prev_light2 = lightmap.get_color({area.max.x - 1, y});
+        float prev_decay2 = Constants::LightDecay(lightmap.get_mask({(area.max.x), y}));
+
+        blur_line(lightmap, y * lightmap.width + area.min.x, y * lightmap.width + (area.max.x - 1), 1, prev_light, prev_decay, prev_light2, prev_decay2);
+    }
+}
+
+SGE_FORCE_INLINE static void blur_vertical(LightMap& lightmap, const sge::IRect& area) {
+    #pragma omp parallel for
+    for (int x = area.min.x; x < area.max.x; ++x) {
+        glm::vec3 prev_light = lightmap.get_color({x, area.min.y});
+        float prev_decay = Constants::LightDecay(lightmap.get_mask({x, (area.min.y) - 1}));
+
+        glm::vec3 prev_light2 = lightmap.get_color({x, area.max.y - 1});
+        float prev_decay2 = Constants::LightDecay(lightmap.get_mask({x, (area.max.y)}));
+
+        blur_line(lightmap, area.min.y * lightmap.width + x, (area.max.y - 1) * lightmap.width + x, lightmap.width, prev_light, prev_decay, prev_light2, prev_decay2);
+    }
+}
+
+static uint32_t count_steps(const LightMap& lightmap, Color* line, glm::vec3& prev_light, float& prev_decay, int start_index, int stride) {
+    using Constants::LIGHT_EPSILON;
+
+    int index = start_index;
+    uint32_t i = 0;
+    while (i < Constants::LIGHT_DECAY_STEPS && index >= 0) {
+        glm::vec3 this_light = line[i].as_vec3();
+
+        prev_light.r = prev_light.r < LIGHT_EPSILON ? 0.0f : prev_light.r;
+        prev_light.g = prev_light.g < LIGHT_EPSILON ? 0.0f : prev_light.g;
+        prev_light.b = prev_light.b < LIGHT_EPSILON ? 0.0f : prev_light.b;
+
+        if (prev_light.r < this_light.r) {
+            prev_light.r = this_light.r;
+        } else {
+            this_light.r = prev_light.r;
+        }
+
+        if (prev_light.g < this_light.g) {
+            prev_light.g = this_light.g;
+        } else {
+            this_light.g = prev_light.g;
+        }
+
+        if (prev_light.b < this_light.b) {
+            prev_light.b = this_light.b;
+        } else {
+            this_light.b = prev_light.b;
+        }
+
+        // The light has completely decayed - nothing to blur 
+        if (this_light.r < LIGHT_EPSILON && this_light.g < LIGHT_EPSILON && this_light.b < LIGHT_EPSILON) break;
+
+        prev_light = prev_light * prev_decay;
+        prev_decay = Constants::LightDecay(lightmap.get_mask(index));
+        index += stride;
+        i++;
+    }
+
+    return i;
+}
+
+static sge::IRect calculate_light_area(const LightMap& lightmap, Color* m_line, glm::ivec2 pos, const glm::vec3& color) {
+    glm::vec3 prev_light = glm::vec3(0.0f);
+    float prev_decay = 0.0f;
+    int length = 0;
+
+    m_line[0] = Color(color);
+
+    prev_light = glm::vec3(0.0f);
+
+    sge::IRect area = sge::IRect();
+
+    // Horizontal
+    prev_decay = Constants::LightDecay(lightmap.get_mask({pos.x + 1, pos.y}));
+    length = count_steps(lightmap, m_line, prev_light, prev_decay, (pos.y) * lightmap.width + pos.x, -1);
+    area.min.x = glm::min(area.min.x, -length);
+
+    prev_decay = Constants::LightDecay(lightmap.get_mask({pos.x - 1, pos.y}));
+    length = count_steps(lightmap, m_line, prev_light, prev_decay, (pos.y) * lightmap.width + pos.x, 1);
+    area.max.x = glm::max(area.max.x, length);
+
+    prev_light = glm::vec3(0.0f);
+
+    // Vertical
+    prev_decay = Constants::LightDecay(lightmap.get_mask({pos.x, pos.y + 1}));
+    length = count_steps(lightmap, m_line, prev_light, prev_decay, (pos.y) * lightmap.width + pos.x, -lightmap.width);
+    area.min.y = glm::min(area.min.y, -length);
+
+    prev_decay = Constants::LightDecay(lightmap.get_mask({pos.x, pos.y - 1}));
+    length = count_steps(lightmap, m_line, prev_light, prev_decay, (pos.y) * lightmap.width + pos.x, lightmap.width);
+    area.max.y = glm::max(area.max.y, length);
+
+    return area;
+}
+
+void DynamicLighting::update(World& world) {
+    const uint32_t light_count = world.light_count();
+    if (light_count == 0) return;
+
+    m_areas.clear();
+    m_indices.clear();
+
+    sge::IRect process_area = sge::IRect::uninitialized();
+    bool initialized = false;
+
+    LightMap& lightmap = m_dynamic_lightmap;
+
+    size_t i = 0;
+    for (i = 0; i < light_count; ++i) {
+        const Light& light = world.lights()[i];
+        
+        glm::ivec2 light_pos = glm::max(glm::ivec2(light.pos), glm::ivec2(0));
+
+        const sge::IRect area = calculate_light_area(lightmap, m_line, light_pos, light.color);
+        const sge::IRect a = (area + light.pos).clamp(sge::IRect({0, 0}, {lightmap.width, lightmap.height}));
+
+        if (!initialized) {
+            process_area = a;
+            initialized = true;
+        }
+
+        if (process_area.intersects(a)) {
+            process_area = process_area.merge(a);
+            m_indices.emplace_back(i, m_areas.size());
+        } else {
+            m_areas.push_back(process_area);
+
+            m_indices.emplace_back(i, m_areas.size());
+            m_areas.push_back(a);
+
+            process_area = sge::IRect::uninitialized();
+            initialized = false;
+        }
+    }
+
+    if (initialized) {
+        m_areas.push_back(process_area);
+    }
+}
+
+void DynamicLighting::compute_light(const sge::Camera& camera, const World& world) {
     const uint32_t light_count = world.light_count();
     if (light_count == 0) return;
 
     LightMap& lightmap = m_dynamic_lightmap;
 
-    // Clear
-    for (size_t i = 0; i < light_count; ++i) {
-        const Light& light = world.lights()[i];
+    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / Constants::TILE_SIZE) - 8;
+    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / Constants::TILE_SIZE) + 8;
 
-        const sge::IRect area = sge::IRect::from_center_half_size(
-            glm::ivec2(light.pos.x, light.pos.y), glm::ivec2(Constants::LIGHT_DECAY_STEPS)
-        );
+    const sge::URect screen_blur_area = sge::URect(
+        glm::uvec2(glm::max(proj_area_min * Constants::SUBDIVISION, glm::ivec2(0))),
+        glm::uvec2(glm::max(proj_area_max * Constants::SUBDIVISION, glm::ivec2(0)))
+    );
 
+    for (sge::IRect& area : m_areas) {
+        // Clamp to screen resolution
+        area = area.clamp(screen_blur_area);
+        
+        // Clear
         for (int y = area.min.y; y < area.max.y; ++y) {
             memset(&lightmap.colors[y * lightmap.width + area.min.x], 0, area.width() * sizeof(Color));
         }
     }
 
-    for (size_t i = 0; i < light_count; ++i) {
+    for (size_t i = 0; i < world.light_count(); ++i) {
         const Light& light = world.lights()[i];
 
-        glm::vec3 prev_light = glm::vec3(0.0f);
-        float prev_decay = 0.0f;
-        int length = 0;
-
-        sge::IRect processed_area = sge::IRect::uninitialized();
-
         // Init
-        for (int y = 0; y < light.size.y; ++y) {
-            for (int x = 0; x < light.size.x; ++x) {
+        for (uint32_t y = 0; y < light.size.y; ++y) {
+            for (uint32_t x = 0; x < light.size.x; ++x) {
                 lightmap.set_color(light.pos + TilePos(x, y), light.color);
-
-                prev_light = glm::vec3(0.0f);
-
-                // Horizontal
-                prev_decay = Constants::LightDecay(lightmap.get_mask({light.pos.x + x + 1, light.pos.y + y}));
-                length = blur_line_bwd(lightmap, (light.pos.y + y) * lightmap.width + light.pos.x + x, 1, prev_light, prev_decay);
-                processed_area.min.x = glm::min(processed_area.min.x, -length);
-
-                prev_decay = Constants::LightDecay(lightmap.get_mask({light.pos.x + x - 1, light.pos.y + y}));
-                length = blur_line_fwd(lightmap, (light.pos.y + y) * lightmap.width + light.pos.x + x, 1, prev_light, prev_decay);
-                processed_area.max.x = glm::max(processed_area.max.x, length);
-
-                prev_light = glm::vec3(0.0f);
-
-                // Vertical
-                prev_decay = Constants::LightDecay(lightmap.get_mask({light.pos.x + x, light.pos.y + y + 1}));
-                length = blur_line_bwd(lightmap, (light.pos.y + y) * lightmap.width + light.pos.x + x, lightmap.width, prev_light, prev_decay);
-                processed_area.min.y = glm::min(processed_area.min.y, -length);
-
-                prev_decay = Constants::LightDecay(lightmap.get_mask({light.pos.x + x, light.pos.y + y - 1}));
-                length = blur_line_fwd(lightmap, (light.pos.y + y) * lightmap.width + light.pos.x + x, lightmap.width, prev_light, prev_decay);
-                processed_area.max.y = glm::max(processed_area.max.y, length);
             }
         }
+    }
 
-        sge::IRect area = processed_area + glm::ivec2(light.pos.x, light.pos.y);
-        area = area.clamp(sge::IRect({0, 0}, {lightmap.width, lightmap.height}));
+    // Blur
+    DoConcurrent([&lightmap, this](size_t i) {
+        const sge::IRect& area = m_areas[i];
 
-        // Blur
         for (size_t i = 0; i < 2; ++i) {
-            blur_horizontal(lightmap, area, light.pos, prev_light, prev_decay);
+            blur_horizontal(lightmap, area);
 
-            blur_vertical(lightmap, area, light.pos, prev_light, prev_decay);
+            blur_vertical(lightmap, area);
         }
 
-        blur_horizontal(lightmap, area, light.pos, prev_light, prev_decay);
+        blur_horizontal(lightmap, area);
+    }, m_areas.size(), m_areas.size(), 1);
 
-        const auto& context = m_renderer->Context();
+    const auto& context = m_renderer->Context();
+
+    for (const sge::IRect& area : m_areas) {
         LLGL::ImageView image_view;
         image_view.format   = LLGL::ImageFormat::RGBA;
         image_view.dataType = LLGL::DataType::UInt8;
@@ -218,7 +419,20 @@ AcceleratedDynamicLighting::AcceleratedDynamicLighting(const WorldData& world, L
     init_textures(world);
 }
 
+AcceleratedDynamicLighting::~AcceleratedDynamicLighting() {
+    const auto& context = m_renderer->Context();
+
+    SGE_RESOURCE_RELEASE(m_light_set_light_sources_pipeline);
+    SGE_RESOURCE_RELEASE(m_light_vertical_pipeline);
+    SGE_RESOURCE_RELEASE(m_light_horizontal_pipeline);
+    SGE_RESOURCE_RELEASE(m_light_init_resource_heap);
+    SGE_RESOURCE_RELEASE(m_light_blur_resource_heap);
+    SGE_RESOURCE_RELEASE(m_tile_texture);
+}
+
 void AcceleratedDynamicLighting::init_pipeline() {
+    using Constants::WORLD_MAX_LIGHT_COUNT;
+
     const auto& context = m_renderer->Context();
     const sge::RenderBackend backend = m_renderer->Backend();
 
@@ -341,8 +555,8 @@ void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
     context->WriteResourceHeap(*m_light_blur_resource_heap, 1, {m_tile_texture, m_light_texture});
 }
 
-void AcceleratedDynamicLighting::update(WorldData& world) {
-    update_tile_texture(world);
+void AcceleratedDynamicLighting::update(World& world) {
+    update_tile_texture(world.data());
 }
 
 void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const World& world) {
@@ -355,8 +569,8 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
     const size_t size = world.light_count() * sizeof(Light);
     commands->UpdateBuffer(*m_light_buffer, 0, world.lights(), size);
 
-    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / Constants::TILE_SIZE) - static_cast<int>(m_workgroup_size);
-    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / Constants::TILE_SIZE) + static_cast<int>(m_workgroup_size);
+    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / Constants::TILE_SIZE) - 16;
+    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / Constants::TILE_SIZE) + 16;
 
     const sge::URect blur_area = sge::URect(
         glm::uvec2(glm::max(proj_area_min * Constants::SUBDIVISION, glm::ivec2(0))),
@@ -423,15 +637,4 @@ void AcceleratedDynamicLighting::update_tile_texture(WorldData& world) {
         image_view.data     = &value;
         m_renderer->Context()->WriteTexture(*m_tile_texture, LLGL::TextureRegion(LLGL::Offset3D(pos.x, pos.y, 0), LLGL::Extent3D(1, 1, 1)), image_view);
     }
-}
-
-void AcceleratedDynamicLighting::destroy() {
-    const auto& context = m_renderer->Context();
-
-    SGE_RESOURCE_RELEASE(m_light_set_light_sources_pipeline);
-    SGE_RESOURCE_RELEASE(m_light_vertical_pipeline);
-    SGE_RESOURCE_RELEASE(m_light_horizontal_pipeline);
-    SGE_RESOURCE_RELEASE(m_light_init_resource_heap);
-    SGE_RESOURCE_RELEASE(m_light_blur_resource_heap);
-    SGE_RESOURCE_RELEASE(m_tile_texture);
 }

@@ -198,7 +198,7 @@ void GameRenderer::Begin(const sge::Camera& camera, World& world) {
     state.camera_frustums[NOZOOM_CAMERA_FRUSTUM] = nozoom_camera_frustum;
     state.ui_frustum = ui_frustum;
 
-    state.world_renderer.update(world.data());
+    state.world_renderer.update(world);
 
     if (state.update_light) {
         commands->Begin();

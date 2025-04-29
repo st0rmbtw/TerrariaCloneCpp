@@ -77,6 +77,10 @@ struct TilePos {
     constexpr inline TilePos operator+(TilePos rhs) const {
         return TilePos(x + rhs.x, y + rhs.y);
     }
+
+    inline operator glm::ivec2() const {
+        return glm::ivec2(x, y);
+    }
 };
 
 constexpr SGE_FORCE_INLINE TilePos operator+(const TilePos& lhs, const glm::ivec2& rhs) {

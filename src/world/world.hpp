@@ -29,8 +29,6 @@ struct TileCracks {
     uint8_t cracks_index;
 };
 
-static constexpr size_t WORLD_MAX_LIGHT_COUNT = 0xFFFF / sizeof(Light);
-
 class World {
 public:
     World() = default;
@@ -125,6 +123,8 @@ public:
     inline void clear_lights() { m_light_count = 0; }
 
     [[nodiscard]] inline void add_light(Light light) {
+        using Constants::WORLD_MAX_LIGHT_COUNT;
+
         m_lights[m_light_count] = light;
         m_light_count = (m_light_count + 1) % WORLD_MAX_LIGHT_COUNT;
     }

@@ -8,31 +8,29 @@
 #include <SGE/engine.hpp>
 
 #include "../world/world.hpp"
-#include "../utils/thread_pool.hpp"
 
 class IDynamicLighting {
 public:
-    virtual void update(WorldData& world) = 0;
+    virtual void update(World& world) = 0;
     virtual void compute_light(const sge::Camera& camera, const World& world) = 0;
 
-    virtual void destroy() = 0;
+    virtual ~IDynamicLighting() = default;
 };
 
 class DynamicLighting : public IDynamicLighting {
 public:
     DynamicLighting(const WorldData& world, LLGL::Texture* light_texture);
 
-    void update(WorldData&) override {};
+    void update(World& world) override;
     void compute_light(const sge::Camera& camera, const World& world) override;
-    void destroy() override {
-        m_thread_pool.stop();
-    };
 
+    ~DynamicLighting() override;
 private:
-    ThreadPool m_thread_pool;
+    std::vector<sge::IRect> m_areas;
 
-    std::vector<sge::IRect> m_dense_areas;
-    std::vector<sge::IRect> m_nondense_areas;
+    std::vector<std::pair<size_t, size_t>> m_indices;
+
+    Color* m_line = nullptr;
 
     LightMap m_dynamic_lightmap;
 
@@ -49,10 +47,10 @@ class AcceleratedDynamicLighting : public IDynamicLighting {
 public:
     AcceleratedDynamicLighting(const WorldData& world, LLGL::Texture* light_texture);
 
-    void update(WorldData& world) override;
+    void update(World& world) override;
     void compute_light(const sge::Camera& camera, const World& world) override;
 
-    void destroy() override;
+    ~AcceleratedDynamicLighting() override;
 private:
     void init_textures(const WorldData& world);
 
