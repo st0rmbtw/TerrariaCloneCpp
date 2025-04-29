@@ -582,8 +582,6 @@ void Player::fixed_update(const sge::Camera& camera, World& world, bool handle_i
 
     if (m_swing_anim) {
         update_using_item_anim();
-    } else {
-        update_hold_item();
     }
 
     update_sprites_index();
@@ -619,6 +617,10 @@ void Player::update(World& world) {
     }
 
     update_sprites();
+
+    if (!m_swing_anim) {
+        update_hold_item();
+    }
 }
 
 void Player::keep_in_world_bounds(const World& world) {

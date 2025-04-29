@@ -155,6 +155,12 @@ static void update() {
     
     g.player.update(g.world);
 
+    g.world.add_light(Light {
+        .color = glm::vec3(1.0f, 0.0f, 0.0f),
+        .pos = get_lightmap_pos(g.camera.screen_to_world(sge::Input::MouseScreenPosition())),
+        .size = glm::uvec2(2)
+    });
+
 #if DEBUG_TOOLS
     if (sge::Input::Pressed(sge::Key::K)) {
         const glm::vec2 position = g.camera.screen_to_world(sge::Input::MouseScreenPosition());
@@ -181,7 +187,7 @@ static void post_update() {
 static void render() {
     ZoneScopedN("Game::render");
 
-    GameRenderer::Begin(g.camera, g.world.data());
+    GameRenderer::Begin(g.camera, g.world);
 
     Background::Draw();
 

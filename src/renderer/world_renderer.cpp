@@ -21,9 +21,9 @@
 
 #include "../assets.hpp"
 #include "../world/chunk.hpp"
-#include "../utils.hpp"
 #include "../world/utils.hpp"
 
+#include "dynamic_lighting.hpp"
 #include "types.hpp"
 
 static constexpr uint32_t LIGHTMAP_CHUNK_TILE_SIZE = 500;
@@ -42,16 +42,6 @@ struct SGE_ALIGN(16) TileTextureData {
     float depth;
 };
 
-static SGE_FORCE_INLINE void blur_dispatch(LLGL::CommandBuffer* commands, uint32_t width) {
-    commands->Dispatch(width, 1, 1);
-}
-
-static SGE_FORCE_INLINE void blur_dispatch_metal(LLGL::CommandBuffer* commands, uint32_t width) {
-    const uint32_t h = (width + 512 - 1) / 512;
-    const uint32_t w = std::min(512u, width);
-    commands->Dispatch(w, h, 1);
-}
-
 void WorldRenderer::init() {
     ZoneScopedN("WorldRenderer::init");
 
@@ -62,14 +52,6 @@ void WorldRenderer::init() {
     m_renderer = &sge::Engine::Renderer();
 
     const auto& context = m_renderer->Context();
-    const sge::RenderBackend backend = m_renderer->Backend();
-
-    if (backend.IsMetal()) {
-        m_workgroup_size = 1;
-        m_dispatch_func = blur_dispatch_metal;
-    } else {
-        m_dispatch_func = blur_dispatch;
-    }
 
     {
         const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Tiles).size());
@@ -150,84 +132,6 @@ void WorldRenderer::init() {
         m_pipeline = context->CreatePipelineState(pipelineDesc);
     }
 
-    // =======================================================
-
-    LLGL::BufferDescriptor light_buffer;
-    light_buffer.bindFlags = LLGL::BindFlags::Sampled;
-    light_buffer.stride = sizeof(Light);
-    light_buffer.size = sizeof(Light) * WORLD_MAX_LIGHT_COUNT;
-    m_light_buffer = context->CreateBuffer(light_buffer);
-
-    {
-        LLGL::PipelineLayoutDescriptor lightInitPipelineLayoutDesc;
-        lightInitPipelineLayoutDesc.heapBindings = sge::BindingLayout(
-            LLGL::StageFlags::ComputeStage,
-            {
-                sge::BindingLayoutItem::ConstantBuffer(3, "GlobalUniformBuffer"),
-                sge::BindingLayoutItem::Buffer(4, "LightBuffer"),
-                sge::BindingLayoutItem::TextureStorage(6, "LightTexture")
-            }
-        );
-
-        LLGL::PipelineLayout* lightInitPipelineLayout = context->CreatePipelineLayout(lightInitPipelineLayoutDesc);
-
-        const LLGL::ResourceViewDescriptor lightInitResourceViews[] = {
-            m_renderer->GlobalUniformBuffer(), m_light_buffer, nullptr
-        };
-
-        LLGL::ResourceHeapDescriptor lightResourceHeapDesc;
-        lightResourceHeapDesc.pipelineLayout = lightInitPipelineLayout;
-        lightResourceHeapDesc.numResourceViews = ARRAY_LEN(lightInitResourceViews);
-
-        m_light_init_resource_heap = context->CreateResourceHeap(lightResourceHeapDesc, lightInitResourceViews);
-
-        LLGL::ComputePipelineDescriptor lightPipelineDesc;
-        lightPipelineDesc.debugName = "WorldLightSetLightSourcesComputePipeline";
-        lightPipelineDesc.pipelineLayout = lightInitPipelineLayout;
-        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightSetLightSources);
-
-        m_light_set_light_sources_pipeline = context->CreatePipelineState(lightPipelineDesc);
-    }
-    {
-        LLGL::PipelineLayoutDescriptor lightBlurPipelineLayoutDesc;
-        lightBlurPipelineLayoutDesc.heapBindings = sge::BindingLayout(
-            LLGL::StageFlags::ComputeStage,
-            {
-                sge::BindingLayoutItem::ConstantBuffer(3, "GlobalUniformBuffer"),
-                backend.IsOpenGL()
-                    ? sge::BindingLayoutItem::TextureStorage(5, "TileTexture")
-                    : sge::BindingLayoutItem::Texture(5, "TileTexture"),
-                sge::BindingLayoutItem::TextureStorage(6, "LightTexture")
-            }
-        );
-        lightBlurPipelineLayoutDesc.uniforms = {
-            LLGL::UniformDescriptor("uniform_min", LLGL::UniformType::UInt2),
-            LLGL::UniformDescriptor("uniform_max", LLGL::UniformType::UInt2),
-        };
-
-        LLGL::PipelineLayout* lightBlurPipelineLayout = context->CreatePipelineLayout(lightBlurPipelineLayoutDesc);
-
-        const LLGL::ResourceViewDescriptor lightBlurResourceViews[] = {
-            m_renderer->GlobalUniformBuffer(), nullptr, nullptr
-        };
-
-        LLGL::ResourceHeapDescriptor lightBlurResourceHeapDesc;
-        lightBlurResourceHeapDesc.pipelineLayout = lightBlurPipelineLayout;
-        lightBlurResourceHeapDesc.numResourceViews = ARRAY_LEN(lightBlurResourceViews);
-
-        m_light_blur_resource_heap = context->CreateResourceHeap(lightBlurResourceHeapDesc, lightBlurResourceViews);
-
-        LLGL::ComputePipelineDescriptor lightPipelineDesc;
-        lightPipelineDesc.pipelineLayout = lightBlurPipelineLayout;
-
-        lightPipelineDesc.debugName = "WorldLightVerticalComputePipeline";
-        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightVertical);
-        m_light_vertical_pipeline = context->CreatePipelineState(lightPipelineDesc);
-
-        lightPipelineDesc.debugName = "WorldLightHorizontalComputePipeline";
-        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightHorizontal);
-        m_light_horizontal_pipeline = context->CreatePipelineState(lightPipelineDesc);
-    }
     {
         LLGL::PipelineLayoutDescriptor lightmapPipelineLayoutDesc;
         lightmapPipelineLayoutDesc.heapBindings = sge::BindingLayout(
@@ -278,6 +182,20 @@ void WorldRenderer::init() {
 
         m_lightmap_pipeline = context->CreatePipelineState(lightPipelineDesc);
     }
+}
+
+void WorldRenderer::init_lighting(const WorldData& world) {
+    const LLGL::RenderingFeatures& features = m_renderer->GetRenderingCaps().features;
+
+#if 0
+    if (features.hasComputeShaders) {
+        m_dynamic_lighting = new AcceleratedDynamicLighting(world, m_light_texture);
+    } else {
+        m_dynamic_lighting = new DynamicLighting();
+    }
+#else
+    m_dynamic_lighting = new DynamicLighting(world, m_light_texture);
+#endif
 }
 
 void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
@@ -352,10 +270,8 @@ void WorldRenderer::init_textures(const WorldData& world) {
     using Constants::SUBDIVISION;
 
     auto& context = m_renderer->Context();
-    const sge::RenderBackend backend = m_renderer->Backend();
 
     SGE_RESOURCE_RELEASE(m_light_texture);
-    SGE_RESOURCE_RELEASE(m_tile_texture);
     SGE_RESOURCE_RELEASE(m_light_texture_target);
 
     {
@@ -379,36 +295,6 @@ void WorldRenderer::init_textures(const WorldData& world) {
 
         m_light_texture = context->CreateTexture(light_texture_desc, &image_view);
     }
-
-    LLGL::TextureDescriptor tile_texture_desc;
-    tile_texture_desc.type      = LLGL::TextureType::Texture2D;
-    tile_texture_desc.format    = LLGL::Format::R8UInt;
-    tile_texture_desc.extent    = LLGL::Extent3D(world.area.width(), world.area.height(), 1);
-    tile_texture_desc.miscFlags = 0;
-    tile_texture_desc.bindFlags = backend.IsOpenGL() ? LLGL::BindFlags::Storage : LLGL::BindFlags::Sampled;
-    tile_texture_desc.mipLevels = 1;
-
-    {
-        const size_t size = world.area.width() * world.area.height();
-        uint8_t* data = new uint8_t[size];
-        for (int y = 0; y < world.area.height(); ++y) {
-            for (int x = 0; x < world.area.width(); ++x) {
-                uint8_t tile = world.tile_exists(TilePos(x, y)) ? 1 : 0;
-                data[y * world.area.width() + x] = tile;
-            }
-        }
-
-        LLGL::ImageView image_view;
-        image_view.format   = LLGL::ImageFormat::R;
-        image_view.dataType = LLGL::DataType::UInt8;
-        image_view.data     = data;
-        image_view.dataSize = size;
-
-        m_tile_texture = context->CreateTexture(tile_texture_desc, &image_view);
-    }
-
-    context->WriteResourceHeap(*m_light_init_resource_heap, 2, {m_light_texture});
-    context->WriteResourceHeap(*m_light_blur_resource_heap, 1, {m_tile_texture, m_light_texture});
 
     LLGL::RenderTargetDescriptor lightTextureRenderTarget;
     lightTextureRenderTarget.resolution.width = world.lightmap.width;
@@ -501,6 +387,11 @@ SGE_FORCE_INLINE static void internal_update_world_lightmap(const WorldData& wor
     }
 }
 
+void WorldRenderer::update(WorldData& world) {
+    update_lightmap_texture(world);
+    m_dynamic_lighting->update(world);
+}
+
 void WorldRenderer::update_lightmap_texture(WorldData& world) {
     ZoneScopedN("WorldRenderer::update_lightmap_texture");
 
@@ -568,21 +459,6 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
         ++it;
     }
 
-}
-
-void WorldRenderer::update_tile_texture(WorldData& world) {
-    LLGL::ImageView image_view;
-    image_view.format   = LLGL::ImageFormat::R;
-    image_view.dataType = LLGL::DataType::UInt8;
-    image_view.dataSize = 1;
-
-    while (!world.changed_tiles.empty()) {
-        auto [pos, value] = world.changed_tiles.back();
-        world.changed_tiles.pop_back();
-
-        image_view.data     = &value;
-        m_renderer->Context()->WriteTexture(*m_tile_texture, LLGL::TextureRegion(LLGL::Offset3D(pos.x, pos.y, 0), LLGL::Extent3D(1, 1, 1)), image_view);
-    }
 }
 
 void WorldRenderer::render(const ChunkManager& chunk_manager) {
@@ -669,82 +545,15 @@ void WorldRenderer::render_lightmap(const sge::Camera& camera) {
 }
 
 void WorldRenderer::compute_light(const sge::Camera& camera, const World& world) {
-    ZoneScopedN("WorldRenderer::compute_light");
-
-    if (world.light_count() == 0) return;
-
-    auto* const commands = m_renderer->CommandBuffer();
-
-    const size_t size = world.light_count() * sizeof(Light);
-    commands->UpdateBuffer(*m_light_buffer, 0, world.lights(), size);
-
-    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / Constants::TILE_SIZE) - static_cast<int>(m_workgroup_size);
-    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / Constants::TILE_SIZE) + static_cast<int>(m_workgroup_size);
-
-    const sge::URect blur_area = sge::URect(
-        glm::uvec2(glm::max(proj_area_min * Constants::SUBDIVISION, glm::ivec2(0))),
-        glm::uvec2(glm::max(proj_area_max * Constants::SUBDIVISION, glm::ivec2(0)))
-    );
-
-    const uint32_t grid_w = blur_area.width() / m_workgroup_size;
-    const uint32_t grid_h = blur_area.height() / m_workgroup_size;
-
-    if (grid_w * grid_h == 0) return;
-
-    commands->PushDebugGroup("CS Light SetLightSources");
-    {
-        commands->SetPipelineState(*m_light_set_light_sources_pipeline);
-        commands->SetResourceHeap(*m_light_init_resource_heap);
-        commands->Dispatch(world.light_count(), 1, 1);
-    }
-    commands->PopDebugGroup();
-
-    const auto blur_horizontal = [&blur_area, commands, grid_w, this] {
-        commands->PushDebugGroup("CS Light BlurHorizontal");
-        {
-            commands->SetPipelineState(*m_light_horizontal_pipeline);
-            commands->SetResourceHeap(*m_light_blur_resource_heap);
-            commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
-            commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
-            m_dispatch_func(commands, grid_w);
-        }
-        commands->PopDebugGroup();
-    };
-
-    const auto blur_vertical = [&blur_area, commands, grid_h, this] {
-        commands->PushDebugGroup("CS Light BlurVertical");
-        {
-            commands->SetPipelineState(*m_light_vertical_pipeline);
-            commands->SetResourceHeap(*m_light_blur_resource_heap);
-            commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
-            commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
-            m_dispatch_func(commands, grid_h);
-        }
-        commands->PopDebugGroup();
-    };
-
-    for (int i = 0; i < 2; ++i) {
-        blur_horizontal();  
-        commands->ResourceBarrier(0, nullptr, 1, &m_light_texture);
-
-        blur_vertical();
-        commands->ResourceBarrier(0, nullptr, 1, &m_light_texture);
-    }
-    blur_horizontal();
+    m_dynamic_lighting->compute_light(camera, world);
 }
 
 void WorldRenderer::terminate() {
     const auto& context = m_renderer->Context();
 
     SGE_RESOURCE_RELEASE(m_pipeline);
-    SGE_RESOURCE_RELEASE(m_light_set_light_sources_pipeline);
-    SGE_RESOURCE_RELEASE(m_light_vertical_pipeline);
-    SGE_RESOURCE_RELEASE(m_light_horizontal_pipeline);
-    SGE_RESOURCE_RELEASE(m_light_init_resource_heap);
-    SGE_RESOURCE_RELEASE(m_light_blur_resource_heap);
     SGE_RESOURCE_RELEASE(m_resource_heap);
     SGE_RESOURCE_RELEASE(m_tile_texture_data_buffer);
     SGE_RESOURCE_RELEASE(m_light_texture);
     SGE_RESOURCE_RELEASE(m_light_texture_target);
-    SGE_RESOURCE_RELEASE(m_tile_texture);
 }

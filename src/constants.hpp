@@ -28,7 +28,7 @@ namespace Constants {
     constexpr float RENDER_CHUNK_SIZE = 50.0f;
     constexpr uint8_t RENDER_CHUNK_SIZE_U = 50u;
     constexpr int SUBDIVISION = 8;
-    constexpr float LIGHT_EPSILON = 0.0185;
+    constexpr float LIGHT_EPSILON = 0.05;
     
     constexpr float LightDecay(bool solid) {
         if constexpr (SUBDIVISION == 8) {
@@ -42,7 +42,7 @@ namespace Constants {
 
     namespace internal {
         constexpr int LightDecaySteps() {
-            return gcem::ceil(gcem::log(LIGHT_EPSILON) / gcem::log(LightDecay(true)));
+            return gcem::ceil(gcem::log(LIGHT_EPSILON) / gcem::log(LightDecay(false)));
         }
     }
 

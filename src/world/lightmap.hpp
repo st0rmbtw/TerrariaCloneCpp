@@ -33,17 +33,15 @@ struct LightMap {
         masks = new LightMask[width * height]();
     }
 
-    LightMap(LightMap& other) {
-        copy(other);
+    LightMap(const LightMap& other) = delete;
+    LightMap& operator=(const LightMap &other) noexcept = delete;
+
+    LightMap(LightMap&& other) noexcept {
+        move(other);
     }
 
     LightMap& operator=(LightMap&& other) noexcept {
-        copy(other);
-        return *this;
-    }
-
-    LightMap& operator=(LightMap &other) noexcept {
-        copy(other);
+        move(other);
         return *this;
     }
 
@@ -101,7 +99,7 @@ struct LightMap {
     }
 
 private:
-    inline void copy(LightMap& from) {
+    inline void move(LightMap& from) {
         this->colors = from.colors;
         this->masks = from.masks;
         this->width = from.width;

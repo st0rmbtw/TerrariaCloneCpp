@@ -170,16 +170,19 @@ void GameRenderer::InitWorldRenderer(const WorldData &world) {
     context->WriteResourceHeap(*state.resource_heap, 4, {state.world_renderer.light_texture()});
 
     state.world_renderer.init_lightmap_chunks(world);
+    state.world_renderer.init_lighting(world);
 }
 
 void GameRenderer::UpdateLight() {
     state.update_light = true;
 }
 
-void GameRenderer::Begin(const sge::Camera& camera, WorldData& world) {
+void GameRenderer::Begin(const sge::Camera& camera, World& world) {
     ZoneScopedN("Renderer::Begin");
 
     sge::Renderer& renderer = sge::Engine::Renderer();
+    auto* const commands = renderer.CommandBuffer();
+    auto* const command_queue = renderer.CommandQueue();
 
     const sge::Rect camera_frustum = sge::Rect::from_corners(
         camera.position() + camera.get_projection_area().min,
@@ -195,8 +198,18 @@ void GameRenderer::Begin(const sge::Camera& camera, WorldData& world) {
     state.camera_frustums[NOZOOM_CAMERA_FRUSTUM] = nozoom_camera_frustum;
     state.ui_frustum = ui_frustum;
 
-    state.world_renderer.update_lightmap_texture(world);
-    state.world_renderer.update_tile_texture(world);
+    state.world_renderer.update(world.data());
+
+    if (state.update_light) {
+        commands->Begin();
+            renderer.BeginPass(*state.world_renderer.light_texture_target());
+                renderer.Clear(LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f), LLGL::ClearFlags::Color);
+            renderer.EndPass();
+        commands->End();
+        command_queue->Submit(*commands);
+
+        state.world_renderer.compute_light(camera, world);
+    }
 
     renderer.Begin(camera);
 
@@ -225,12 +238,6 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
     renderer.UploadBatchData();
 
     if (state.update_light) {
-        renderer.BeginPass(*state.world_renderer.light_texture_target());
-            renderer.Clear(clear_value, LLGL::ClearFlags::Color);
-        renderer.EndPass();
-
-        state.world_renderer.compute_light(camera, world);
-
         renderer.BeginPass(*state.world_renderer.static_lightmap_target());
             renderer.Clear(clear_value, LLGL::ClearFlags::Color);
             state.world_renderer.render_lightmap(camera);
