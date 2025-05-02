@@ -14,6 +14,8 @@ public:
     virtual void update(World& world) = 0;
     virtual void compute_light(const sge::Camera& camera, const World& world) = 0;
 
+    virtual void destroy() = 0;
+
     virtual ~IDynamicLighting() = default;
 };
 
@@ -24,7 +26,7 @@ public:
     void update(World& world) override;
     void compute_light(const sge::Camera& camera, const World& world) override;
 
-    ~DynamicLighting() override;
+    void destroy() override {}
 private:
     std::vector<sge::IRect> m_areas;
 
@@ -50,7 +52,7 @@ public:
     void update(World& world) override;
     void compute_light(const sge::Camera& camera, const World& world) override;
 
-    ~AcceleratedDynamicLighting() override;
+    void destroy() override;
 private:
     void init_textures(const WorldData& world);
 

@@ -29,7 +29,7 @@ namespace Constants {
     constexpr float RENDER_CHUNK_SIZE = 50.0f;
     constexpr uint8_t RENDER_CHUNK_SIZE_U = 50u;
     constexpr int SUBDIVISION = 8;
-    constexpr float LIGHT_EPSILON = 0.05;
+    constexpr float LIGHT_EPSILON = 0.01;
     
     constexpr float LightDecay(bool solid) {
         if constexpr (SUBDIVISION == 8) {
@@ -42,12 +42,13 @@ namespace Constants {
     }
 
     namespace internal {
-        constexpr int LightDecaySteps() {
-            return gcem::ceil(gcem::log(LIGHT_EPSILON) / gcem::log(LightDecay(false)));
+        constexpr int LightDecaySteps(bool solid) {
+            return gcem::ceil(gcem::log(LIGHT_EPSILON) / gcem::log(LightDecay(solid)));
         }
     }
 
-    constexpr int LIGHT_DECAY_STEPS = internal::LightDecaySteps();
+    constexpr int LIGHT_SOLID_DECAY_STEPS = internal::LightDecaySteps(true);
+    constexpr int LIGHT_AIR_DECAY_STEPS = internal::LightDecaySteps(false);
 
     static constexpr size_t WORLD_MAX_LIGHT_COUNT = 2000;
 };

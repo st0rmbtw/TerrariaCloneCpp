@@ -14,11 +14,11 @@
 #include "../world/autotile.hpp"
 #include "../renderer/renderer.hpp"
 
-using Constants::LIGHT_DECAY_STEPS;
-
 static void update_lightmap(WorldData& world_data, TilePos pos) {
+    using Constants::LIGHT_SOLID_DECAY_STEPS;
+
     const glm::ivec2 origin = glm::vec2(pos.x, pos.y);
-    const glm::ivec2 size = glm::ivec2(LIGHT_DECAY_STEPS, LIGHT_DECAY_STEPS);
+    const glm::ivec2 size = glm::ivec2(LIGHT_SOLID_DECAY_STEPS, LIGHT_SOLID_DECAY_STEPS);
 
     const sge::IRect light_area = sge::IRect::from_center_half_size(origin, size).clamp(world_data.area);
     world_data.lightmap_update_area_async(light_area);

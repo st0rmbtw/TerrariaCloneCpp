@@ -207,11 +207,13 @@ void GameRenderer::Begin(const sge::Camera& camera, World& world) {
             renderer.EndPass();
         commands->End();
         command_queue->Submit(*commands);
-
-        state.world_renderer.compute_light(camera, world);
     }
 
     renderer.Begin(camera);
+
+    if (state.update_light) {
+        state.world_renderer.compute_light(camera, world);
+    }
 
     state.main_batch.Reset();
     state.world_batch.Reset();

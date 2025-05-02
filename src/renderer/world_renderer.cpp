@@ -25,6 +25,7 @@
 
 #include "dynamic_lighting.hpp"
 #include "types.hpp"
+#include "utils.hpp"
 
 static constexpr uint32_t LIGHTMAP_CHUNK_TILE_SIZE = 500;
 static constexpr uint32_t LIGHTMAP_CHUNK_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::SUBDIVISION;
@@ -185,17 +186,11 @@ void WorldRenderer::init() {
 }
 
 void WorldRenderer::init_lighting(const WorldData& world) {
-#if 0
-    const LLGL::RenderingFeatures& features = m_renderer->GetRenderingCaps().features;
-
-    if (features.hasComputeShaders) {
+    if (SupportsAcceleratedDynamicLighting(*m_renderer)) {
         m_dynamic_lighting = std::make_unique<AcceleratedDynamicLighting>(world, m_light_texture);
     } else {
         m_dynamic_lighting = std::make_unique<DynamicLighting>(world, m_light_texture);
     }
-#else
-    m_dynamic_lighting = std::make_unique<DynamicLighting>(world, m_light_texture);
-#endif
 }
 
 void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
@@ -550,6 +545,8 @@ void WorldRenderer::compute_light(const sge::Camera& camera, const World& world)
 
 void WorldRenderer::terminate() {
     const auto& context = m_renderer->Context();
+
+    m_dynamic_lighting->destroy();
 
     SGE_RESOURCE_RELEASE(m_pipeline);
     SGE_RESOURCE_RELEASE(m_resource_heap);
