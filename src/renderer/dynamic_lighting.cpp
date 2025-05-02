@@ -47,7 +47,7 @@ DynamicLighting::DynamicLighting(const WorldData& world, LLGL::Texture* light_te
     m_dynamic_lightmap = LightMap(world.area.width(), world.area.height());
     m_renderer = &sge::Engine::Renderer();
 
-    m_line = new Color[Constants::LIGHT_DECAY_STEPS];
+    m_line = new Color[Constants::LIGHT_AIR_DECAY_STEPS];
 
     for (int y = 0; y < m_dynamic_lightmap.height; ++y) {
         for (int x = 0; x < m_dynamic_lightmap.width; ++x) {
@@ -59,7 +59,7 @@ DynamicLighting::DynamicLighting(const WorldData& world, LLGL::Texture* light_te
     }
 }
 
-DynamicLighting::~DynamicLighting() {
+void DynamicLighting::destroy() {
     delete[] m_line;
 }
 
@@ -209,7 +209,7 @@ static uint32_t count_steps(const LightMap& lightmap, Color* line, glm::vec3& pr
 
     int index = start_index;
     uint32_t i = 0;
-    while (i < Constants::LIGHT_DECAY_STEPS && index >= 0) {
+    while (i < Constants::LIGHT_AIR_DECAY_STEPS && index >= 0) {
         glm::vec3 this_light = line[i].as_vec3();
 
         prev_light.r = prev_light.r < LIGHT_EPSILON ? 0.0f : prev_light.r;
@@ -419,7 +419,7 @@ AcceleratedDynamicLighting::AcceleratedDynamicLighting(const WorldData& world, L
     init_textures(world);
 }
 
-AcceleratedDynamicLighting::~AcceleratedDynamicLighting() {
+void AcceleratedDynamicLighting::destroy() {
     const auto& context = m_renderer->Context();
 
     SGE_RESOURCE_RELEASE(m_light_set_light_sources_pipeline);

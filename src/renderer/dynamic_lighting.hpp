@@ -26,7 +26,11 @@ public:
     void update(World& world) override;
     void compute_light(const sge::Camera& camera, const World& world) override;
 
-    void destroy() override {}
+    void destroy() override;
+
+    ~DynamicLighting() override {
+        destroy();
+    }
 private:
     std::vector<sge::IRect> m_areas;
 

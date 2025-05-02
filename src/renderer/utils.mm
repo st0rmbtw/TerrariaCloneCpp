@@ -1,5 +1,11 @@
 #include "utils.hpp"
 
+#include <SGE/defines.hpp>
+
+#if SGE_PLATFORM_APPLE
+    #include <LLGL/Backend/Metal/NativeHandle.h>
+#endif
+
 bool SupportsAcceleratedDynamicLighting(const sge::Renderer& renderer) {
     const LLGL::RenderingFeatures& features = renderer.GetRenderingCaps().features;
 
