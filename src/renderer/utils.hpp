@@ -1,5 +1,5 @@
-#ifndef _RENDERER_BACKGROUND_RENDERER_HPP_
-#define _RENDERER_BACKGROUND_RENDERER_HPP_
+#ifndef _RENDERER_UTILS_HPP_
+#define _RENDERER_UTILS_HPP_
 
 #include <SGE/renderer/renderer.hpp>
 #include <SGE/defines.hpp>
