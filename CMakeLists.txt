@@ -28,6 +28,10 @@ else()
     set(RELEASE_BUILD ON)
 endif()
 
+if(UNIX AND NOT APPLE)
+    set(LINUX TRUE)
+endif()
+
 if (RELEASE_BUILD)
     message("-- Build Type: Release")
     if(MSVC)
@@ -88,6 +92,8 @@ add_subdirectory(FontAssetGenerator)
 file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/*.mm")
 if (APPLE)
     set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/game.cpp PROPERTIES COMPILE_FLAGS "-x objective-c++")
+else()
+    set_source_files_properties(${SRC} PROPERTIES COMPILE_FLAGS "-x c++")
 endif()
 
 add_executable(${PROJECT_NAME})
@@ -118,6 +124,10 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE SGE FastNoiseLite)
+
+if (LINUX)
+    target_link_libraries(${PROJECT_NAME} PRIVATE SGE atomic)
+endif()
 
 # ========================= Copy Assets =========================
 
