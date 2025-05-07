@@ -1,6 +1,6 @@
 #version 330 core
 
-out vec4 frag_color;
+layout(location = 0) out vec4 frag_color;
 
 uniform sampler2DArray u_texture_array;
 

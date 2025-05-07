@@ -1,6 +1,6 @@
 #version 330 core
 
-out vec4 frag_color;
+layout(location = 0) out vec4 frag_color;
 
 uniform sampler2D u_background_texture;
 uniform sampler2D u_world_texture;
