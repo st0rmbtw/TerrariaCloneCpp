@@ -117,7 +117,7 @@ public:
         m_wall_cracks.erase(pos);
     }
 
-    [[nodiscard]] inline const Light* lights() const { return m_lights; }
+    [[nodiscard]] inline const Light* lights() const { return m_lights.data(); }
     [[nodiscard]] inline uint32_t light_count() const { return m_light_count; }
 
     inline void clear_lights() { m_light_count = 0; }
@@ -139,7 +139,7 @@ private:
     std::unordered_map<TilePos, TileCracks> m_tile_cracks;
     std::unordered_map<TilePos, TileCracks> m_wall_cracks;
     sge::Timer m_anim_timer = sge::Timer::from_seconds(1.0f / 15.0f, sge::TimerMode::Repeating);
-    Light* m_lights = nullptr;
+    LLGL::DynamicArray<Light> m_lights;
     uint32_t m_light_count = 0; 
 
     glm::vec2 offsets[7];

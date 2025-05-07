@@ -6,6 +6,8 @@
 
 #include <tracy/Tracy.hpp>
 
+#include <LLGL/Tags.h>
+
 #include <SGE/time/time.hpp>
 #include <SGE/types/color.hpp>
 
@@ -183,8 +185,8 @@ void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
     world_generate(m_data, width, height, seed);
 
     m_light_count = 0;
-    if (m_lights == nullptr) {
-        m_lights = new Light[WORLD_MAX_LIGHT_COUNT];
+    if (m_lights.data() == nullptr) {
+        m_lights = LLGL::DynamicArray<Light>(WORLD_MAX_LIGHT_COUNT, LLGL::UninitializeTag{});
     }
 }
 

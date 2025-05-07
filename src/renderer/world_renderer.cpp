@@ -8,6 +8,7 @@
 #include <LLGL/PipelineLayoutFlags.h>
 #include <LLGL/ResourceFlags.h>
 #include <LLGL/ShaderFlags.h>
+#include <LLGL/Container/DynamicArray.h>
 
 #include <SGE/engine.hpp>
 #include <SGE/renderer/macros.hpp>
@@ -278,15 +279,13 @@ void WorldRenderer::init_textures(const WorldData& world) {
         light_texture_desc.bindFlags = LLGL::BindFlags::Storage | LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
         light_texture_desc.mipLevels = 1;
 
-        const size_t size = world.lightmap.width * world.lightmap.height * 3;
-        uint8_t* data = new uint8_t[size];
-        memset(data, 0, size);
+        LLGL::DynamicArray<uint8_t> pixels(world.lightmap.width * world.lightmap.height * 3, 0);
 
         LLGL::ImageView image_view;
         image_view.format   = LLGL::ImageFormat::RGB;
         image_view.dataType = LLGL::DataType::UInt8;
-        image_view.data     = data;
-        image_view.dataSize = size;
+        image_view.data     = pixels.data();
+        image_view.dataSize = pixels.size();
 
         m_light_texture = context->CreateTexture(light_texture_desc, &image_view);
     }

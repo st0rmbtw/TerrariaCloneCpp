@@ -4,6 +4,8 @@
 
 #include <tracy/Tracy.hpp>
 
+#include <LLGL/Container/DynamicArray.h>
+
 #include <SGE/time/time.hpp>
 #include <SGE/time/timer.hpp>
 #include <SGE/types/anchor.hpp>
@@ -88,7 +90,7 @@ static struct UiState {
     sge::LinearRgba cursor_foreground_color;
     sge::LinearRgba cursor_background_color;
 
-    float* frametime_records;
+    LLGL::DynamicArray<float> frametime_records;
     uint16_t frametime_record_index = 0;
     float frametime_record_sum = 0.0f;
 
@@ -129,7 +131,7 @@ void UI::Init() {
         .set_color(state.cursor_foreground_color)
         .set_anchor(sge::Anchor::TopLeft);
 
-    state.frametime_records = new float[FRAMETIME_RECORD_MAX_COUNT]();
+    state.frametime_records = LLGL::DynamicArray<float>(FRAMETIME_RECORD_MAX_COUNT);
 }
 
 static SGE_FORCE_INLINE void select_hotbar_slot(Inventory& inventory, uint8_t slot) {

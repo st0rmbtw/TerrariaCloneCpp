@@ -609,22 +609,16 @@ sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAss
     }
     layers_count += 1;
 
-    const size_t data_size = width * height * layers_count * 4;
-    uint8_t* image_data = new uint8_t[data_size];
-    memset(image_data, 0, data_size);
+    LLGL::DynamicArray<uint8_t> pixels(width * height * layers_count * 4, 0);
 
     for (const auto& [layer, layer_data] : layer_to_data_map) {
         for (size_t row = 0; row < layer_data.rows; ++row) {
-            memcpy(&image_data[width * height * 4 * layer + row * width * 4], &layer_data.data[row * layer_data.cols * 4], layer_data.cols * 4);
+            memcpy(&pixels[width * height * 4 * layer + row * width * 4], &layer_data.data[row * layer_data.cols * 4], layer_data.cols * 4);
         }
         stbi_image_free(layer_data.data);
     }
 
-    const sge::Texture texture = sge::Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2DArray, LLGL::ImageFormat::RGBA, LLGL::DataType::UInt8, width, height, layers_count, Assets::GetSampler(sampler), image_data, generate_mip_maps);
-    
-    delete[] image_data;
-
-    return texture;
+    return sge::Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2DArray, LLGL::ImageFormat::RGBA, LLGL::DataType::UInt8, width, height, layers_count, Assets::GetSampler(sampler), pixels.data(), generate_mip_maps);
 }
 
 template <typename T>

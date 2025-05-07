@@ -36,7 +36,7 @@ private:
 
     std::vector<std::pair<size_t, size_t>> m_indices;
 
-    Color* m_line = nullptr;
+    LLGL::DynamicArray<Color> m_line;
 
     LightMap m_dynamic_lightmap;
 

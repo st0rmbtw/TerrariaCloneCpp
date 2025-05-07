@@ -1,6 +1,9 @@
 #include <algorithm>
 #include <tracy/Tracy.hpp>
 
+#include <LLGL/Container/DynamicArray.h>
+#include <LLGL/Tags.h>
+
 #include <SGE/engine.hpp>
 #include <SGE/renderer/macros.hpp>
 #include <SGE/types/binding_layout.hpp>
@@ -47,7 +50,7 @@ DynamicLighting::DynamicLighting(const WorldData& world, LLGL::Texture* light_te
     m_dynamic_lightmap = LightMap(world.area.width(), world.area.height());
     m_renderer = &sge::Engine::Renderer();
 
-    m_line = new Color[Constants::LIGHT_AIR_DECAY_STEPS];
+    m_line = LLGL::DynamicArray<Color>(Constants::LIGHT_AIR_DECAY_STEPS);
 
     for (int y = 0; y < m_dynamic_lightmap.height; ++y) {
         for (int x = 0; x < m_dynamic_lightmap.width; ++x) {
@@ -59,9 +62,7 @@ DynamicLighting::DynamicLighting(const WorldData& world, LLGL::Texture* light_te
     }
 }
 
-void DynamicLighting::destroy() {
-    delete[] m_line;
-}
+void DynamicLighting::destroy() {}
 
 SGE_FORCE_INLINE static void blur_line(LightMap& lightmap, int start, int end, int stride, glm::vec3& prev_light, float& prev_decay, glm::vec3& prev_light2, float& prev_decay2) {
     using Constants::LIGHT_EPSILON;
@@ -204,7 +205,7 @@ SGE_FORCE_INLINE static void blur_vertical(LightMap& lightmap, const sge::IRect&
     }
 }
 
-static uint32_t count_steps(const LightMap& lightmap, Color* line, glm::vec3& prev_light, float& prev_decay, int start_index, int stride) {
+static uint32_t count_steps(const LightMap& lightmap, LLGL::DynamicArray<Color>& line, glm::vec3& prev_light, float& prev_decay, int start_index, int stride) {
     using Constants::LIGHT_EPSILON;
 
     int index = start_index;
@@ -246,12 +247,12 @@ static uint32_t count_steps(const LightMap& lightmap, Color* line, glm::vec3& pr
     return i;
 }
 
-static sge::IRect calculate_light_area(const LightMap& lightmap, Color* m_line, glm::ivec2 pos, const glm::vec3& color) {
+static sge::IRect calculate_light_area(const LightMap& lightmap, LLGL::DynamicArray<Color>& line, glm::ivec2 pos, const glm::vec3& color) {
     glm::vec3 prev_light = glm::vec3(0.0f);
     float prev_decay = 0.0f;
     int length = 0;
 
-    m_line[0] = Color(color);
+    line[0] = Color(color);
 
     prev_light = glm::vec3(0.0f);
 
@@ -259,22 +260,22 @@ static sge::IRect calculate_light_area(const LightMap& lightmap, Color* m_line, 
 
     // Horizontal
     prev_decay = Constants::LightDecay(lightmap.get_mask({pos.x + 1, pos.y}));
-    length = count_steps(lightmap, m_line, prev_light, prev_decay, (pos.y) * lightmap.width + pos.x, -1);
+    length = count_steps(lightmap, line, prev_light, prev_decay, (pos.y) * lightmap.width + pos.x, -1);
     area.min.x = glm::min(area.min.x, -length);
 
     prev_decay = Constants::LightDecay(lightmap.get_mask({pos.x - 1, pos.y}));
-    length = count_steps(lightmap, m_line, prev_light, prev_decay, (pos.y) * lightmap.width + pos.x, 1);
+    length = count_steps(lightmap, line, prev_light, prev_decay, (pos.y) * lightmap.width + pos.x, 1);
     area.max.x = glm::max(area.max.x, length);
 
     prev_light = glm::vec3(0.0f);
 
     // Vertical
     prev_decay = Constants::LightDecay(lightmap.get_mask({pos.x, pos.y + 1}));
-    length = count_steps(lightmap, m_line, prev_light, prev_decay, (pos.y) * lightmap.width + pos.x, -lightmap.width);
+    length = count_steps(lightmap, line, prev_light, prev_decay, (pos.y) * lightmap.width + pos.x, -lightmap.width);
     area.min.y = glm::min(area.min.y, -length);
 
     prev_decay = Constants::LightDecay(lightmap.get_mask({pos.x, pos.y - 1}));
-    length = count_steps(lightmap, m_line, prev_light, prev_decay, (pos.y) * lightmap.width + pos.x, lightmap.width);
+    length = count_steps(lightmap, line, prev_light, prev_decay, (pos.y) * lightmap.width + pos.x, lightmap.width);
     area.max.y = glm::max(area.max.y, length);
 
     return area;
@@ -533,20 +534,20 @@ void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
     tile_texture_desc.mipLevels = 1;
 
     {
-        const size_t size = world.area.width() * world.area.height();
-        uint8_t* data = new uint8_t[size];
+        LLGL::DynamicArray<uint8_t> pixels(world.area.width() * world.area.height(), LLGL::UninitializeTag{});
+
         for (int y = 0; y < world.area.height(); ++y) {
             for (int x = 0; x < world.area.width(); ++x) {
                 uint8_t tile = world.tile_exists(TilePos(x, y)) ? 1 : 0;
-                data[y * world.area.width() + x] = tile;
+                pixels[y * world.area.width() + x] = tile;
             }
         }
 
         LLGL::ImageView image_view;
         image_view.format   = LLGL::ImageFormat::R;
         image_view.dataType = LLGL::DataType::UInt8;
-        image_view.data     = data;
-        image_view.dataSize = size;
+        image_view.data     = pixels.data();
+        image_view.dataSize = pixels.size();
 
         m_tile_texture = context->CreateTexture(tile_texture_desc, &image_view);
     }

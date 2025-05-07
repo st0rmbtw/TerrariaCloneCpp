@@ -23,7 +23,7 @@ enum class TileOffset: uint8_t {
 struct TilePos {
     int x, y;
 
-    constexpr TilePos() : x(0), y(0) {}
+    explicit TilePos() = default;
 
     constexpr TilePos(int x, int y) : x(x), y(y) {}
     constexpr TilePos(const glm::ivec2& pos) : x(pos.x), y(pos.y) {}
