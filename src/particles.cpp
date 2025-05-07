@@ -340,6 +340,7 @@ void ParticleManager::Terminate() {
 #endif
 
     free(state.light_color);
+    free(state.initial_light_color);
     free(state.max_lifetime);
     free(state.custom_scale);
     free(state.scale);

@@ -416,3 +416,16 @@ void GameRenderer::DrawParticle(const glm::vec2& position, const glm::quat& rota
     else
         state.particle_renderer.draw_particle(position, rotation, scale, type, variant, order);
 }
+
+void GameRenderer::Terminate() {
+    state.world_renderer.terminate();
+    state.background_renderer.terminate();
+    state.particle_renderer.terminate();
+
+    const auto& context = sge::Engine::Renderer().Context();
+    
+    SGE_RESOURCE_RELEASE(state.resource_heap);
+    SGE_RESOURCE_RELEASE(state.chunk_vertex_buffer);
+    SGE_RESOURCE_RELEASE(state.postprocess_pipeline);
+    SGE_RESOURCE_RELEASE(state.postprocess_vertex_buffer);
+}

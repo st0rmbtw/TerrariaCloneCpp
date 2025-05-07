@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <thread>
 #include <atomic>
+#include <memory>
 
 #include "../types/tile_pos.hpp"
 #include "../constants.hpp"
@@ -58,8 +59,8 @@ struct LightMap {
     }
 
     ~LightMap() {
-        if (colors) delete[] colors;
-        if (masks) delete[] masks;
+        if (colors != nullptr) delete[] colors;
+        if (masks != nullptr) delete[] masks;
     }
 
     [[nodiscard]]

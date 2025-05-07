@@ -332,5 +332,7 @@ void Game::Run() {
 }
 
 void Game::Destroy() {
+    GameRenderer::Terminate();
+    ParticleManager::Terminate();
     sge::Engine::Destroy();
 }

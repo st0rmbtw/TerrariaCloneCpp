@@ -373,4 +373,10 @@ void ParticleRenderer::terminate() {
 
     SGE_RESOURCE_RELEASE(m_pipeline);
     SGE_RESOURCE_RELEASE(m_compute_pipeline);
+
+    delete[] m_instance_buffer_data;
+    delete[] m_instance_buffer_data_world;
+    delete[] m_position_buffer_data;
+    delete[] m_rotation_buffer_data;
+    delete[] m_scale_buffer_data;
 }
