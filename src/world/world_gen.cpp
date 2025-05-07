@@ -107,7 +107,7 @@ static void world_generate_walls(WorldData& world) {
     const int underground_level = world.layers.underground;
 
     for (int y = dirt_level; y < underground_level; ++y) {
-        for (int x = world.playable_area.min.x; x < world.playable_area.max.x - 1; ++x) {
+        for (int x = world.playable_area.min.x; x < world.playable_area.max.x; ++x) {
             set_wall(world, {x, y}, Wall(WallType::DirtWall));
         }
     }

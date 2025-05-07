@@ -133,7 +133,7 @@ static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, co
                 continue;
             }
 
-            if (tile_pos.x <= world.playable_area.min.x || tile_pos.x >= world.playable_area.max.x - 1 || world.tile_exists(tile_pos) || world.wall_exists(tile_pos)) {
+            if (tile_pos.x < world.playable_area.min.x || tile_pos.x > world.playable_area.max.x - 1 || world.tile_exists(tile_pos) || world.wall_exists(tile_pos)) {
                 lightmap.set_color(color_pos, glm::vec3(0.0f));
             } else {
                 lightmap.set_color(color_pos, glm::vec3(1.0f));
