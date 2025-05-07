@@ -1,14 +1,10 @@
 #version 450 core
 
 layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec2 a_wall_tex_size;
-layout(location = 2) in vec2 a_tile_tex_size;
-layout(location = 3) in vec2 a_wall_padding;
-layout(location = 4) in vec2 a_tile_padding;
-layout(location = 5) in uint i_position;
-layout(location = 6) in vec2 i_atlas_pos;
-layout(location = 7) in vec2 i_world_pos;
-layout(location = 8) in uint i_tile_data;
+layout(location = 1) in uint i_position;
+layout(location = 2) in vec2 i_atlas_pos;
+layout(location = 3) in vec2 i_world_pos;
+layout(location = 4) in uint i_tile_data;
 
 layout(binding = 2) uniform GlobalUniformBuffer {
     mat4 screen_projection;
