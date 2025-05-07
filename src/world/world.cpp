@@ -231,18 +231,16 @@ void World::draw() const {
     flames.set_index(0, 0);
     flames.set_color(sge::LinearRgba(150, 150, 150, 7));
 
-    GameRenderer::BeginBlendMode(sge::BlendMode::PremultipliedAlpha);
     GameRenderer::BeginOrderMode();
         for (const TilePos& tile_pos : m_data.torches) {
             for (const glm::vec2& offset : offsets) {
                 float xx = offset.x;
                 float yy = offset.y;
                 flames.set_position(tile_pos.to_world_pos() + glm::vec2(-(20.0f - 16.0f) / 2.0f + xx, yy));
-                GameRenderer::DrawAtlasSpriteWorld(flames);
+                GameRenderer::DrawAtlasSpriteWorldPremultiplied(flames);
             }
         }
     GameRenderer::EndOrderMode();
-    GameRenderer::EndBlendMode();
 
     for (const auto& [pos, cracks] : m_tile_cracks) {
         sge::TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));

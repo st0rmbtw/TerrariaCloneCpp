@@ -248,18 +248,21 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
         state.update_light = false;
     }
 
-    renderer.BeginPass(*state.background_renderer.target());
-        renderer.Clear(clear_value, LLGL::ClearFlags::Color);
-        state.background_renderer.render();
-    renderer.EndPass();
+    // renderer.BeginPass(*state.background_renderer.target());
+    //     renderer.Clear(clear_value, LLGL::ClearFlags::Color);
+    //     state.background_renderer.render();
+    // renderer.EndPass();
 
     renderer.BeginPass(*state.world_renderer.target());
         renderer.Clear(clear_value, LLGL::ClearFlags::ColorDepth);
+
+        state.background_renderer.render();
 
         state.background_renderer.render_world();
         state.world_renderer.render(world.chunk_manager());
         state.particle_renderer.render_world();
 
+        renderer.RenderBatch(state.premultiply_batch);
         renderer.RenderBatch(state.world_batch);
     renderer.EndPass();
 
