@@ -66,6 +66,10 @@ if (WIN32)
     add_compile_definitions(NOMINMAX)
 endif()
 
+if (UNIX AND NOT APPLE)
+   set(LLGL_LINUX_ENABLE_WAYLAND ON)
+endif()
+
 if (MSVC)
     add_compile_options(/wd5240)
 else()

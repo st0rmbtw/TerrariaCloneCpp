@@ -54,6 +54,8 @@ void WorldRenderer::init() {
 
     const auto& context = m_renderer->Context();
 
+    const uint32_t samples = m_renderer->SwapChain()->GetSamples();
+
     {
         const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Tiles).size());
         const glm::vec2 tile_padding = glm::vec2(Constants::TILE_TEXTURE_PADDING) / tile_tex_size;
@@ -113,6 +115,7 @@ void WorldRenderer::init() {
         pipelineDesc.indexFormat = LLGL::Format::R16UInt;
         pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
         pipelineDesc.rasterizer.frontCCW = true;
+        pipelineDesc.rasterizer.multiSampleEnabled = (samples > 1);
         pipelineDesc.depth = LLGL::DepthDescriptor {
             .testEnabled = true,
             .writeEnabled = true,
@@ -172,6 +175,7 @@ void WorldRenderer::init() {
         lightPipelineDesc.indexFormat = LLGL::Format::R16UInt;
         lightPipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
         lightPipelineDesc.rasterizer.frontCCW = true;
+        lightPipelineDesc.rasterizer.multiSampleEnabled = (samples > 1);
         lightPipelineDesc.renderPass = m_static_lightmap_render_pass;
         lightPipelineDesc.blend = LLGL::BlendDescriptor {
             .targets = {
@@ -197,6 +201,8 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
     const auto& context = m_renderer->Context();
     const LLGL::SwapChain* swap_chain = m_renderer->SwapChain();
 
+    const uint32_t samples = swap_chain->GetSamples();
+
     SGE_RESOURCE_RELEASE(m_target);
     SGE_RESOURCE_RELEASE(m_target_texture);
     SGE_RESOURCE_RELEASE(m_depth_texture);
@@ -205,8 +211,7 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
     SGE_RESOURCE_RELEASE(m_static_lightmap_texture);
 
     LLGL::TextureDescriptor texture_desc;
-    texture_desc.extent.depth = 1;
-    texture_desc.miscFlags = 0;
+    texture_desc.miscFlags = LLGL::MiscFlags::FixedSamples;
     texture_desc.cpuAccessFlags = 0;
     texture_desc.mipLevels = 1;
 
@@ -218,6 +223,8 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
     m_static_lightmap_texture = context->CreateTexture(texture_desc);
 
     LLGL::TextureDescriptor depth_texture_desc = texture_desc;
+    depth_texture_desc.type = samples > 1 ? LLGL::TextureType::Texture2DMS : LLGL::TextureType::Texture2DMS;
+    depth_texture_desc.samples = samples;
     depth_texture_desc.extent.width = resolution.width;
     depth_texture_desc.extent.height = resolution.height;
     depth_texture_desc.format = swap_chain->GetDepthStencilFormat();
@@ -233,30 +240,46 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
         render_pass.depthAttachment.storeOp = LLGL::AttachmentStoreOp::Store;
         render_pass.stencilAttachment.format = swap_chain->GetDepthStencilFormat();
         render_pass.stencilAttachment.storeOp = LLGL::AttachmentStoreOp::Store;
+        render_pass.samples = samples;
         m_render_pass = context->CreateRenderPass(render_pass);
     }
 
     if (m_static_lightmap_render_pass == nullptr) {
-        LLGL::RenderPassDescriptor static_lightmap_render_pass_desc;
-        static_lightmap_render_pass_desc.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Undefined;
-        static_lightmap_render_pass_desc.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
-        static_lightmap_render_pass_desc.colorAttachments[0].format = swap_chain->GetColorFormat();
-        m_static_lightmap_render_pass = context->CreateRenderPass(static_lightmap_render_pass_desc);
+        LLGL::RenderPassDescriptor render_pass_desc;
+        render_pass_desc.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Undefined;
+        render_pass_desc.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
+        render_pass_desc.colorAttachments[0].format = swap_chain->GetColorFormat();
+        render_pass_desc.samples = samples;
+        m_static_lightmap_render_pass = context->CreateRenderPass(render_pass_desc);
     }
 
-    LLGL::RenderTargetDescriptor render_target_desc;
-    render_target_desc.resolution.width = resolution.width;
-    render_target_desc.resolution.height = resolution.height;
-    render_target_desc.colorAttachments[0].texture = m_target_texture;
-    render_target_desc.depthStencilAttachment.texture = m_depth_texture;
-    render_target_desc.renderPass = m_render_pass;
-    m_target = context->CreateRenderTarget(render_target_desc);
-
-    LLGL::RenderTargetDescriptor static_lightmap_target_desc;
-    static_lightmap_target_desc.renderPass = m_static_lightmap_render_pass;
-    static_lightmap_target_desc.resolution = resolution;
-    static_lightmap_target_desc.colorAttachments[0] = m_static_lightmap_texture;
-    m_static_lightmap_target = context->CreateRenderTarget(static_lightmap_target_desc);
+    {
+        LLGL::RenderTargetDescriptor target_desc;
+        target_desc.renderPass = m_render_pass;
+        target_desc.resolution = resolution;
+        target_desc.samples = samples;
+        target_desc.depthStencilAttachment = m_depth_texture;
+        if (samples > 1) {
+            target_desc.colorAttachments[0] = m_target_texture->GetFormat();
+            target_desc.resolveAttachments[0] = m_target_texture;
+        } else {
+            target_desc.colorAttachments[0] = m_target_texture;
+        }
+        m_target = context->CreateRenderTarget(target_desc);
+    }
+    {
+        LLGL::RenderTargetDescriptor target_desc;
+        target_desc.renderPass = m_static_lightmap_render_pass;
+        target_desc.resolution = resolution;
+        target_desc.samples = samples;
+        if (samples > 1) {
+            target_desc.colorAttachments[0] = m_static_lightmap_texture->GetFormat();
+            target_desc.resolveAttachments[0] = m_static_lightmap_texture;
+        } else {
+            target_desc.colorAttachments[0] = m_static_lightmap_texture;
+        }
+        m_static_lightmap_target = context->CreateRenderTarget(target_desc);
+    }
 }
 
 void WorldRenderer::init_textures(const WorldData& world) {

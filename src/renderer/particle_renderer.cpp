@@ -36,6 +36,8 @@ void ParticleRenderer::init() {
     const auto& context = m_renderer->Context();
     const auto* swap_chain = m_renderer->SwapChain();
 
+    const uint32_t samples = swap_chain->GetSamples();
+
     m_atlas = Assets::GetTextureAtlas(TextureAsset::Particles);
 
     m_instance_buffer_data = new ParticleInstance[MAX_PARTICLES_COUNT];
@@ -139,6 +141,7 @@ void ParticleRenderer::init() {
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = swap_chain->GetRenderPass();
     pipelineDesc.rasterizer.frontCCW = true;
+    pipelineDesc.rasterizer.multiSampleEnabled = (samples > 1);
     pipelineDesc.depth = LLGL::DepthDescriptor {
         .testEnabled = true,
         .writeEnabled = true,

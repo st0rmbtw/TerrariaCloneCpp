@@ -47,7 +47,7 @@ enum class TextureAsset : uint8_t {
     Flames0
 };
 
-enum class BackgroundAsset : uint16_t {
+enum class BackgroundAsset : uint8_t {
     Background0 = 0,
     Background7,
     Background55,

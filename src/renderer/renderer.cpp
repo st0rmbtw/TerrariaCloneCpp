@@ -60,6 +60,7 @@ LLGL::Buffer* GameRenderer::ChunkVertexBuffer() { return state.chunk_vertex_buff
 bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
     sge::Renderer& renderer = sge::Engine::Renderer();
     const auto& context = renderer.Context();
+    const uint32_t samples = renderer.SwapChain()->GetSamples();
 
     const sge::Vertex vertices[] = {
         sge::Vertex(0.0, 0.0),
@@ -121,6 +122,7 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
     pipelineDesc.indexFormat = LLGL::Format::R16UInt;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.rasterizer.frontCCW = true;
+    pipelineDesc.rasterizer.multiSampleEnabled = (samples > 1);
 
     state.postprocess_pipeline = context->CreatePipelineState(pipelineDesc);
 
@@ -134,9 +136,12 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
     return true;
 }
 
-void GameRenderer::ResizeTextures(LLGL::Extent2D resolution) {
+void GameRenderer::ResizeTextures(LLGL::Extent2D size) {
     sge::Renderer& renderer = sge::Engine::Renderer();
     const auto& context = renderer.Context();
+    const uint32_t samples = renderer.SwapChain()->GetSamples();
+
+    const LLGL::Extent2D resolution = LLGL::Extent2D(size.width * samples, size.height * samples);
 
     state.world_renderer.init_targets(resolution);
     state.background_renderer.init_targets(resolution);
@@ -283,6 +288,7 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
     renderer.End();
 
     state.particle_renderer.reset();
+    state.background_renderer.reset();
 }
 
 void GameRenderer::BeginOrderMode(int order, bool advance) {

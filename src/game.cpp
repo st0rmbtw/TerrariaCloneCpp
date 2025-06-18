@@ -28,9 +28,12 @@
 static struct GameState {
     Player player;
     World world;
-    sge::Camera camera;
-    bool free_camera = false;
+    sge::Camera camera = sge::Camera(sge::CameraOrigin::Center, sge::CoordinateSystem {
+        .up = sge::CoordinateDirectionY::Negative,
+        .forward = sge::CoordinateDirectionZ::Negative,
+    });
     std::vector<Light> lights;
+    bool free_camera = false;
 } g;
 
 static glm::vec2 camera_follow_player() {

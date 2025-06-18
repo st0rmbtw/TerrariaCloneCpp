@@ -29,6 +29,8 @@ void BackgroundRenderer::init() {
     const auto& context = m_renderer->Context();
     const auto* swap_chain = m_renderer->SwapChain();
 
+    const uint32_t samples = swap_chain->GetSamples();
+
     const sge::Texture& backgrounds_texture = Assets::GetTexture(TextureAsset::Backgrounds);
 
     m_buffer = new BackgroundInstance[MAX_QUADS];
@@ -85,6 +87,7 @@ void BackgroundRenderer::init() {
     render_pass.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Load;
     render_pass.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
     render_pass.colorAttachments[0].format = swap_chain->GetColorFormat();
+    render_pass.samples = samples;
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
     pipelineDesc.debugName = "BackgroundRenderer Pipeline";
@@ -95,6 +98,7 @@ void BackgroundRenderer::init() {
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = context->CreateRenderPass(render_pass);
     pipelineDesc.rasterizer.frontCCW = true;
+    pipelineDesc.rasterizer.multiSampleEnabled = (samples > 1);
 
     m_pipeline = context->CreatePipelineState(pipelineDesc);
 
@@ -107,6 +111,8 @@ void BackgroundRenderer::init_targets(LLGL::Extent2D resolution) {
     const auto& context = m_renderer->Context();
     const auto* swap_chain = m_renderer->SwapChain();
 
+    const uint32_t samples = swap_chain->GetSamples();
+
     SGE_RESOURCE_RELEASE(m_background_render_target);
     SGE_RESOURCE_RELEASE(m_background_render_texture);
 
@@ -115,7 +121,7 @@ void BackgroundRenderer::init_targets(LLGL::Extent2D resolution) {
     texture_desc.extent.height = resolution.height;
     texture_desc.format = swap_chain->GetColorFormat();
     texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
-    texture_desc.miscFlags = 0;
+    texture_desc.miscFlags = LLGL::MiscFlags::FixedSamples;
     texture_desc.cpuAccessFlags = 0;
     texture_desc.mipLevels = 1;
 
@@ -123,12 +129,21 @@ void BackgroundRenderer::init_targets(LLGL::Extent2D resolution) {
 
     LLGL::RenderTargetDescriptor background_target_desc;
     background_target_desc.resolution = resolution;
-    background_target_desc.colorAttachments[0] = m_background_render_texture;
+    background_target_desc.samples = samples;
+    if (samples > 1) {
+        background_target_desc.colorAttachments[0] = m_background_render_texture->GetFormat();
+        background_target_desc.resolveAttachments[0] = m_background_render_texture;
+    } else {
+        background_target_desc.colorAttachments[0] = m_background_render_texture;
+    }
     m_background_render_target = context->CreateRenderTarget(background_target_desc);
 }
 
 void BackgroundRenderer::init_world(WorldRenderer& world_renderer) {
     const auto& context = m_renderer->Context();
+    const auto* swap_chain = m_renderer->SwapChain();
+
+    const uint32_t samples = swap_chain->GetSamples();
 
     const sge::ShaderPipeline& background_shader = Assets::GetShader(ShaderAsset::BackgroundShader);
 
@@ -141,12 +156,20 @@ void BackgroundRenderer::init_world(WorldRenderer& world_renderer) {
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = world_renderer.render_pass();
     pipelineDesc.rasterizer.frontCCW = true;
+    pipelineDesc.rasterizer.multiSampleEnabled = (samples > 1);
 
     m_pipeline_world = context->CreatePipelineState(pipelineDesc);
 
     if (const LLGL::Report* report = m_pipeline_world->GetReport()) {
         if (report->HasErrors()) SGE_LOG_ERROR("%s", report->GetText());
     }
+}
+
+void BackgroundRenderer::reset() {
+    m_buffer_ptr = m_buffer;
+    m_layer_count = 0;
+    m_world_buffer_ptr = m_world_buffer;
+    m_world_layer_count = 0;
 }
 
 void BackgroundRenderer::draw_layer_internal(const BackgroundLayer& layer, BackgroundInstance** p_buffer) {

@@ -27,6 +27,7 @@ public:
     void render();
     void render_world();
     void terminate();
+    void reset();
 
     inline void draw_layer(const BackgroundLayer& layer) {
         draw_layer_internal(layer, &m_buffer_ptr);
@@ -50,16 +51,16 @@ private:
     size_t m_world_layer_count = 0;
 
     sge::Renderer* m_renderer = nullptr;
-    
+
     LLGL::PipelineLayout* m_pipeline_layout = nullptr;
     LLGL::PipelineState* m_pipeline = nullptr;
     LLGL::PipelineState* m_pipeline_world = nullptr;
     LLGL::ResourceHeap* m_resource_heap = nullptr;
     LLGL::Buffer* m_vertex_buffer = nullptr;
-    
+
     LLGL::Buffer* m_instance_buffer = nullptr;
     LLGL::Buffer* m_world_instance_buffer = nullptr;
-    
+
     LLGL::BufferArray* m_buffer_array = nullptr;
     LLGL::BufferArray* m_world_buffer_array = nullptr;
 

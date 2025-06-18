@@ -24,7 +24,7 @@ static inline int rand_range(int from, int to) {
 
 static inline float rand_range(float from, float to) {
     const float scale = rand() / (float) RAND_MAX;
-    return from + scale * (to - from); 
+    return from + scale * (to - from);
 }
 
 static inline int rand_int(int from, int to) {
