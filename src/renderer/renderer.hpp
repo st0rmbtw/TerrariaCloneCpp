@@ -35,7 +35,7 @@ namespace GameRenderer {
 
     uint32_t DrawSprite(const sge::Sprite& sprite, sge::Order order = {});
     uint32_t DrawSpriteWorld(const sge::Sprite& sprite, sge::Order order = {});
-    
+
     uint32_t DrawAtlasSprite(const sge::TextureAtlasSprite& sprite, sge::Order order = {});
     uint32_t DrawAtlasSpriteWorld(const sge::TextureAtlasSprite& sprite, sge::Order order = {});
 

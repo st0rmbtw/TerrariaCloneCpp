@@ -18,7 +18,7 @@
 #include <SGE/types/texture.hpp>
 #include <SGE/types/attributes.hpp>
 #include <SGE/log.hpp>
-#include <SGE/utils.hpp>
+#include <SGE/utils/io.hpp>
 #include "types/block.hpp"
 #include "types/wall.hpp"
 
@@ -320,7 +320,7 @@ bool Assets::Load() {
     for (const auto& [key, asset] : TEXTURE_ATLAS_ASSETS) {
         state.textures_atlases[key] = sge::TextureAtlas::from_grid(Assets::GetTexture(key), asset.tile_size, asset.columns, asset.rows, asset.padding, asset.offset);
     }
-    
+
     for (const auto& [key, asset] : ITEM_ASSETS) {
         sge::Texture texture;
         if (!load_texture(asset.c_str(), sge::TextureSampler::Nearest, &texture)) {
@@ -341,7 +341,7 @@ bool Assets::Load() {
 
 bool Assets::LoadShaders(const std::vector<sge::ShaderDef>& shader_defs) {
     InitVertexFormats();
-    
+
     sge::Renderer& renderer = sge::Engine::Renderer();
 
     sge::RenderBackend backend = renderer.Backend();
@@ -360,7 +360,7 @@ bool Assets::LoadShaders(const std::vector<sge::ShaderDef>& shader_defs) {
             if (!(shader_pipeline.vs = renderer.LoadShader(sge::ShaderPath(sge::ShaderType::Vertex, asset.file_name), shader_defs, attributes)))
                 return false;
         }
-        
+
         if (BITFLAG_CHECK(asset.stages, ShaderStages::Fragment)) {
             if (!(shader_pipeline.ps = renderer.LoadShader(sge::ShaderPath(sge::ShaderType::Fragment, asset.file_name), shader_defs)))
                 return false;
@@ -609,7 +609,7 @@ sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAss
     }
     layers_count += 1;
 
-    LLGL::DynamicArray<uint8_t> pixels(width * height * layers_count * 4, 0);
+    LLGL::DynamicArray<uint8_t> pixels(width * height * layers_count * 4);
 
     for (const auto& [layer, layer_data] : layer_to_data_map) {
         for (size_t row = 0; row < layer_data.rows; ++row) {
@@ -655,7 +655,7 @@ static bool load_font(sge::Font& font, const char* meta_file_path, const char* a
         uint32_t row = read<uint32_t>(meta_file);
 
         const glm::ivec2 size = glm::ivec2(bitmap_width, bitmap_rows);
-        
+
         const sge::Glyph glyph = {
             .size = size,
             .tex_size = glm::vec2(size) / texture_size,

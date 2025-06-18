@@ -10,12 +10,13 @@
 #include <SGE/time/timer.hpp>
 #include <SGE/types/anchor.hpp>
 #include <SGE/types/rich_text.hpp>
+#include <SGE/types/color.hpp>
+#include <SGE/types/sprite.hpp>
+#include <SGE/utils/text.hpp>
 #include <SGE/input.hpp>
 
 #include "../renderer/renderer.hpp"
 #include "../assets.hpp"
-#include "SGE/types/color.hpp"
-#include "SGE/types/sprite.hpp"
 
 static constexpr float INVENTORY_TITLE_SIZE = 22.0f;
 static constexpr float MIN_CURSOR_SCALE = 1.2;
@@ -148,7 +149,7 @@ void UI::PreUpdate(Inventory& inventory) {
     for (const Element& element : state.elements) {
         if (element.rect().contains(sge::Input::MouseScreenPosition())) {
             sge::Input::SetMouseOverUi(true);
-            
+
             if (sge::Input::JustPressed(sge::MouseButton::Left)) {
                 switch (element.type()) {
                 case UiElement::HotbarCell:
@@ -248,7 +249,7 @@ static inline void draw_item_with_stack(const sge::Font& font, const glm::vec2& 
 
 void UI::Draw(const sge::Camera& camera, const Player& player) {
     ZoneScopedN("UI::Draw");
-    
+
     const glm::vec2& window_size = camera.viewport();
     const Inventory& inventory = player.inventory();
 
@@ -260,7 +261,7 @@ void UI::Draw(const sge::Camera& camera, const Player& player) {
         const sge::RichText text = sge::rich_text(state.fps_text, 22.0f, sge::LinearRgba(0.8f));
         GameRenderer::DrawTextUI(text, glm::vec2(10.0f, window_size.y - 10.0f - 22.0f), font, sge::Order(0, false));
     }
-    
+
     GameRenderer::DrawSpriteUI(state.cursor_background);
     GameRenderer::DrawSpriteUI(state.cursor_foreground);
 
@@ -327,7 +328,7 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
 
     static constexpr float TITLE_OFFSET = 4.0f;
     static constexpr float DEFAULT_TEXT_SIZE = 14.0f;
-    
+
     GameRenderer::BeginOrderMode();
 
     static constexpr uint32_t inventory_index = 0;
@@ -415,7 +416,7 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
         const sge::RichText text = sge::rich_text(title, INVENTORY_TITLE_SIZE, sge::LinearRgba(0.8f));
 
         const glm::vec2 bounds = sge::calculate_text_bounds(font, text);
-        
+
         const glm::vec2 position = glm::vec2((offset.x - bounds.x) * 0.5f, TITLE_OFFSET);
         GameRenderer::DrawTextUI(text, position, font, sge::Order(text_index));
     }

@@ -15,7 +15,6 @@
 #include <SGE/types/binding_layout.hpp>
 #include <SGE/defines.hpp>
 
-#include <cstddef>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <tracy/Tracy.hpp>
@@ -67,7 +66,7 @@ void WorldRenderer::init() {
             TileTextureData{wall_tex_size, wall_padding, glm::vec2(WALL_SIZE),  glm::vec2(-TILE_SIZE * 0.5f), WALL_DEPTH}, // Wall
             TileTextureData{tile_tex_size, tile_padding, glm::vec2(TORCH_SIZE), glm::vec2(-2.0f, 0.0f), TILE_DEPTH}, // Torch
         };
-    
+
         LLGL::BufferDescriptor desc;
         desc.size = sizeof(texture_data);
         desc.bindFlags = LLGL::BindFlags::ConstantBuffer;
@@ -279,7 +278,7 @@ void WorldRenderer::init_textures(const WorldData& world) {
         light_texture_desc.bindFlags = LLGL::BindFlags::Storage | LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
         light_texture_desc.mipLevels = 1;
 
-        LLGL::DynamicArray<uint8_t> pixels(world.lightmap.width * world.lightmap.height * 3, 0);
+        LLGL::DynamicArray<uint8_t> pixels(world.lightmap.width * world.lightmap.height * 3);
 
         LLGL::ImageView image_view;
         image_view.format   = LLGL::ImageFormat::RGB;
@@ -314,7 +313,7 @@ void WorldRenderer::init_lightmap_chunks(const WorldData& world) {
     for (uint32_t j = 0; j < rows; ++j) {
         for (uint32_t i = 0; i < cols; ++i) {
             LLGL::TextureDescriptor texture_desc;
-            
+
             glm::uvec2 chunk_size = glm::uvec2(LIGHTMAP_CHUNK_SIZE, LIGHTMAP_CHUNK_SIZE);
 
             if (chunk_size.x > m_lightmap_width - i * LIGHTMAP_CHUNK_SIZE) {
@@ -359,7 +358,7 @@ void WorldRenderer::init_lightmap_chunks(const WorldData& world) {
                     glm::vec2(i, j) * LIGHTMAP_CHUNK_WORLD_SIZE + glm::vec2(chunk_size.x * LIGHTMAP_TO_WORLD, 0.0f),
                     glm::vec2(1.0f, 0.0f)
                 ),
-                
+
                 StaticLightMapChunkVertex(
                     glm::vec2(i, j) * LIGHTMAP_CHUNK_WORLD_SIZE + glm::vec2(chunk_size) * LIGHTMAP_TO_WORLD,
                     glm::vec2(1.0f, 1.0f)

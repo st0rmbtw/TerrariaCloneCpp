@@ -8,9 +8,9 @@
 #include <SGE/engine.hpp>
 #include <SGE/input.hpp>
 #include <SGE/renderer/camera.hpp>
-#include <SGE/types/window_settings.hpp>
 #include <SGE/time/time.hpp>
 #include <SGE/types/config.hpp>
+#include <SGE/types/cursor_mode.hpp>
 
 #include "renderer/renderer.hpp"
 #include "ui/ui.hpp"
@@ -40,7 +40,7 @@ static glm::vec2 camera_follow_player() {
 
     const sge::Rect area = g.world.playable_area() * Constants::TILE_SIZE;
     const sge::Rect& camera_area = g.camera.get_projection_area();
-    
+
     const float left = camera_area.min.x;
     const float right = camera_area.max.x;
 
@@ -151,9 +151,9 @@ static void update() {
     g.world.update(g.camera);
 
     Background::Update(g.camera, g.world);
-    
+
     UI::Update(g.player.inventory());
-    
+
     g.player.update(g.world);
 
     g.world.add_light(Light {
@@ -263,7 +263,6 @@ bool load_assets() {
 static void destroy() {
     g.world.data().lightmap_tasks_wait();
     g.world.chunk_manager().destroy();
-    ParticleManager::Terminate();
 }
 
 bool Game::Init(sge::RenderBackend backend, sge::AppConfig config) {
@@ -279,20 +278,21 @@ bool Game::Init(sge::RenderBackend backend, sge::AppConfig config) {
     sge::Engine::SetDestroyCallback(destroy);
     sge::Engine::SetWindowResizeCallback(window_resized);
 
-    sge::WindowSettings settings;
-    settings.width = 1280;
-    settings.height = 720;
-    settings.fullscreen = config.fullscreen;
-    settings.hidden = true;
+    sge::WindowSettings window_settings;
+    window_settings.title = "TerrariaClone";
+    window_settings.width = 1280;
+    window_settings.height = 720;
+    window_settings.cursor_mode = CursorMode::Hidden;
+    window_settings.fullscreen = config.fullscreen;
+    window_settings.vsync = config.vsync;
+    window_settings.hidden = true;
 
     LLGL::Extent2D resolution;
-    if (!sge::Engine::Init(backend, config.vsync, settings, resolution)) return false;
+    if (!sge::Engine::Init(backend, window_settings, resolution)) return false;
 
     if (!GameRenderer::Init(resolution)) return false;
 
     sge::Time::SetFixedTimestepSeconds(Constants::FIXED_UPDATE_INTERVAL);
-
-    sge::Engine::SetCursorMode(CursorMode::Hidden);
 
     init_tile_rules();
 

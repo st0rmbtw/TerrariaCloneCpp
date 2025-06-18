@@ -109,7 +109,7 @@ void BackgroundRenderer::init_targets(LLGL::Extent2D resolution) {
 
     SGE_RESOURCE_RELEASE(m_background_render_target);
     SGE_RESOURCE_RELEASE(m_background_render_texture);
-    
+
     LLGL::TextureDescriptor texture_desc;
     texture_desc.extent.width = resolution.width;
     texture_desc.extent.height = resolution.height;
@@ -120,7 +120,7 @@ void BackgroundRenderer::init_targets(LLGL::Extent2D resolution) {
     texture_desc.mipLevels = 1;
 
     m_background_render_texture = context->CreateTexture(texture_desc);
-    
+
     LLGL::RenderTargetDescriptor background_target_desc;
     background_target_desc.resolution = resolution;
     background_target_desc.colorAttachments[0] = m_background_render_texture;
@@ -178,7 +178,7 @@ void BackgroundRenderer::render() {
 
     const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
     commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, size);
-    
+
     commands->SetVertexBufferArray(*m_buffer_array);
 
     commands->SetPipelineState(*m_pipeline);
@@ -199,7 +199,7 @@ void BackgroundRenderer::render_world() {
 
     const ptrdiff_t size = (uint8_t*) m_world_buffer_ptr - (uint8_t*) m_world_buffer;
     commands->UpdateBuffer(*m_world_instance_buffer, 0, m_world_buffer, size);
-    
+
     commands->SetVertexBufferArray(*m_world_buffer_array);
 
     commands->SetPipelineState(*m_pipeline_world);

@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "math/constexpr_math.hpp"
 
@@ -14,7 +14,7 @@ namespace Constants {
     constexpr float TORCH_SIZE = 20.0f;
     constexpr float PARTICLE_SIZE = 8.0f;
     constexpr float WORLD_BOUNDARY_OFFSET = 4.0f;
-    constexpr size_t MAX_PARTICLES_COUNT = 10 * 100000;
+    constexpr std::size_t MAX_PARTICLES_COUNT = 10 * 100000;
 
     constexpr float CAMERA_MAX_ZOOM = 0.2f;
 #if DEBUG
@@ -30,7 +30,7 @@ namespace Constants {
     constexpr uint8_t RENDER_CHUNK_SIZE_U = 50u;
     constexpr int SUBDIVISION = 8;
     constexpr float LIGHT_EPSILON = 0.01;
-    
+
     constexpr float LightDecay(bool solid) {
         if constexpr (SUBDIVISION == 8) {
             return solid ? 0.92 : 0.975;
@@ -50,7 +50,7 @@ namespace Constants {
     constexpr int LIGHT_SOLID_DECAY_STEPS = internal::LightDecaySteps(true);
     constexpr int LIGHT_AIR_DECAY_STEPS = internal::LightDecaySteps(false);
 
-    static constexpr size_t WORLD_MAX_LIGHT_COUNT = 2000;
+    static constexpr std::size_t WORLD_MAX_LIGHT_COUNT = 2000;
 };
 
 #endif

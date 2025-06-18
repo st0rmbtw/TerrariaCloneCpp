@@ -7,11 +7,7 @@ set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 
 find_package(OpenMP)
 
-if(MSVC)
-    set(CMAKE_CXX_STANDARD 20)
-else()
-    set(CMAKE_CXX_STANDARD 17)
-endif()
+set(CMAKE_CXX_STANDARD 20)
 
 if(APPLE)
     enable_language(OBJCXX)
@@ -139,7 +135,7 @@ foreach(asset ${ASSETS})
     file(RELATIVE_PATH out_file ${CMAKE_CURRENT_SOURCE_DIR}/assets/ ${asset})
     get_filename_component(out_dir ${out_file} DIRECTORY)
     get_filename_component(out_name ${out_file} NAME)
- 
+
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/assets/${out_dir})
 
     if (NOT ${out_dir} STREQUAL "shaders/vulkan")

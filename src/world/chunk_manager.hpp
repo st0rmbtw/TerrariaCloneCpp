@@ -9,7 +9,7 @@
 #include <glm/vec2.hpp>
 
 #include <SGE/renderer/camera.hpp>
-#include <SGE/utils.hpp>
+#include <SGE/utils/alloc.hpp>
 #include "../renderer/types.hpp"
 #include "../types/tile_pos.hpp"
 

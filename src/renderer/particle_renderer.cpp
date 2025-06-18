@@ -40,7 +40,7 @@ void ParticleRenderer::init() {
 
     m_instance_buffer_data = new ParticleInstance[MAX_PARTICLES_COUNT];
     m_instance_buffer_data_world = new ParticleInstance[MAX_PARTICLES_COUNT];
-    
+
     m_position_buffer_data = new glm::vec2[MAX_PARTICLES_COUNT];
     m_rotation_buffer_data = new glm::quat[MAX_PARTICLES_COUNT];
     m_scale_buffer_data = new float[MAX_PARTICLES_COUNT];
@@ -319,7 +319,7 @@ void ParticleRenderer::prepare() {
 
 void ParticleRenderer::render() {
     if (m_particle_count == 0) return;
-    
+
     ZoneScopedN("ParticleRenderer::render");
 
     auto* const commands = m_renderer->CommandBuffer();
@@ -334,7 +334,7 @@ void ParticleRenderer::render() {
 
 void ParticleRenderer::render_world() {
     if (m_world_particle_count == 0) return;
-    
+
     ZoneScopedN("ParticleRenderer::render_world");
 
     auto* const commands = m_renderer->CommandBuffer();

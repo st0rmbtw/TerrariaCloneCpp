@@ -76,7 +76,7 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
     ResizeTextures(resolution);
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
-    pipelineLayoutDesc.staticSamplers = {   
+    pipelineLayoutDesc.staticSamplers = {
         LLGL::StaticSamplerDescriptor("u_background_sampler", LLGL::StageFlags::FragmentStage, 4, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
         LLGL::StaticSamplerDescriptor("u_world_sampler", LLGL::StageFlags::FragmentStage, 6, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
         LLGL::StaticSamplerDescriptor("u_lightmap_sampler", LLGL::StageFlags::FragmentStage, 8, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
@@ -268,7 +268,7 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
 
     renderer.BeginMainPass();
         renderer.Clear(clear_value);
-    
+
         commands->SetVertexBuffer(*state.postprocess_vertex_buffer);
         commands->SetPipelineState(*state.postprocess_pipeline);
         commands->SetResourceHeap(*state.resource_heap);
@@ -423,7 +423,7 @@ void GameRenderer::Terminate() {
     state.particle_renderer.terminate();
 
     const auto& context = sge::Engine::Renderer().Context();
-    
+
     SGE_RESOURCE_RELEASE(state.resource_heap);
     SGE_RESOURCE_RELEASE(state.chunk_vertex_buffer);
     SGE_RESOURCE_RELEASE(state.postprocess_pipeline);

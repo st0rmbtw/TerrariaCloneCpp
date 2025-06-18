@@ -132,6 +132,8 @@ static bool generate_font_assets(FT_Library ft, const fs::path& input_path, cons
 
     stbi_write_png(output_path.string().c_str(), texture_width, texture_height, 1, texture_data, texture_width);
 
+    delete[] texture_data;
+
     FT_Done_Face(face);
 
     return true;

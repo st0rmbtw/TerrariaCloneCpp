@@ -15,11 +15,11 @@
 #if SGE_PLATFORM_WINDOWS
     #include <corecrt_malloc.h>
     #define ALIGNED_ALLOC(size, alignment) _aligned_malloc((size), (alignment))
-    #define ALIGNED_FREE(ptr) _aligned_free((ptr))
+    #define ALIGNED_FREE(ptr) _aligned_free((ptr)); (ptr) = nullptr
 #else
     #include <stdlib.h>
     #define ALIGNED_ALLOC(size, alignment) aligned_alloc((alignment), (size))
-    #define ALIGNED_FREE(ptr) free((ptr))
+    #define ALIGNED_FREE(ptr) free((ptr)); (ptr) = nullptr
 #endif
 
 using Constants::MAX_PARTICLES_COUNT;
@@ -32,19 +32,19 @@ namespace ParticleFlags {
 }
 
 static struct ParticlesState {
-    float* position;
-    float* velocity;
-    float* lifetime;
-    float* max_lifetime;
-    float* custom_scale;
-    float* scale;
-    float* rotation;
-    float* rotation_speed;
-    float* initial_light_color;
-    float* light_color;
-    uint8_t* flags;
-    Particle::Type* type;
-    uint8_t* variant;
+    float* position = nullptr;
+    float* velocity = nullptr;
+    float* lifetime = nullptr;
+    float* max_lifetime = nullptr;
+    float* custom_scale = nullptr;
+    float* scale = nullptr;
+    float* rotation = nullptr;
+    float* rotation_speed = nullptr;
+    float* initial_light_color = nullptr;
+    float* light_color = nullptr;
+    uint8_t* flags = nullptr;
+    Particle::Type* type = nullptr;
+    uint8_t* variant = nullptr;
 
     size_t active_count = 0;
 } state;
@@ -148,7 +148,7 @@ void ParticleManager::Draw() {
 
         const glm::quat& rotation = *reinterpret_cast<const glm::quat*>(&state.rotation[i * 4]);
 
-        const float scale = state.scale[i]; 
+        const float scale = state.scale[i];
         const Particle::Type type = state.type[i];
         const uint8_t variant = state.variant[i];
         const bool world = BITFLAG_CHECK(state.flags[i], ParticleFlags::InWorldLayer);
@@ -170,7 +170,7 @@ void ParticleManager::Update(World& world) {
     }
 
     const float dt = sge::Time::FixedDeltaSeconds();
-    
+
 #if defined(__AVX__)
     // The size of a float type is 32 bit, so it can be packed as 8 into 256 bit vector.
     for (size_t i = 0; i < state.active_count; i += 8) {
