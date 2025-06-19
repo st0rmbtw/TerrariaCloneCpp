@@ -285,6 +285,7 @@ bool Game::Init(sge::RenderBackend backend, AppConfig config) {
     window_settings.width = 1280;
     window_settings.height = 720;
     window_settings.cursor_mode = CursorMode::Hidden;
+    window_settings.samples = config.samples;
     window_settings.fullscreen = config.fullscreen;
     window_settings.vsync = config.vsync;
     window_settings.hidden = true;
