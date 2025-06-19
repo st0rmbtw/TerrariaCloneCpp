@@ -1,7 +1,8 @@
 #include <cstring>
 #include <cstdio>
-#include "game.hpp"
+#include <string>
 #include <SGE/defines.hpp>
+#include "game.hpp"
 
 inline void print_render_backends() {
     #if SGE_PLATFORM_WINDOWS
@@ -23,7 +24,7 @@ int main(int argc, char** argv) {
 #else
     sge::RenderBackend backend = sge::RenderBackend::OpenGL;
 #endif
-    sge::AppConfig config;
+    AppConfig config;
 
     for (int i = 1; i < argc; i++) {
         if (str_eq(argv[i], "--pause")) {
@@ -69,6 +70,14 @@ int main(int argc, char** argv) {
             config.vsync = true;
         } else if (str_eq(argv[i], "--fullscreen")) {
             config.fullscreen = true;
+        } else if (str_eq(argv[i], "--samples")) {
+            if (i >= argc-1) {
+                printf("Specify the number of samples.\n");
+                return 1;
+            }
+
+            const char* arg = argv[i + 1];
+            config.samples = std::stoul(arg);
         }
     }
 

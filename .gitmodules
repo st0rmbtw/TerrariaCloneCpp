@@ -1,3 +1,4 @@
 [submodule "thirdparty/SGE"]
 	path = thirdparty/SGE
 	url = https://github.com/st0rmbtw/SGE.git
+	ignore = dirty

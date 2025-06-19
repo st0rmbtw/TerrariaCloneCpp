@@ -9,7 +9,6 @@
 #include <SGE/input.hpp>
 #include <SGE/renderer/camera.hpp>
 #include <SGE/time/time.hpp>
-#include <SGE/types/config.hpp>
 #include <SGE/types/cursor_mode.hpp>
 
 #include "renderer/renderer.hpp"
@@ -268,7 +267,7 @@ static void destroy() {
     g.world.chunk_manager().destroy();
 }
 
-bool Game::Init(sge::RenderBackend backend, sge::AppConfig config) {
+bool Game::Init(sge::RenderBackend backend, AppConfig config) {
     ZoneScopedN("Game::Init");
 
     sge::Engine::SetLoadAssetsCallback(load_assets);

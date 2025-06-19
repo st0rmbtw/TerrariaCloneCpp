@@ -4,10 +4,15 @@
 #pragma once
 
 #include <SGE/types/backend.hpp>
-#include <SGE/types/config.hpp>
+
+struct AppConfig {
+    bool vsync = false;
+    bool fullscreen = false;
+    uint8_t samples = 4;
+};
 
 namespace Game {
-    bool Init(sge::RenderBackend backend, sge::AppConfig config);
+    bool Init(sge::RenderBackend backend, AppConfig config);
     void Run();
     void Destroy();
 };
