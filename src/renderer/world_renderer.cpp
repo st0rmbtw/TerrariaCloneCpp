@@ -223,7 +223,7 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
     m_static_lightmap_texture = context->CreateTexture(texture_desc);
 
     LLGL::TextureDescriptor depth_texture_desc = texture_desc;
-    depth_texture_desc.type = samples > 1 ? LLGL::TextureType::Texture2DMS : LLGL::TextureType::Texture2DMS;
+    depth_texture_desc.type = samples > 1 ? LLGL::TextureType::Texture2DMS : LLGL::TextureType::Texture2D;
     depth_texture_desc.samples = samples;
     depth_texture_desc.extent.width = resolution.width;
     depth_texture_desc.extent.height = resolution.height;
