@@ -316,14 +316,16 @@ bool Game::Init(sge::RenderBackend backend, AppConfig config) {
     Background::SetupWorldBackground(g.world);
 
     Inventory& inventory = g.player.inventory();
-    inventory.set_item(0, ITEM_COPPER_AXE);
-    inventory.set_item(1, ITEM_COPPER_PICKAXE);
-    inventory.set_item(2, ITEM_COPPER_HAMMER);
-    inventory.set_item(3, ITEM_DIRT_BLOCK.with_max_stack());
-    inventory.set_item(4, ITEM_STONE_BLOCK.with_max_stack());
-    inventory.set_item(5, ITEM_WOOD_BLOCK.with_max_stack());
-    inventory.set_item(6, ITEM_TORCH.with_max_stack());
-    inventory.set_item(7, ITEM_WOOD_WALL.with_max_stack());
+    inventory.add_item_stack(ITEM_COPPER_AXE);
+    inventory.add_item_stack(ITEM_COPPER_PICKAXE);
+    inventory.add_item_stack(ITEM_COPPER_HAMMER);
+    inventory.add_item_stack(ITEM_DIRT_BLOCK.with_stack(1000));
+    inventory.add_item_stack(ITEM_DIRT_BLOCK.with_stack(2500));
+    inventory.add_item_stack(ITEM_STONE_BLOCK.with_max_stack());
+    inventory.add_item_stack(ITEM_WOOD_BLOCK.with_max_stack());
+    inventory.add_item_stack(ITEM_TORCH.with_max_stack());
+    inventory.add_item_stack(ITEM_WOOD_WALL.with_max_stack());
+    inventory.add_item_stack(ITEM_DIRT_BLOCK.with_max_stack());
 
     sge::Engine::ShowWindow();
 

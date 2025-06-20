@@ -9,9 +9,10 @@
 
 #include "../types/item.hpp"
 
-constexpr uint8_t CELLS_IN_ROW = 10;
-constexpr uint8_t INVENTORY_ROWS = 5;
-constexpr uint8_t TAKEN_ITEM_INDEX = 50;
+static constexpr uint8_t ITEM_COUNT = 51;
+static constexpr uint8_t CELLS_IN_ROW = 10;
+static constexpr uint8_t INVENTORY_ROWS = 5;
+static constexpr uint8_t TAKEN_ITEM_INDEX = 50;
 
 struct ItemSlot {
     explicit ItemSlot(const std::optional<Item>& item, uint8_t index = 0) :
@@ -34,31 +35,31 @@ public:
     Inventory() = default;
 
     inline void set_selected_slot(uint8_t index) {
-        SGE_ASSERT(index < CELLS_IN_ROW, "Index must be less than 10.");
+        SGE_ASSERT(index < CELLS_IN_ROW, "Index must be less than %u.", CELLS_IN_ROW);
         m_selected_slot = index;
     }
 
     [[nodiscard]]
     inline ItemSlot get_item(uint8_t index) const {
-        SGE_ASSERT(index < 51, "Index must be less than 50.");
+        SGE_ASSERT(index < ITEM_COUNT, "Index must be less than %u.", ITEM_COUNT);
 
         return ItemSlot(m_items[index], index);
     }
 
     [[nodiscard]]
     inline void set_item(uint8_t index, const Item& item) {
-        SGE_ASSERT(index < 51, "Index must be less than 50.");
+        SGE_ASSERT(index < ITEM_COUNT, "Index must be less than %u.", ITEM_COUNT);
         m_items[index] = item;
     }
 
     [[nodiscard]]
     inline bool item_exits(uint8_t index) const {
-        SGE_ASSERT(index < 51, "Index must be less than 50.");
+        SGE_ASSERT(index < ITEM_COUNT, "Index must be less than %u.", ITEM_COUNT);
         return m_items[index].has_value();
     }
 
     inline void take_or_put_item(uint8_t index) {
-        SGE_ASSERT(index < 51, "Index must be less than 50.");
+        SGE_ASSERT(index < ITEM_COUNT, "Index must be less than %u.", ITEM_COUNT);
         m_taken_item_index = index;
         std::swap(m_items[index], m_items[TAKEN_ITEM_INDEX]);
     }
@@ -70,7 +71,7 @@ public:
     }
 
     inline void consume_item(uint8_t index) {
-        SGE_ASSERT(index < 51, "Index must be less than 50.");
+        SGE_ASSERT(index < ITEM_COUNT, "Index must be less than %u.", ITEM_COUNT);
         std::optional<Item>& item = m_items[index];
         if (!item) return;
 
@@ -78,6 +79,38 @@ public:
 
         if (item->stack > 1) item->stack -= 1;
         else m_items[index] = std::nullopt;
+    }
+
+    /// Returns the number of remaining items 
+    ItemStack add_item_stack(const Item& new_item) {
+        ItemStack remaining = new_item.stack;
+
+        for (std::optional<Item>& item : m_items) {
+            if (!item.has_value()) {
+                item = new_item.with_stack(remaining);
+                remaining = 0;
+                break;
+            }
+
+            const bool same_id = item->id == new_item.id;
+            const bool not_full = item->has_space();
+        
+            if (!same_id || !not_full)
+                continue;
+
+            const ItemStack new_stack = item->stack + remaining;
+
+            if (new_stack <= item->max_stack) {
+                item->stack = new_stack;
+                remaining = 0;
+                break;
+            } else {
+                item->stack = item->max_stack;
+                remaining -= new_stack - item->max_stack;
+            }
+        }
+
+        return remaining;
     }
 
     [[nodiscard]] inline ItemSlot get_selected_item() const { return get_item(selected_slot()); }
@@ -91,7 +124,7 @@ public:
 private:
     uint8_t m_selected_slot = 0;
     uint8_t m_taken_item_index = 0;
-    std::optional<Item> m_items[51];
+    std::optional<Item> m_items[ITEM_COUNT];
 };
 
 #endif

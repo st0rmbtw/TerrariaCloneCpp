@@ -51,7 +51,6 @@ public:
 
     ItemId(id_type id) : m_id(id) {}
 
-    inline constexpr bool operator==(id_type other) const { return m_id == other; }
     inline constexpr operator id_type() const { return m_id; }
 private:
     id_type m_id;
@@ -99,13 +98,17 @@ struct Item {
         return (tool_flags & ToolFlags::Hammer) == ToolFlags::Hammer;
     }
 
-    inline Item with_stack(ItemStack stack) {
+    inline constexpr bool has_space() const {
+        return stack < max_stack;
+    }
+
+    inline Item with_stack(ItemStack stack) const {
         Item new_item = *this;
         new_item.stack = std::min(max_stack, stack);
         return new_item;
     }
 
-    inline Item with_max_stack() {
+    inline Item with_max_stack() const {
         Item new_item = *this;
         new_item.stack = max_stack;
         return new_item;
