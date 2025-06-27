@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
             if (str_eq(arg, "d3d12")) {
                 backend = sge::RenderBackend::D3D12;
             } else
-            
+
             if (str_eq(arg, "d3d11")) {
                 backend = sge::RenderBackend::D3D11;
             } else

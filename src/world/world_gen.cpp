@@ -306,7 +306,7 @@ static void world_small_caves(WorldData& world, int seed) {
     const int min_x = world.playable_area.min.x;
     const int max_x = world.playable_area.max.x;
     const int max_y = world.playable_area.max.y;
-    
+
     for (int y = dirt_level; y < max_y; ++y) {
         for (int x = min_x; x < max_x; ++x) {
             const float noise_value = noise.GetNoise(static_cast<float>(x), static_cast<float>(y));
@@ -314,7 +314,7 @@ static void world_small_caves(WorldData& world, int seed) {
             if (noise_value < -0.5) {
                 remove_block(world, {x, y});
             }
-        }   
+        }
     }
 
     noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
@@ -332,7 +332,7 @@ static void world_small_caves(WorldData& world, int seed) {
             if (noise_value < -0.5) {
                 remove_block(world, {x, y});
             }
-        }   
+        }
     }
 }
 
@@ -351,7 +351,7 @@ static void world_big_caves(WorldData& world, int seed) {
     const int min_x = world.playable_area.min.x;
     const int max_x = world.playable_area.max.x;
     const int max_y = world.playable_area.max.y;
-    
+
     for (int y = dirt_level; y < max_y; ++y) {
         for (int x = min_x; x < max_x; ++x) {
             const float noise_value = noise.GetNoise(static_cast<float>(x), static_cast<float>(y));
@@ -359,7 +359,7 @@ static void world_big_caves(WorldData& world, int seed) {
             if (noise_value < -0.4) {
                 remove_block(world, {x, y});
             }
-        }   
+        }
     }
 }
 
@@ -423,7 +423,7 @@ static void world_generate_rocks_in_dirt(WorldData& world, int seed) {
                     set_block(world, pos, TileType::Stone);
                 }
             }
-        }   
+        }
     }
 }
 
@@ -446,7 +446,7 @@ static void world_generate_dirt(WorldData& world, int seed, int from, int to, fl
             const float f = map_range(static_cast<float>(from), static_cast<float>(to), from_freq, to_freq, static_cast<float>(y));
 
             const float noise_value = noise.GetNoise(static_cast<float>(x), static_cast<float>(y));
-            
+
             if (noise_value >= f) {
                 const TilePos pos = TilePos(x, y);
                 if (world.tile_exists_with_type(pos, TileType::Stone)) {
@@ -478,7 +478,7 @@ static void world_update_tile_sprite_index(WorldData& world) {
             update_tile_sprite_index(world, {x, y});
         }
     }
-    
+
     for (int y = 0; y < world.area.height(); ++y) {
         for (int x = 0; x < world.area.width(); ++x) {
             update_tile_sprite_index(world, {x, y});
@@ -509,7 +509,7 @@ static void grassify_flood_fill(WorldData &world, TilePos start) {
         static const TileOffset DIRECTIONS[] = {
             TileOffset::Right, TileOffset::Left, TileOffset::Top, TileOffset::Bottom, TileOffset::TopLeft, TileOffset::TopRight, TileOffset::BottomLeft, TileOffset::BottomRight
         };
-        
+
         for (const TileOffset offset : DIRECTIONS) {
             const TilePos new_pos = pos.offset(offset);
             if (grassify_is_valid(world, new_pos)) {
@@ -556,10 +556,10 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
     };
 
     SGE_LOG_DEBUG("World Layers:");
-    SGE_LOG_DEBUG("  Surface: %u", layers.surface);
-    SGE_LOG_DEBUG("  Underground: %u", layers.underground);
-    SGE_LOG_DEBUG("  Cavern: %u", layers.cavern);
-    SGE_LOG_DEBUG("  Dirt Height: %u", layers.dirt_height);
+    SGE_LOG_DEBUG("  Surface: {}", layers.surface);
+    SGE_LOG_DEBUG("  Underground: {}", layers.underground);
+    SGE_LOG_DEBUG("  Cavern: {}", layers.cavern);
+    SGE_LOG_DEBUG("  Dirt Height: {}", layers.dirt_height);
 
     world.blocks = new std::optional<Tile>[area.width() * area.height()];
     world.walls = new std::optional<Wall>[area.width() * area.height()];
@@ -590,8 +590,8 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
     world_update_tile_sprite_index(world);
 
     world_generate_lightmap(world);
-    
+
     world.spawn_point = world_get_spawn_point(world);
-    
+
     srand(time(NULL));
 };

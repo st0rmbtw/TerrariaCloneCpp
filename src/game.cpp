@@ -288,6 +288,7 @@ bool Game::Init(sge::RenderBackend backend, AppConfig config) {
     window_settings.samples = config.samples;
     window_settings.fullscreen = config.fullscreen;
     window_settings.vsync = config.vsync;
+    window_settings.samples = config.samples;
     window_settings.hidden = true;
 
     LLGL::Extent2D resolution;

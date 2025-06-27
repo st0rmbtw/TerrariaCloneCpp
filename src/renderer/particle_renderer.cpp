@@ -19,7 +19,7 @@ using Constants::PARTICLE_SIZE;
 using Constants::MAX_PARTICLES_COUNT;
 
 static inline constexpr size_t get_particle_index(Particle::Type type, uint8_t variant) {
-    SGE_ASSERT(variant <= 2, "Variant must be in range from 0 to 3");
+    SGE_ASSERT(variant <= 2);
 
     const size_t index = static_cast<uint8_t>(type);
     const size_t y = index / PARTICLES_ATLAS_COLUMNS;
@@ -162,7 +162,7 @@ void ParticleRenderer::init() {
 
     m_pipeline = context->CreatePipelineState(pipelineDesc);
     if (const LLGL::Report* report = m_pipeline->GetReport()) {
-        if (report->HasErrors()) SGE_LOG_ERROR("%s", report->GetText());
+        if (report->HasErrors()) SGE_LOG_ERROR("{}", report->GetText());
     }
 
     LLGL::PipelineLayoutDescriptor compute_pipeline_layout_desc;
@@ -193,7 +193,7 @@ void ParticleRenderer::init() {
 
     m_compute_pipeline = context->CreatePipelineState(compute_pipeline_desc);
     if (const LLGL::Report* report = m_compute_pipeline->GetReport()) {
-        if (report->HasErrors()) SGE_LOG_ERROR("%s", report->GetText());
+        if (report->HasErrors()) SGE_LOG_ERROR("{}", report->GetText());
     }
 
     m_is_metal = backend.IsMetal();

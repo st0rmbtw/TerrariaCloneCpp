@@ -35,31 +35,31 @@ public:
     Inventory() = default;
 
     inline void set_selected_slot(uint8_t index) {
-        SGE_ASSERT(index < CELLS_IN_ROW, "Index must be less than %u.", CELLS_IN_ROW);
+        SGE_ASSERT(index < CELLS_IN_ROW);
         m_selected_slot = index;
     }
 
     [[nodiscard]]
     inline ItemSlot get_item(uint8_t index) const {
-        SGE_ASSERT(index < ITEM_COUNT, "Index must be less than %u.", ITEM_COUNT);
+        SGE_ASSERT(index < 51);
 
         return ItemSlot(m_items[index], index);
     }
 
     [[nodiscard]]
     inline void set_item(uint8_t index, const Item& item) {
-        SGE_ASSERT(index < ITEM_COUNT, "Index must be less than %u.", ITEM_COUNT);
+        SGE_ASSERT(index < 51);
         m_items[index] = item;
     }
 
     [[nodiscard]]
     inline bool item_exits(uint8_t index) const {
-        SGE_ASSERT(index < ITEM_COUNT, "Index must be less than %u.", ITEM_COUNT);
+        SGE_ASSERT(index < 51);
         return m_items[index].has_value();
     }
 
     inline void take_or_put_item(uint8_t index) {
-        SGE_ASSERT(index < ITEM_COUNT, "Index must be less than %u.", ITEM_COUNT);
+        SGE_ASSERT(index < 51);
         m_taken_item_index = index;
         std::swap(m_items[index], m_items[TAKEN_ITEM_INDEX]);
     }
@@ -71,7 +71,8 @@ public:
     }
 
     inline void consume_item(uint8_t index) {
-        SGE_ASSERT(index < ITEM_COUNT, "Index must be less than %u.", ITEM_COUNT);
+        SGE_ASSERT(index < 51);
+
         std::optional<Item>& item = m_items[index];
         if (!item) return;
 
@@ -81,7 +82,7 @@ public:
         else m_items[index] = std::nullopt;
     }
 
-    /// Returns the number of remaining items 
+    /// Returns the number of remaining items
     ItemStack add_item_stack(const Item& new_item) {
         ItemStack remaining = new_item.stack;
 
@@ -94,7 +95,7 @@ public:
 
             const bool same_id = item->id == new_item.id;
             const bool not_full = item->has_space();
-        
+
             if (!same_id || !not_full)
                 continue;
 

@@ -103,7 +103,7 @@ void BackgroundRenderer::init() {
     m_pipeline = context->CreatePipelineState(pipelineDesc);
 
     if (const LLGL::Report* report = m_pipeline->GetReport()) {
-        if (report->HasErrors()) SGE_LOG_ERROR("%s", report->GetText());
+        if (report->HasErrors()) SGE_LOG_ERROR("{}", report->GetText());
     }
 }
 
@@ -161,7 +161,7 @@ void BackgroundRenderer::init_world(WorldRenderer& world_renderer) {
     m_pipeline_world = context->CreatePipelineState(pipelineDesc);
 
     if (const LLGL::Report* report = m_pipeline_world->GetReport()) {
-        if (report->HasErrors()) SGE_LOG_ERROR("%s", report->GetText());
+        if (report->HasErrors()) SGE_LOG_ERROR("{}", report->GetText());
     }
 }
 

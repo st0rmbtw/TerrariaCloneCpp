@@ -394,12 +394,12 @@ bool Assets::LoadFonts() {
         const std::string atlas_file_str = atlas_file.string();
 
         if (!sge::FileExists(meta_file_str.c_str())) {
-            SGE_LOG_ERROR("Failed to find the font meta file '%s'", meta_file_str.c_str());
+            SGE_LOG_ERROR("Failed to find the font meta file '{}'", meta_file_str.c_str());
             return false;
         }
 
         if (!sge::FileExists(atlas_file_str.c_str())) {
-            SGE_LOG_ERROR("Failed to find the font atlas file '%s'", atlas_file_str.c_str());
+            SGE_LOG_ERROR("Failed to find the font atlas file '{}'", atlas_file_str.c_str());
             return false;
         }
 
@@ -511,48 +511,48 @@ void Assets::DestroyShaders() {
 
 const sge::Texture& Assets::GetTexture(TextureAsset key) {
     const auto entry = std::as_const(state.textures).find(key);
-    SGE_ASSERT(entry != state.textures.cend(), "Texture not found: %u", static_cast<uint32_t>(key));
+    SGE_ASSERT(entry != state.textures.cend());
     return entry->second;
 }
 
 const sge::TextureAtlas& Assets::GetTextureAtlas(TextureAsset key) {
     const auto entry = std::as_const(state.textures_atlases).find(key);
-    SGE_ASSERT(entry != state.textures_atlases.cend(), "TextureAtlas not found: %u", static_cast<uint32_t>(key));
+    SGE_ASSERT(entry != state.textures_atlases.cend());
     return entry->second;
 }
 
 const sge::Font& Assets::GetFont(FontAsset key) {
     const auto entry = std::as_const(state.fonts).find(key);
-    SGE_ASSERT(entry != state.fonts.cend(), "Font not found: %u", static_cast<uint32_t>(key));
+    SGE_ASSERT(entry != state.fonts.cend());
     return entry->second;
 }
 
 const sge::Texture& Assets::GetItemTexture(uint16_t index) {
     const auto entry = std::as_const(state.items).find(index);
-    SGE_ASSERT(entry != state.items.cend(), "Item not found: %u", index);
+    SGE_ASSERT(entry != state.items.cend());
     return entry->second;
 }
 
 const sge::ShaderPipeline& Assets::GetShader(ShaderAsset key) {
     const auto entry = std::as_const(state.shaders).find(key);
-    SGE_ASSERT(entry != state.shaders.cend(), "Shader not found: %u", static_cast<uint32_t>(key));
+    SGE_ASSERT(entry != state.shaders.cend());
     return entry->second;
 }
 
 LLGL::Shader* Assets::GetComputeShader(ComputeShaderAsset key) {
     const auto entry = std::as_const(state.compute_shaders).find(key);
-    SGE_ASSERT(entry != state.compute_shaders.cend(), "ComputeShader not found: %u", static_cast<uint32_t>(key));
+    SGE_ASSERT(entry != state.compute_shaders.cend());
     return entry->second;
 }
 
 const sge::Sampler& Assets::GetSampler(size_t index) {
-    SGE_ASSERT(index < state.samplers.size(), "Index is out of bounds: %zu", index);
+    SGE_ASSERT(index < state.samplers.size());
     return state.samplers[index];
 }
 
 const LLGL::VertexFormat& Assets::GetVertexFormat(VertexFormatAsset key) {
     const auto entry = std::as_const(state.vertex_formats).find(key);
-    SGE_ASSERT(entry != state.vertex_formats.cend(), "VertexFormat not found: %u", static_cast<uint32_t>(key));
+    SGE_ASSERT(entry != state.vertex_formats.cend());
     return entry->second;
 }
 
@@ -561,7 +561,7 @@ static bool load_texture(const char* path, int sampler, sge::Texture* texture) {
 
     uint8_t* data = stbi_load(path, &width, &height, nullptr, 4);
     if (data == nullptr) {
-        SGE_LOG_ERROR("Couldn't load asset: %s", path);
+        SGE_LOG_ERROR("Couldn't load asset: {}", path);
         return false;
     }
 
@@ -594,7 +594,7 @@ sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAss
         int w, h;
         uint8_t* layer_data = stbi_load(path, &w, &h, nullptr, 4);
         if (layer_data == nullptr) {
-            SGE_LOG_ERROR("Couldn't load asset: %s", path);
+            SGE_LOG_ERROR("Couldn't load asset: {}", path);
             continue;
         }
 
@@ -632,7 +632,7 @@ static bool load_font(sge::Font& font, const char* meta_file_path, const char* a
     std::ifstream meta_file(meta_file_path, std::ios::in | std::ios::binary);
 
     if (!meta_file.good()) {
-        SGE_LOG_ERROR("Failed to open file %s", meta_file_path);
+        SGE_LOG_ERROR("Failed to open file {}", meta_file_path);
         return false;
     }
 
