@@ -1,9 +1,9 @@
 #version 330 core
 
 layout(location = 0) in vec2 a_position;
-layout(location = 1) in uint i_position;
-layout(location = 2) in vec2 i_atlas_pos;
-layout(location = 3) in vec2 i_world_pos;
+layout(location = 1) in vec2 i_atlas_pos;
+layout(location = 2) in vec2 i_world_pos;
+layout(location = 3) in uint i_position;
 layout(location = 4) in uint i_tile_data;
 
 layout(std140) uniform GlobalUniformBuffer {

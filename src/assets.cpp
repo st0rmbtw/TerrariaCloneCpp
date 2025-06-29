@@ -431,10 +431,10 @@ void Assets::InitVertexFormats() {
     }).ToLLGL(backend);
 
     tilemap_instance_format.attributes = sge::Attributes({
-        sge::Attribute::Instance(LLGL::Format::R16UInt, "i_position", "I_Position", 1),
         sge::Attribute::Instance(LLGL::Format::RG32Float, "i_atlas_pos", "I_AtlasPos", 1),
         sge::Attribute::Instance(LLGL::Format::RG32Float, "i_world_pos", "I_WorldPos", 1),
-        sge::Attribute::Instance(LLGL::Format::R32UInt, "i_tile_data", "I_TileData", 1),
+        sge::Attribute::Instance(LLGL::Format::R16UInt, "i_position", "I_Position", 1),
+        sge::Attribute::Instance(LLGL::Format::R16UInt, "i_tile_data", "I_TileData", 1),
     }).ToLLGL(backend, 1);
 
     background_vertex_format.attributes = sge::Attributes({

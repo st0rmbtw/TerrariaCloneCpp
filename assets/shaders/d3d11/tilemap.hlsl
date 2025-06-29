@@ -26,10 +26,10 @@ struct VSInput
 {
     float2 position : Position;
 
-    uint   i_position: I_Position;
     float2 i_atlas_pos : I_AtlasPos;
-    float2 i_world_pos: I_WorldPos;
-    nointerpolation uint i_tile_data: I_TileData;
+    float2 i_world_pos : I_WorldPos;
+    uint   i_position  : I_Position;
+    uint   i_tile_data : I_TileData;
 };
 
 struct VSOutput {

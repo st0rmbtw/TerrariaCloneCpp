@@ -25,15 +25,15 @@ struct ParticleInstance {
 };
 
 struct ChunkInstance {
-    uint16_t position;
     glm::vec2 atlas_pos;
     glm::vec2 world_pos;
+    uint16_t position;
     uint16_t tile_data;
 
     ChunkInstance(uint16_t position, glm::vec2 atlas_pos, glm::vec2 world_pos, uint16_t tile_data) :
-        position(position),
         atlas_pos(atlas_pos),
         world_pos(world_pos),
+        position(position),
         tile_data(tile_data) {}
 };
 

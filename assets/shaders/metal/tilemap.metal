@@ -28,9 +28,9 @@ struct VertexIn
 {
     float2 position      [[attribute(0)]];
 
-    uint   i_position    [[attribute(1)]];
-    float2 i_atlas_pos   [[attribute(2)]];
-    float2 i_world_pos   [[attribute(3)]];
+    float2 i_atlas_pos   [[attribute(1)]];
+    float2 i_world_pos   [[attribute(2)]];
+    uint   i_position    [[attribute(3)]];
     uint   i_tile_data   [[attribute(4)]];
 };
 
