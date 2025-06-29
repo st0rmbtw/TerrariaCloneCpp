@@ -47,7 +47,7 @@ public:
     void update_tile_sprite_index(TilePos pos);
 
     void update(const sge::Camera& camera);
-    
+
     void draw() const;
 
     [[nodiscard]] inline std::optional<Tile> get_tile(TilePos pos) const { return m_data.get_tile(pos); }
@@ -85,7 +85,7 @@ public:
     [[nodiscard]] inline const WorldData& data() const { return m_data; }
     [[nodiscard]] inline WorldData& data() { return m_data; }
 
-    [[nodiscard]] inline void create_dig_tile_animation(const Tile& tile, TilePos pos) {
+    inline void create_dig_tile_animation(const Tile& tile, TilePos pos) {
         m_tile_dig_animations.push_back(TileDigAnimation {
             .tile_pos = pos,
             .atlas_pos = tile.atlas_pos,
@@ -95,7 +95,7 @@ public:
         });
     }
 
-    [[nodiscard]] inline void create_tile_cracks(TilePos pos, uint8_t cracks_index) {
+    inline void create_tile_cracks(TilePos pos, uint8_t cracks_index) {
         m_tile_cracks[pos] = TileCracks {
             .tile_pos = pos,
             .cracks_index = cracks_index
@@ -106,7 +106,7 @@ public:
         m_tile_cracks.erase(pos);
     }
 
-    [[nodiscard]] inline void create_wall_cracks(TilePos pos, uint8_t cracks_index) {
+    inline void create_wall_cracks(TilePos pos, uint8_t cracks_index) {
         m_wall_cracks[pos] = TileCracks {
             .tile_pos = pos,
             .cracks_index = cracks_index
@@ -122,7 +122,7 @@ public:
 
     inline void clear_lights() { m_light_count = 0; }
 
-    [[nodiscard]] inline void add_light(Light light) {
+    inline void add_light(Light light) {
         using Constants::WORLD_MAX_LIGHT_COUNT;
 
         m_lights[m_light_count] = light;
@@ -140,7 +140,7 @@ private:
     std::unordered_map<TilePos, TileCracks> m_wall_cracks;
     sge::Timer m_anim_timer = sge::Timer::from_seconds(1.0f / 15.0f, sge::TimerMode::Repeating);
     LLGL::DynamicArray<Light> m_lights;
-    uint32_t m_light_count = 0; 
+    uint32_t m_light_count = 0;
 
     glm::vec2 offsets[7];
 

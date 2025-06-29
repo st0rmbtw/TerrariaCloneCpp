@@ -46,7 +46,6 @@ public:
         return ItemSlot(m_items[index], index);
     }
 
-    [[nodiscard]]
     inline void set_item(uint8_t index, const Item& item) {
         SGE_ASSERT(index < 51);
         m_items[index] = item;
