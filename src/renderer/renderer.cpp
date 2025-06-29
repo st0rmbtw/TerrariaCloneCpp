@@ -90,16 +90,13 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
         LLGL::CombinedTextureSamplerDescriptor{ "u_lightmap_texture", "u_lightmap_texture", "u_lightmap_sampler", 7 },
         LLGL::CombinedTextureSamplerDescriptor{ "u_light_texture", "u_light_texture", "u_light_sampler", 9 },
     };
-    pipelineLayoutDesc.heapBindings = sge::BindingLayout(
-        LLGL::StageFlags::VertexStage | LLGL::StageFlags::FragmentStage,
-        {
-            sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer"),
-            sge::BindingLayoutItem::Texture(3, "u_background_texture"),
-            sge::BindingLayoutItem::Texture(5, "u_world_texture"),
-            sge::BindingLayoutItem::Texture(7, "u_lightmap_texture"),
-            sge::BindingLayoutItem::Texture(9, "u_light_texture"),
-        }
-    );
+    pipelineLayoutDesc.heapBindings = sge::BindingLayout({
+        sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer", LLGL::StageFlags::VertexStage),
+        sge::BindingLayoutItem::Texture(3, "u_background_texture", LLGL::StageFlags::FragmentStage),
+        sge::BindingLayoutItem::Texture(5, "u_world_texture", LLGL::StageFlags::FragmentStage),
+        sge::BindingLayoutItem::Texture(7, "u_lightmap_texture", LLGL::StageFlags::FragmentStage),
+        sge::BindingLayoutItem::Texture(9, "u_light_texture", LLGL::StageFlags::FragmentStage),
+    });
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 

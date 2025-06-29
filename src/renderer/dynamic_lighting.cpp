@@ -42,7 +42,7 @@ static bool blur(LightMap& lightmap, int index, glm::vec3& prev_light, float& pr
     prev_light = prev_light * prev_decay;
     prev_decay = Constants::LightDecay(lightmap.get_mask(index));
 
-    // The light has completely decayed - nothing to blur 
+    // The light has completely decayed - nothing to blur
     return this_light.r < LIGHT_EPSILON && this_light.g < LIGHT_EPSILON && this_light.b < LIGHT_EPSILON;
 }
 
@@ -235,7 +235,7 @@ static uint32_t count_steps(const LightMap& lightmap, LLGL::DynamicArray<Color>&
             this_light.b = prev_light.b;
         }
 
-        // The light has completely decayed - nothing to blur 
+        // The light has completely decayed - nothing to blur
         if (this_light.r < LIGHT_EPSILON && this_light.g < LIGHT_EPSILON && this_light.b < LIGHT_EPSILON) break;
 
         prev_light = prev_light * prev_decay;
@@ -296,7 +296,7 @@ void DynamicLighting::update(World& world) {
     size_t i = 0;
     for (i = 0; i < light_count; ++i) {
         const Light& light = world.lights()[i];
-        
+
         glm::ivec2 light_pos = glm::max(glm::ivec2(light.pos), glm::ivec2(0));
 
         const sge::IRect area = calculate_light_area(lightmap, m_line, light_pos, light.color);
@@ -343,7 +343,7 @@ void DynamicLighting::compute_light(const sge::Camera& camera, const World& worl
     for (sge::IRect& area : m_areas) {
         // Clamp to screen resolution
         area = area.clamp(screen_blur_area);
-        
+
         // Clear
         for (int y = area.min.y; y < area.max.y; ++y) {
             memset(&lightmap.colors[y * lightmap.width + area.min.x], 0, area.width() * sizeof(Color));
@@ -616,7 +616,7 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
     };
 
     for (int i = 0; i < 2; ++i) {
-        blur_horizontal();  
+        blur_horizontal();
         commands->ResourceBarrier(0, nullptr, 1, &m_light_texture);
 
         blur_vertical();

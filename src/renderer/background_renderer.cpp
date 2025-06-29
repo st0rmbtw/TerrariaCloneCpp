@@ -60,13 +60,10 @@ void BackgroundRenderer::init() {
     }
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
-    pipelineLayoutDesc.heapBindings = sge::BindingLayout(
-        LLGL::StageFlags::VertexStage | LLGL::StageFlags::FragmentStage,
-        {
-            sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer"),
-            sge::BindingLayoutItem::Texture(3, "u_texture"),
-        }
-    );
+    pipelineLayoutDesc.heapBindings = sge::BindingLayout({
+        sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer", LLGL::StageFlags::VertexStage),
+        sge::BindingLayoutItem::Texture(3, "u_texture", LLGL::StageFlags::FragmentStage),
+    });
     pipelineLayoutDesc.staticSamplers = {
         LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4), backgrounds_texture.sampler().descriptor()),
     };

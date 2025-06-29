@@ -138,18 +138,12 @@ void WorldRenderer::init() {
 
     {
         LLGL::PipelineLayoutDescriptor lightmapPipelineLayoutDesc;
-        lightmapPipelineLayoutDesc.heapBindings = sge::BindingLayout(
-            LLGL::StageFlags::VertexStage,
-            {
-                sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer")
-            }
-        );
-        lightmapPipelineLayoutDesc.bindings = sge::BindingLayout(
-            LLGL::StageFlags::FragmentStage,
-            {
-                sge::BindingLayoutItem::Texture(3, "u_texture")
-            }
-        );
+        lightmapPipelineLayoutDesc.heapBindings = sge::BindingLayout({
+            sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer", LLGL::StageFlags::VertexStage)
+        });
+        lightmapPipelineLayoutDesc.bindings = sge::BindingLayout({
+            sge::BindingLayoutItem::Texture(3, "u_texture", LLGL::StageFlags::FragmentStage)
+        });
         lightmapPipelineLayoutDesc.staticSamplers = {
             LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4), Assets::GetSampler(sge::TextureSampler::Nearest).descriptor())
         };

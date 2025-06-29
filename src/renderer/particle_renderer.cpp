@@ -105,14 +105,11 @@ void ParticleRenderer::init() {
     }
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
-    pipelineLayoutDesc.heapBindings = sge::BindingLayout(
-        LLGL::StageFlags::VertexStage | LLGL::StageFlags::FragmentStage,
-        {
-            sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer"),
-            sge::BindingLayoutItem::StorageBuffer(5, "TransformBuffer"),
-            sge::BindingLayoutItem::Texture(3, "u_texture"),
-        }
-    );
+    pipelineLayoutDesc.heapBindings = sge::BindingLayout({
+        sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer", LLGL::StageFlags::VertexStage),
+        sge::BindingLayoutItem::StorageBuffer(5, "TransformBuffer", LLGL::StageFlags::VertexStage),
+        sge::BindingLayoutItem::Texture(3, "u_texture", LLGL::StageFlags::FragmentStage),
+    });
     pipelineLayoutDesc.staticSamplers = {
         LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4), m_atlas.texture().sampler().descriptor())
     };
