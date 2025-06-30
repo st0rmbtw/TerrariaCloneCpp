@@ -8,7 +8,7 @@
 struct AppConfig {
     bool vsync = false;
     bool fullscreen = false;
-    uint8_t samples = 4;
+    uint8_t samples = 1;
 };
 
 namespace Game {
