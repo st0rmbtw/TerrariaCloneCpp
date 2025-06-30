@@ -165,6 +165,7 @@ void UI::PreUpdate(Inventory& inventory) {
                     }
                     break;
                 }
+                break;
             }
         }
     }
@@ -454,12 +455,12 @@ static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
     }
 
     // Draw pangramas in different languages to test text rendering
-    // const RichText text = rich_text(
-    //     RichTextSection("The quick brown fox jumps over the lazy dog æ\n", 48.0f, glm::vec3(0.9f, 0.4f, 0.4f)),
-    //     RichTextSection("Съешь ещё этих мягких французских булок, да выпей же чаю\n", 48.0f, glm::vec3(0.4f, 0.9f, 0.4f))
+    // const sge::RichText text = rich_text(
+    //     sge::RichTextSection("The quick brown fox jumps over the lazy dog æ\n", 48.0f, sge::LinearRgba(0.9f, 0.4f, 0.4f)),
+    //     sge::RichTextSection("Съешь ещё этих мягких французских булок, да выпей же чаю\n", 48.0f, sge::LinearRgba(0.4f, 0.9f, 0.4f))
     // );
-    // const glm::vec2 bounds = calculate_text_bounds(text, FontAsset::AndyBold);
-    // Renderer::DrawTextUI(text, glm::vec2(window_size.x * 0.5f - bounds.x * 0.5f, window_size.y * 0.5f - bounds.y * 0.5f), FontAsset::AndyBold, inventory_index);
+    // const glm::vec2 bounds = sge::calculate_text_bounds(font, text);
+    // GameRenderer::DrawTextUI(text, window_size * 0.5f - bounds * 0.5f, font, sge::Order(inventory_index));
 
     GameRenderer::EndOrderMode();
 }
