@@ -69,6 +69,7 @@ enum class ShaderAsset : uint8_t {
     BackgroundShader,
     ParticleShader,
     StaticLightMapShader,
+    FontShader
 };
 
 enum class ComputeShaderAsset : uint8_t {

@@ -19,6 +19,7 @@
 #include <SGE/renderer/macros.hpp>
 #include <SGE/renderer/batch.hpp>
 #include <SGE/types/binding_layout.hpp>
+#include <SGE/types/blend_mode.hpp>
 
 #include "../assets.hpp"
 #include "../utils.hpp"
@@ -34,7 +35,6 @@ static struct RendererState {
     sge::Batch main_batch;
     sge::Batch world_batch;
     sge::Batch ui_batch;
-    sge::Batch premultiply_batch;
 
     sge::Rect camera_frustums[2];
     sge::Rect ui_frustum;
@@ -83,8 +83,7 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
         LLGL::StaticSamplerDescriptor("u_lightmap_sampler", LLGL::StageFlags::FragmentStage, 8, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
         LLGL::StaticSamplerDescriptor("u_light_sampler", LLGL::StageFlags::FragmentStage, 10, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
     };
-    pipelineLayoutDesc.combinedTextureSamplers =
-    {
+    pipelineLayoutDesc.combinedTextureSamplers = {
         LLGL::CombinedTextureSamplerDescriptor{ "u_background_texture", "u_background_texture", "u_background_sampler", 3 },
         LLGL::CombinedTextureSamplerDescriptor{ "u_world_texture", "u_world_texture", "u_world_sampler", 5 },
         LLGL::CombinedTextureSamplerDescriptor{ "u_lightmap_texture", "u_lightmap_texture", "u_lightmap_sampler", 7 },
@@ -105,7 +104,7 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
         state.background_renderer.target_texture(),
         state.world_renderer.target_texture(),
         state.world_renderer.static_lightmap_texture(),
-        nullptr,
+        Assets::GetTexture(TextureAsset::Stub)
     };
     state.resource_heap = context->CreateResourceHeap(LLGL::ResourceHeapDescriptor(pipelineLayout, ARRAY_LEN(resource_views)), resource_views);
 
@@ -126,9 +125,13 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
     state.background_renderer.init_world(state.world_renderer);
     state.particle_renderer.init();
 
+    const sge::ShaderPipeline& font_shader = Assets::GetShader(ShaderAsset::FontShader);
+    state.main_batch = sge::Batch(renderer, font_shader.ps);
+    state.world_batch = sge::Batch(renderer, font_shader.ps);
+    state.ui_batch = sge::Batch(renderer, font_shader.ps);
+
     state.world_batch.SetDepthEnabled(true);
     state.ui_batch.SetIsUi(true);
-    state.premultiply_batch.SetBlendMode(sge::BlendMode::PremultipliedAlpha);
 
     return true;
 }
@@ -220,7 +223,6 @@ void GameRenderer::Begin(const sge::Camera& camera, World& world) {
     state.main_batch.Reset();
     state.world_batch.Reset();
     state.ui_batch.Reset();
-    state.premultiply_batch.Reset();
 }
 
 void GameRenderer::Render(const sge::Camera& camera, const World& world) {
@@ -237,7 +239,6 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
     renderer.PrepareBatch(state.main_batch);
     renderer.PrepareBatch(state.world_batch);
     renderer.PrepareBatch(state.ui_batch);
-    renderer.PrepareBatch(state.premultiply_batch);
 
     renderer.UploadBatchData();
 
@@ -264,7 +265,6 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
         state.world_renderer.render(world.chunk_manager());
         state.particle_renderer.render_world();
 
-        renderer.RenderBatch(state.premultiply_batch);
         renderer.RenderBatch(state.world_batch);
     renderer.EndPass();
 
@@ -292,14 +292,12 @@ void GameRenderer::BeginOrderMode(int order, bool advance) {
     state.main_batch.BeginOrderMode(order, advance);
     state.world_batch.BeginOrderMode(order, advance);
     state.ui_batch.BeginOrderMode(order, advance);
-    state.premultiply_batch.BeginOrderMode(order, advance);
 }
 
 void GameRenderer::EndOrderMode() {
     state.main_batch.EndOrderMode();
     state.world_batch.EndOrderMode();
     state.ui_batch.EndOrderMode();
-    state.premultiply_batch.EndOrderMode();
 }
 
 void GameRenderer::BeginBlendMode(sge::BlendMode blend_mode) {
@@ -365,7 +363,11 @@ uint32_t GameRenderer::DrawAtlasSpriteWorldPremultiplied(const sge::TextureAtlas
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
 
-    return state.premultiply_batch.DrawAtlasSprite(sprite, order);
+    state.world_batch.BeginBlendMode(sge::BlendMode::PremultipliedAlpha);
+    uint32_t ordr = state.world_batch.DrawAtlasSprite(sprite, order);
+    state.world_batch.EndBlendMode();
+
+    return ordr;
 }
 
 uint32_t GameRenderer::DrawAtlasSpriteUI(const sge::TextureAtlasSprite& sprite, sge::Order order) {
@@ -426,6 +428,10 @@ void GameRenderer::Terminate() {
     state.particle_renderer.terminate();
 
     const auto& context = sge::Engine::Renderer().Context();
+
+    state.main_batch.Terminate(context);
+    state.world_batch.Terminate(context);
+    state.ui_batch.Terminate(context);
 
     SGE_RESOURCE_RELEASE(state.resource_heap);
     SGE_RESOURCE_RELEASE(state.chunk_vertex_buffer);

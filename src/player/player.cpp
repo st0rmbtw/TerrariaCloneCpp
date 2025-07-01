@@ -6,6 +6,7 @@
 
 #include <SGE/math/quat.hpp>
 #include <SGE/math/rect.hpp>
+#include <SGE/math/consts.hpp>
 #include <SGE/input.hpp>
 #include <SGE/time/time.hpp>
 #include <SGE/time/timer.hpp>
@@ -51,7 +52,7 @@ void spawn_particles_on_dig(const glm::vec2& position, Particle::Type particle, 
     const int count = broken ? rand_range(7, 15) : rand_range(3, 8);
 
     for (int i = 0; i < count; i++) {
-        const float rotation_speed = rand_range(0.0f, glm::pi<float>() / 12.0f);
+        const float rotation_speed = rand_range(0.0f, sge::consts::PI / 12.0f);
 
         const glm::vec2 velocity = glm::vec2(rand_range(-1.0f, 1.0f), rand_range(-2.0f, 2.0f));
         const glm::vec2 offset = particle == Particle::Type::Torch ? glm::diskRand(10.0f) : glm::vec2(0.0f);
@@ -219,7 +220,7 @@ glm::vec2 Player::check_collisions(const World& world) {
     for (int y = top; y < bottom; ++y) {
         for (int x = left; x < right; ++x) {
             if (!world.solid_tile_exists(TilePos(x, y))) continue;
-            
+
             const glm::vec2 tile_pos = glm::vec2(x * TILE_SIZE, y * TILE_SIZE);
 
             if (
@@ -371,7 +372,7 @@ void Player::update_using_item_anim() {
     m_using_item.set_rotation(Quat::from_rotation_z(rotation * direction * ITEM_ROTATION + direction * 0.5f));
     m_using_item.set_anchor(m_direction == Direction::Left ? sge::Anchor::BottomRight : sge::Anchor::BottomLeft);
     m_using_item.set_flip_x(m_direction == Direction::Left);
-    
+
     m_using_item_visible = true;
 }
 
@@ -506,7 +507,7 @@ void Player::spawn_particles_on_walk() const {
     const glm::vec2 position = draw_position() + glm::vec2(0., PLAYER_HEIGHT_HALF);
     const glm::vec2 velocity = random_point_cone(glm::vec2(direction, 0.0f), 45.0f);
     const float scale = rand_range(0.0f, 1.0f);
-    const float rotation_speed = glm::pi<float>() / 12.0f;
+    const float rotation_speed = sge::consts::PI / 12.0f;
 
     ParticleManager::SpawnParticle(
         ParticleBuilder::create(Particle::get_by_tile(tile), position, velocity, 0.3f)
@@ -518,7 +519,7 @@ void Player::spawn_particles_on_walk() const {
 
 void Player::spawn_particles_grounded() const {
     ZoneScopedN("Player::spawn_particles_grounded");
-    
+
     if (!m_stand_on_tile.has_value()) return;
     const TileType tile = m_stand_on_tile.value();
 
@@ -527,7 +528,7 @@ void Player::spawn_particles_grounded() const {
     const Particle::Type particle = Particle::get_by_tile(tile);
 
     const float fall_distance = get_fall_distance();
-    const float rotation_speed = glm::pi<float>() / 12.0f;
+    const float rotation_speed = sge::consts::PI / 12.0f;
     const glm::vec2 position = draw_position() + glm::vec2(0., PLAYER_HEIGHT_HALF);
 
     if (!m_prev_grounded && m_collisions.down && fall_distance > TILE_SIZE * 1.5) {
@@ -710,7 +711,7 @@ void Player::use_item(const sge::Camera& camera, World& world) {
     const ItemSlot item_slot = taken_item.has_item() ? taken_item : m_inventory.get_selected_item();
     const std::optional<Item>& item = item_slot.item;
     if (!item) return;
-    
+
     // m_direction = screen_pos.x < camera.viewport().x * 0.5f ? Direction::Left : Direction::Right;
 
     if (m_swing_counter <= 0) {
@@ -723,7 +724,7 @@ void Player::use_item(const sge::Camera& camera, World& world) {
 
     if (m_use_cooldown > 0) return;
     m_use_cooldown = item->use_cooldown;
-    
+
     const glm::vec2& screen_pos = sge::Input::MouseScreenPosition();
     const glm::vec2 world_pos = camera.screen_to_world(screen_pos);
 
@@ -740,7 +741,7 @@ void Player::use_item(const sge::Camera& camera, World& world) {
 
         const glm::vec2 position = tile_pos.to_world_pos_center();
         spawn_particles_on_dig(position, Particle::get_by_tile(tile->type), tile->hp <= 0);
-        
+
         if (tile->hp <= 0) {
             world.remove_tile(tile_pos);
             world.remove_tile_cracks(tile_pos);
@@ -768,7 +769,7 @@ void Player::use_item(const sge::Camera& camera, World& world) {
 
         const glm::vec2 position = tile_pos.to_world_pos_center();
         spawn_particles_on_dig(position, Particle::get_by_wall(wall->type), wall->hp <= 0);
-        
+
         if (wall->hp <= 0) {
             world.remove_wall(tile_pos);
             world.remove_wall_cracks(tile_pos);

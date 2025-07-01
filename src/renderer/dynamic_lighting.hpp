@@ -26,7 +26,7 @@ public:
     void update(World& world) override;
     void compute_light(const sge::Camera& camera, const World& world) override;
 
-    void destroy() override;
+    void destroy() override {}
 
     ~DynamicLighting() override {
         destroy();
@@ -53,7 +53,10 @@ class AcceleratedDynamicLighting : public IDynamicLighting {
 public:
     AcceleratedDynamicLighting(const WorldData& world, LLGL::Texture* light_texture);
 
-    void update(World& world) override;
+    void update(World& world) override {
+        update_tile_texture(world.data());
+    }
+
     void compute_light(const sge::Camera& camera, const World& world) override;
 
     void destroy() override;
@@ -67,7 +70,6 @@ private:
     std::unordered_map<glm::uvec2, LightMapChunk> m_lightmap_chunks;
 
     sge::Renderer* m_renderer = nullptr;
-    void (*m_dispatch_func)(LLGL::CommandBuffer*, uint32_t) = nullptr;
 
     LLGL::Buffer* m_light_buffer = nullptr;
     LLGL::Texture* m_tile_texture = nullptr;
@@ -81,6 +83,8 @@ private:
     LLGL::PipelineState* m_light_horizontal_pipeline = nullptr;
 
     uint32_t m_workgroup_size = 16;
+
+    bool is_metal = false;
 };
 
 #endif

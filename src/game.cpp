@@ -206,7 +206,7 @@ static void render() {
 
     Background::Draw();
 
-    g.world.draw();
+    g.world.draw(g.camera);
 
     g.player.draw();
 
@@ -280,19 +280,20 @@ bool Game::Init(sge::RenderBackend backend, AppConfig config) {
     sge::Engine::SetDestroyCallback(destroy);
     sge::Engine::SetWindowResizeCallback(window_resized);
 
-    sge::WindowSettings window_settings;
-    window_settings.title = "TerrariaClone";
-    window_settings.width = 1280;
-    window_settings.height = 720;
-    window_settings.cursor_mode = CursorMode::Hidden;
-    window_settings.samples = config.samples;
-    window_settings.fullscreen = config.fullscreen;
-    window_settings.vsync = config.vsync;
-    window_settings.samples = config.samples;
-    window_settings.hidden = true;
+    sge::EngineConfig engine_config;
+    engine_config.cache_pipelines = true;
+    engine_config.window_settings.title = "TerrariaClone";
+    engine_config.window_settings.width = 1280;
+    engine_config.window_settings.height = 720;
+    engine_config.window_settings.cursor_mode = CursorMode::Hidden;
+    engine_config.window_settings.samples = config.samples;
+    engine_config.window_settings.fullscreen = config.fullscreen;
+    engine_config.window_settings.vsync = config.vsync;
+    engine_config.window_settings.samples = config.samples;
+    engine_config.window_settings.hidden = true;
 
     LLGL::Extent2D resolution;
-    if (!sge::Engine::Init(backend, window_settings, resolution)) return false;
+    if (!sge::Engine::Init(backend, engine_config, resolution)) return false;
 
     if (!GameRenderer::Init(resolution)) return false;
 

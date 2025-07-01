@@ -1,9 +1,10 @@
 #include "math.hpp"
 
 #include <glm/glm.hpp>
-#include <glm/ext/scalar_constants.hpp>
 
 #include <SGE/assert.hpp>
+#include <SGE/math/consts.hpp>
+
 #include "../utils.hpp"
 
 float move_towards(float current, float target, float max_delta) noexcept {
@@ -51,7 +52,7 @@ glm::vec2 random_point_circle(float xradius, float yradius) {
     SGE_ASSERT(0.0f <= yradius && yradius <= 1.0f);
 
     const glm::vec2 radius = glm::vec2(xradius, yradius) * glm::sqrt(rand_range(0.0f, 1.0f));
-    const float theta = rand_range(0.0f, 1.0f) * 2.0f * glm::pi<float>();
+    const float theta = rand_range(0.0f, 1.0f) * 2.0f * sge::consts::PI;
     const float x = radius.x * glm::cos(theta);
     const float y = radius.y * glm::sin(theta);
 

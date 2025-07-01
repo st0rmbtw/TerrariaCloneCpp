@@ -48,7 +48,7 @@ public:
 
     void update(const sge::Camera& camera);
 
-    void draw() const;
+    void draw(const sge::Camera& camera) const;
 
     [[nodiscard]] inline std::optional<Tile> get_tile(TilePos pos) const { return m_data.get_tile(pos); }
     [[nodiscard]] inline Tile* get_tile_mut(TilePos pos) { return m_data.get_tile_mut(pos); }

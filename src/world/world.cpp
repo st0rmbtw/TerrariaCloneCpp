@@ -64,7 +64,7 @@ void World::set_tile(TilePos pos, TileType tile_type) {
     reset_tiles(pos, *this);
 
     update_neighbors(pos);
-    
+
     m_changed = true;
     m_lightmap_changed = true;
 
@@ -81,7 +81,7 @@ void World::remove_tile(TilePos pos) {
     if (!m_data.is_tilepos_valid(pos)) return;
 
     const size_t index = m_data.get_tile_index(pos);
-    
+
     if (m_data.blocks[index].has_value()) {
         m_chunk_manager.set_blocks_changed(pos);
     }
@@ -147,7 +147,7 @@ void World::remove_wall(TilePos pos) {
     if (!m_data.is_tilepos_valid(pos)) return;
 
     const size_t index = m_data.get_tile_index(pos);
-    
+
     if (m_data.walls[index].has_value()) {
         m_chunk_manager.set_walls_changed(pos);
     }
@@ -212,7 +212,7 @@ void World::update(const sge::Camera& camera) {
             continue;
         }
 
-        anim.progress += 7.0f * sge::Time::DeltaSeconds();
+        anim.progress += 7.5f * sge::Time::DeltaSeconds();
 
         if (anim.progress >= 0.5f) {
             anim.scale = 1.0f - anim.progress;
@@ -224,7 +224,7 @@ void World::update(const sge::Camera& camera) {
     }
 }
 
-void World::draw() const {
+void World::draw(const sge::Camera& camera) const {
     ZoneScopedN("World::draw");
 
     sge::TextureAtlasSprite flames(Assets::GetTextureAtlas(TextureAsset::Flames0));
@@ -264,7 +264,8 @@ void World::draw() const {
 
     GameRenderer::BeginOrderMode();
         for (const TileDigAnimation& anim : m_tile_dig_animations) {
-            const glm::vec2 scale = glm::vec2(1.0f + anim.scale * 0.5f);
+            const float zoom = glm::max(camera.zoom(), 0.6f);
+            const glm::vec2 scale = glm::vec2(1.0f + anim.scale * 0.8f * zoom);
             const glm::vec2 position = anim.tile_pos.to_world_pos_center();
 
             sge::TextureAtlasSprite sprite(Assets::GetTextureAtlas(tile_texture_asset(anim.tile_type)), position, scale);
@@ -277,7 +278,7 @@ void World::draw() const {
                 sge::TextureAtlasSprite cracks_sprites(Assets::GetTextureAtlas(TextureAsset::TileCracks), position, scale);
                 cracks_sprites.set_index(cracks->second.cracks_index);
 
-                GameRenderer::DrawAtlasSpriteWorld(cracks_sprites);
+                GameRenderer::DrawAtlasSpriteWorld(cracks_sprites, sge::Order(1));
             }
         }
     GameRenderer::EndOrderMode();
@@ -303,7 +304,7 @@ void World::update_tile_sprite_index(TilePos pos) {
         const Neighbors<Tile> neighbors = this->get_tile_neighbors(pos);
 
         update_block_sprite_index(*tile, neighbors);
-    
+
         m_chunk_manager.set_blocks_changed(pos);
     }
 
@@ -311,7 +312,7 @@ void World::update_tile_sprite_index(TilePos pos) {
         const Neighbors<Wall> neighbors = this->get_wall_neighbors(pos);
 
         update_wall_sprite_index(*wall, neighbors);
-        
+
         m_chunk_manager.set_walls_changed(pos);
     }
 }

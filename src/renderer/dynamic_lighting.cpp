@@ -62,8 +62,6 @@ DynamicLighting::DynamicLighting(const WorldData& world, LLGL::Texture* light_te
     }
 }
 
-void DynamicLighting::destroy() {}
-
 SGE_FORCE_INLINE static void blur_line(LightMap& lightmap, int start, int end, int stride, glm::vec3& prev_light, float& prev_decay, glm::vec3& prev_light2, float& prev_decay2) {
     using Constants::LIGHT_EPSILON;
 
@@ -408,13 +406,10 @@ AcceleratedDynamicLighting::AcceleratedDynamicLighting(const WorldData& world, L
     m_renderer = &sge::Engine::Renderer();
 
     const sge::RenderBackend backend = m_renderer->Backend();
+    is_metal = backend.IsMetal();
 
-    if (backend.IsMetal()) {
+    if (backend.IsMetal())
         m_workgroup_size = 1;
-        m_dispatch_func = blur_dispatch_metal;
-    } else {
-        m_dispatch_func = blur_dispatch;
-    }
 
     init_pipeline();
     init_textures(world);
@@ -556,10 +551,6 @@ void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
     context->WriteResourceHeap(*m_light_blur_resource_heap, 1, {m_tile_texture, m_light_texture});
 }
 
-void AcceleratedDynamicLighting::update(World& world) {
-    update_tile_texture(world.data());
-}
-
 void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const World& world) {
     ZoneScopedN("WorldRenderer::compute_light");
 
@@ -598,7 +589,12 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
             commands->SetResourceHeap(*m_light_blur_resource_heap);
             commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
             commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
-            m_dispatch_func(commands, grid_w);
+
+            if (is_metal) {
+                blur_dispatch_metal(commands, grid_w);
+            } else {
+                blur_dispatch(commands, grid_w);
+            }
         }
         commands->PopDebugGroup();
     };
@@ -610,7 +606,12 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
             commands->SetResourceHeap(*m_light_blur_resource_heap);
             commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
             commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
-            m_dispatch_func(commands, grid_h);
+
+            if (is_metal) {
+                blur_dispatch_metal(commands, grid_h);
+            } else {
+                blur_dispatch(commands, grid_h);
+            }
         }
         commands->PopDebugGroup();
     };
