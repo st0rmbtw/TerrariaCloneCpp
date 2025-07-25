@@ -1,3 +1,7 @@
+#include <metal_stdlib>
+
+using namespace metal;
+
 struct VertexOut
 {
     float4 position [[position]];
@@ -7,8 +11,7 @@ struct VertexOut
 };
 
 constant const float GLYPH_CENTER = 0.5;
-constant const float OUTLINE = 0.5;
-
+constant const float OUTLINE = 0.2;
 
 fragment float4 PS(
     VertexOut inp [[stage_in]],

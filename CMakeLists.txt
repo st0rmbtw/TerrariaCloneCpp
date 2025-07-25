@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 if(APPLE)
     enable_language(OBJCXX)
+    set(CMAKE_OBJCXX_STANDARD 20)
 endif()
 
 set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")

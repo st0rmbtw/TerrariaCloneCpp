@@ -631,10 +631,22 @@ void Player::keep_in_world_bounds(const World& world) {
 
     const sge::Rect area = world.playable_area() * TILE_SIZE;
 
-    if (m_position.x - PLAYER_WIDTH_HALF < area.min.x + OFFSET) m_position.x = area.min.x + PLAYER_WIDTH_HALF + OFFSET;
-    if (m_position.x + PLAYER_WIDTH_HALF > area.max.x - OFFSET) m_position.x = area.max.x - PLAYER_WIDTH_HALF - OFFSET;
-    if (m_position.y - PLAYER_HEIGHT_HALF < area.min.y) m_position.y = area.min.y + PLAYER_HEIGHT_HALF;
-    if (m_position.y + PLAYER_HEIGHT_HALF > area.max.y) m_position.y = area.max.y - PLAYER_HEIGHT_HALF;
+    if (m_position.x - PLAYER_WIDTH_HALF < area.min.x + OFFSET) {
+        m_position.x = area.min.x + PLAYER_WIDTH_HALF + OFFSET;
+        m_velocity.x = 0.0f;
+    }
+    if (m_position.x + PLAYER_WIDTH_HALF > area.max.x - OFFSET) {
+        m_position.x = area.max.x - PLAYER_WIDTH_HALF - OFFSET;
+        m_velocity.x = 0.0f;
+    }
+    if (m_position.y - PLAYER_HEIGHT_HALF < area.min.y) {
+        m_position.y = area.min.y + PLAYER_HEIGHT_HALF;
+        m_velocity.y = 0.0f;
+    }
+    if (m_position.y + PLAYER_HEIGHT_HALF > area.max.y) {
+        m_position.y = area.max.y - PLAYER_HEIGHT_HALF;
+        m_velocity.y = 0.0f;
+    }
 }
 
 float Player::get_fall_distance() const {

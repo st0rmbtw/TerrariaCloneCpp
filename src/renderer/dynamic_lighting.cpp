@@ -132,7 +132,7 @@ static unsigned ClampThreadCount(unsigned threadCount, std::size_t workSize, uns
     return 0;
 }
 
-LLGL_EXPORT void DoConcurrentRange(
+static void DoConcurrentRange(
     const std::function<void(std::size_t begin, std::size_t end)>&  task,
     std::size_t                                                     count,
     unsigned                                                        threadCount,
@@ -159,7 +159,7 @@ LLGL_EXPORT void DoConcurrentRange(
     }
 }
 
-LLGL_EXPORT void DoConcurrent(
+static void DoConcurrent(
     const std::function<void(std::size_t index)>&   task,
     std::size_t                                     count,
     unsigned                                        threadCount = LLGL_MAX_THREAD_COUNT,

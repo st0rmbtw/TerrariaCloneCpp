@@ -561,7 +561,8 @@ void WorldRenderer::compute_light(const sge::Camera& camera, const World& world)
 void WorldRenderer::terminate() {
     const auto& context = m_renderer->Context();
 
-    m_dynamic_lighting->destroy();
+    if (m_dynamic_lighting)
+        m_dynamic_lighting->destroy();
 
     SGE_RESOURCE_RELEASE(m_pipeline);
     SGE_RESOURCE_RELEASE(m_resource_heap);
