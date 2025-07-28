@@ -35,10 +35,14 @@ public:
 
     void generate(uint32_t width, uint32_t height, uint32_t seed);
 
-    void set_tile(TilePos pos, const Block& block);
-    void set_tile(TilePos pos, BlockType block_type);
-    void remove_tile(TilePos pos);
-    void update_tile(TilePos pos, BlockType new_type, uint8_t new_variant);
+    void set_block(TilePos pos, const Block& block);
+    void set_block(TilePos pos, BlockType block_type);
+    void remove_block(TilePos pos);
+    void update_block(TilePos pos, BlockTypeWithData new_block, uint8_t new_variant);
+
+    void update_block_variant(TilePos pos, uint8_t new_variant);
+    void update_block_type(TilePos pos, BlockType new_type);
+    void update_block_data(TilePos pos, BlockData new_data);
 
     void set_wall(TilePos pos, WallType wall_type);
     void remove_wall(TilePos pos);
@@ -50,18 +54,18 @@ public:
 
     void draw(const sge::Camera& camera) const;
 
-    [[nodiscard]] inline std::optional<Block> get_tile(TilePos pos) const { return m_data.get_block(pos); }
-    [[nodiscard]] inline Block* get_tile_mut(TilePos pos) { return m_data.get_block_mut(pos); }
+    [[nodiscard]] inline std::optional<Block> get_block(TilePos pos) const { return m_data.get_block(pos); }
+    [[nodiscard]] inline Block* get_block_mut(TilePos pos) { return m_data.get_block_mut(pos); }
 
-    [[nodiscard]] inline std::optional<BlockType> get_tile_type(TilePos pos) const { return m_data.get_block_type(pos); }
+    [[nodiscard]] inline std::optional<BlockType> get_block_type(TilePos pos) const { return m_data.get_block_type(pos); }
 
-    [[nodiscard]] inline bool tile_exists(TilePos pos) const { return m_data.block_exists(pos); }
-    [[nodiscard]] inline bool tile_exists_with_type(TilePos pos, BlockType block_type) const { return m_data.block_exists_with_type(pos, block_type); }
-    [[nodiscard]] inline bool solid_tile_exists(TilePos pos) const { return m_data.solid_block_exists(pos); }
+    [[nodiscard]] inline bool block_exists(TilePos pos) const { return m_data.block_exists(pos); }
+    [[nodiscard]] inline bool block_exists_with_type(TilePos pos, BlockType block_type) const { return m_data.block_exists_with_type(pos, block_type); }
+    [[nodiscard]] inline bool solid_block_exists(TilePos pos) const { return m_data.solid_block_exists(pos); }
 
-    [[nodiscard]] inline Neighbors<Block> get_tile_neighbors(TilePos pos) const { return m_data.get_block_neighbors(pos); }
-    [[nodiscard]] inline Neighbors<BlockType> get_tile_type_neighbors(TilePos pos) const { return m_data.get_block_type_neighbors(pos); }
-    [[nodiscard]] inline Neighbors<Block*> get_tile_neighbors_mut(TilePos pos) { return m_data.get_block_neighbors_mut(pos); }
+    [[nodiscard]] inline Neighbors<Block> get_block_neighbors(TilePos pos) const { return m_data.get_block_neighbors(pos); }
+    [[nodiscard]] inline Neighbors<BlockType> get_block_type_neighbors(TilePos pos) const { return m_data.get_block_type_neighbors(pos); }
+    [[nodiscard]] inline Neighbors<Block*> get_block_neighbors_mut(TilePos pos) { return m_data.get_block_neighbors_mut(pos); }
 
     [[nodiscard]] inline std::optional<Wall> get_wall(TilePos pos) const { return m_data.get_wall(pos); }
     [[nodiscard]] inline Wall* get_wall_mut(TilePos pos) { return m_data.get_wall_mut(pos); }
@@ -95,15 +99,11 @@ public:
         });
     }
 
-    inline void create_tile_cracks(TilePos pos, uint8_t cracks_index) {
-        m_tile_cracks[pos] = TileCracks {
+    inline void create_block_cracks(TilePos pos, uint8_t cracks_index) {
+        m_block_cracks[pos] = TileCracks {
             .tile_pos = pos,
             .cracks_index = cracks_index
         };
-    }
-
-    inline void remove_tile_cracks(TilePos pos) {
-        m_tile_cracks.erase(pos);
     }
 
     inline void create_wall_cracks(TilePos pos, uint8_t cracks_index) {
@@ -111,10 +111,6 @@ public:
             .tile_pos = pos,
             .cracks_index = cracks_index
         };
-    }
-
-    inline void remove_wall_cracks(TilePos pos) {
-        m_wall_cracks.erase(pos);
     }
 
     [[nodiscard]] inline const Light* lights() const { return m_lights.data(); }
@@ -136,7 +132,7 @@ private:
     WorldData m_data;
     ChunkManager m_chunk_manager;
     std::vector<TileDigAnimation> m_tile_dig_animations;
-    std::unordered_map<TilePos, TileCracks> m_tile_cracks;
+    std::unordered_map<TilePos, TileCracks> m_block_cracks;
     std::unordered_map<TilePos, TileCracks> m_wall_cracks;
     sge::Timer m_anim_timer = sge::Timer::from_seconds(1.0f / 15.0f, sge::TimerMode::Repeating);
     LLGL::DynamicArray<Light> m_lights;

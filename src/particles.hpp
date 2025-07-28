@@ -17,16 +17,25 @@ namespace Particle {
         Dirt = 0,
         Stone = 1,
         Grass = 2,
+        GrassBlades = 3,
         Torch = 6,
         Wood = 7
     };
 
-    inline constexpr Particle::Type get_by_tile(BlockType tile_type) {
-        switch (tile_type) {
+    inline constexpr Particle::Type get_by_block(BlockTypeWithData block) {
+        switch (block.type) {
         case BlockType::Dirt: return Particle::Type::Dirt;
         case BlockType::Stone: return Particle::Type::Stone;
         case BlockType::Grass: return Particle::Type::Grass;
-        case BlockType::Tree: return Particle::Type::Wood;
+        case BlockType::Tree: switch (block.data.tree.frame) {
+            case TreeFrameType::TopLeaves:
+            case TreeFrameType::BranchLeftLeaves:
+            case TreeFrameType::BranchRightLeaves:
+                return Particle::Type::GrassBlades;
+
+            default:
+                return Particle::Type::Wood;    
+        }
         case BlockType::Wood: return Particle::Type::Wood;
         case BlockType::Torch: return Particle::Type::Torch;
         }

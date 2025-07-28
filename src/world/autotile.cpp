@@ -374,6 +374,15 @@ void update_block_sprite_index(Block& tile, const Neighbors<Block>& neighbors) {
             case TreeFrameType::TopBareJagged:
                 tile.atlas_pos = TextureAtlasPos(0, 9 + tile.variant);
             break;
+            case TreeFrameType::StumpRootLeft:
+                tile.atlas_pos = TextureAtlasPos(7, tile.variant);
+            break;
+            case TreeFrameType::StumpRootRight:
+                tile.atlas_pos = TextureAtlasPos(7, 3 + tile.variant);
+            break;
+            case TreeFrameType::StumpRootBoth:
+                tile.atlas_pos = TextureAtlasPos(7, 6 + tile.variant);
+            break;
         }
 
         return;
@@ -514,7 +523,7 @@ void reset_tiles(const TilePos& initial_pos, World& world) {
     for (int y = initial_pos.y - 3; y < initial_pos.y + 3; ++y) {
         for (int x = initial_pos.x - 3; x < initial_pos.x + 3; ++x) {
             auto pos = TilePos(x, y);
-            Block* tile = world.get_tile_mut(pos);
+            Block* tile = world.get_block_mut(pos);
 
             if (tile != nullptr) {
                 tile->is_merged = false;

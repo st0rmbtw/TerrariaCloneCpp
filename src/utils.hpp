@@ -8,6 +8,8 @@
 #include <LLGL/LLGL.h>
 #include <glm/glm.hpp>
 #include <list>
+#include <vector>
+#include <unordered_set>
 
 #include <optional>
 
@@ -18,8 +20,8 @@
 
 #define ARRAY_LEN(array) (sizeof(array)/sizeof(array[0]))
 
-static inline int rand_range(int from, int to) {
-    return rand() % (to + 1 - from) + from;
+static inline int rand_int(int from, int to) {
+    return from + rand() % (to + 1 - from);
 }
 
 static inline float rand_range(float from, float to) {
@@ -27,13 +29,9 @@ static inline float rand_range(float from, float to) {
     return from + scale * (to - from);
 }
 
-static inline int rand_int(int from, int to) {
-    return from + rand() / (RAND_MAX / (to - from + 1) + 1);
-}
-
 static inline bool rand_bool(float probability) {
-    if (probability >= 1.0) return true;
-    if (probability <= 0.0) return false;
+    if (probability >= 1.0f) return true;
+    if (probability <= 0.0f) return false;
 
     return rand_range(0.0f, 1.0f) < probability;
 }
@@ -60,5 +58,24 @@ static inline auto map(std::optional<T> a, F&& func) -> std::optional<decltype(f
     if (!a.has_value()) return std::nullopt;
     return func(a.value());
 }
+
+template <typename TNode, typename TGetNeighborsFunc, typename TProcessNodeFunc>
+static inline void bfs(TNode start_node, TGetNeighborsFunc get_neighbors_func, TProcessNodeFunc process_node_func) {
+    std::vector<TNode> q;
+
+    q.push_back(start_node);
+
+    while (!q.empty()) {
+        TNode current_node = q.back();
+        q.pop_back();
+
+        process_node_func(current_node);
+
+        for (const TNode& neighbor : get_neighbors_func(current_node)) {
+            q.push_back(neighbor);
+        }
+    }
+}
+
 
 #endif

@@ -349,7 +349,7 @@ static void world_grow_trees(WorldData& world) {
     for (int x = playable_area_min_x; x < playable_area_max_x; ++x) {
         const int y = get_surface_block(world, x);
 
-        const bool grow = rand_bool(1.0f / 5.0f);
+        const bool grow = rand_bool(1.0f / 10.0f);
 
         if (grow) {
             // Trees can only grow on dirt or grass

@@ -87,11 +87,22 @@ enum class TreeFrameType : uint8_t {
     TopLeaves,
     // A jagged top of a tree with no leaves
     TopBareJagged,
+
+    // A stump when there is only a left root
+    StumpRootLeft,
+    // A stump when there is only a right root
+    StumpRootRight,
+    // A stump when there are both a left root and a right roots
+    StumpRootBoth,
 };
 
 struct TreeData {
     TreeType type;
     TreeFrameType frame;
+};
+
+union BlockData {
+    TreeData tree;
 };
 
 namespace AnchorType {
@@ -127,9 +138,7 @@ struct Block {
     TextureAtlasPos atlas_pos;
     int16_t hp;
     BlockType type;
-    union {
-        TreeData tree;
-    } data;
+    BlockData data;
     uint8_t variant;
     uint8_t merge_id = 0xFF;
     bool is_merged = false;
@@ -148,6 +157,22 @@ struct Block {
     }
 };
 
+struct BlockTypeWithData {
+    constexpr BlockTypeWithData(BlockType block_type) :
+        type(block_type) {}
+
+    constexpr BlockTypeWithData(BlockType block_type, BlockData block_data) :
+        type(block_type),
+        data(block_data) {}
+
+    constexpr BlockTypeWithData(const Block& block) :
+        type(block.type),
+        data(block.data) {}
+
+    BlockType type;
+    BlockData data;
+};
+
 inline constexpr static uint8_t tile_type(const Block& tile) {
     switch (tile.type) {
     case BlockType::Dirt: 
@@ -157,32 +182,16 @@ inline constexpr static uint8_t tile_type(const Block& tile) {
 
     case BlockType::Torch: return TileType::Torch;
     case BlockType::Tree: switch (tile.data.tree.frame) {
-        case TreeFrameType::Trunk:
-        case TreeFrameType::RootLeft:
-        case TreeFrameType::RootRight:
-        case TreeFrameType::BaseLeft:
-        case TreeFrameType::BaseRight:
-        case TreeFrameType::BaseBoth:
-        case TreeFrameType::BranchLeftBare:
-        case TreeFrameType::BranchRightBare:
-        case TreeFrameType::TopBare:
-        case TreeFrameType::TopBareJagged:
-        case TreeFrameType::TrunkBranchLeft:
-        case TreeFrameType::TrunkBranchRight:
-        case TreeFrameType::TrunkBranchBoth:
-        case TreeFrameType::TrunkHollowLeft:
-        case TreeFrameType::TrunkHollowRight:
-        case TreeFrameType::TrunkBranchCollarLeft:
-        case TreeFrameType::TrunkBranchCollarRight:
-            return TileType::Tree;
-
         case TreeFrameType::BranchLeftLeaves:
         case TreeFrameType::BranchRightLeaves:
             return TileType::TreeBranch;
         
         case TreeFrameType::TopLeaves:
             return TileType::TreeTop;
-    }
+
+        default:
+            return TileType::Tree;
+}
     }
 }
 
@@ -193,31 +202,15 @@ inline constexpr static TileTextureType tile_texture_type(const Block& tile) {
     case BlockType::Grass: return TileTextureType::Grass;
     case BlockType::Torch: return TileTextureType::Torch;
     case BlockType::Tree: switch (tile.data.tree.frame) {
-        case TreeFrameType::Trunk:
-        case TreeFrameType::RootLeft:
-        case TreeFrameType::RootRight:
-        case TreeFrameType::BaseLeft:
-        case TreeFrameType::BaseRight:
-        case TreeFrameType::BaseBoth:
-        case TreeFrameType::BranchLeftBare:
-        case TreeFrameType::BranchRightBare:
-        case TreeFrameType::TopBare:
-        case TreeFrameType::TopBareJagged:
-        case TreeFrameType::TrunkBranchLeft:
-        case TreeFrameType::TrunkBranchRight:
-        case TreeFrameType::TrunkBranchBoth:
-        case TreeFrameType::TrunkHollowLeft:
-        case TreeFrameType::TrunkHollowRight:
-        case TreeFrameType::TrunkBranchCollarLeft:
-        case TreeFrameType::TrunkBranchCollarRight:
-            return TileTextureType::TreeTrunk;
-
         case TreeFrameType::BranchLeftLeaves:
         case TreeFrameType::BranchRightLeaves:
             return TileTextureType::TreeBranch;
         
         case TreeFrameType::TopLeaves:
             return TileTextureType::TreeCrown;
+
+        default:
+            return TileTextureType::TreeTrunk;
     }
     case BlockType::Wood:  return TileTextureType::Wood;
     }
@@ -249,13 +242,6 @@ inline constexpr static uint8_t block_required_tool(BlockType tile_type) {
 inline constexpr static bool block_is_stone(BlockType tile_type) {
     switch (tile_type) {
     case BlockType::Stone: return true;
-    default: return false;
-    }
-}
-
-inline constexpr static bool block_hand_destroy(BlockType tile_type) {
-    switch (tile_type) {
-    case BlockType::Torch: return true;
     default: return false;
     }
 }

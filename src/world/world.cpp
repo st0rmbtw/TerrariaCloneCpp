@@ -26,8 +26,8 @@ static void update_lightmap(WorldData& world_data, TilePos pos) {
     world_data.lightmap_update_area_async(light_area);
 }
 
-void World::set_tile(TilePos pos, const Block& tile) {
-    ZoneScopedN("World::set_tile");
+void World::set_block(TilePos pos, const Block& tile) {
+    ZoneScopedN("World::set_block");
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
@@ -48,8 +48,8 @@ void World::set_tile(TilePos pos, const Block& tile) {
     this->update_neighbors(pos);
 }
 
-void World::set_tile(TilePos pos, BlockType tile_type) {
-    ZoneScopedN("World::set_tile");
+void World::set_block(TilePos pos, BlockType tile_type) {
+    ZoneScopedN("World::set_block");
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
@@ -75,8 +75,8 @@ void World::set_tile(TilePos pos, BlockType tile_type) {
     m_chunk_manager.set_blocks_changed(pos);
 }
 
-void World::remove_tile(TilePos pos) {
-    ZoneScopedN("World::remove_tile");
+void World::remove_block(TilePos pos) {
+    ZoneScopedN("World::remove_block");
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
@@ -94,6 +94,8 @@ void World::remove_tile(TilePos pos) {
     m_changed = true;
     m_lightmap_changed = true;
 
+    m_block_cracks.erase(pos);
+
     update_lightmap(m_data, pos);
 
     m_data.changed_tiles.emplace_back(pos, 0);
@@ -103,19 +105,65 @@ void World::remove_tile(TilePos pos) {
     this->update_neighbors(pos);
 }
 
-void World::update_tile(TilePos pos, BlockType new_type, uint8_t new_variant) {
-    ZoneScopedN("World::update_tile");
+void World::update_block(TilePos pos, BlockTypeWithData new_block, uint8_t new_variant) {
+    ZoneScopedN("World::update_block");
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
     const size_t index = m_data.get_tile_index(pos);
 
-    if (m_data.blocks[index]->type == BlockType::Torch && new_type != BlockType::Torch) {
+    if (m_data.blocks[index]->type == BlockType::Torch && new_block.type != BlockType::Torch) {
         m_data.torches.erase(pos);
     }
 
-    m_data.blocks[index]->type = new_type;
+    m_data.blocks[index]->type = new_block.type;
+    m_data.blocks[index]->data = new_block.data;
     m_data.blocks[index]->variant = new_variant;
+
+    m_changed = true;
+
+    reset_tiles(pos, *this);
+    update_neighbors(pos);
+}
+
+void World::update_block_data(TilePos pos, BlockData new_data) {
+    ZoneScopedN("World::update_block_data");
+
+    if (!m_data.is_tilepos_valid(pos)) return;
+
+    const size_t index = m_data.get_tile_index(pos);
+
+    m_data.blocks[index]->data = new_data;
+
+    m_changed = true;
+
+    reset_tiles(pos, *this);
+    update_neighbors(pos);
+}
+
+void World::update_block_variant(TilePos pos, uint8_t new_variant) {
+    ZoneScopedN("World::update_block_variant");
+
+    if (!m_data.is_tilepos_valid(pos)) return;
+
+    const size_t index = m_data.get_tile_index(pos);
+
+    m_data.blocks[index]->variant = new_variant;
+
+    m_changed = true;
+
+    reset_tiles(pos, *this);
+    update_neighbors(pos);
+}
+
+void World::update_block_type(TilePos pos, BlockType new_type) {
+    ZoneScopedN("World::update_block_type");
+
+    if (!m_data.is_tilepos_valid(pos)) return;
+
+    const size_t index = m_data.get_tile_index(pos);
+
+    m_data.blocks[index]->type = new_type;
 
     m_changed = true;
 
@@ -155,6 +203,8 @@ void World::remove_wall(TilePos pos) {
     m_data.walls[index] = std::nullopt;
     m_changed = true;
     m_lightmap_changed = true;
+
+    m_wall_cracks.erase(pos);
 
     update_lightmap(m_data, pos);
 
@@ -236,15 +286,14 @@ void World::draw(const sge::Camera& camera) const {
     GameRenderer::BeginOrderMode();
         for (const TilePos& tile_pos : m_data.torches) {
             for (const glm::vec2& offset : offsets) {
-                float xx = offset.x;
-                float yy = offset.y;
-                flames.set_position(tile_pos.to_world_pos() + glm::vec2(-(20.0f - 16.0f) / 2.0f + xx, yy));
+                const glm::vec2 flame_pos = tile_pos.to_world_pos() - glm::vec2((20.0f - 16.0f) / 2.0f, 0.0f);
+                flames.set_position(flame_pos + offset);
                 GameRenderer::DrawAtlasSpriteWorldPremultiplied(flames);
             }
         }
     GameRenderer::EndOrderMode();
 
-    for (const auto& [pos, cracks] : m_tile_cracks) {
+    for (const auto& [pos, cracks] : m_block_cracks) {
         sge::TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));
         sprite.set_position(pos.to_world_pos_center());
         sprite.set_index(cracks.cracks_index);
@@ -273,8 +322,8 @@ void World::draw(const sge::Camera& camera) const {
 
             GameRenderer::DrawAtlasSpriteWorld(sprite);
 
-            const auto cracks = m_tile_cracks.find(anim.tile_pos);
-            if (cracks != m_tile_cracks.end()) {
+            const auto cracks = m_block_cracks.find(anim.tile_pos);
+            if (cracks != m_block_cracks.end()) {
                 sge::TextureAtlasSprite cracks_sprites(Assets::GetTextureAtlas(TextureAsset::TileCracks), position, scale);
                 cracks_sprites.set_index(cracks->second.cracks_index);
 
@@ -297,11 +346,11 @@ void World::update_neighbors(TilePos initial_pos) {
 }
 
 void World::update_tile_sprite_index(TilePos pos) {
-    Block* tile = this->get_tile_mut(pos);
+    Block* tile = this->get_block_mut(pos);
     Wall* wall = this->get_wall_mut(pos);
 
     if (tile) {
-        const Neighbors<Block> neighbors = this->get_tile_neighbors(pos);
+        const Neighbors<Block> neighbors = this->get_block_neighbors(pos);
 
         update_block_sprite_index(*tile, neighbors);
 
