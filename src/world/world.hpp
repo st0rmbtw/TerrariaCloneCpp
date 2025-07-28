@@ -21,7 +21,7 @@ struct TileDigAnimation {
     TextureAtlasPos atlas_pos;
     float progress;
     float scale;
-    TileType tile_type;
+    BlockType tile_type;
 };
 
 struct TileCracks {
@@ -35,10 +35,10 @@ public:
 
     void generate(uint32_t width, uint32_t height, uint32_t seed);
 
-    void set_tile(TilePos pos, const Tile& block);
-    void set_tile(TilePos pos, TileType block_type);
+    void set_tile(TilePos pos, const Block& block);
+    void set_tile(TilePos pos, BlockType block_type);
     void remove_tile(TilePos pos);
-    void update_tile(TilePos pos, TileType new_type, uint8_t new_variant);
+    void update_tile(TilePos pos, BlockType new_type, uint8_t new_variant);
 
     void set_wall(TilePos pos, WallType wall_type);
     void remove_wall(TilePos pos);
@@ -50,18 +50,18 @@ public:
 
     void draw(const sge::Camera& camera) const;
 
-    [[nodiscard]] inline std::optional<Tile> get_tile(TilePos pos) const { return m_data.get_tile(pos); }
-    [[nodiscard]] inline Tile* get_tile_mut(TilePos pos) { return m_data.get_tile_mut(pos); }
+    [[nodiscard]] inline std::optional<Block> get_tile(TilePos pos) const { return m_data.get_block(pos); }
+    [[nodiscard]] inline Block* get_tile_mut(TilePos pos) { return m_data.get_block_mut(pos); }
 
-    [[nodiscard]] inline std::optional<TileType> get_tile_type(TilePos pos) const { return m_data.get_tile_type(pos); }
+    [[nodiscard]] inline std::optional<BlockType> get_tile_type(TilePos pos) const { return m_data.get_block_type(pos); }
 
-    [[nodiscard]] inline bool tile_exists(TilePos pos) const { return m_data.tile_exists(pos); }
-    [[nodiscard]] inline bool tile_exists_with_type(TilePos pos, TileType block_type) const { return m_data.tile_exists_with_type(pos, block_type); }
-    [[nodiscard]] inline bool solid_tile_exists(TilePos pos) const { return m_data.solid_tile_exists(pos); }
+    [[nodiscard]] inline bool tile_exists(TilePos pos) const { return m_data.block_exists(pos); }
+    [[nodiscard]] inline bool tile_exists_with_type(TilePos pos, BlockType block_type) const { return m_data.block_exists_with_type(pos, block_type); }
+    [[nodiscard]] inline bool solid_tile_exists(TilePos pos) const { return m_data.solid_block_exists(pos); }
 
-    [[nodiscard]] inline Neighbors<Tile> get_tile_neighbors(TilePos pos) const { return m_data.get_tile_neighbors(pos); }
-    [[nodiscard]] inline Neighbors<TileType> get_tile_type_neighbors(TilePos pos) const { return m_data.get_tile_type_neighbors(pos); }
-    [[nodiscard]] inline Neighbors<Tile*> get_tile_neighbors_mut(TilePos pos) { return m_data.get_tile_neighbors_mut(pos); }
+    [[nodiscard]] inline Neighbors<Block> get_tile_neighbors(TilePos pos) const { return m_data.get_block_neighbors(pos); }
+    [[nodiscard]] inline Neighbors<BlockType> get_tile_type_neighbors(TilePos pos) const { return m_data.get_block_type_neighbors(pos); }
+    [[nodiscard]] inline Neighbors<Block*> get_tile_neighbors_mut(TilePos pos) { return m_data.get_block_neighbors_mut(pos); }
 
     [[nodiscard]] inline std::optional<Wall> get_wall(TilePos pos) const { return m_data.get_wall(pos); }
     [[nodiscard]] inline Wall* get_wall_mut(TilePos pos) { return m_data.get_wall_mut(pos); }
@@ -85,7 +85,7 @@ public:
     [[nodiscard]] inline const WorldData& data() const { return m_data; }
     [[nodiscard]] inline WorldData& data() { return m_data; }
 
-    inline void create_dig_tile_animation(const Tile& tile, TilePos pos) {
+    inline void create_dig_tile_animation(const Block& tile, TilePos pos) {
         m_tile_dig_animations.push_back(TileDigAnimation {
             .tile_pos = pos,
             .atlas_pos = tile.atlas_pos,

@@ -31,6 +31,17 @@ static inline int rand_int(int from, int to) {
     return from + rand() / (RAND_MAX / (to - from + 1) + 1);
 }
 
+static inline bool rand_bool(float probability) {
+    if (probability >= 1.0) return true;
+    if (probability <= 0.0) return false;
+
+    return rand_range(0.0f, 1.0f) < probability;
+}
+
+static inline bool rand_bool() {
+    return rand() & 1;
+}
+
 template <class T>
 static const T& list_at(const std::list<T>& list, int index) {
     auto it = list.cbegin();

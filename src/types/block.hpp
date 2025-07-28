@@ -8,15 +8,90 @@
 
 #include "texture_atlas_pos.hpp"
 #include "neighbors.hpp"
+#include "tool_flags.hpp"
+
 #include "../assets.hpp"
 #include "../utils.hpp"
 
-enum class TileType : uint8_t {
+namespace TileType {
+    enum : uint8_t {
+        Block = 0,
+        Wall,
+        Torch,
+        Tree,
+        TreeBranch,
+        TreeTop,
+        Count,
+    };
+}
+
+enum class BlockType : uint8_t {
     Dirt = 0,
     Stone = 1,
     Grass = 2,
     Torch = 4,
+    Tree = 5,
     Wood = 30,
+};
+
+enum class TileTextureType : uint8_t {
+    Dirt = 0,
+    Stone,
+    Grass,
+    Torch,
+    TreeTrunk,
+    TreeCrown,
+    TreeBranch,
+    Wood
+};
+
+enum class TreeType : uint8_t {
+    Forest = 0
+};
+
+enum class TreeFrameType : uint8_t {
+    // A trunk
+    Trunk = 0,
+
+    TrunkBranchLeft,
+    TrunkBranchRight,
+    TrunkBranchBoth,
+
+    TrunkHollowLeft,
+    TrunkHollowRight,
+
+    TrunkBranchCollarLeft,
+    TrunkBranchCollarRight,
+
+    // A left root
+    RootLeft,
+    // A right root
+    RootRight,
+    // A center base when there is only a left root
+    BaseLeft,
+    // A center base when there is only a right root
+    BaseRight,
+    // A center base when there are both a left and a right roots
+    BaseBoth,
+    // A left side branch with no leaves 
+    BranchLeftBare,
+    // A right side branch with no leaves
+    BranchRightBare,
+    // A left side branch with leaves
+    BranchLeftLeaves,
+    // A right side branch with leaves
+    BranchRightLeaves,
+    // A top of a tree with no leaves
+    TopBare,
+    // A top of a tree with leaves
+    TopLeaves,
+    // A jagged top of a tree with no leaves
+    TopBareJagged,
+};
+
+struct TreeData {
+    TreeType type;
+    TreeFrameType frame;
 };
 
 namespace AnchorType {
@@ -39,49 +114,166 @@ struct AnchorData {
     bool wall = true;
 };
 
-inline constexpr static bool tile_is_block(TileType tile_type) {
+inline constexpr static int16_t block_hp(BlockType tile_type) {
     switch (tile_type) {
-    case TileType::Torch: return false;
+    case BlockType::Torch: return 1;
+    case BlockType::Dirt:  case BlockType::Grass: return 50;
+    case BlockType::Stone: case BlockType::Wood:  return 100;
+    case BlockType::Tree:  return 500;
+    }
+}
+
+struct Block {
+    TextureAtlasPos atlas_pos;
+    int16_t hp;
+    BlockType type;
+    union {
+        TreeData tree;
+    } data;
+    uint8_t variant;
+    uint8_t merge_id = 0xFF;
+    bool is_merged = false;
+
+    explicit Block(BlockType tile_type) :
+        atlas_pos(),
+        hp(block_hp(tile_type)),
+        type(tile_type),
+        variant(static_cast<uint8_t>(rand() % 3)) {}
+
+    static Block Tree(TreeType type, TreeFrameType frame) {
+        Block tile = Block(BlockType::Tree);
+        tile.data.tree.type = type;
+        tile.data.tree.frame = frame;
+        return tile;
+    }
+};
+
+inline constexpr static uint8_t tile_type(const Block& tile) {
+    switch (tile.type) {
+    case BlockType::Dirt: 
+    case BlockType::Stone:
+    case BlockType::Grass:
+    case BlockType::Wood: return TileType::Block;
+
+    case BlockType::Torch: return TileType::Torch;
+    case BlockType::Tree: switch (tile.data.tree.frame) {
+        case TreeFrameType::Trunk:
+        case TreeFrameType::RootLeft:
+        case TreeFrameType::RootRight:
+        case TreeFrameType::BaseLeft:
+        case TreeFrameType::BaseRight:
+        case TreeFrameType::BaseBoth:
+        case TreeFrameType::BranchLeftBare:
+        case TreeFrameType::BranchRightBare:
+        case TreeFrameType::TopBare:
+        case TreeFrameType::TopBareJagged:
+        case TreeFrameType::TrunkBranchLeft:
+        case TreeFrameType::TrunkBranchRight:
+        case TreeFrameType::TrunkBranchBoth:
+        case TreeFrameType::TrunkHollowLeft:
+        case TreeFrameType::TrunkHollowRight:
+        case TreeFrameType::TrunkBranchCollarLeft:
+        case TreeFrameType::TrunkBranchCollarRight:
+            return TileType::Tree;
+
+        case TreeFrameType::BranchLeftLeaves:
+        case TreeFrameType::BranchRightLeaves:
+            return TileType::TreeBranch;
+        
+        case TreeFrameType::TopLeaves:
+            return TileType::TreeTop;
+    }
+    }
+}
+
+inline constexpr static TileTextureType tile_texture_type(const Block& tile) {
+    switch (tile.type) {
+    case BlockType::Dirt:  return TileTextureType::Dirt;
+    case BlockType::Stone: return TileTextureType::Stone;
+    case BlockType::Grass: return TileTextureType::Grass;
+    case BlockType::Torch: return TileTextureType::Torch;
+    case BlockType::Tree: switch (tile.data.tree.frame) {
+        case TreeFrameType::Trunk:
+        case TreeFrameType::RootLeft:
+        case TreeFrameType::RootRight:
+        case TreeFrameType::BaseLeft:
+        case TreeFrameType::BaseRight:
+        case TreeFrameType::BaseBoth:
+        case TreeFrameType::BranchLeftBare:
+        case TreeFrameType::BranchRightBare:
+        case TreeFrameType::TopBare:
+        case TreeFrameType::TopBareJagged:
+        case TreeFrameType::TrunkBranchLeft:
+        case TreeFrameType::TrunkBranchRight:
+        case TreeFrameType::TrunkBranchBoth:
+        case TreeFrameType::TrunkHollowLeft:
+        case TreeFrameType::TrunkHollowRight:
+        case TreeFrameType::TrunkBranchCollarLeft:
+        case TreeFrameType::TrunkBranchCollarRight:
+            return TileTextureType::TreeTrunk;
+
+        case TreeFrameType::BranchLeftLeaves:
+        case TreeFrameType::BranchRightLeaves:
+            return TileTextureType::TreeBranch;
+        
+        case TreeFrameType::TopLeaves:
+            return TileTextureType::TreeCrown;
+    }
+    case BlockType::Wood:  return TileTextureType::Wood;
+    }
+}
+
+inline constexpr static bool tile_is_block(BlockType tile_type) {
+    switch (tile_type) {
+    case BlockType::Torch: return false;
     default: return true;
     }
 }
 
-inline constexpr static bool tile_is_stone(TileType tile_type) {
+inline constexpr static uint8_t block_required_tool(BlockType tile_type) {
     switch (tile_type) {
-    case TileType::Stone: return true;
+    case BlockType::Dirt:
+    case BlockType::Stone:
+    case BlockType::Grass:
+    case BlockType::Wood:
+        return ToolFlags::Pickaxe;
+
+    case BlockType::Torch:
+        return ToolFlags::Any;
+
+    case BlockType::Tree:
+        return ToolFlags::Axe;
+    }
+}
+
+inline constexpr static bool block_is_stone(BlockType tile_type) {
+    switch (tile_type) {
+    case BlockType::Stone: return true;
     default: return false;
     }
 }
 
-inline constexpr static bool tile_hand_destroy(TileType tile_type) {
+inline constexpr static bool block_hand_destroy(BlockType tile_type) {
     switch (tile_type) {
-    case TileType::Torch: return true;
+    case BlockType::Torch: return true;
     default: return false;
     }
 }
 
-inline constexpr static int16_t tile_hp(TileType tile_type) {
+inline constexpr static std::optional<BlockType> block_merge_with(BlockType tile_type) {
     switch (tile_type) {
-    case TileType::Torch: return 1;
-    case TileType::Dirt:  case TileType::Grass: return 50;
-    case TileType::Stone: case TileType::Wood:  return 100;
-    }
-}
-
-inline constexpr static std::optional<TileType> tile_merge_with(TileType tile_type) {
-    switch (tile_type) {
-    case TileType::Grass: return TileType::Dirt;
-    case TileType::Stone: return TileType::Dirt;
-    case TileType::Wood:  return TileType::Dirt;
+    case BlockType::Grass: return BlockType::Dirt;
+    case BlockType::Stone: return BlockType::Dirt;
+    case BlockType::Wood:  return BlockType::Dirt;
     default: return std::nullopt;
     }
 }
 
-inline constexpr static bool tile_merges_with(TileType block, TileType other) {
+inline constexpr static bool block_merges_with(BlockType block, BlockType other) {
     if (!tile_is_block(block)) return false;
 
-    const std::optional<TileType> this_merge = tile_merge_with(block);
-    const std::optional<TileType> other_merge = tile_merge_with(other);
+    const std::optional<BlockType> this_merge = block_merge_with(block);
+    const std::optional<BlockType> other_merge = block_merge_with(other);
 
     if (other_merge == block) return true;
     if (this_merge == other) return true;
@@ -90,36 +282,38 @@ inline constexpr static bool tile_merges_with(TileType block, TileType other) {
     return false;
 }
 
-inline constexpr static const char* block_type_name(TileType tile_type) {
+inline constexpr static const char* block_type_name(BlockType tile_type) {
     switch (tile_type) {
-    case TileType::Dirt:  return "Dirt";
-    case TileType::Grass: return "Grass";
-    case TileType::Stone: return "Stone";
-    case TileType::Wood:  return "Wood";
-    case TileType::Torch: return "Torch";
+    case BlockType::Dirt:  return "Dirt";
+    case BlockType::Grass: return "Grass";
+    case BlockType::Stone: return "Stone";
+    case BlockType::Wood:  return "Wood";
+    case BlockType::Torch: return "Torch";
+    case BlockType::Tree:  return "Tree";
     }
 }
 
-inline constexpr static bool tile_dusty(TileType tile_type) {
+inline constexpr static bool block_dusty(BlockType tile_type) {
     switch (tile_type) {
-    case TileType::Dirt:  return true;
+    case BlockType::Dirt:  return true;
     default: return false;
     }
 }
 
-inline constexpr static TextureAsset tile_texture_asset(TileType tile_type) {
+inline constexpr static TextureAsset block_texture_asset(BlockType tile_type) {
     switch (tile_type) {
-    case TileType::Dirt: return TextureAsset::Tiles0;
-    case TileType::Stone: return TextureAsset::Tiles1;
-    case TileType::Grass: return TextureAsset::Tiles2;
-    case TileType::Torch: return TextureAsset::Tiles4;
-    case TileType::Wood: return TextureAsset::Tiles30;
+    case BlockType::Dirt: return TextureAsset::Tiles0;
+    case BlockType::Stone: return TextureAsset::Tiles1;
+    case BlockType::Grass: return TextureAsset::Tiles2;
+    case BlockType::Torch: return TextureAsset::Tiles4;
+    case BlockType::Tree: return TextureAsset::Tiles5;
+    case BlockType::Wood: return TextureAsset::Tiles30;
     }
 }
 
-inline constexpr static AnchorData tile_anchor(TileType tile_type) {
+inline constexpr static AnchorData block_anchor(BlockType tile_type) {
     switch (tile_type) {
-    case TileType::Torch: return AnchorData {
+    case BlockType::Torch: return AnchorData {
         .left = AnchorType::Default | AnchorType::Tree,
         .right = AnchorType::Default | AnchorType::Tree,
         .bottom = AnchorType::Default,
@@ -129,30 +323,31 @@ inline constexpr static AnchorData tile_anchor(TileType tile_type) {
     }
 }
 
-inline constexpr static bool tile_is_solid(std::optional<TileType> tile_type) {
+inline constexpr static bool block_is_solid(std::optional<BlockType> tile_type) {
     if (!tile_type.has_value()) return false;
 
     switch (tile_type.value()) {
-    case TileType::Torch: return false;
+    case BlockType::Torch:
+    case BlockType::Tree: return false;
     default: return true;
     }
 }
 
-inline constexpr static bool check_anchor_horizontal(std::optional<TileType> tile, AnchorType::Type anchor) {
+inline constexpr static bool check_anchor_horizontal(std::optional<BlockType> tile, AnchorType::Type anchor) {
     if (anchor == AnchorType::None && tile.has_value()) return false;
     if (anchor != AnchorType::None && !tile.has_value()) return false;
 
-    if (BITFLAG_CHECK(anchor, AnchorType::SolidTile) && !tile_is_solid(tile)) return false;
-    if (BITFLAG_CHECK(anchor, AnchorType::SolidSide) && !tile_is_solid(tile)) return false;
+    if (BITFLAG_CHECK(anchor, AnchorType::SolidTile) && !block_is_solid(tile)) return false;
+    if (BITFLAG_CHECK(anchor, AnchorType::SolidSide) && !block_is_solid(tile)) return false;
     return true;
 }
 
-inline constexpr static bool check_anchor_vertical(std::optional<TileType> tile, AnchorType::Type anchor) {
-    if (BITFLAG_CHECK(anchor, AnchorType::SolidTile) && tile_is_solid(tile)) return true;
+inline constexpr static bool check_anchor_vertical(std::optional<BlockType> tile, AnchorType::Type anchor) {
+    if (BITFLAG_CHECK(anchor, AnchorType::SolidTile) && block_is_solid(tile)) return true;
     return false;
 }
 
-inline constexpr static bool check_anchor_data(AnchorData anchor, const Neighbors<TileType>& neighbors, bool has_wall) {
+inline constexpr static bool check_anchor_data(AnchorData anchor, const Neighbors<BlockType>& neighbors, bool has_wall) {
     if (check_anchor_horizontal(neighbors.left, anchor.left)) return true;
     if (check_anchor_horizontal(neighbors.right, anchor.right)) return true;
     if (check_anchor_vertical(neighbors.top, anchor.top)) return true;
@@ -162,28 +357,13 @@ inline constexpr static bool check_anchor_data(AnchorData anchor, const Neighbor
     return false;
 }
 
-inline constexpr static std::optional<glm::vec3> tile_light(std::optional<TileType> tile_type) {
+inline constexpr static std::optional<glm::vec3> block_light(std::optional<BlockType> tile_type) {
     if (!tile_type.has_value()) return std::nullopt;
 
     switch (tile_type.value()) {
-    case TileType::Torch: return glm::vec3(1.0f, 0.95f, 0.8f);
+    case BlockType::Torch: return glm::vec3(1.0f, 0.95f, 0.8f);
     default: return std::nullopt;
     }
 }
-
-struct Tile {
-    TextureAtlasPos atlas_pos;
-    int16_t hp;
-    TileType type;
-    uint8_t variant;
-    uint8_t merge_id = 0xFF;
-    bool is_merged = false;
-
-    Tile(TileType tile_type) :
-        atlas_pos(),
-        hp(tile_hp(tile_type)),
-        type(tile_type),
-        variant(static_cast<uint8_t>(rand() % 3)) {}
-};
 
 #endif

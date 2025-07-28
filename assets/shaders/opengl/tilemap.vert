@@ -20,6 +20,7 @@ layout(std140) uniform GlobalUniformBuffer {
 struct TileData {
     vec2 tex_size;
     vec2 tex_padding;
+    vec2 tex_offset;
     vec2 size;
     vec2 offset;
     float depth;
@@ -48,7 +49,7 @@ void main() {
     float depth = tile_data.depth;
     vec2 size = tile_data.size;
     vec2 tex_size = size / tile_data.tex_size;
-    vec2 start_uv = i_atlas_pos * (tex_size + tile_data.tex_padding);
+    vec2 start_uv = tile_data.tex_offset + i_atlas_pos * (tex_size + tile_data.tex_padding);
     vec2 tex_dims = tile_data.tex_size;
     vec2 offset = tile_data.offset;
 

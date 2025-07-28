@@ -499,8 +499,8 @@ void Player::spawn_particles_on_walk() const {
     if (!m_stand_on_tile.has_value()) return;
     if (glm::abs(m_velocity.x) < 1.0f) return;
 
-    const TileType tile = m_stand_on_tile.value();
-    if (!tile_dusty(tile)) return;
+    const BlockType tile = m_stand_on_tile.value();
+    if (!block_dusty(tile)) return;
 
     const float direction = m_direction == Direction::Right ? -1.0f : 1.0f;
 
@@ -521,9 +521,9 @@ void Player::spawn_particles_grounded() const {
     ZoneScopedN("Player::spawn_particles_grounded");
 
     if (!m_stand_on_tile.has_value()) return;
-    const TileType tile = m_stand_on_tile.value();
+    const BlockType tile = m_stand_on_tile.value();
 
-    if (!tile_dusty(tile)) return;
+    if (!block_dusty(tile)) return;
 
     const Particle::Type particle = Particle::get_by_tile(tile);
 
@@ -744,34 +744,39 @@ void Player::use_item(const sge::Camera& camera, World& world) {
 
     bool used = false;
 
-    if (item->is_pickaxe() && world.tile_exists(tile_pos)) {
-        Tile* tile = world.get_tile_mut(tile_pos);
+    const std::optional<BlockType> block_type = world.get_tile_type(tile_pos);
+    if (block_type.has_value()) {
+        const bool valid_tool = (item->tool_flags & block_required_tool(block_type.value())) != 0;
+        
+        if (valid_tool) {
+            Block* tile = world.get_tile_mut(tile_pos);
 
-        if (tile->hp > 0) {
-            tile->hp -= item->power;
-        }
-
-        const glm::vec2 position = tile_pos.to_world_pos_center();
-        spawn_particles_on_dig(position, Particle::get_by_tile(tile->type), tile->hp <= 0);
-
-        if (tile->hp <= 0) {
-            world.remove_tile(tile_pos);
-            world.remove_tile_cracks(tile_pos);
-        } else {
-            uint8_t new_variant = rand() % 3;
-            TileType new_tile_type;
-            switch (tile->type) {
-                case TileType::Grass: new_tile_type = TileType::Dirt; break;
-                default: new_tile_type = tile->type;
+            if (tile->hp > 0) {
+                tile->hp -= item->power;
             }
 
-            world.update_tile(tile_pos, new_tile_type, new_variant);
+            const glm::vec2 position = tile_pos.to_world_pos_center();
+            spawn_particles_on_dig(position, Particle::get_by_tile(tile->type), tile->hp <= 0);
 
-            world.create_dig_tile_animation(*tile, tile_pos);
-            world.create_tile_cracks(tile_pos, map_range(tile_hp(tile->type), 0, 0, 3, tile->hp) * 6 + (rand() % 6));
+            if (tile->hp <= 0) {
+                world.remove_tile(tile_pos);
+                world.remove_tile_cracks(tile_pos);
+            } else {
+                uint8_t new_variant = rand() % 3;
+                BlockType new_tile_type;
+                switch (tile->type) {
+                    case BlockType::Grass: new_tile_type = BlockType::Dirt; break;
+                    default: new_tile_type = tile->type;
+                }
+
+                world.update_tile(tile_pos, new_tile_type, new_variant);
+
+                world.create_dig_tile_animation(*tile, tile_pos);
+                world.create_tile_cracks(tile_pos, map_range(block_hp(tile->type), 0, 0, 3, tile->hp) * 6 + (rand() % 6));
+            }
+
+            used = true;
         }
-
-        used = true;
     } else if (item->is_hammer() && world.wall_exists(tile_pos)) {
         Wall* wall = world.get_wall_mut(tile_pos);
 
@@ -799,9 +804,9 @@ void Player::use_item(const sge::Camera& camera, World& world) {
             const sge::Rect tile_rect = sge::Rect::from_center_size(tile_pos.to_world_pos_center(), glm::vec2(TILE_SIZE));
 
             if (!player_rect.intersects(tile_rect)) {
-                const Neighbors<TileType> neighbors = world.get_tile_type_neighbors(tile_pos);
+                const Neighbors<BlockType> neighbors = world.get_tile_type_neighbors(tile_pos);
 
-                if (check_anchor_data(tile_anchor(item->places_tile->tile), neighbors, world.wall_exists(tile_pos))) {
+                if (check_anchor_data(block_anchor(item->places_tile->tile), neighbors, world.wall_exists(tile_pos))) {
                     world.set_tile(tile_pos, item->places_tile->tile);
                     used = true;
                 }
@@ -820,8 +825,8 @@ void Player::interact(const sge::Camera& camera, World& world) {
     const glm::vec2 world_pos = camera.screen_to_world(screen_pos);
     const TilePos tile_pos = TilePos::from_world_pos(world_pos);
 
-    std::optional<TileType> tile = world.get_tile_type(tile_pos);
-    if (tile.has_value() && tile_hand_destroy(tile.value())) {
+    std::optional<BlockType> tile = world.get_tile_type(tile_pos);
+    if (tile.has_value() && block_hand_destroy(tile.value())) {
         world.remove_tile(tile_pos);
         const glm::vec2 position = tile_pos.to_world_pos_center();
         spawn_particles_on_dig(position, Particle::get_by_tile(tile.value()), false);

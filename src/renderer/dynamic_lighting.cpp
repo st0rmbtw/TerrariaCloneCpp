@@ -57,7 +57,7 @@ DynamicLighting::DynamicLighting(const WorldData& world, LLGL::Texture* light_te
             const TilePos color_pos = TilePos(x, y);
             const TilePos tile_pos = color_pos / Constants::SUBDIVISION;
 
-            m_dynamic_lightmap.set_mask(color_pos, world.tile_exists(tile_pos));
+            m_dynamic_lightmap.set_mask(color_pos, world.block_exists(tile_pos));
         }
     }
 }
@@ -375,6 +375,9 @@ void DynamicLighting::compute_light(const sge::Camera& camera, const World& worl
     const auto& context = m_renderer->Context();
 
     for (const sge::IRect& area : m_areas) {
+        if (area.width() < 2 || area.height() < 2)
+            continue;
+
         LLGL::ImageView image_view;
         image_view.format   = LLGL::ImageFormat::RGBA;
         image_view.dataType = LLGL::DataType::UInt8;
@@ -533,7 +536,7 @@ void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
 
         for (int y = 0; y < world.area.height(); ++y) {
             for (int x = 0; x < world.area.width(); ++x) {
-                uint8_t tile = world.tile_exists(TilePos(x, y)) ? 1 : 0;
+                uint8_t tile = world.block_exists(TilePos(x, y)) ? 1 : 0;
                 pixels[y * world.area.width() + x] = tile;
             }
         }

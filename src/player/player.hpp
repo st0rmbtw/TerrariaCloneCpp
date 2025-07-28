@@ -149,7 +149,7 @@ private:
     bool m_swing_anim = false;
     bool m_using_item_visible = false;
     bool m_prev_grounded = false;
-    std::optional<TileType> m_stand_on_tile = std::nullopt;
+    std::optional<BlockType> m_stand_on_tile = std::nullopt;
 
     MovementState m_movement_state;
 

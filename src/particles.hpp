@@ -21,13 +21,14 @@ namespace Particle {
         Wood = 7
     };
 
-    inline constexpr Particle::Type get_by_tile(TileType tile_type) {
+    inline constexpr Particle::Type get_by_tile(BlockType tile_type) {
         switch (tile_type) {
-        case TileType::Dirt: return Particle::Type::Dirt;
-        case TileType::Stone: return Particle::Type::Stone;
-        case TileType::Grass: return Particle::Type::Grass;
-        case TileType::Wood: return Particle::Type::Wood;
-        case TileType::Torch: return Particle::Type::Torch;
+        case BlockType::Dirt: return Particle::Type::Dirt;
+        case BlockType::Stone: return Particle::Type::Stone;
+        case BlockType::Grass: return Particle::Type::Grass;
+        case BlockType::Tree: return Particle::Type::Wood;
+        case BlockType::Wood: return Particle::Type::Wood;
+        case BlockType::Torch: return Particle::Type::Torch;
         }
     }
 

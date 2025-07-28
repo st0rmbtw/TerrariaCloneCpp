@@ -133,11 +133,14 @@ static const std::pair<TextureAsset, AssetTextureAtlas> TEXTURE_ATLAS_ASSETS[] =
 
 #define BLOCK_ASSET(BLOCK_TYPE, TEXTURE_ASSET, PATH, SIZE) std::make_tuple(static_cast<uint16_t>(BLOCK_TYPE), TEXTURE_ASSET, PATH, SIZE)
 static const std::array BLOCK_ASSETS = {
-    BLOCK_ASSET(TileType::Dirt, TextureAsset::Tiles0, "assets/sprites/tiles/Tiles_0.png", glm::uvec2(16)),
-    BLOCK_ASSET(TileType::Stone, TextureAsset::Tiles1, "assets/sprites/tiles/Tiles_1.png", glm::uvec2(16)),
-    BLOCK_ASSET(TileType::Grass, TextureAsset::Tiles2, "assets/sprites/tiles/Tiles_2.png", glm::uvec2(16)),
-    BLOCK_ASSET(TileType::Torch, TextureAsset::Tiles4, "assets/sprites/tiles/Tiles_4.png", glm::uvec2(20)),
-    BLOCK_ASSET(TileType::Wood, TextureAsset::Tiles30, "assets/sprites/tiles/Tiles_30.png", glm::uvec2(16)),
+    BLOCK_ASSET(TileTextureType::Dirt, TextureAsset::Tiles0, "assets/sprites/tiles/Tiles_0.png", glm::uvec2(16)),
+    BLOCK_ASSET(TileTextureType::Stone, TextureAsset::Tiles1, "assets/sprites/tiles/Tiles_1.png", glm::uvec2(16)),
+    BLOCK_ASSET(TileTextureType::Grass, TextureAsset::Tiles2, "assets/sprites/tiles/Tiles_2.png", glm::uvec2(16)),
+    BLOCK_ASSET(TileTextureType::Torch, TextureAsset::Tiles4, "assets/sprites/tiles/Tiles_4.png", glm::uvec2(20)),
+    BLOCK_ASSET(TileTextureType::TreeTrunk, TextureAsset::Tiles5, "assets/sprites/tiles/Tiles_5.png", glm::uvec2(20)),
+    BLOCK_ASSET(TileTextureType::TreeBranch, TextureAsset::TreeBranches, "assets/sprites/tiles/Tree_Branches_0.png", glm::uvec2(50, 40)),
+    BLOCK_ASSET(TileTextureType::TreeCrown, TextureAsset::TreeTops, "assets/sprites/tiles/Tree_Tops_0.png", glm::uvec2(88, 148)),
+    BLOCK_ASSET(TileTextureType::Wood, TextureAsset::Tiles30, "assets/sprites/tiles/Tiles_30.png", glm::uvec2(16)),
 };
 
 #define WALL_ASSET(WALL_TYPE, PATH) std::make_tuple(static_cast<uint16_t>(WALL_TYPE), TextureAsset::Stub, PATH, glm::uvec2(32))
@@ -298,7 +301,7 @@ bool Assets::Load() {
         state.textures[key] = texture;
     }
 
-    for (const auto& [block_type, asset_key, path, size] : BLOCK_ASSETS) {
+    for (const auto& [_, asset_key, path, size] : BLOCK_ASSETS) {
         sge::Texture texture;
         if (!load_texture(path, sge::TextureSampler::Nearest, &texture)) {
             return false;
@@ -566,7 +569,7 @@ static bool load_texture(const char* path, int sampler, sge::Texture* texture) {
 }
 
 template <size_t T>
-sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*, glm::uvec2>, T>& assets, int sampler, bool generate_mip_maps) {
+static sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*, glm::uvec2>, T>& assets, int sampler, bool generate_mip_maps) {
     uint32_t width = 0;
     uint32_t height = 0;
     uint32_t layers_count = 0;
@@ -580,8 +583,8 @@ sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAss
     std::unordered_map<uint16_t, Layer> layer_to_data_map;
     layer_to_data_map.reserve(assets.size());
 
-    for (const auto& [block_type, asset_key, path, _] : assets) {
-        layers_count = glm::max(layers_count, static_cast<uint32_t>(block_type));
+    for (const auto& [id, asset_key, path, _] : assets) {
+        layers_count = glm::max(layers_count, static_cast<uint32_t>(id));
 
         int w, h;
         uint8_t* layer_data = stbi_load(path, &w, &h, nullptr, 4);
@@ -590,7 +593,7 @@ sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAss
             continue;
         }
 
-        layer_to_data_map[block_type] = Layer {
+        layer_to_data_map[id] = Layer {
             .data = layer_data,
             .cols = static_cast<uint32_t>(w),
             .rows = static_cast<uint32_t>(h),

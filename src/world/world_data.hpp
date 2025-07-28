@@ -24,7 +24,7 @@ struct Layers {
 };
 
 struct WorldData {
-    std::optional<Tile>* blocks;
+    std::optional<Block>* blocks;
     std::optional<Wall>* walls;
     LightMap lightmap;
     sge::IRect area;
@@ -46,7 +46,7 @@ struct WorldData {
     }
 
     [[nodiscard]]
-    std::optional<Tile> get_tile(TilePos pos) const {
+    std::optional<Block> get_block(TilePos pos) const {
         if (!is_tilepos_valid(pos)) return std::nullopt;
         return this->blocks[get_tile_index(pos)];
     }
@@ -58,25 +58,25 @@ struct WorldData {
     }
 
     [[nodiscard]]
-    Tile* get_tile_mut(TilePos pos);
+    Block* get_block_mut(TilePos pos);
 
     [[nodiscard]]
     Wall* get_wall_mut(TilePos pos);
 
     [[nodiscard]]
-    inline bool tile_exists(TilePos pos) const {
+    inline bool block_exists(TilePos pos) const {
         if (!is_tilepos_valid(pos)) return false;
         return blocks[get_tile_index(pos)].has_value();
     }
 
     [[nodiscard]]
-    inline bool solid_tile_exists(TilePos pos) const {
+    inline bool solid_block_exists(TilePos pos) const {
         if (!is_tilepos_valid(pos)) return false;
 
-        const std::optional<Tile>& tile = blocks[get_tile_index(pos)];
+        const std::optional<Block>& tile = blocks[get_tile_index(pos)];
         if (!tile.has_value()) return false;
 
-        return tile_is_solid(tile->type);
+        return block_is_solid(tile->type);
     }
 
     [[nodiscard]]
@@ -86,16 +86,16 @@ struct WorldData {
     }
 
     [[nodiscard]]
-    std::optional<TileType> get_tile_type(TilePos pos) const;
+    std::optional<BlockType> get_block_type(TilePos pos) const;
 
     [[nodiscard]]
-    Neighbors<Tile> get_tile_neighbors(TilePos pos) const;
+    Neighbors<Block> get_block_neighbors(TilePos pos) const;
 
     [[nodiscard]]
-    Neighbors<TileType> get_tile_type_neighbors(TilePos pos) const;
+    Neighbors<BlockType> get_block_type_neighbors(TilePos pos) const;
 
     [[nodiscard]]
-    Neighbors<Tile*> get_tile_neighbors_mut(TilePos pos);
+    Neighbors<Block*> get_block_neighbors_mut(TilePos pos);
 
     [[nodiscard]]
     Neighbors<Wall> get_wall_neighbors(TilePos pos) const;
@@ -104,8 +104,8 @@ struct WorldData {
     Neighbors<Wall*> get_wall_neighbors_mut(TilePos pos);
     
     [[nodiscard]]
-    bool tile_exists_with_type(TilePos pos, TileType block_type) const {
-        const std::optional<TileType> block = this->get_tile_type(pos);
+    bool block_exists_with_type(TilePos pos, BlockType block_type) const {
+        const std::optional<BlockType> block = this->get_block_type(pos);
         if (!block.has_value()) return false;
         return block.value() == block_type;
     }

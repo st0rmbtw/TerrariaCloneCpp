@@ -15,9 +15,9 @@ using Constants::SUBDIVISION;
 
 static constexpr int DIRT_HILL_HEIGHT = 100;
 
-static inline void set_block(WorldData& world, TilePos pos, TileType block) {
+static inline void set_block(WorldData& world, TilePos pos, Block tile) {
     const size_t index = world.get_tile_index(pos);
-    world.blocks[index] = Tile(block);
+    world.blocks[index] = tile;
 }
 
 static inline void remove_block(WorldData& world, TilePos pos) {
@@ -38,11 +38,11 @@ static inline void remove_wall(WorldData& world, TilePos pos) {
 static void update_tile_sprite_index(WorldData& world, const TilePos& pos) {
     if (!world.is_tilepos_valid(pos)) return;
 
-    std::optional<Tile>& block = world.blocks[world.get_tile_index(pos)];
+    std::optional<Block>& block = world.blocks[world.get_tile_index(pos)];
     std::optional<Wall>& wall = world.walls[world.get_tile_index(pos)];
 
     if (block.has_value()) {
-        const Neighbors<Tile> neighbors = world.get_tile_neighbors(pos);
+        const Neighbors<Block> neighbors = world.get_block_neighbors(pos);
         update_block_sprite_index(block.value(), neighbors);
     }
 
@@ -52,14 +52,14 @@ static void update_tile_sprite_index(WorldData& world, const TilePos& pos) {
     }
 }
 
-static void fill_line_vertical(WorldData& world, TileType block, int from_y, int to_y, int x) {
+static void fill_line_vertical(WorldData& world, BlockType block, int from_y, int to_y, int x) {
     if (from_y < to_y) {
         for (int y = from_y; y < to_y; ++y) {
-            set_block(world, {x, y}, block);
+            set_block(world, {x, y}, Block(block));
         }
     } else {
         for (int y = from_y; y > to_y; --y) {
-            set_block(world, {x, y}, block);
+            set_block(world, {x, y}, Block(block));
         }
     }
 }
@@ -70,7 +70,7 @@ static int get_surface_block(const WorldData &world, int x) {
     int y = world.playable_area.min.y;
 
     while (y < height) {
-        if (world.solid_tile_exists({x, y})) break;
+        if (world.solid_block_exists({x, y})) break;
         ++y;
     }
 
@@ -94,9 +94,9 @@ static void world_generate_terrain(WorldData& world) {
     for (int y = world.playable_area.min.y; y < world.playable_area.max.y; ++y) {
         for (int x = world.playable_area.min.x; x < world.playable_area.max.x; ++x) {
             if (y >= world.layers.underground) {
-                set_block(world, {x, y}, TileType::Stone);
+                set_block(world, {x, y}, Block(BlockType::Stone));
             } else if (y >= world.layers.underground - world.layers.dirt_height) {
-                set_block(world, {x, y}, TileType::Dirt);
+                set_block(world, {x, y}, Block(BlockType::Dirt));
             }
         }
     }
@@ -124,10 +124,10 @@ static bool remove_walls_is_valid(WorldData& world, TilePos pos) {
 
     if (!world.wall_exists(pos)) return false;
 
-    const Neighbors<Tile> neighbors = world.get_tile_neighbors(pos);
+    const Neighbors<Block> neighbors = world.get_block_neighbors(pos);
     if (neighbors.any_not_exists()) return true;
 
-    if (world.tile_exists(pos)) return false;
+    if (world.block_exists(pos)) return false;
 
     return true;
 }
@@ -232,7 +232,7 @@ static void world_remove_walls_from_surface(WorldData& world) {
 
         const TilePos pos = TilePos(x, y);
 
-        if (world.tile_exists(pos)) continue;
+        if (world.block_exists(pos)) continue;
 
         remove_walls_flood_fill(world, pos);
     }
@@ -241,8 +241,124 @@ static void world_remove_walls_from_surface(WorldData& world) {
         int y = world.playable_area.min.y;
         while (y < world.playable_area.max.y) {
             remove_wall(world, TilePos(x, y));
-            if (world.tile_exists(TilePos(x, y))) break;
+            if (world.block_exists(TilePos(x, y))) break;
             y++;
+        }
+    }
+}
+
+static void world_place_tree(WorldData& world, TreeType tree_type, TilePos pos) {
+    const int height = rand_range(5, 16);
+
+    if (pos.x >= world.playable_area.max.x - 2 || pos.x <= world.playable_area.min.x + 2) {
+        return;
+    }
+
+    const bool left_block = world.block_exists({pos.x - 1, pos.y + 1});
+    const bool right_block = world.block_exists({pos.x + 1, pos.y + 1});
+
+    // Check enough space
+    {
+        const uint8_t left  = left_block ? 2 : 1;
+        const uint8_t right = right_block ? 2 : 1;
+
+        // Check enough space for base
+        for (int x = pos.x - left; x < pos.x + right; ++x) {
+            if (world.block_exists({x, pos.y})) return;
+        }
+
+        // Check enough space for branches
+        for (int y = pos.y - height; y < pos.y; ++y) {
+            for (int x = pos.x - 2; x < pos.x + 2; ++x) {
+                if (world.block_exists({x, y})) return;
+            }   
+        }
+    }
+
+
+    const bool left_base = rand_bool() && left_block;
+    const bool right_base = rand_bool() && right_block;
+
+    // Base
+    if (left_base)
+        set_block(world, {pos.x - 1, pos.y}, Block::Tree(tree_type, TreeFrameType::RootLeft));
+
+    if (right_base)
+        set_block(world, {pos.x + 1, pos.y}, Block::Tree(tree_type, TreeFrameType::RootRight));
+    
+    // ------------- Trunk -------------
+
+    TreeFrameType frame = TreeFrameType::Trunk;
+
+    if (left_base && right_base) {
+        frame = TreeFrameType::BaseBoth;
+    } else if (left_base) {
+        frame = TreeFrameType::BaseLeft;
+    } else if (right_base) {
+        frame = TreeFrameType::BaseRight;
+    }
+
+    set_block(world, pos, Block::Tree(tree_type, frame));
+    for (int y = pos.y - height; y < pos.y; ++y) {
+        const bool branch_left = rand_bool(1.0f / 10.0f);
+        const bool branch_right = rand_bool(1.0f / 10.0f);
+
+        if (branch_left && !world.block_exists({pos.x - 1, y - 1})) {
+            const bool bare = rand_bool(1.0f / 5.0f);
+            const TreeFrameType frame_type = bare ? TreeFrameType::BranchLeftBare : TreeFrameType::BranchLeftLeaves;
+            set_block(world, {pos.x - 1, y}, Block::Tree(tree_type, frame_type));
+        }
+
+        if (branch_right && !world.block_exists({pos.x + 1, y - 1})) {
+            const bool bare = rand_bool(1.0f / 5.0f);
+            const TreeFrameType frame_type = bare ? TreeFrameType::BranchRightBare : TreeFrameType::BranchRightLeaves;
+            set_block(world, {pos.x + 1, y}, Block::Tree(tree_type, frame_type));
+        }
+
+        // Hollow to the left
+        if (!branch_left && rand_bool(1.0f / 10.0f)) {
+            set_block(world, {pos.x, y}, Block::Tree(tree_type, TreeFrameType::TrunkHollowLeft));
+        // Hollow to the right
+        } else if (!branch_right && rand_bool(1.0f / 10.0f)) {
+            set_block(world, {pos.x, y}, Block::Tree(tree_type, TreeFrameType::TrunkHollowRight));
+        // Regular trunk
+        } else {
+            set_block(world, {pos.x, y}, Block::Tree(tree_type, TreeFrameType::Trunk));
+        }
+    }
+
+    // ------------- Crown -------------
+
+    const bool bare = rand_bool(1.0f / 5.0f);
+    const bool jagged = rand_bool(1.0f / 3.0f);
+
+    TreeFrameType frame_type = TreeFrameType::TopLeaves;
+
+    if (jagged)
+        frame_type = TreeFrameType::TopBareJagged;
+    else if (bare)
+        frame_type = TreeFrameType::TopBare;
+
+    set_block(world, {pos.x, pos.y - height - 1}, Block::Tree(tree_type, frame_type));
+}
+
+static void world_grow_trees(WorldData& world) {
+    const int playable_area_min_x = world.playable_area.min.x;
+    const int playable_area_max_x = world.playable_area.max.x;
+
+    for (int x = playable_area_min_x; x < playable_area_max_x; ++x) {
+        const int y = get_surface_block(world, x);
+
+        const bool grow = rand_bool(1.0f / 5.0f);
+
+        if (grow) {
+            // Trees can only grow on dirt or grass
+            const bool is_valid_block =
+                world.block_exists_with_type({x, y}, BlockType::Dirt) ||
+                world.block_exists_with_type({x, y}, BlockType::Grass);
+
+            if (is_valid_block)
+                world_place_tree(world, TreeType::Forest, {x, y - 1});
         }
     }
 }
@@ -288,7 +404,7 @@ static void world_make_hills(WorldData& world) {
         const float noise_value = fbm_value * gradient_value;
         const int hill_height = level - (noise_value * DIRT_HILL_HEIGHT);
 
-        fill_line_vertical(world, TileType::Dirt, hill_height, level, x);
+        fill_line_vertical(world, BlockType::Dirt, hill_height, level, x);
     }
 }
 
@@ -386,9 +502,9 @@ static void world_rough_cavern_layer_border(WorldData& world) {
         const int height = glm::abs(noise_value) * ROUGHNESS;
 
         if (noise_value > 0) {
-            fill_line_vertical(world, TileType::Dirt, level, level + height, x);
+            fill_line_vertical(world, BlockType::Dirt, level, level + height, x);
         } else {
-            fill_line_vertical(world, TileType::Stone, level - height, level, x);
+            fill_line_vertical(world, BlockType::Stone, level - height, level, x);
         }
     }
 }
@@ -415,12 +531,12 @@ static void world_generate_rocks_in_dirt(WorldData& world, int seed) {
 
             if (noise_value >= 0.4) {
                 auto pos = TilePos(x, y);
-                const std::optional<TileType> tile = world.get_tile_type(pos);
+                const std::optional<BlockType> tile = world.get_block_type(pos);
                 if (!tile.has_value()) continue;
 
-                if (tile.value() == TileType::Dirt || tile.value() == TileType::Grass) {
+                if (tile.value() == BlockType::Dirt || tile.value() == BlockType::Grass) {
                     remove_block(world, pos);
-                    set_block(world, pos, TileType::Stone);
+                    set_block(world, pos, Block(BlockType::Stone));
                 }
             }
         }
@@ -449,8 +565,8 @@ static void world_generate_dirt(WorldData& world, int seed, int from, int to, fl
 
             if (noise_value >= f) {
                 const TilePos pos = TilePos(x, y);
-                if (world.tile_exists_with_type(pos, TileType::Stone)) {
-                    set_block(world, pos, TileType::Dirt);
+                if (world.block_exists_with_type(pos, BlockType::Stone)) {
+                    set_block(world, pos, Block(BlockType::Dirt));
                 }
             }
         }
@@ -489,9 +605,9 @@ static void world_update_tile_sprite_index(WorldData& world) {
 static bool grassify_is_valid(const WorldData& world, const TilePos& pos) {
     if (pos.x >= world.area.width()) return false;
     if (pos.y >= world.area.height()) return false;
-    if (!world.tile_exists_with_type(pos, TileType::Dirt)) return false;
+    if (!world.block_exists_with_type(pos, BlockType::Dirt)) return false;
 
-    const Neighbors<Tile> neighbors = world.get_tile_neighbors(pos);
+    const Neighbors<Block> neighbors = world.get_block_neighbors(pos);
 
     return neighbors.any_not_exists();
 }
@@ -500,7 +616,7 @@ static void grassify_flood_fill(WorldData &world, TilePos start) {
     std::vector<TilePos> queue;
     queue.push_back(start);
 
-    set_block(world, start, TileType::Grass);
+    set_block(world, start, Block(BlockType::Grass));
 
     while (!queue.empty()) {
         const TilePos pos = queue.back();
@@ -513,7 +629,7 @@ static void grassify_flood_fill(WorldData &world, TilePos start) {
         for (const TileOffset offset : DIRECTIONS) {
             const TilePos new_pos = pos.offset(offset);
             if (grassify_is_valid(world, new_pos)) {
-                set_block(world, new_pos, TileType::Grass);
+                set_block(world, new_pos, Block(BlockType::Grass));
                 queue.push_back(new_pos);
             }
         }
@@ -524,7 +640,7 @@ static void world_grassify(WorldData& world) {
     for (int x = 0; x < world.area.width(); ++x) {
         const int y = get_surface_block(world, x);
         const TilePos pos = TilePos(x, y);
-        if (world.tile_exists_with_type(pos, TileType::Dirt)) {
+        if (world.block_exists_with_type(pos, BlockType::Dirt)) {
             grassify_flood_fill(world, pos);
         }
     }
@@ -561,7 +677,7 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
     SGE_LOG_DEBUG("  Cavern: {}", layers.cavern);
     SGE_LOG_DEBUG("  Dirt Height: {}", layers.dirt_height);
 
-    world.blocks = new std::optional<Tile>[area.width() * area.height()];
+    world.blocks = new std::optional<Block>[area.width() * area.height()];
     world.walls = new std::optional<Wall>[area.width() * area.height()];
     world.lightmap = LightMap(area.width(), area.height());
     world.playable_area = playable_area;
@@ -586,6 +702,8 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
     world_generate_rocks_in_dirt(world, seed);
 
     world_remove_walls_from_surface(world);
+
+    world_grow_trees(world);
 
     world_update_tile_sprite_index(world);
 

@@ -12,10 +12,6 @@
 
 #include <SGE/defines.hpp>
 
-#define TILE_TYPE_BLOCK 0
-#define TILE_TYPE_WALL 1
-#define TILE_TYPE_TORCH 2
-
 using Constants::SUBDIVISION;
 using Constants::RENDER_CHUNK_SIZE;
 using Constants::RENDER_CHUNK_SIZE_U;
@@ -38,9 +34,9 @@ static inline LLGL::BufferDescriptor GetBufferDescriptor() {
     return buffer_desc;
 }
 
-static SGE_FORCE_INLINE uint16_t pack_tile_data(uint16_t tile_id, uint8_t tile_type) {
-    // 6 bits for tile_type and 10 bits for tile_id
-    return (tile_type & 0x3f) | (tile_id << 6);
+static SGE_FORCE_INLINE uint16_t pack_tile_data(uint16_t tile_texture_id, uint8_t tile_type) {
+    // 6 bits for tile_type and 10 bits for tile_texture_id
+    return (tile_type & 0x3f) | (tile_texture_id << 6);
 }
 
 static SGE_FORCE_INLINE uint16_t pack_position(uint8_t x, uint8_t y) {
@@ -57,13 +53,14 @@ static inline uint16_t fill_block_buffer(const WorldData& world, ChunkInstance* 
                 index.y * RENDER_CHUNK_SIZE_U + y
             );
 
-            const std::optional<Tile> tile = world.get_tile(map_pos);
+            const std::optional<Block> tile = world.get_block(map_pos);
             if (tile.has_value()) {
                 count++;
 
                 const glm::vec2 atlas_pos = glm::vec2(tile->atlas_pos.x, tile->atlas_pos.y);
-                const uint8_t tile_type = tile->type == TileType::Torch ? TILE_TYPE_TORCH : TILE_TYPE_BLOCK;
-                const uint16_t tile_data = pack_tile_data(static_cast<uint32_t>(tile->type), tile_type);
+                const uint8_t type = tile_type(tile.value());
+                const uint16_t texture_id = static_cast<uint16_t>(tile_texture_type(tile.value()));
+                const uint16_t tile_data = pack_tile_data(texture_id, type);
 
                 data->position = pack_position(x, y);
                 data->atlas_pos = atlas_pos;
@@ -92,7 +89,7 @@ static inline uint16_t fill_wall_buffer(const WorldData& world, ChunkInstance* d
                 count++;
 
                 const glm::vec2 atlas_pos = glm::vec2(wall->atlas_pos.x, wall->atlas_pos.y);
-                const uint16_t tile_data = pack_tile_data(static_cast<uint32_t>(wall->type), TILE_TYPE_WALL);
+                const uint16_t tile_data = pack_tile_data(static_cast<uint32_t>(wall->type), TileType::Wall);
 
                 data->position = pack_position(x, y);
                 data->atlas_pos = atlas_pos;

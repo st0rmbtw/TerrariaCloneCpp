@@ -10,6 +10,7 @@
 
 #include "block.hpp"
 #include "wall.hpp"
+#include "tool_flags.hpp"
 
 struct PlacesTile {
     enum Type : uint8_t {
@@ -17,7 +18,7 @@ struct PlacesTile {
         Wall
     };
 
-    PlacesTile(TileType tile_type) :
+    PlacesTile(BlockType tile_type) :
         tile(tile_type),
         type(Type::Block) {}
 
@@ -26,7 +27,7 @@ struct PlacesTile {
         type(Type::Wall) {}
 
     union {
-        TileType tile;
+        BlockType tile;
         WallType wall;
     };
     Type type;
@@ -61,15 +62,6 @@ enum class HoldStyle : uint8_t {
     HoldFront,
 };
 
-namespace ToolFlags {
-    enum : uint8_t {
-        None = 0,
-        Axe = 1 << 0,
-        Pickaxe = 1 << 1,
-        Hammer = 1 << 2
-    };
-}
-
 struct Item {
     std::string_view name;
     ItemId id;
@@ -98,16 +90,19 @@ struct Item {
         return (tool_flags & ToolFlags::Hammer) == ToolFlags::Hammer;
     }
 
+    [[nodiscard]]
     inline constexpr bool has_space() const {
         return stack < max_stack;
     }
 
+    [[nodiscard]]
     inline Item with_stack(ItemStack stack) const {
         Item new_item = *this;
         new_item.stack = std::min(max_stack, stack);
         return new_item;
     }
 
+    [[nodiscard]]
     inline Item with_max_stack() const {
         Item new_item = *this;
         new_item.stack = max_stack;

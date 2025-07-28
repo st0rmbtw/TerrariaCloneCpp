@@ -18,10 +18,11 @@ struct Constants
 struct TileData {
     packed_float2 tex_size;
     packed_float2 tex_padding;
+    packed_float2 tex_offset;
     packed_float2 size;
     packed_float2 offset;
     float depth;
-    packed_float3 _padding;
+    float _padding;
 };
 
 struct VertexIn
@@ -63,7 +64,7 @@ vertex VertexOut VS(
     const float depth = tile_data.depth;
     const float2 size = tile_data.size;
     const float2 tex_size = size / tile_data.tex_size;
-    const float2 start_uv = inp.i_atlas_pos * (tex_size + tile_data.tex_padding);
+    const float2 start_uv = tile_data.tex_offset + inp.i_atlas_pos * (tex_size + tile_data.tex_padding);
     const float2 tex_dims = tile_data.tex_size;
     const float2 offset = tile_data.offset;
 

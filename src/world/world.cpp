@@ -26,14 +26,14 @@ static void update_lightmap(WorldData& world_data, TilePos pos) {
     world_data.lightmap_update_area_async(light_area);
 }
 
-void World::set_tile(TilePos pos, const Tile& tile) {
+void World::set_tile(TilePos pos, const Block& tile) {
     ZoneScopedN("World::set_tile");
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
     const size_t index = m_data.get_tile_index(pos);
 
-    if (tile.type == TileType::Torch) {
+    if (tile.type == BlockType::Torch) {
         m_data.torches.insert(pos);
     }
 
@@ -48,18 +48,18 @@ void World::set_tile(TilePos pos, const Tile& tile) {
     this->update_neighbors(pos);
 }
 
-void World::set_tile(TilePos pos, TileType tile_type) {
+void World::set_tile(TilePos pos, BlockType tile_type) {
     ZoneScopedN("World::set_tile");
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
     const size_t index = m_data.get_tile_index(pos);
 
-    if (tile_type == TileType::Torch) {
+    if (tile_type == BlockType::Torch) {
         m_data.torches.insert(pos);
     }
 
-    m_data.blocks[index] = Tile(tile_type);
+    m_data.blocks[index] = Block(tile_type);
 
     reset_tiles(pos, *this);
 
@@ -86,7 +86,7 @@ void World::remove_tile(TilePos pos) {
         m_chunk_manager.set_blocks_changed(pos);
     }
 
-    if (m_data.blocks[index]->type == TileType::Torch) {
+    if (m_data.blocks[index]->type == BlockType::Torch) {
         m_data.torches.erase(pos);
     }
 
@@ -103,14 +103,14 @@ void World::remove_tile(TilePos pos) {
     this->update_neighbors(pos);
 }
 
-void World::update_tile(TilePos pos, TileType new_type, uint8_t new_variant) {
+void World::update_tile(TilePos pos, BlockType new_type, uint8_t new_variant) {
     ZoneScopedN("World::update_tile");
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
     const size_t index = m_data.get_tile_index(pos);
 
-    if (m_data.blocks[index]->type == TileType::Torch && new_type != TileType::Torch) {
+    if (m_data.blocks[index]->type == BlockType::Torch && new_type != BlockType::Torch) {
         m_data.torches.erase(pos);
     }
 
@@ -268,7 +268,7 @@ void World::draw(const sge::Camera& camera) const {
             const glm::vec2 scale = glm::vec2(1.0f + anim.scale * 0.8f * zoom);
             const glm::vec2 position = anim.tile_pos.to_world_pos_center();
 
-            sge::TextureAtlasSprite sprite(Assets::GetTextureAtlas(tile_texture_asset(anim.tile_type)), position, scale);
+            sge::TextureAtlasSprite sprite(Assets::GetTextureAtlas(block_texture_asset(anim.tile_type)), position, scale);
             sprite.set_index(anim.atlas_pos.x, anim.atlas_pos.y);
 
             GameRenderer::DrawAtlasSpriteWorld(sprite);
@@ -297,11 +297,11 @@ void World::update_neighbors(TilePos initial_pos) {
 }
 
 void World::update_tile_sprite_index(TilePos pos) {
-    Tile* tile = this->get_tile_mut(pos);
+    Block* tile = this->get_tile_mut(pos);
     Wall* wall = this->get_wall_mut(pos);
 
     if (tile) {
-        const Neighbors<Tile> neighbors = this->get_tile_neighbors(pos);
+        const Neighbors<Block> neighbors = this->get_tile_neighbors(pos);
 
         update_block_sprite_index(*tile, neighbors);
 
