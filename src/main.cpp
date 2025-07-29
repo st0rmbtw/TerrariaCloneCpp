@@ -2,15 +2,17 @@
 #include <cstdio>
 #include <string>
 #include <SGE/defines.hpp>
+#include <fmt/base.h>
+
 #include "game.hpp"
 
 inline void print_render_backends() {
     #if SGE_PLATFORM_WINDOWS
-        printf("Available render backends: d3d11, d3d12, opengl, vulkan.\n");
+        fmt::println("Available render backends: d3d11, d3d12, opengl, vulkan.");
     #elif SGE_PLATFORM_MACOS
-        printf("Available render backends: metal, opengl, vulkan.\n");
+        fmt::println("Available render backends: metal, opengl, vulkan.");
     #elif SGE_PLATFORM_LINUX
-        printf("Available render backends: opengl, vulkan.\n");
+        fmt::println("Available render backends: opengl, vulkan.");
     #endif
 }
 
@@ -26,13 +28,16 @@ int main(int argc, char** argv) {
 #endif
     AppConfig config;
 
+    int16_t world_width = 200;
+    int16_t world_height = 500;
+
     for (int i = 1; i < argc; i++) {
         if (str_eq(argv[i], "--pause")) {
-            printf("Initialization is paused. Press any key to continue...\n");
+            fmt::println("Initialization is paused. Press any key to continue...");
             getchar();
         } else if (str_eq(argv[i], "--backend")) {
             if (i >= argc-1) {
-                printf("Specify a render backend. ");
+                fmt::print("Specify a render backend. ");
                 print_render_backends();
                 return 1;
             }
@@ -62,7 +67,7 @@ int main(int argc, char** argv) {
             if (str_eq(arg, "opengl")) {
                 backend = sge::RenderBackend::OpenGL;
             } else {
-                printf("Unknown render backend: \"%s\". ", arg);
+                fmt::print("Unknown render backend: {}. ", arg);
                 print_render_backends();
                 return 1;
             }
@@ -72,16 +77,32 @@ int main(int argc, char** argv) {
             config.fullscreen = true;
         } else if (str_eq(argv[i], "--samples")) {
             if (i >= argc-1) {
-                printf("Specify the number of samples.\n");
+                fmt::println("Specify the number of samples.");
                 return 1;
             }
 
             const char* arg = argv[i + 1];
             config.samples = std::stoul(arg);
+        } else if (str_eq(argv[i], "--world-width")) {
+            if (i >= argc-1) {
+                fmt::println("Specify the width of the world.");
+                return 1;
+            }
+
+            const char* arg = argv[i + 1];
+            world_width = std::stoul(arg);
+        } else if (str_eq(argv[i], "--world-height")) {
+            if (i >= argc-1) {
+                fmt::println("Specify the height of the world.");
+                return 1;
+            }
+
+            const char* arg = argv[i + 1];
+            world_height = std::stoul(arg);
         }
     }
 
-    if (Game::Init(backend, config)) {
+    if (Game::Init(backend, config, world_width, world_height)) {
         Game::Run();
     }
     Game::Destroy();

@@ -297,7 +297,7 @@ void init_tile_rules() {
 
 void update_block_sprite_index(Block& tile, const Neighbors<Block>& neighbors) {
     if (tile.type == BlockType::Torch) {
-        AnchorData anchor = block_anchor(tile.type);
+        const AnchorData anchor = block_anchor(tile.type);
 
         const auto to_type = [](Block tile) {
             return tile.type;

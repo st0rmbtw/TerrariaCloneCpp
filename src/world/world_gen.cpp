@@ -1,11 +1,12 @@
 #include "world_gen.h"
 
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
-#include <FastNoiseLite/FastNoiseLite.hpp>
-#include <time.h>
+#include <ctime>
 
+#include <FastNoiseLite/FastNoiseLite.hpp>
 #include <SGE/log.hpp>
+
 #include "../types/wall.hpp"
 #include "../math/math.hpp"
 
@@ -711,5 +712,5 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
 
     world.spawn_point = world_get_spawn_point(world);
 
-    srand(time(NULL));
+    srand(time(nullptr));
 };

@@ -20,7 +20,7 @@ namespace TileType {
         Torch,
         Tree,
         TreeBranch,
-        TreeTop,
+        TreeCrown,
         Count,
     };
 }
@@ -187,7 +187,7 @@ inline constexpr static uint8_t tile_type(const Block& tile) {
             return TileType::TreeBranch;
         
         case TreeFrameType::TopLeaves:
-            return TileType::TreeTop;
+            return TileType::TreeCrown;
 
         default:
             return TileType::Tree;

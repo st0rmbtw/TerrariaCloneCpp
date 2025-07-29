@@ -267,7 +267,7 @@ static void destroy() {
     g.world.chunk_manager().destroy();
 }
 
-bool Game::Init(sge::RenderBackend backend, AppConfig config) {
+bool Game::Init(sge::RenderBackend backend, AppConfig config, int16_t world_width, int16_t world_height) {
     ZoneScopedN("Game::Init");
 
     sge::Engine::SetLoadAssetsCallback(load_assets);
@@ -301,7 +301,7 @@ bool Game::Init(sge::RenderBackend backend, AppConfig config) {
 
     init_tile_rules();
 
-    g.world.generate(200, 500, 0);
+    g.world.generate(world_width, world_height, 0);
 
     g.camera.set_viewport(glm::uvec2(resolution.width, resolution.height));
     g.camera.set_zoom(1.0f);

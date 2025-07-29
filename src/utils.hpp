@@ -3,15 +3,14 @@
 
 #pragma once
 
-#include <stdlib.h>
-#include <GLFW/glfw3.h>
-#include <LLGL/LLGL.h>
-#include <glm/glm.hpp>
+#include <cstdlib>
 #include <list>
 #include <vector>
 #include <unordered_set>
-
 #include <optional>
+
+#include <LLGL/LLGL.h>
+#include <glm/glm.hpp>
 
 #include "types/tile_pos.hpp"
 
@@ -60,7 +59,7 @@ static inline auto map(std::optional<T> a, F&& func) -> std::optional<decltype(f
 }
 
 template <typename TNode, typename TGetNeighborsFunc, typename TProcessNodeFunc>
-static inline void bfs(TNode start_node, TGetNeighborsFunc get_neighbors_func, TProcessNodeFunc process_node_func) {
+static inline void bfs(TNode start_node, TGetNeighborsFunc&& get_neighbors_func, TProcessNodeFunc&& process_node_func) {
     std::vector<TNode> q;
 
     q.push_back(start_node);

@@ -1,13 +1,11 @@
 #include "world.hpp"
 
 #include <cstdint>
-#include <glm/glm.hpp>
 #include <ctime>
 
 #include <tracy/Tracy.hpp>
-
 #include <LLGL/Tags.h>
-
+#include <glm/glm.hpp>
 #include <SGE/time/time.hpp>
 #include <SGE/types/color.hpp>
 

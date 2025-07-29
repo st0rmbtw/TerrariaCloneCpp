@@ -7,12 +7,12 @@
 #include <deque>
 #include <unordered_set>
 
+#include <SGE/math/rect.hpp>
+
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
 #include "../types/tile_pos.hpp"
 #include "../types/neighbors.hpp"
-
-#include <SGE/math/rect.hpp>
 
 #include "lightmap.hpp"
 
