@@ -21,7 +21,7 @@ struct TileDigAnimation {
     TextureAtlasPos atlas_pos;
     float progress;
     float scale;
-    BlockType tile_type;
+    BlockTypeWithData block;
 };
 
 struct TileCracks {
@@ -89,13 +89,13 @@ public:
     [[nodiscard]] inline const WorldData& data() const { return m_data; }
     [[nodiscard]] inline WorldData& data() { return m_data; }
 
-    inline void create_dig_tile_animation(const Block& tile, TilePos pos) {
+    inline void create_dig_tile_animation(const Block& block, TilePos pos) {
         m_tile_dig_animations.push_back(TileDigAnimation {
             .tile_pos = pos,
-            .atlas_pos = tile.atlas_pos,
+            .atlas_pos = block.atlas_pos,
             .progress = 0.0f,
             .scale = 0.0f,
-            .tile_type = tile.type
+            .block = block
         });
     }
 

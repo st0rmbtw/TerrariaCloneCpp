@@ -314,17 +314,17 @@ void World::draw(const sge::Camera& camera) const {
             const glm::vec2 scale = glm::vec2(1.0f + anim.scale * 0.8f * zoom);
             const glm::vec2 position = anim.tile_pos.to_world_pos_center();
 
-            sge::TextureAtlasSprite sprite(Assets::GetTextureAtlas(block_texture_asset(anim.tile_type)), position, scale);
+            sge::TextureAtlasSprite sprite(Assets::GetTextureAtlas(block_texture_asset(anim.block)), position, scale);
             sprite.set_index(anim.atlas_pos.x, anim.atlas_pos.y);
 
             GameRenderer::DrawAtlasSpriteWorld(sprite);
 
             const auto cracks = m_block_cracks.find(anim.tile_pos);
             if (cracks != m_block_cracks.end()) {
-                sge::TextureAtlasSprite cracks_sprites(Assets::GetTextureAtlas(TextureAsset::TileCracks), position, scale);
-                cracks_sprites.set_index(cracks->second.cracks_index);
+                sge::TextureAtlasSprite cracks_sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks), position, scale);
+                cracks_sprite.set_index(cracks->second.cracks_index);
 
-                GameRenderer::DrawAtlasSpriteWorld(cracks_sprites, sge::Order(1));
+                GameRenderer::DrawAtlasSpriteWorld(cracks_sprite, sge::Order(1));
             }
         }
     GameRenderer::EndOrderMode();

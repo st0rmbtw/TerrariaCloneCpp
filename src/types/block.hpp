@@ -173,7 +173,7 @@ struct BlockTypeWithData {
     BlockData data;
 };
 
-inline constexpr static uint8_t tile_type(const Block& tile) {
+inline constexpr static uint8_t tile_type(BlockTypeWithData tile) {
     switch (tile.type) {
     case BlockType::Dirt: 
     case BlockType::Stone:
@@ -195,7 +195,7 @@ inline constexpr static uint8_t tile_type(const Block& tile) {
     }
 }
 
-inline constexpr static TileTextureType tile_texture_type(const Block& tile) {
+inline constexpr static TileTextureType tile_texture_type(BlockTypeWithData tile) {
     switch (tile.type) {
     case BlockType::Dirt:  return TileTextureType::Dirt;
     case BlockType::Stone: return TileTextureType::Stone;
@@ -216,10 +216,63 @@ inline constexpr static TileTextureType tile_texture_type(const Block& tile) {
     }
 }
 
-inline constexpr static bool tile_is_block(BlockType tile_type) {
-    switch (tile_type) {
+inline constexpr static TextureAsset block_texture_asset(BlockTypeWithData block) {
+    switch (block.type) {
+    case BlockType::Dirt:  return TextureAsset::Tiles0;
+    case BlockType::Stone: return TextureAsset::Tiles1;
+    case BlockType::Grass: return TextureAsset::Tiles2;
+    case BlockType::Torch: return TextureAsset::Tiles4;
+    case BlockType::Tree: switch (block.data.tree.frame) {
+        case TreeFrameType::BranchLeftLeaves:
+        case TreeFrameType::BranchRightLeaves:
+            return TextureAsset::TreeBranches;
+        
+        case TreeFrameType::TopLeaves:
+            return TextureAsset::TreeTops;
+
+        default:
+            return TextureAsset::Tiles5;
+    }
+    case BlockType::Wood:  return TextureAsset::Tiles30;
+    }
+}
+
+inline constexpr static bool tile_is_block(BlockTypeWithData block) {
+    switch (block.type) {
     case BlockType::Torch: return false;
-    default: return true;
+    case BlockType::Tree: switch (block.data.tree.frame) {
+        case TreeFrameType::BranchLeftLeaves:
+        case TreeFrameType::BranchRightLeaves:
+        case TreeFrameType::TopLeaves:
+            return false;
+        default:
+            return true;
+        }
+    default:
+        return true;
+    }
+}
+
+inline constexpr static uint8_t tree_is_trunk(TreeFrameType frame) {
+    switch (frame) {
+    case TreeFrameType::Trunk:
+    case TreeFrameType::TrunkHollowLeft:
+    case TreeFrameType::TrunkHollowRight:
+    case TreeFrameType::TrunkBranchCollarLeft:
+    case TreeFrameType::TrunkBranchCollarRight:
+    case TreeFrameType::RootLeft:
+    case TreeFrameType::RootRight:
+    case TreeFrameType::BaseLeft:
+    case TreeFrameType::BaseRight:
+    case TreeFrameType::BaseBoth:
+    case TreeFrameType::StumpRootLeft:
+    case TreeFrameType::StumpRootRight:
+    case TreeFrameType::StumpRootBoth:
+    case TreeFrameType::TopBare:
+    case TreeFrameType::TopBareJagged:
+        return true;
+    default:
+        return false;
     }
 }
 
@@ -283,17 +336,6 @@ inline constexpr static bool block_dusty(BlockType tile_type) {
     switch (tile_type) {
     case BlockType::Dirt:  return true;
     default: return false;
-    }
-}
-
-inline constexpr static TextureAsset block_texture_asset(BlockType tile_type) {
-    switch (tile_type) {
-    case BlockType::Dirt: return TextureAsset::Tiles0;
-    case BlockType::Stone: return TextureAsset::Tiles1;
-    case BlockType::Grass: return TextureAsset::Tiles2;
-    case BlockType::Torch: return TextureAsset::Tiles4;
-    case BlockType::Tree: return TextureAsset::Tiles5;
-    case BlockType::Wood: return TextureAsset::Tiles30;
     }
 }
 

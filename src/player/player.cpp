@@ -818,7 +818,7 @@ void Player::use_item(const sge::Camera& camera, World& world) {
             spawn_particles_on_dig(position, Particle::get_by_block(*block), block->hp <= 0);
 
             if (block->hp <= 0) {
-                if (block_type == BlockType::Tree) {
+                if (block_type == BlockType::Tree && tree_is_trunk(block->data.tree.frame)) {
                     break_tree(world, tile_pos);
                 } else {
                     world.remove_block(tile_pos);
@@ -832,9 +832,11 @@ void Player::use_item(const sge::Camera& camera, World& world) {
                 }
 
                 world.update_block_type(tile_pos, new_tile_type);
-                world.update_block_variant(tile_pos, new_variant);
 
-                world.create_dig_tile_animation(*block, tile_pos);
+                if (tile_is_block(*block)) {
+                    world.update_block_variant(tile_pos, new_variant);
+                    world.create_dig_tile_animation(*block, tile_pos);
+                }
                 world.create_block_cracks(tile_pos, map_range(block_hp(block->type), 0, 0, 3, block->hp) * 6 + (rand() % 6));
             }
 
