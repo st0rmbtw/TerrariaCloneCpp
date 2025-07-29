@@ -249,14 +249,17 @@ static void world_remove_walls_from_surface(WorldData& world) {
 }
 
 static void world_place_tree(WorldData& world, TreeType tree_type, TilePos pos) {
-    const int height = rand_range(5, 16);
+    const int height = rand_int(5, 16);
 
     if (pos.x >= world.playable_area.max.x - 2 || pos.x <= world.playable_area.min.x + 2) {
         return;
     }
 
-    const bool left_block = world.block_exists({pos.x - 1, pos.y + 1});
-    const bool right_block = world.block_exists({pos.x + 1, pos.y + 1});
+    const bool left_block = world.block_exists_with_type({pos.x - 1, pos.y + 1}, BlockType::Dirt) ||
+                            world.block_exists_with_type({pos.x - 1, pos.y + 1}, BlockType::Grass);
+
+    const bool right_block = world.block_exists_with_type({pos.x + 1, pos.y + 1}, BlockType::Dirt) || 
+                             world.block_exists_with_type({pos.x + 1, pos.y + 1}, BlockType::Grass);
 
     // Check enough space
     {
@@ -275,34 +278,33 @@ static void world_place_tree(WorldData& world, TreeType tree_type, TilePos pos) 
             }   
         }
     }
-
-
-    const bool left_base = rand_bool() && left_block;
-    const bool right_base = rand_bool() && right_block;
-
-    // Base
-    if (left_base)
-        set_block(world, {pos.x - 1, pos.y}, Block::Tree(tree_type, TreeFrameType::RootLeft));
-
-    if (right_base)
-        set_block(world, {pos.x + 1, pos.y}, Block::Tree(tree_type, TreeFrameType::RootRight));
     
     // ------------- Trunk -------------
 
+    const bool left_root = rand_bool() && left_block;
+    const bool right_root = rand_bool() && right_block;
+
+    // Base
+    if (left_root)
+        set_block(world, {pos.x - 1, pos.y}, Block::Tree(tree_type, TreeFrameType::RootLeft));
+
+    if (right_root)
+        set_block(world, {pos.x + 1, pos.y}, Block::Tree(tree_type, TreeFrameType::RootRight));
+
     TreeFrameType frame = TreeFrameType::Trunk;
 
-    if (left_base && right_base) {
+    if (left_root && right_root) {
         frame = TreeFrameType::BaseBoth;
-    } else if (left_base) {
+    } else if (left_root) {
         frame = TreeFrameType::BaseLeft;
-    } else if (right_base) {
+    } else if (right_root) {
         frame = TreeFrameType::BaseRight;
     }
 
     set_block(world, pos, Block::Tree(tree_type, frame));
     for (int y = pos.y - height; y < pos.y; ++y) {
-        const bool branch_left = rand_bool(1.0f / 10.0f);
-        const bool branch_right = rand_bool(1.0f / 10.0f);
+        const bool branch_left = rand_bool(1.0f / 7.0f);
+        const bool branch_right = rand_bool(1.0f / 7.0f);
 
         if (branch_left && !world.block_exists({pos.x - 1, y - 1})) {
             const bool bare = rand_bool(1.0f / 5.0f);

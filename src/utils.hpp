@@ -23,7 +23,7 @@ static inline int rand_int(int from, int to) {
     return from + rand() % (to + 1 - from);
 }
 
-static inline float rand_range(float from, float to) {
+static inline float rand_float(float from, float to) {
     const float scale = rand() / (float) RAND_MAX;
     return from + scale * (to - from);
 }
@@ -32,7 +32,7 @@ static inline bool rand_bool(float probability) {
     if (probability >= 1.0f) return true;
     if (probability <= 0.0f) return false;
 
-    return rand_range(0.0f, 1.0f) < probability;
+    return rand_float(0.0f, 1.0f) < probability;
 }
 
 static inline bool rand_bool() {

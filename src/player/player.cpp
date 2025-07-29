@@ -49,12 +49,12 @@ static const glm::vec2 ITEM_HOLD_POINTS[] = {
 static constexpr float ITEM_ROTATION = 1.7;
 
 void spawn_particles_on_dig(const glm::vec2& position, Particle::Type particle, bool broken) {
-    const int count = broken ? rand_range(7, 15) : rand_range(3, 8);
+    const int count = broken ? rand_int(7, 15) : rand_int(3, 8);
 
     for (int i = 0; i < count; i++) {
-        const float rotation_speed = rand_range(0.0f, sge::consts::PI / 12.0f);
+        const float rotation_speed = rand_float(0.0f, sge::consts::PI / 12.0f);
 
-        const glm::vec2 velocity = glm::vec2(rand_range(-1.0f, 1.0f), rand_range(-2.0f, 2.0f));
+        const glm::vec2 velocity = glm::vec2(rand_float(-1.0f, 1.0f), rand_float(-2.0f, 2.0f));
         const glm::vec2 offset = particle == Particle::Type::Torch ? glm::diskRand(10.0f) : glm::vec2(0.0f);
         const float min_scale = broken ? 0.6f : 0.3f;
         const float scale = glm::linearRand(min_scale, 1.0f);
@@ -506,7 +506,7 @@ void Player::spawn_particles_on_walk() const {
 
     const glm::vec2 position = draw_position() + glm::vec2(0., PLAYER_HEIGHT_HALF);
     const glm::vec2 velocity = random_point_cone(glm::vec2(direction, 0.0f), 45.0f);
-    const float scale = rand_range(0.0f, 1.0f);
+    const float scale = rand_float(0.0f, 1.0f);
     const float rotation_speed = sge::consts::PI / 12.0f;
 
     ParticleManager::SpawnParticle(
@@ -533,7 +533,7 @@ void Player::spawn_particles_grounded() const {
 
     if (!m_prev_grounded && m_collisions.down && fall_distance > TILE_SIZE * 1.5) {
         for (int i = 0; i < 10; i++) {
-            const float scale = rand_range(0.0f, 1.0f);
+            const float scale = rand_float(0.0f, 1.0f);
             const glm::vec2 point = random_point_circle(1.0f, 0.5f) * PLAYER_WIDTH_HALF;
             const glm::vec2 velocity = glm::vec2(glm::normalize(point).x, -0.5f);
 

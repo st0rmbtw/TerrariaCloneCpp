@@ -91,15 +91,15 @@ struct AssetComputeShader {
 };
 
 static const std::pair<TextureAsset, AssetTexture> TEXTURE_ASSETS[] = {
-    { TextureAsset::PlayerHair,         AssetTexture("assets/sprites/player/Player_Hair_1.png") },
-    { TextureAsset::PlayerHead,         AssetTexture("assets/sprites/player/Player_0_0.png") },
-    { TextureAsset::PlayerChest,        AssetTexture("assets/sprites/player/Player_Body.png") },
-    { TextureAsset::PlayerLegs,         AssetTexture("assets/sprites/player/Player_0_11.png") },
-    { TextureAsset::PlayerLeftHand,     AssetTexture("assets/sprites/player/Player_Left_Hand.png") },
-    { TextureAsset::PlayerLeftShoulder, AssetTexture("assets/sprites/player/Player_Left_Shoulder.png") },
-    { TextureAsset::PlayerRightArm,     AssetTexture("assets/sprites/player/Player_Right_Arm.png") },
-    { TextureAsset::PlayerLeftEye,      AssetTexture("assets/sprites/player/Player_0_1.png") },
-    { TextureAsset::PlayerRightEye,     AssetTexture("assets/sprites/player/Player_0_2.png") },
+    { TextureAsset::PlayerHair,         AssetTexture("assets/sprites/player/Player_Hair_1.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerHead,         AssetTexture("assets/sprites/player/Player_0_0.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerChest,        AssetTexture("assets/sprites/player/Player_Body.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerLegs,         AssetTexture("assets/sprites/player/Player_0_11.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerLeftHand,     AssetTexture("assets/sprites/player/Player_Left_Hand.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerLeftShoulder, AssetTexture("assets/sprites/player/Player_Left_Shoulder.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerRightArm,     AssetTexture("assets/sprites/player/Player_Right_Arm.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerLeftEye,      AssetTexture("assets/sprites/player/Player_0_1.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerRightEye,     AssetTexture("assets/sprites/player/Player_0_2.png", sge::TextureSampler::NearestMips) },
 
     { TextureAsset::UiCursorForeground,    AssetTexture("assets/sprites/ui/Cursor_0.png", sge::TextureSampler::Linear) },
     { TextureAsset::UiCursorBackground,    AssetTexture("assets/sprites/ui/Cursor_11.png", sge::TextureSampler::Linear) },
@@ -293,9 +293,13 @@ bool Assets::Load() {
     const uint8_t data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
     state.textures[TextureAsset::Stub] = renderer.CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, 1, 1, 1, Assets::GetSampler(sge::TextureSampler::Nearest), data);
 
+    // There are some glitches in mipmaps on Metal
+    const bool mip_maps = !renderer.Backend().IsMetal();
+
     for (const auto& [key, asset] : TEXTURE_ASSETS) {
         sge::Texture texture;
-        if (!load_texture(asset.path.c_str(), asset.sampler, &texture)) {
+        const uint8_t sampler = !mip_maps ? sge::TextureSampler::DisableMips(asset.sampler) : asset.sampler;
+        if (!load_texture(asset.path.c_str(), sampler, &texture)) {
             return false;
         }
         state.textures[key] = texture;
@@ -303,7 +307,8 @@ bool Assets::Load() {
 
     for (const auto& [_, asset_key, path, size] : BLOCK_ASSETS) {
         sge::Texture texture;
-        if (!load_texture(path, sge::TextureSampler::Nearest, &texture)) {
+        const uint8_t sampler = mip_maps ? sge::TextureSampler::NearestMips : sge::TextureSampler::Nearest;
+        if (!load_texture(path, sampler, &texture)) {
             return false;
         }
         state.textures[asset_key] = texture;
@@ -332,9 +337,6 @@ bool Assets::Load() {
         }
         state.items[key] = texture;
     }
-
-    // There is some glitches in mipmaps on Metal
-    const bool mip_maps = !renderer.Backend().IsMetal();
 
     state.textures[TextureAsset::Tiles] = load_texture_array(BLOCK_ASSETS, mip_maps ? sge::TextureSampler::NearestMips : sge::TextureSampler::Nearest, mip_maps);
     state.textures[TextureAsset::Walls] = load_texture_array(WALL_ASSETS, sge::TextureSampler::Nearest);
