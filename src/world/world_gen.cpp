@@ -338,14 +338,11 @@ static void world_place_tree(WorldData& world, TreeType tree_type, TilePos pos) 
 
     // ------------- Crown -------------
 
-    const bool bare = rand_bool(1.0f / 5.0f);
-    const bool jagged = rand_bool(1.0f / 3.0f);
-
     TreeFrameType frame_type = TreeFrameType::TopLeaves;
 
-    if (jagged)
+    if (rand_bool(1.0f / 3.0f))
         frame_type = TreeFrameType::TopBareJagged;
-    else if (bare)
+    else if (rand_bool(1.0f / 5.0f))
         frame_type = TreeFrameType::TopBare;
 
     set_block(world, {pos.x, pos.y - height - 1}, Block::Tree(tree_type, frame_type));

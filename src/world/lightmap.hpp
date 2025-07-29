@@ -1,7 +1,7 @@
 #ifndef WORLD_LIGHTMAP_HPP
 #define WORLD_LIGHTMAP_HPP
 
-#include <stdint.h>
+#include <cstdint>
 #include <thread>
 #include <atomic>
 #include <memory>
