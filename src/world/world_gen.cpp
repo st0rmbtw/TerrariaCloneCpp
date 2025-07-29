@@ -322,6 +322,12 @@ static void world_place_tree(WorldData& world, TreeType tree_type, TilePos pos) 
         // Hollow to the right
         } else if (!branch_right && rand_bool(1.0f / 10.0f)) {
             set_block(world, {pos.x, y}, Block::Tree(tree_type, TreeFrameType::TrunkHollowRight));
+        // Branch collar to the left
+        } else if (!branch_left && rand_bool(1.0f / 10.0f)) {
+            set_block(world, {pos.x, y}, Block::Tree(tree_type, TreeFrameType::TrunkBranchCollarLeft));
+        // Branch collar to the right
+        } else if (!branch_right && rand_bool(1.0f / 10.0f)) {
+            set_block(world, {pos.x, y}, Block::Tree(tree_type, TreeFrameType::TrunkBranchCollarRight));
         // Regular trunk
         } else {
             set_block(world, {pos.x, y}, Block::Tree(tree_type, TreeFrameType::Trunk));
