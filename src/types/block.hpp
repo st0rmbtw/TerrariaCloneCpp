@@ -178,9 +178,12 @@ inline constexpr static uint8_t tile_type(BlockTypeWithData tile) {
     case BlockType::Dirt: 
     case BlockType::Stone:
     case BlockType::Grass:
-    case BlockType::Wood: return TileType::Block;
+    case BlockType::Wood:
+        return TileType::Block;
 
-    case BlockType::Torch: return TileType::Torch;
+    case BlockType::Torch:
+        return TileType::Torch;
+
     case BlockType::Tree: switch (tile.data.tree.frame) {
         case TreeFrameType::BranchLeftLeaves:
         case TreeFrameType::BranchRightLeaves:
@@ -191,7 +194,7 @@ inline constexpr static uint8_t tile_type(BlockTypeWithData tile) {
 
         default:
             return TileType::Tree;
-}
+        }
     }
 }
 
@@ -232,7 +235,7 @@ inline constexpr static TextureAsset block_texture_asset(BlockTypeWithData block
 
         default:
             return TextureAsset::Tiles5;
-    }
+        }
     case BlockType::Wood:  return TextureAsset::Tiles30;
     }
 }
