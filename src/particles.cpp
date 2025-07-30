@@ -3,11 +3,11 @@
 #include <immintrin.h>
 #include <xmmintrin.h>
 
-#include <tracy/Tracy.hpp>
+#include <SGE/time/time.hpp>
+#include <SGE/defines.hpp>
+#include <SGE/profile.hpp>
 
 #include "renderer/renderer.hpp"
-#include <SGE/defines.hpp>
-#include <SGE/time/time.hpp>
 
 #include "constants.hpp"
 #include "utils.hpp"
@@ -60,7 +60,7 @@ static T* checked_aligned_alloc(size_t count, size_t alignment) {
 }
 
 void ParticleManager::Init() {
-    ZoneScopedN("ParticleManager::Init");
+    ZoneScoped;
 
 #if defined(__AVX__)
     state.position       = checked_aligned_alloc<float>(MAX_PARTICLES_COUNT * 2, sizeof(__m256));
@@ -88,7 +88,7 @@ void ParticleManager::Init() {
 }
 
 void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
-    ZoneScopedN("ParticleManager::SpawnParticle");
+    ZoneScoped;
 
     const uint32_t index = state.active_count;
     ParticleData particle_data = builder.build();
@@ -138,7 +138,7 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
 }
 
 void ParticleManager::Draw() {
-    ZoneScopedN("ParticleManager::Draw");
+    ZoneScoped;
 
     const uint32_t main_depth = GameRenderer::GetMainOrderIndex();
     const uint32_t world_depth = GameRenderer::GetWorldOrderIndex();
@@ -158,7 +158,7 @@ void ParticleManager::Draw() {
 }
 
 void ParticleManager::Update(World& world) {
-    ZoneScopedN("ParticleManager::Update");
+    ZoneScoped;
 
     for (size_t i = 0; i < state.active_count; ++i) {
         const bool gravity = BITFLAG_CHECK(state.flags[i], ParticleFlags::Gravity);
@@ -258,7 +258,7 @@ void ParticleManager::Update(World& world) {
 }
 
 void ParticleManager::DeleteExpired() {
-    ZoneScopedN("ParticleManager::DeleteExpired");
+    ZoneScoped;
 
     size_t i = 0;
 

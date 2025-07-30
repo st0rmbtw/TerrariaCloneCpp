@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <tracy/Tracy.hpp>
 
 #include <LLGL/Container/DynamicArray.h>
 #include <LLGL/Tags.h>
@@ -7,6 +6,7 @@
 #include <SGE/engine.hpp>
 #include <SGE/renderer/macros.hpp>
 #include <SGE/types/binding_layout.hpp>
+#include <SGE/profile.hpp>
 
 #include "dynamic_lighting.hpp"
 
@@ -514,7 +514,7 @@ void AcceleratedDynamicLighting::init_pipeline() {
 }
 
 void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
-    ZoneScopedN("WorldRenderer::init_textures");
+    ZoneScoped;
 
     using Constants::SUBDIVISION;
 
@@ -555,7 +555,7 @@ void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
 }
 
 void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const World& world) {
-    ZoneScopedN("WorldRenderer::compute_light");
+    ZoneScoped;
 
     if (world.light_count() == 0) return;
 

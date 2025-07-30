@@ -3,11 +3,12 @@
 #include <cstdint>
 #include <ctime>
 
-#include <tracy/Tracy.hpp>
 #include <LLGL/Tags.h>
 #include <glm/glm.hpp>
 #include <SGE/time/time.hpp>
 #include <SGE/types/color.hpp>
+#include <SGE/utils/random.hpp>
+#include <SGE/profile.hpp>
 
 #include "../types/block.hpp"
 #include "../world/world_gen.h"
@@ -24,7 +25,7 @@ static void update_lightmap(WorldData& world_data, TilePos pos) {
 }
 
 void World::set_block(TilePos pos, const Block& tile) {
-    ZoneScopedN("World::set_block");
+    ZoneScoped;
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
@@ -46,7 +47,7 @@ void World::set_block(TilePos pos, const Block& tile) {
 }
 
 void World::set_block(TilePos pos, BlockType tile_type) {
-    ZoneScopedN("World::set_block");
+    ZoneScoped;
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
@@ -73,7 +74,7 @@ void World::set_block(TilePos pos, BlockType tile_type) {
 }
 
 void World::remove_block(TilePos pos) {
-    ZoneScopedN("World::remove_block");
+    ZoneScoped;
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
@@ -103,7 +104,7 @@ void World::remove_block(TilePos pos) {
 }
 
 void World::update_block(TilePos pos, BlockTypeWithData new_block, uint8_t new_variant) {
-    ZoneScopedN("World::update_block");
+    ZoneScoped;
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
@@ -124,7 +125,7 @@ void World::update_block(TilePos pos, BlockTypeWithData new_block, uint8_t new_v
 }
 
 void World::update_block_data(TilePos pos, BlockData new_data) {
-    ZoneScopedN("World::update_block_data");
+    ZoneScoped;
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
@@ -139,7 +140,7 @@ void World::update_block_data(TilePos pos, BlockData new_data) {
 }
 
 void World::update_block_variant(TilePos pos, uint8_t new_variant) {
-    ZoneScopedN("World::update_block_variant");
+    ZoneScoped;
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
@@ -154,7 +155,7 @@ void World::update_block_variant(TilePos pos, uint8_t new_variant) {
 }
 
 void World::update_block_type(TilePos pos, BlockType new_type) {
-    ZoneScopedN("World::update_block_type");
+    ZoneScoped;
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
@@ -169,7 +170,7 @@ void World::update_block_type(TilePos pos, BlockType new_type) {
 }
 
 void World::set_wall(TilePos pos, WallType wall_type) {
-    ZoneScopedN("World::set_wall");
+    ZoneScoped;
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
@@ -187,7 +188,7 @@ void World::set_wall(TilePos pos, WallType wall_type) {
 }
 
 void World::remove_wall(TilePos pos) {
-    ZoneScopedN("World::remove_wall");
+    ZoneScoped;
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
@@ -211,7 +212,7 @@ void World::remove_wall(TilePos pos) {
 }
 
 void World::update_wall(TilePos pos, WallType new_type, uint8_t new_variant) {
-    ZoneScopedN("World::update_wall");
+    ZoneScoped;
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
@@ -225,7 +226,7 @@ void World::update_wall(TilePos pos, WallType new_type, uint8_t new_variant) {
 }
 
 void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
-    ZoneScopedN("World::generate");
+    ZoneScoped;
 
     using Constants::WORLD_MAX_LIGHT_COUNT;
 
@@ -238,7 +239,7 @@ void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
 }
 
 void World::update(const sge::Camera& camera) {
-    ZoneScopedN("World::update");
+    ZoneScoped;
 
     m_changed = false;
     m_lightmap_changed = false;
@@ -246,8 +247,8 @@ void World::update(const sge::Camera& camera) {
 
     if (m_anim_timer.tick(sge::Time::Delta()).just_finished()) {
         for (glm::vec2& offset : offsets) {
-            offset.x = rand_int(-10, 11) * 0.15f;
-            offset.y = rand_int(-10, 1) * 0.35f;
+            offset.x = sge::random::rand_int(-10, 11) * 0.15f;
+            offset.y = sge::random::rand_int(-10, 1) * 0.35f;
         }
     }
 
@@ -272,7 +273,7 @@ void World::update(const sge::Camera& camera) {
 }
 
 void World::draw(const sge::Camera& camera) const {
-    ZoneScopedN("World::draw");
+    ZoneScoped;
 
     sge::TextureAtlasSprite flames(Assets::GetTextureAtlas(TextureAsset::Flames0));
     flames.set_anchor(sge::Anchor::TopLeft);

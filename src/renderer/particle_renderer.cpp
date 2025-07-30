@@ -6,10 +6,9 @@
 
 #include <SGE/engine.hpp>
 #include <SGE/log.hpp>
+#include <SGE/profile.hpp>
 #include <SGE/renderer/macros.hpp>
 #include <SGE/types/binding_layout.hpp>
-
-#include <tracy/Tracy.hpp>
 
 #include "types.hpp"
 
@@ -28,7 +27,7 @@ static inline constexpr size_t get_particle_index(Particle::Type type, uint8_t v
 }
 
 void ParticleRenderer::init() {
-    ZoneScopedN("ParticleRenderer::init");
+    ZoneScoped;
 
     m_renderer = &sge::Engine::Renderer();
 
@@ -199,7 +198,7 @@ void ParticleRenderer::init() {
 }
 
 void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, sge::Order) {
-    ZoneScopedN("ParticleRenderer::draw_particle");
+    ZoneScoped;
 
     const sge::Rect& rect = m_atlas.get_rect(get_particle_index(type, variant));
 
@@ -222,7 +221,7 @@ void ParticleRenderer::draw_particle(const glm::vec2& position, const glm::quat&
 }
 
 void ParticleRenderer::draw_particle_world(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, sge::Order) {
-    ZoneScopedN("ParticleRenderer::draw_particle");
+    ZoneScoped;
 
     const sge::Rect& rect = m_atlas.get_rect(get_particle_index(type, variant));
 
@@ -247,7 +246,7 @@ void ParticleRenderer::draw_particle_world(const glm::vec2& position, const glm:
 void ParticleRenderer::compute() {
     if (m_particle_id == 0) return;
 
-    ZoneScopedN("ParticleRenderer::compute");
+    ZoneScoped;
 
     const auto& context = m_renderer->Context();
     auto* const commands = m_renderer->CommandBuffer();
@@ -293,7 +292,7 @@ void ParticleRenderer::compute() {
 }
 
 void ParticleRenderer::prepare() {
-    ZoneScopedN("ParticleRenderer::prepare");
+    ZoneScoped;
 
     const auto& context = m_renderer->Context();
     auto* const commands = m_renderer->CommandBuffer();
@@ -320,7 +319,7 @@ void ParticleRenderer::prepare() {
 void ParticleRenderer::render() {
     if (m_particle_count == 0) return;
 
-    ZoneScopedN("ParticleRenderer::render");
+    ZoneScoped;
 
     auto* const commands = m_renderer->CommandBuffer();
 
@@ -335,7 +334,7 @@ void ParticleRenderer::render() {
 void ParticleRenderer::render_world() {
     if (m_world_particle_count == 0) return;
 
-    ZoneScopedN("ParticleRenderer::render_world");
+    ZoneScoped;
 
     auto* const commands = m_renderer->CommandBuffer();
 

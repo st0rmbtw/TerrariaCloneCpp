@@ -4,9 +4,9 @@
 #include <memory>
 #include <thread>
 
-#include <tracy/Tracy.hpp>
-
 #include <SGE/defines.hpp>
+#include <SGE/profile.hpp>
+
 #include "lightmap.hpp"
 
 using Constants::SUBDIVISION;
@@ -106,7 +106,7 @@ Neighbors<Wall*> WorldData::get_wall_neighbors_mut(TilePos pos) {
 }
 
 static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, const sge::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
-    ZoneScopedN("internal_lightmap_init_area");
+    ZoneScoped;
 
     const int min_y = area.min.y * SUBDIVISION;
     const int max_y = area.max.y * SUBDIVISION;
@@ -212,7 +212,7 @@ SGE_FORCE_INLINE static void blur_vertical(const WorldData& world, LightMap& lig
 }
 
 static void internal_lightmap_blur_area(WorldData& world, LightMap& lightmap, const sge::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
-    ZoneScopedN("internal_lightmap_blur_area");
+    ZoneScoped;
 
     const sge::IRect lightmap_area = area * SUBDIVISION;
     const TilePos offset = {tile_offset.x * SUBDIVISION, tile_offset.y * SUBDIVISION};

@@ -19,26 +19,6 @@
 
 #define ARRAY_LEN(array) (sizeof(array)/sizeof(array[0]))
 
-static inline int rand_int(int from, int to) {
-    return from + rand() % (to + 1 - from);
-}
-
-static inline float rand_float(float from, float to) {
-    const float scale = rand() / (float) RAND_MAX;
-    return from + scale * (to - from);
-}
-
-static inline bool rand_bool(float probability) {
-    if (probability >= 1.0f) return true;
-    if (probability <= 0.0f) return false;
-
-    return rand_float(0.0f, 1.0f) < probability;
-}
-
-static inline bool rand_bool() {
-    return rand() & 1;
-}
-
 template <class T>
 static const T& list_at(const std::list<T>& list, int index) {
     auto it = list.cbegin();

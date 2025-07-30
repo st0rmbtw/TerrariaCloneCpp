@@ -14,10 +14,9 @@
 #include <SGE/renderer/macros.hpp>
 #include <SGE/types/binding_layout.hpp>
 #include <SGE/defines.hpp>
+#include <SGE/profile.hpp>
 
 #include <glm/gtc/type_ptr.hpp>
-
-#include <tracy/Tracy.hpp>
 
 #include "../assets.hpp"
 #include "../world/chunk.hpp"
@@ -45,7 +44,7 @@ struct SGE_ALIGN(16) TileTextureData {
 };
 
 void WorldRenderer::init() {
-    ZoneScopedN("WorldRenderer::init");
+    ZoneScoped;
 
     using Constants::TILE_SIZE;
     using Constants::WALL_SIZE;
@@ -285,7 +284,7 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
 }
 
 void WorldRenderer::init_textures(const WorldData& world) {
-    ZoneScopedN("WorldRenderer::init_textures");
+    ZoneScoped;
 
     using Constants::SUBDIVISION;
 
@@ -411,7 +410,7 @@ void WorldRenderer::update(World& world) {
 }
 
 void WorldRenderer::update_lightmap_texture(WorldData& world) {
-    ZoneScopedN("WorldRenderer::update_lightmap_texture");
+    ZoneScoped;
 
     const auto& context = m_renderer->Context();
 
@@ -424,7 +423,7 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
         const LightMapTaskResult result = task.result->load();
 
         if (result.is_complete) {
-            ZoneScopedN("WorldRenderer::process_lightmap_task_result");
+            ZoneScoped;
 
             internal_update_world_lightmap(world, result);
 
@@ -480,7 +479,7 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
 }
 
 void WorldRenderer::render(const ChunkManager& chunk_manager) {
-    ZoneScopedN("WorldRenderer::render");
+    ZoneScoped;
 
     auto* const commands = m_renderer->CommandBuffer();
 

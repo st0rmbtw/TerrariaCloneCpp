@@ -3,10 +3,9 @@
 #include <LLGL/ShaderFlags.h>
 #include <LLGL/PipelineLayoutFlags.h>
 
-#include <tracy/Tracy.hpp>
-
 #include <SGE/log.hpp>
 #include <SGE/engine.hpp>
+#include <SGE/profile.hpp>
 #include <SGE/renderer/macros.hpp>
 #include <SGE/types/binding_layout.hpp>
 
@@ -21,7 +20,7 @@ namespace BackgroundFlags {
 };
 
 void BackgroundRenderer::init() {
-    ZoneScopedN("BackgroundRenderer::init");
+    ZoneScoped;
 
     m_renderer = &sge::Engine::Renderer();
 
@@ -170,7 +169,7 @@ void BackgroundRenderer::reset() {
 }
 
 void BackgroundRenderer::draw_layer_internal(const BackgroundLayer& layer, BackgroundInstance** p_buffer) {
-    ZoneScopedN("BackgroundRenderer::draw_layer");
+    ZoneScoped;
 
     const glm::vec2 offset = layer.anchor().to_vec2();
     const glm::vec2 pos = layer.position() - layer.size() * offset;
@@ -192,7 +191,7 @@ void BackgroundRenderer::draw_layer_internal(const BackgroundLayer& layer, Backg
 void BackgroundRenderer::render() {
     if (m_layer_count == 0) return;
 
-    ZoneScopedN("BackgroundRenderer::render");
+    ZoneScoped;
 
     auto* const commands = m_renderer->CommandBuffer();
 
@@ -213,7 +212,7 @@ void BackgroundRenderer::render() {
 void BackgroundRenderer::render_world() {
     if (m_world_layer_count == 0) return;
 
-    ZoneScopedN("BackgroundRenderer::render_world");
+    ZoneScoped;
 
     auto* const commands = m_renderer->CommandBuffer();
 

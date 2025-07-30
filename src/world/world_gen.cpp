@@ -6,6 +6,7 @@
 
 #include <FastNoiseLite/FastNoiseLite.hpp>
 #include <SGE/log.hpp>
+#include <SGE/utils/random.hpp>
 
 #include "../types/wall.hpp"
 #include "../math/math.hpp"
@@ -249,6 +250,8 @@ static void world_remove_walls_from_surface(WorldData& world) {
 }
 
 static void world_place_tree(WorldData& world, TreeType tree_type, TilePos pos) {
+    using namespace sge::random;
+
     if (pos.x >= world.playable_area.max.x - 2 || pos.x <= world.playable_area.min.x + 2) {
         return;
     }
@@ -337,6 +340,8 @@ static void world_place_tree(WorldData& world, TreeType tree_type, TilePos pos) 
 }
 
 static void world_grow_trees(WorldData& world) {
+    using namespace sge::random;
+
     const int playable_area_min_x = world.playable_area.min.x;
     const int playable_area_max_x = world.playable_area.max.x;
 

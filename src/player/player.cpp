@@ -2,8 +2,6 @@
 
 #include <glm/gtc/random.hpp>
 
-#include <tracy/Tracy.hpp>
-
 #include <SGE/math/quat.hpp>
 #include <SGE/math/rect.hpp>
 #include <SGE/math/consts.hpp>
@@ -11,6 +9,8 @@
 #include <SGE/time/time.hpp>
 #include <SGE/time/timer.hpp>
 #include <SGE/time/stopwatch.hpp>
+#include <SGE/utils/random.hpp>
+#include <SGE/profile.hpp>
 
 #include "../assets.hpp"
 #include "../constants.hpp"
@@ -22,6 +22,7 @@
 #include "../particles.hpp"
 
 using Constants::TILE_SIZE;
+using namespace sge::random;
 
 static constexpr float PLAYER_WIDTH = 20.0f;
 static constexpr float PLAYER_HEIGHT = 42.0f;
@@ -70,7 +71,7 @@ void spawn_particles_on_dig(const glm::vec2& position, Particle::Type particle, 
 }
 
 void Player::init() {
-    ZoneScopedN("Player::init");
+    ZoneScoped;
 
     m_hair = sge::TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerHair));
     m_head = sge::TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerHead));
@@ -130,7 +131,7 @@ void Player::set_position(const World& world, const glm::vec2& position) {
 }
 
 void Player::horizontal_movement(bool handle_input) {
-    ZoneScopedN("Player::horizontal_movement");
+    ZoneScoped;
 
     int8_t dir = 0;
 
@@ -157,7 +158,7 @@ void Player::horizontal_movement(bool handle_input) {
 }
 
 void Player::vertical_movement(bool handle_input) {
-    ZoneScopedN("Player::vertical_movement");
+    ZoneScoped;
 
     if (do_jump && m_collisions.down) {
         m_jump = JUMP_HEIGHT;
@@ -182,7 +183,7 @@ void Player::vertical_movement(bool handle_input) {
 }
 
 void Player::gravity() {
-    ZoneScopedN("Player::gravity");
+    ZoneScoped;
 
     if (!m_collisions.down && m_velocity.y > 0 && m_fall_start < 0) {
         m_fall_start = m_position.y;
@@ -193,7 +194,7 @@ void Player::gravity() {
 }
 
 glm::vec2 Player::check_collisions(const World& world) {
-    ZoneScopedN("Player::check_collisions");
+    ZoneScoped;
 
     glm::vec2 result = m_velocity;
     const glm::vec2 pos = m_position;
@@ -334,7 +335,7 @@ glm::vec2 Player::check_collisions(const World& world) {
 }
 
 void Player::update_walk_anim_timer() {
-    ZoneScopedN("Player::update_walk_anim_timer");
+    ZoneScoped;
 
     if (m_velocity.x != 0.0) {
         const uint32_t time = glm::abs(100.0 / glm::abs(m_velocity.x));
@@ -343,7 +344,7 @@ void Player::update_walk_anim_timer() {
 }
 
 void Player::update_using_item_anim() {
-    ZoneScopedN("Player::update_using_item_anim");
+    ZoneScoped;
 
     if (m_use_cooldown > 0) m_use_cooldown -= 1;
     if (m_swing_counter > 0) m_swing_counter -= 1;
@@ -377,7 +378,7 @@ void Player::update_using_item_anim() {
 }
 
 void Player::update_hold_item() {
-    ZoneScopedN("Player::update_hold_item");
+    ZoneScoped;
 
     const std::optional<Item>& selected_item = m_inventory.get_selected_item().item;
     if (!selected_item.has_value()) return;
@@ -405,7 +406,7 @@ void Player::update_hold_item() {
 }
 
 void Player::update_sprites_index() {
-    ZoneScopedN("Player::update_sprites_index");
+    ZoneScoped;
 
     PlayerSprite* sprites[] = { &m_hair, &m_head, &m_body, &m_legs, &m_left_hand, &m_left_shoulder, &m_right_arm, &m_left_eye, &m_right_eye };
 
@@ -473,7 +474,7 @@ void Player::update_sprites_index() {
 }
 
 void Player::update_movement_state() {
-    ZoneScopedN("Player::update_movement_state");
+    ZoneScoped;
 
     if (abs(m_velocity.y) > 0.0 || m_jumping) {
         m_movement_state = MovementState::Flying;
@@ -485,7 +486,7 @@ void Player::update_movement_state() {
 }
 
 void Player::pre_update() {
-    ZoneScopedN("Player::pre_update");
+    ZoneScoped;
 
     if (sge::Input::JustPressed(sge::Key::Space)) {
         do_jump = true;
@@ -493,7 +494,7 @@ void Player::pre_update() {
 }
 
 void Player::spawn_particles_on_walk() const {
-    ZoneScopedN("Player::spawn_particles_on_walk");
+    ZoneScoped;
 
     if (m_movement_state != MovementState::Walking) return;
     if (!m_stand_on_tile.has_value()) return;
@@ -518,7 +519,7 @@ void Player::spawn_particles_on_walk() const {
 }
 
 void Player::spawn_particles_grounded() const {
-    ZoneScopedN("Player::spawn_particles_grounded");
+    ZoneScoped;
 
     if (!m_stand_on_tile.has_value()) return;
     const BlockTypeWithData block = m_stand_on_tile.value();
@@ -548,7 +549,7 @@ void Player::spawn_particles_grounded() const {
 }
 
 void Player::fixed_update(const sge::Camera& camera, World& world, bool handle_input) {
-    ZoneScopedN("Player::fixed_update");
+    ZoneScoped;
 
     m_using_item_visible = false;
 
@@ -603,7 +604,7 @@ void Player::fixed_update(const sge::Camera& camera, World& world, bool handle_i
 }
 
 void Player::update(World& world) {
-    ZoneScopedN("Player::update");
+    ZoneScoped;
 
     const std::optional<Item>& selected_item = m_inventory.get_selected_item().item;
     if (selected_item.has_value() && selected_item->id == ItemId::Torch) {
@@ -625,7 +626,7 @@ void Player::update(World& world) {
 }
 
 void Player::keep_in_world_bounds(const World& world) {
-    ZoneScopedN("Player::keep_in_world_bounds");
+    ZoneScoped;
 
     static constexpr float OFFSET = Constants::WORLD_BOUNDARY_OFFSET;
 
@@ -655,7 +656,7 @@ float Player::get_fall_distance() const {
 }
 
 void Player::update_sprites() {
-    ZoneScopedN("Player::update_sprites");
+    ZoneScoped;
 
     const bool flip_x = m_direction == Direction::Left;
 
@@ -691,7 +692,7 @@ void Player::update_sprites() {
 }
 
 void Player::draw() const {
-    ZoneScopedN("Player::draw");
+    ZoneScoped;
 
     GameRenderer::DrawAtlasSpriteWorld(m_head.sprite);
 
@@ -776,7 +777,7 @@ static void break_tree(World& world, TilePos start_pos) {
 }
 
 void Player::use_item(const sge::Camera& camera, World& world) {
-    ZoneScopedN("Player::use_item");
+    ZoneScoped;
 
     const ItemSlot taken_item = m_inventory.taken_item();
     const ItemSlot item_slot = taken_item.has_item() ? taken_item : m_inventory.get_selected_item();

@@ -1,5 +1,7 @@
 #include "game.hpp"
 
+#include <string>
+
 #include <GLFW/glfw3.h>
 #include <LLGL/Types.h>
 #include <glm/gtc/random.hpp>
@@ -10,6 +12,7 @@
 #include <SGE/renderer/camera.hpp>
 #include <SGE/time/time.hpp>
 #include <SGE/types/cursor_mode.hpp>
+#include <SGE/profile.hpp>
 
 #include "renderer/renderer.hpp"
 #include "ui/ui.hpp"
@@ -20,9 +23,6 @@
 #include "background.hpp"
 #include "assets.hpp"
 #include "constants.hpp"
-
-#include <string>
-#include <tracy/Tracy.hpp>
 
 static struct GameState {
     Player player;
@@ -82,7 +82,7 @@ static glm::vec2 camera_free() {
 #endif
 
 static void pre_update() {
-    ZoneScopedN("Game::pre_update");
+    ZoneScoped;
 
 #if DEBUG
     if (sge::Input::JustPressed(sge::Key::B)) {
@@ -103,7 +103,7 @@ static void pre_update() {
 }
 
 static void fixed_update() {
-    ZoneScopedN("Game::fixed_update");
+    ZoneScoped;
 
 #if DEBUG_TOOLS
     const bool handle_input = !g.free_camera;
@@ -121,7 +121,7 @@ static void fixed_update() {
 }
 
 static void update() {
-    ZoneScopedN("Game::update");
+    ZoneScoped;
 
     float scale_speed = 2.f;
 
@@ -194,13 +194,13 @@ static void update() {
 }
 
 static void post_update() {
-    ZoneScopedN("Game::post_update");
+    ZoneScoped;
 
     UI::PostUpdate();
 }
 
 static void render() {
-    ZoneScopedN("Game::render");
+    ZoneScoped;
 
     GameRenderer::Begin(g.camera, g.world);
 
@@ -218,7 +218,7 @@ static void render() {
 }
 
 static void post_render() {
-    ZoneScopedN("Game::post_render");
+    ZoneScoped;
 
     if (g.world.chunk_manager().any_chunks_to_destroy()) {
         sge::Engine::Renderer().CommandQueue()->WaitIdle();
@@ -268,7 +268,7 @@ static void destroy() {
 }
 
 bool Game::Init(sge::RenderBackend backend, AppConfig config, int16_t world_width, int16_t world_height) {
-    ZoneScopedN("Game::Init");
+    ZoneScoped;
 
     sge::Engine::SetLoadAssetsCallback(load_assets);
     sge::Engine::SetPreUpdateCallback(pre_update);

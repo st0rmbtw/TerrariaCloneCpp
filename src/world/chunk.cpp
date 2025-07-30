@@ -1,23 +1,22 @@
 #include "chunk.hpp"
 
-#include <tracy/Tracy.hpp>
+#include <SGE/engine.hpp>
+#include <SGE/renderer/macros.hpp>
+#include <SGE/defines.hpp>
+#include <SGE/profile.hpp>
 
 #include "../types/block.hpp"
 #include "../types/texture_atlas_pos.hpp"
 #include "../renderer/types.hpp"
-#include <SGE/engine.hpp>
-#include <SGE/renderer/macros.hpp>
 
 #include "../renderer/renderer.hpp"
-
-#include <SGE/defines.hpp>
 
 using Constants::SUBDIVISION;
 using Constants::RENDER_CHUNK_SIZE;
 using Constants::RENDER_CHUNK_SIZE_U;
 
 void RenderChunk::destroy() {
-    ZoneScopedN("WorldChunk::destroy");
+    ZoneScoped;
 
     const auto& context = sge::Engine::Renderer().Context();
 
@@ -109,7 +108,7 @@ void RenderChunk::build_mesh(
     ChunkInstance* block_data_arena,
     ChunkInstance* wall_data_arena
 ) {
-    ZoneScopedN("WorldChunk::build_mesh");
+    ZoneScoped;
 
     block_count = fill_block_buffer(world, block_data_arena, index, world_pos);
     wall_count = fill_wall_buffer(world, wall_data_arena, index, world_pos);
@@ -143,7 +142,7 @@ void RenderChunk::rebuild_mesh(
     ChunkInstance* block_data_arena,
     ChunkInstance* wall_data_arena
 ) {
-    ZoneScopedN("WorldChunk::rebuild_mesh");
+    ZoneScoped;
 
     const auto& context = sge::Engine::Renderer().Context();
 
