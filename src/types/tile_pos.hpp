@@ -3,10 +3,11 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <glm/glm.hpp>
+#include <cstdint>
 
+#include <glm/glm.hpp>
 #include <SGE/defines.hpp>
+
 #include "../constants.hpp"
 
 enum class TileOffset: uint8_t {

@@ -3,9 +3,8 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 #include <string_view>
-
 #include <optional>
 
 #include "block.hpp"
@@ -36,10 +35,10 @@ struct PlacesTile {
 using ItemStack = uint16_t;
 
 class ItemId {
-private:
-    using id_type = uint16_t;
 public:
-    enum : id_type {
+    using IdType = uint16_t;
+
+    enum : IdType {
         DirtBlock = 2,
         StoneBlock = 3,
         Torch = 8,
@@ -50,11 +49,11 @@ public:
         CopperPickaxe = 3509
     };
 
-    ItemId(id_type id) : m_id(id) {}
+    ItemId(IdType id) : m_id(id) {}
 
-    inline constexpr operator id_type() const { return m_id; }
+    inline constexpr operator IdType() const { return m_id; }
 private:
-    id_type m_id;
+    IdType m_id;
 };
 
 enum class HoldStyle : uint8_t {

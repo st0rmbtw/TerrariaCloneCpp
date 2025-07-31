@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 #include <optional>
 
 #include "texture_atlas_pos.hpp"
@@ -125,7 +125,7 @@ struct AnchorData {
     bool wall = true;
 };
 
-inline constexpr static int16_t block_hp(BlockType tile_type) {
+inline constexpr int16_t block_hp(BlockType tile_type) {
     switch (tile_type) {
     case BlockType::Torch: return 1;
     case BlockType::Dirt:  case BlockType::Grass: return 50;
@@ -173,7 +173,7 @@ struct BlockTypeWithData {
     BlockData data;
 };
 
-inline constexpr static uint8_t tile_type(BlockTypeWithData tile) {
+inline constexpr uint8_t tile_type(BlockTypeWithData tile) {
     switch (tile.type) {
     case BlockType::Dirt: 
     case BlockType::Stone:
@@ -198,7 +198,7 @@ inline constexpr static uint8_t tile_type(BlockTypeWithData tile) {
     }
 }
 
-inline constexpr static TileTextureType tile_texture_type(BlockTypeWithData tile) {
+inline constexpr TileTextureType tile_texture_type(BlockTypeWithData tile) {
     switch (tile.type) {
     case BlockType::Dirt:  return TileTextureType::Dirt;
     case BlockType::Stone: return TileTextureType::Stone;
@@ -219,7 +219,7 @@ inline constexpr static TileTextureType tile_texture_type(BlockTypeWithData tile
     }
 }
 
-inline constexpr static TextureAsset block_texture_asset(BlockTypeWithData block) {
+inline constexpr TextureAsset block_texture_asset(BlockTypeWithData block) {
     switch (block.type) {
     case BlockType::Dirt:  return TextureAsset::Tiles0;
     case BlockType::Stone: return TextureAsset::Tiles1;
@@ -240,7 +240,7 @@ inline constexpr static TextureAsset block_texture_asset(BlockTypeWithData block
     }
 }
 
-inline constexpr static bool tile_is_block(BlockTypeWithData block) {
+inline constexpr bool tile_is_block(BlockTypeWithData block) {
     switch (block.type) {
     case BlockType::Torch: return false;
     case BlockType::Tree: switch (block.data.tree.frame) {
@@ -256,7 +256,7 @@ inline constexpr static bool tile_is_block(BlockTypeWithData block) {
     }
 }
 
-inline constexpr static uint8_t tree_is_trunk(TreeFrameType frame) {
+inline constexpr uint8_t tree_is_trunk(TreeFrameType frame) {
     switch (frame) {
     case TreeFrameType::Trunk:
     case TreeFrameType::TrunkHollowLeft:
@@ -279,7 +279,7 @@ inline constexpr static uint8_t tree_is_trunk(TreeFrameType frame) {
     }
 }
 
-inline constexpr static uint8_t block_required_tool(BlockType tile_type) {
+inline constexpr uint8_t block_required_tool(BlockType tile_type) {
     switch (tile_type) {
     case BlockType::Dirt:
     case BlockType::Stone:
@@ -295,14 +295,14 @@ inline constexpr static uint8_t block_required_tool(BlockType tile_type) {
     }
 }
 
-inline constexpr static bool block_is_stone(BlockType tile_type) {
+inline constexpr bool block_is_stone(BlockType tile_type) {
     switch (tile_type) {
     case BlockType::Stone: return true;
     default: return false;
     }
 }
 
-inline constexpr static std::optional<BlockType> block_merge_with(BlockType tile_type) {
+inline constexpr std::optional<BlockType> block_merge_with(BlockType tile_type) {
     switch (tile_type) {
     case BlockType::Grass: return BlockType::Dirt;
     case BlockType::Stone: return BlockType::Dirt;
@@ -311,7 +311,7 @@ inline constexpr static std::optional<BlockType> block_merge_with(BlockType tile
     }
 }
 
-inline constexpr static bool block_merges_with(BlockType block, BlockType other) {
+inline constexpr bool block_merges_with(BlockType block, BlockType other) {
     if (!tile_is_block(block)) return false;
 
     const std::optional<BlockType> this_merge = block_merge_with(block);
@@ -324,7 +324,7 @@ inline constexpr static bool block_merges_with(BlockType block, BlockType other)
     return false;
 }
 
-inline constexpr static const char* block_type_name(BlockType tile_type) {
+inline constexpr const char* block_type_name(BlockType tile_type) {
     switch (tile_type) {
     case BlockType::Dirt:  return "Dirt";
     case BlockType::Grass: return "Grass";
@@ -335,14 +335,14 @@ inline constexpr static const char* block_type_name(BlockType tile_type) {
     }
 }
 
-inline constexpr static bool block_dusty(BlockType tile_type) {
+inline constexpr bool block_dusty(BlockType tile_type) {
     switch (tile_type) {
     case BlockType::Dirt:  return true;
     default: return false;
     }
 }
 
-inline constexpr static AnchorData block_anchor(BlockType tile_type) {
+inline constexpr AnchorData block_anchor(BlockType tile_type) {
     switch (tile_type) {
     case BlockType::Torch: return AnchorData {
         .left = AnchorType::Default | AnchorType::Tree,
@@ -354,7 +354,7 @@ inline constexpr static AnchorData block_anchor(BlockType tile_type) {
     }
 }
 
-inline constexpr static bool block_is_solid(std::optional<BlockType> tile_type) {
+inline constexpr bool block_is_solid(std::optional<BlockType> tile_type) {
     if (!tile_type.has_value()) return false;
 
     switch (tile_type.value()) {
@@ -364,7 +364,7 @@ inline constexpr static bool block_is_solid(std::optional<BlockType> tile_type) 
     }
 }
 
-inline constexpr static bool check_anchor_horizontal(std::optional<BlockType> tile, AnchorType::Type anchor) {
+inline constexpr bool check_anchor_horizontal(std::optional<BlockType> tile, AnchorType::Type anchor) {
     if (anchor == AnchorType::None && tile.has_value()) return false;
     if (anchor != AnchorType::None && !tile.has_value()) return false;
 
@@ -373,12 +373,12 @@ inline constexpr static bool check_anchor_horizontal(std::optional<BlockType> ti
     return true;
 }
 
-inline constexpr static bool check_anchor_vertical(std::optional<BlockType> tile, AnchorType::Type anchor) {
+inline constexpr bool check_anchor_vertical(std::optional<BlockType> tile, AnchorType::Type anchor) {
     if (BITFLAG_CHECK(anchor, AnchorType::SolidTile) && block_is_solid(tile)) return true;
     return false;
 }
 
-inline constexpr static bool check_anchor_data(AnchorData anchor, const Neighbors<BlockType>& neighbors, bool has_wall) {
+inline constexpr bool check_anchor_data(AnchorData anchor, const Neighbors<BlockType>& neighbors, bool has_wall) {
     if (check_anchor_horizontal(neighbors.left, anchor.left)) return true;
     if (check_anchor_horizontal(neighbors.right, anchor.right)) return true;
     if (check_anchor_vertical(neighbors.top, anchor.top)) return true;
@@ -388,7 +388,7 @@ inline constexpr static bool check_anchor_data(AnchorData anchor, const Neighbor
     return false;
 }
 
-inline constexpr static std::optional<glm::vec3> block_light(std::optional<BlockType> tile_type) {
+inline constexpr std::optional<glm::vec3> block_light(std::optional<BlockType> tile_type) {
     if (!tile_type.has_value()) return std::nullopt;
 
     switch (tile_type.value()) {

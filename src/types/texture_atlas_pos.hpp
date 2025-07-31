@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 
 struct TextureAtlasPos {
     uint16_t x, y;
