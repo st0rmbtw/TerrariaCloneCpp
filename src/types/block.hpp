@@ -258,24 +258,13 @@ inline constexpr bool tile_is_block(BlockTypeWithData block) {
 
 inline constexpr uint8_t tree_is_trunk(TreeFrameType frame) {
     switch (frame) {
-    case TreeFrameType::Trunk:
-    case TreeFrameType::TrunkHollowLeft:
-    case TreeFrameType::TrunkHollowRight:
-    case TreeFrameType::TrunkBranchCollarLeft:
-    case TreeFrameType::TrunkBranchCollarRight:
-    case TreeFrameType::RootLeft:
-    case TreeFrameType::RootRight:
-    case TreeFrameType::BaseLeft:
-    case TreeFrameType::BaseRight:
-    case TreeFrameType::BaseBoth:
-    case TreeFrameType::StumpRootLeft:
-    case TreeFrameType::StumpRootRight:
-    case TreeFrameType::StumpRootBoth:
-    case TreeFrameType::TopBare:
-    case TreeFrameType::TopBareJagged:
-        return true;
-    default:
+    case TreeFrameType::BranchLeftBare:
+    case TreeFrameType::BranchLeftLeaves:
+    case TreeFrameType::BranchRightBare:
+    case TreeFrameType::BranchRightLeaves:
         return false;
+    default:
+        return true;
     }
 }
 

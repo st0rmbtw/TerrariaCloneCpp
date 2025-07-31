@@ -76,17 +76,17 @@ struct Item {
 
     [[nodiscard]]
     inline constexpr bool is_axe() const {
-        return (tool_flags & ToolFlags::Axe) == ToolFlags::Axe;
+        return (tool_flags & ToolFlags::Axe) != 0;
     }
 
     [[nodiscard]]
     inline constexpr bool is_pickaxe() const {
-        return (tool_flags & ToolFlags::Pickaxe) == ToolFlags::Pickaxe;
+        return (tool_flags & ToolFlags::Pickaxe) != 0;
     }
 
     [[nodiscard]]
     inline constexpr bool is_hammer() const {
-        return (tool_flags & ToolFlags::Hammer) == ToolFlags::Hammer;
+        return (tool_flags & ToolFlags::Hammer) != 0;
     }
 
     [[nodiscard]]

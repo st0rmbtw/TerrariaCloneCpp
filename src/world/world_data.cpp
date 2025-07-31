@@ -68,14 +68,14 @@ Neighbors<BlockType> WorldData::get_block_type_neighbors(TilePos pos) const {
 
 Neighbors<Block*> WorldData::get_block_neighbors_mut(TilePos pos) {
     return Neighbors<Block*> {
-        .top = this->get_block_mut(pos.offset(TileOffset::Top)),
-        .bottom = this->get_block_mut(pos.offset(TileOffset::Bottom)),
-        .left = this->get_block_mut(pos.offset(TileOffset::Left)),
-        .right = this->get_block_mut(pos.offset(TileOffset::Right)),
-        .top_left = this->get_block_mut(pos.offset(TileOffset::TopLeft)),
-        .top_right = this->get_block_mut(pos.offset(TileOffset::TopRight)),
-        .bottom_left = this->get_block_mut(pos.offset(TileOffset::BottomLeft)),
-        .bottom_right = this->get_block_mut(pos.offset(TileOffset::BottomRight)),
+        .top = get_block_mut(pos.offset(TileOffset::Top)),
+        .bottom = get_block_mut(pos.offset(TileOffset::Bottom)),
+        .left = get_block_mut(pos.offset(TileOffset::Left)),
+        .right = get_block_mut(pos.offset(TileOffset::Right)),
+        .top_left = get_block_mut(pos.offset(TileOffset::TopLeft)),
+        .top_right = get_block_mut(pos.offset(TileOffset::TopRight)),
+        .bottom_left = get_block_mut(pos.offset(TileOffset::BottomLeft)),
+        .bottom_right = get_block_mut(pos.offset(TileOffset::BottomRight)),
     };
 }
 
@@ -94,14 +94,14 @@ Neighbors<Wall> WorldData::get_wall_neighbors(TilePos pos) const {
 
 Neighbors<Wall*> WorldData::get_wall_neighbors_mut(TilePos pos) {
     return Neighbors<Wall*> {
-        .top = this->get_wall_mut(pos.offset(TileOffset::Top)),
-        .bottom = this->get_wall_mut(pos.offset(TileOffset::Bottom)),
-        .left = this->get_wall_mut(pos.offset(TileOffset::Left)),
-        .right = this->get_wall_mut(pos.offset(TileOffset::Right)),
-        .top_left = this->get_wall_mut(pos.offset(TileOffset::TopLeft)),
-        .top_right = this->get_wall_mut(pos.offset(TileOffset::TopRight)),
-        .bottom_left = this->get_wall_mut(pos.offset(TileOffset::BottomLeft)),
-        .bottom_right = this->get_wall_mut(pos.offset(TileOffset::BottomRight)),
+        .top = get_wall_mut(pos.offset(TileOffset::Top)),
+        .bottom = get_wall_mut(pos.offset(TileOffset::Bottom)),
+        .left = get_wall_mut(pos.offset(TileOffset::Left)),
+        .right = get_wall_mut(pos.offset(TileOffset::Right)),
+        .top_left = get_wall_mut(pos.offset(TileOffset::TopLeft)),
+        .top_right = get_wall_mut(pos.offset(TileOffset::TopRight)),
+        .bottom_left = get_wall_mut(pos.offset(TileOffset::BottomLeft)),
+        .bottom_right = get_wall_mut(pos.offset(TileOffset::BottomRight)),
     };
 }
 
@@ -185,7 +185,7 @@ SGE_FORCE_INLINE static void blur_line(LightMap& lightmap, int start, int end, i
     }
 }
 
-SGE_FORCE_INLINE static void blur_horizontal(const WorldData& world, LightMap& lightmap, const sge::IRect& area, TilePos offset) {
+inline static void blur_horizontal(const WorldData& world, LightMap& lightmap, const sge::IRect& area, TilePos offset) {
     #pragma omp parallel for
     for (int y = area.min.y; y < area.max.y; ++y) {
         glm::vec3 prev_light = world.lightmap.get_color({offset.x + area.min.x, offset.y + y});
@@ -198,7 +198,7 @@ SGE_FORCE_INLINE static void blur_horizontal(const WorldData& world, LightMap& l
     }
 }
 
-SGE_FORCE_INLINE static void blur_vertical(const WorldData& world, LightMap& lightmap, const sge::IRect& area, TilePos offset) {
+inline static void blur_vertical(const WorldData& world, LightMap& lightmap, const sge::IRect& area, TilePos offset) {
     #pragma omp parallel for
     for (int x = area.min.x; x < area.max.x; ++x) {
         glm::vec3 prev_light = world.lightmap.get_color({offset.x + x, offset.y + area.min.y});

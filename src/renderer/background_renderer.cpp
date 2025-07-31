@@ -189,9 +189,9 @@ void BackgroundRenderer::draw_layer_internal(const BackgroundLayer& layer, Backg
 }
 
 void BackgroundRenderer::render() {
-    if (m_layer_count == 0) return;
-
     ZoneScoped;
+
+    if (m_layer_count == 0) return;
 
     auto* const commands = m_renderer->CommandBuffer();
 
@@ -210,9 +210,9 @@ void BackgroundRenderer::render() {
 }
 
 void BackgroundRenderer::render_world() {
-    if (m_world_layer_count == 0) return;
-
     ZoneScoped;
+
+    if (m_world_layer_count == 0) return;
 
     auto* const commands = m_renderer->CommandBuffer();
 

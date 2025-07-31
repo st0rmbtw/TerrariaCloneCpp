@@ -18,6 +18,9 @@
 
 class ChunkManager {
 public:
+    using ChunkMap = std::unordered_map<glm::uvec2, RenderChunk>;
+    using ChunkPosSet = std::unordered_set<glm::uvec2>;
+
     ChunkManager() {
         using Constants::RENDER_CHUNK_SIZE_U;
         m_block_data_arena = sge::checked_alloc<ChunkInstance>(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U);
@@ -43,8 +46,8 @@ public:
         }
     }
 
-    [[nodiscard]] inline const std::unordered_map<glm::uvec2, RenderChunk>& render_chunks() const { return m_render_chunks; }
-    [[nodiscard]] inline const std::unordered_set<glm::uvec2>& visible_chunks() const { return m_visible_chunks; }
+    [[nodiscard]] inline const ChunkMap& render_chunks() const { return m_render_chunks; }
+    [[nodiscard]] inline const ChunkPosSet& visible_chunks() const { return m_visible_chunks; }
     [[nodiscard]] inline std::deque<RenderChunk>& chunks_to_destroy() { return m_chunks_to_destroy; }
     [[nodiscard]] inline bool any_chunks_to_destroy() { return !m_chunks_to_destroy.empty(); }
 
@@ -53,8 +56,8 @@ public:
         free(m_wall_data_arena);
     }
 private:
-    std::unordered_map<glm::uvec2, RenderChunk> m_render_chunks;
-    std::unordered_set<glm::uvec2> m_visible_chunks;
+    ChunkMap m_render_chunks;
+    ChunkPosSet m_visible_chunks;
     std::deque<RenderChunk> m_chunks_to_destroy;
 
     ChunkInstance* m_block_data_arena = nullptr;
