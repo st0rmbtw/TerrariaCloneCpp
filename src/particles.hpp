@@ -22,7 +22,7 @@ namespace Particle {
         Wood = 7
     };
 
-    inline constexpr Particle::Type get_by_block(BlockTypeWithData block) {
+    inline constexpr Particle::Type get_by_block(BlockTypeWithData block) noexcept {
         switch (block.type) {
         case BlockType::Dirt: return Particle::Type::Dirt;
         case BlockType::Stone: return Particle::Type::Stone;
@@ -41,7 +41,7 @@ namespace Particle {
         }
     }
 
-    inline constexpr Particle::Type get_by_wall(WallType wall_type) {
+    inline constexpr Particle::Type get_by_wall(WallType wall_type) noexcept {
         switch (wall_type) {
         case WallType::DirtWall: return Particle::Type::Dirt;
         case WallType::StoneWall: return Particle::Type::Stone;
@@ -67,12 +67,12 @@ struct ParticleData {
 
 class ParticleBuilder {
 private:
-    explicit ParticleBuilder(Particle::Type type) :
+    explicit ParticleBuilder(Particle::Type type) noexcept :
         m_position{},
         m_velocity{},
         m_type(type) {}
 
-    explicit ParticleBuilder(Particle::Type type, glm::vec2 position, glm::vec2 velocity, float scale, float lifetime, float rotation_speed, bool gravity, uint8_t variant) :
+    explicit ParticleBuilder(Particle::Type type, glm::vec2 position, glm::vec2 velocity, float scale, float lifetime, float rotation_speed, bool gravity, uint8_t variant) noexcept :
         m_position(position),
         m_velocity(velocity),
         m_scale(scale),
@@ -82,18 +82,37 @@ private:
         m_variant(variant),
         m_type(type) {}
 public:
-    static ParticleBuilder create(Particle::Type type, glm::vec2 position, glm::vec2 velocity, float lifetime) {
+    static ParticleBuilder create(Particle::Type type, glm::vec2 position, glm::vec2 velocity, float lifetime) noexcept {
         return ParticleBuilder(type, position, velocity, 1.0f, lifetime, 0.0f, false, static_cast<uint8_t>(rand() % 3));
     }
 
-    ParticleBuilder& with_gravity(bool gravity) { m_gravity = gravity; return *this; }
-    ParticleBuilder& with_rotation_speed(float speed) { m_rotation_speed = speed; return *this; }
-    ParticleBuilder& with_scale(float scale) { m_scale = scale; return *this; }
-    ParticleBuilder& with_light(glm::vec3 light_color) { m_light_color = light_color; return *this; }
-    ParticleBuilder& in_world_layer() { m_is_world = true; return *this; }
+    ParticleBuilder& with_gravity(bool gravity) noexcept {
+        m_gravity = gravity;
+        return *this;
+    }
+
+    ParticleBuilder& with_rotation_speed(float speed) noexcept {
+        m_rotation_speed = speed;
+        return *this;
+    }
+
+    ParticleBuilder& with_scale(float scale) noexcept {
+        m_scale = scale;
+        return *this;
+    }
+
+    ParticleBuilder& with_light(glm::vec3 light_color) noexcept {
+        m_light_color = light_color;
+        return *this;
+    }
+
+    ParticleBuilder& in_world_layer() noexcept {
+        m_is_world = true;
+        return *this;
+    }
 
     [[nodiscard]] 
-    ParticleData build() const {
+    ParticleData build() const noexcept {
         return ParticleData {
             .rotation       = glm::mat4(1.0f),
             .rotation_speed = Quat::from_rotation_z(m_rotation_speed),

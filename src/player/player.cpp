@@ -122,7 +122,7 @@ void Player::init() {
         .set_color(sge::LinearRgba(0.58, 0.55, 0.47));
 }
 
-void Player::set_position(const World& world, const glm::vec2& position) {
+void Player::set_position(const World& world, const glm::vec2& position) noexcept {
     m_position.x = position.x;
     m_position.y = position.y - PLAYER_HEIGHT_HALF;
     m_velocity.x = 0.0f;
@@ -625,7 +625,7 @@ void Player::update(World& world) {
     }
 }
 
-void Player::keep_in_world_bounds(const World& world) {
+void Player::keep_in_world_bounds(const World& world) noexcept {
     ZoneScoped;
 
     static constexpr float OFFSET = Constants::WORLD_BOUNDARY_OFFSET;

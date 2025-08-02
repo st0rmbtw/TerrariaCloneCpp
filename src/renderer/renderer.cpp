@@ -287,25 +287,25 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
     state.background_renderer.reset();
 }
 
-void GameRenderer::BeginOrderMode(int order, bool advance) {
+void GameRenderer::BeginOrderMode(int order, bool advance) noexcept {
     state.main_batch.BeginOrderMode(order, advance);
     state.world_batch.BeginOrderMode(order, advance);
     state.ui_batch.BeginOrderMode(order, advance);
 }
 
-void GameRenderer::EndOrderMode() {
+void GameRenderer::EndOrderMode() noexcept {
     state.main_batch.EndOrderMode();
     state.world_batch.EndOrderMode();
     state.ui_batch.EndOrderMode();
 }
 
-void GameRenderer::BeginBlendMode(sge::BlendMode blend_mode) {
+void GameRenderer::BeginBlendMode(sge::BlendMode blend_mode) noexcept {
     state.main_batch.BeginBlendMode(blend_mode);
     state.world_batch.BeginBlendMode(blend_mode);
     state.ui_batch.BeginBlendMode(blend_mode);
 }
 
-void GameRenderer::EndBlendMode() {
+void GameRenderer::EndBlendMode() noexcept {
     state.main_batch.EndBlendMode();
     state.world_batch.EndBlendMode();
     state.ui_batch.EndBlendMode();

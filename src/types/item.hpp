@@ -17,11 +17,11 @@ struct PlacesTile {
         Wall
     };
 
-    PlacesTile(BlockType tile_type) :
+    PlacesTile(BlockType tile_type) noexcept :
         tile(tile_type),
         type(Type::Block) {}
 
-    PlacesTile(WallType wall_type) :
+    PlacesTile(WallType wall_type) noexcept :
         wall(wall_type),
         type(Type::Wall) {}
 
@@ -51,7 +51,7 @@ public:
 
     ItemId(IdType id) : m_id(id) {}
 
-    inline constexpr operator IdType() const { return m_id; }
+    inline constexpr operator IdType() const noexcept { return m_id; }
 private:
     IdType m_id;
 };

@@ -110,7 +110,7 @@ static struct UiState {
 static void draw_inventory(const Inventory& inventory, const glm::vec2& window_size);
 static void update_cursor();
 
-void UI::Init() {
+void UI::Init() noexcept {
     ZoneScoped;
 
     state.fps_update_timer = sge::Timer::from_seconds(0.5f, sge::TimerMode::Repeating);
@@ -140,9 +140,9 @@ static SGE_FORCE_INLINE void select_hotbar_slot(Inventory& inventory, uint8_t sl
     inventory.set_selected_slot(slot);
 }
 
-void UI::FixedUpdate() {}
+void UI::FixedUpdate() noexcept {}
 
-void UI::PreUpdate(Inventory& inventory) {
+void UI::PreUpdate(Inventory& inventory) noexcept {
     ZoneScoped;
 
     for (const Element& element : state.elements) {
@@ -170,7 +170,7 @@ void UI::PreUpdate(Inventory& inventory) {
     }
 }
 
-void UI::Update(Inventory& inventory) {
+void UI::Update(Inventory& inventory) noexcept {
     ZoneScoped;
 
     update_cursor();
@@ -220,7 +220,7 @@ void UI::Update(Inventory& inventory) {
     }
 }
 
-void UI::PostUpdate() {
+void UI::PostUpdate() noexcept {
     ZoneScoped;
 
     state.elements.clear();
@@ -247,7 +247,7 @@ static inline void draw_item_with_stack(const sge::Font& font, const glm::vec2& 
     }
 }
 
-void UI::Draw(const sge::Camera& camera, const Player& player) {
+void UI::Draw(const sge::Camera& camera, const Player& player) noexcept {
     ZoneScoped;
 
     const glm::vec2& window_size = camera.viewport();

@@ -54,40 +54,125 @@ public:
 
     void draw(const sge::Camera& camera) const;
 
-    [[nodiscard]] inline std::optional<Block> get_block(TilePos pos) const { return m_data.get_block(pos); }
-    [[nodiscard]] inline Block* get_block_mut(TilePos pos) { return m_data.get_block_mut(pos); }
+    [[nodiscard]]
+    inline std::optional<Block> get_block(TilePos pos) const {
+        return m_data.get_block(pos);
+    }
 
-    [[nodiscard]] inline std::optional<BlockType> get_block_type(TilePos pos) const { return m_data.get_block_type(pos); }
+    [[nodiscard]]
+    inline Block* get_block_mut(TilePos pos) {
+        return m_data.get_block_mut(pos);
+    }
 
-    [[nodiscard]] inline bool block_exists(TilePos pos) const { return m_data.block_exists(pos); }
-    [[nodiscard]] inline bool block_exists_with_type(TilePos pos, BlockType block_type) const { return m_data.block_exists_with_type(pos, block_type); }
-    [[nodiscard]] inline bool solid_block_exists(TilePos pos) const { return m_data.solid_block_exists(pos); }
+    [[nodiscard]]
+    inline std::optional<BlockType> get_block_type(TilePos pos) const {
+        return m_data.get_block_type(pos);
+    }
 
-    [[nodiscard]] inline Neighbors<Block> get_block_neighbors(TilePos pos) const { return m_data.get_block_neighbors(pos); }
-    [[nodiscard]] inline Neighbors<BlockType> get_block_type_neighbors(TilePos pos) const { return m_data.get_block_type_neighbors(pos); }
-    [[nodiscard]] inline Neighbors<Block*> get_block_neighbors_mut(TilePos pos) { return m_data.get_block_neighbors_mut(pos); }
+    [[nodiscard]]
+    inline bool block_exists(TilePos pos) const {
+        return m_data.block_exists(pos);
+    }
 
-    [[nodiscard]] inline std::optional<Wall> get_wall(TilePos pos) const { return m_data.get_wall(pos); }
-    [[nodiscard]] inline Wall* get_wall_mut(TilePos pos) { return m_data.get_wall_mut(pos); }
+    [[nodiscard]]
+    inline bool block_exists_with_type(TilePos pos, BlockType block_type) const {
+        return m_data.block_exists_with_type(pos, block_type);
+    }
 
-    [[nodiscard]] inline bool wall_exists(TilePos pos) const { return m_data.wall_exists(pos); }
+    [[nodiscard]]
+    inline bool solid_block_exists(TilePos pos) const {
+        return m_data.solid_block_exists(pos);
+    }
 
-    [[nodiscard]] inline Neighbors<Wall> get_wall_neighbors(TilePos pos) const { return m_data.get_wall_neighbors(pos); }
-    [[nodiscard]] inline Neighbors<Wall*> get_wall_neighbors_mut(TilePos pos) { return m_data.get_wall_neighbors_mut(pos); }
+    [[nodiscard]]
+    inline Neighbors<Block> get_block_neighbors(TilePos pos) const {
+        return m_data.get_block_neighbors(pos);
+    }
 
-    [[nodiscard]] inline const sge::IRect& area() const { return m_data.area; }
-    [[nodiscard]] inline const sge::IRect& playable_area() const { return m_data.playable_area; }
-    [[nodiscard]] inline const glm::uvec2& spawn_point() const { return m_data.spawn_point; }
-    [[nodiscard]] inline const Layers& layers() const { return m_data.layers; }
+    [[nodiscard]]
+    inline Neighbors<BlockType> get_block_type_neighbors(TilePos pos) const {
+        return m_data.get_block_type_neighbors(pos);
+    }
 
-    [[nodiscard]] inline bool is_changed() const { return m_changed; }
-    [[nodiscard]] inline bool is_lightmap_changed() const { return m_lightmap_changed; }
+    [[nodiscard]]
+    inline Neighbors<Block*> get_block_neighbors_mut(TilePos pos) {
+        return m_data.get_block_neighbors_mut(pos);
+    }
 
-    [[nodiscard]] inline const ChunkManager& chunk_manager() const { return m_chunk_manager; }
-    [[nodiscard]] inline ChunkManager& chunk_manager() { return m_chunk_manager; }
+    [[nodiscard]]
+    inline std::optional<Wall> get_wall(TilePos pos) const {
+        return m_data.get_wall(pos);
+    }
 
-    [[nodiscard]] inline const WorldData& data() const { return m_data; }
-    [[nodiscard]] inline WorldData& data() { return m_data; }
+    [[nodiscard]]
+    inline Wall* get_wall_mut(TilePos pos) {
+        return m_data.get_wall_mut(pos);
+    }
+
+    [[nodiscard]]
+    inline bool wall_exists(TilePos pos) const {
+        return m_data.wall_exists(pos);
+    }
+
+    [[nodiscard]]
+    inline Neighbors<Wall> get_wall_neighbors(TilePos pos) const {
+        return m_data.get_wall_neighbors(pos);
+    }
+
+    [[nodiscard]]
+    inline Neighbors<Wall*> get_wall_neighbors_mut(TilePos pos) {
+        return m_data.get_wall_neighbors_mut(pos);
+    }
+
+    [[nodiscard]]
+    inline const sge::IRect& area() const noexcept {
+        return m_data.area;
+    }
+
+    [[nodiscard]]
+    inline const sge::IRect& playable_area() const noexcept {
+        return m_data.playable_area;
+    }
+
+    [[nodiscard]]
+    inline const glm::uvec2& spawn_point() const noexcept {
+        return m_data.spawn_point;
+    }
+
+    [[nodiscard]]
+    inline const Layers& layers() const noexcept {
+        return m_data.layers;
+    }
+
+    [[nodiscard]]
+    inline bool is_changed() const noexcept {
+        return m_changed;
+    }
+
+    [[nodiscard]]
+    inline bool is_lightmap_changed() const noexcept {
+        return m_lightmap_changed;
+    }
+
+    [[nodiscard]]
+    inline const ChunkManager& chunk_manager() const noexcept {
+        return m_chunk_manager;
+    }
+
+    [[nodiscard]]
+    inline ChunkManager& chunk_manager() noexcept {
+        return m_chunk_manager;
+    }
+
+    [[nodiscard]]
+    inline const WorldData& data() const noexcept {
+        return m_data;
+    }
+
+    [[nodiscard]]
+    inline WorldData& data() noexcept {
+        return m_data;
+    }
 
     inline void create_dig_tile_animation(const Block& block, TilePos pos) {
         m_tile_dig_animations.push_back(TileDigAnimation {
@@ -113,10 +198,19 @@ public:
         };
     }
 
-    [[nodiscard]] inline const Light* lights() const { return m_lights.data(); }
-    [[nodiscard]] inline uint32_t light_count() const { return m_light_count; }
+    [[nodiscard]]
+    inline const Light* lights() const noexcept {
+        return m_lights.data();
+    }
 
-    inline void clear_lights() { m_light_count = 0; }
+    [[nodiscard]]
+    inline uint32_t light_count() const noexcept {
+        return m_light_count;
+    }
+
+    inline void clear_lights() noexcept {
+        m_light_count = 0;
+    }
 
     inline void add_light(Light light) {
         using Constants::WORLD_MAX_LIGHT_COUNT;

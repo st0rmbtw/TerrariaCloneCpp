@@ -24,16 +24,16 @@ enum class TileOffset: uint8_t {
 struct TilePos {
     int x, y;
 
-    explicit TilePos() = default;
+    explicit TilePos() noexcept = default;
 
-    constexpr TilePos(int x, int y) : x(x), y(y) {}
-    constexpr TilePos(const glm::ivec2& pos) : x(pos.x), y(pos.y) {}
+    constexpr TilePos(int x, int y) noexcept : x(x), y(y) {}
+    constexpr TilePos(const glm::ivec2& pos) noexcept : x(pos.x), y(pos.y) {}
 
-    constexpr TilePos(uint32_t x, uint32_t y) : x(static_cast<int>(x)), y(static_cast<int>(y)) {}
-    constexpr TilePos(const glm::uvec2& pos) : x(static_cast<int>(pos.x)), y(static_cast<int>(pos.y)) {}
+    constexpr TilePos(uint32_t x, uint32_t y) noexcept : x(static_cast<int>(x)), y(static_cast<int>(y)) {}
+    constexpr TilePos(const glm::uvec2& pos) noexcept : x(static_cast<int>(pos.x)), y(static_cast<int>(pos.y)) {}
 
     [[nodiscard]] 
-    constexpr TilePos offset(TileOffset offset) const {
+    constexpr TilePos offset(TileOffset offset) const noexcept {
         switch (offset) {
         case TileOffset::Top: 
             return {this->x, this->y - 1};
@@ -54,45 +54,50 @@ struct TilePos {
         }
     }
 
-    inline static TilePos from_world_pos(const glm::vec2& mouse_pos) {
+    [[nodiscard]]
+    inline static TilePos from_world_pos(const glm::vec2& mouse_pos) noexcept {
         return {glm::ivec2(mouse_pos / Constants::TILE_SIZE)};
     }
 
-    [[nodiscard]] inline glm::vec2 to_world_pos() const {
+    [[nodiscard]]
+    inline glm::vec2 to_world_pos() const noexcept {
         return glm::vec2(x, y) * Constants::TILE_SIZE;
     }
 
     [[nodiscard]]
-    inline glm::vec2 to_world_pos_center() const {
+    inline glm::vec2 to_world_pos_center() const noexcept {
         return (glm::vec2(x, y) + glm::vec2(0.5f)) * Constants::TILE_SIZE;
     }
 
+    [[nodiscard]]
     constexpr inline TilePos operator/(int d) const {
         return TilePos(x / d, y / d);
     }
 
-    constexpr inline TilePos operator*(int d) const {
+    [[nodiscard]]
+    constexpr inline TilePos operator*(int d) const noexcept {
         return TilePos(x * d, y * d);
     }
 
-    constexpr inline TilePos operator+(TilePos rhs) const {
+    [[nodiscard]]
+    constexpr inline TilePos operator+(TilePos rhs) const noexcept {
         return TilePos(x + rhs.x, y + rhs.y);
     }
 
-    inline operator glm::ivec2() const {
+    inline operator glm::ivec2() const noexcept {
         return glm::ivec2(x, y);
     }
 };
 
-constexpr SGE_FORCE_INLINE TilePos operator+(const TilePos& lhs, const glm::ivec2& rhs) {
+constexpr SGE_FORCE_INLINE TilePos operator+(const TilePos& lhs, const glm::ivec2& rhs) noexcept {
     return TilePos(lhs.x + rhs.x, lhs.y + rhs.y);
 }
 
-constexpr SGE_FORCE_INLINE TilePos operator+(const glm::ivec2& lhs, const TilePos& rhs) {
+constexpr SGE_FORCE_INLINE TilePos operator+(const glm::ivec2& lhs, const TilePos& rhs) noexcept {
     return TilePos(lhs.x + rhs.x, lhs.y + rhs.y);
 }
 
-constexpr SGE_FORCE_INLINE bool operator==(const TilePos a, const TilePos b) {
+constexpr SGE_FORCE_INLINE bool operator==(const TilePos a, const TilePos b) noexcept {
     return a.x == b.x && a.y == b.y;
 }
 

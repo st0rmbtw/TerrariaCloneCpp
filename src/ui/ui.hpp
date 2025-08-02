@@ -9,12 +9,12 @@
 #include "../player/player.hpp"
 
 namespace UI {
-    void Init();
-    void FixedUpdate();
-    void PreUpdate(Inventory& inventory);
-    void Update(Inventory& inventory);
-    void PostUpdate();
-    void Draw(const sge::Camera& camera, const Player& player);
+    void Init() noexcept;
+    void FixedUpdate() noexcept;
+    void PreUpdate(Inventory& inventory) noexcept;
+    void Update(Inventory& inventory) noexcept;
+    void PostUpdate() noexcept;
+    void Draw(const sge::Camera& camera, const Player& player) noexcept;
 };
 
 #endif

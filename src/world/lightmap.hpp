@@ -15,15 +15,16 @@ struct Color {
     uint8_t b;
     uint8_t a;
 
-    Color() = default;
+    Color() noexcept = default;
 
-    explicit Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) :
+    explicit Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) noexcept :
         r(r), g(g), b(b), a(a) {}
 
-    explicit Color(const glm::vec3& c) :
+    explicit Color(const glm::vec3& c) noexcept :
         r(c.r * 255.0f), g(c.g * 255.0f), b(c.b * 255.0f) {}
 
-    [[nodiscard]] inline glm::vec3 as_vec3() const {
+    [[nodiscard]]
+    inline glm::vec3 as_vec3() const noexcept {
         return glm::vec3(r / 255.0f, g / 255.0f, b / 255.0f);
     }
 };
@@ -36,7 +37,7 @@ struct LightMap {
     int width = 0;
     int height = 0;
 
-    LightMap() = default;
+    LightMap() noexcept = default;
 
     LightMap(int tiles_width, int tiles_height) {
         using Constants::SUBDIVISION;
@@ -64,7 +65,7 @@ struct LightMap {
     }
 
     [[nodiscard]]
-    inline glm::vec3 get_color(int index) const {
+    inline glm::vec3 get_color(int index) const noexcept {
         if (!(index >= 0 && index < width * height)) {
             return glm::vec3(0.0f);
         }
@@ -73,20 +74,20 @@ struct LightMap {
     }
 
     [[nodiscard]]
-    inline glm::vec3 get_color(TilePos pos) const {
+    inline glm::vec3 get_color(TilePos pos) const noexcept {
         return get_color(pos.y * width + pos.x);
     }
 
-    inline void set_color(size_t index, const glm::vec3& color) {
+    inline void set_color(size_t index, const glm::vec3& color) noexcept {
         colors[index] = Color(color);
     }
 
-    inline void set_color(TilePos pos, const glm::vec3& color) {
+    inline void set_color(TilePos pos, const glm::vec3& color) noexcept {
         set_color(pos.y * width + pos.x, color);
     }
 
     [[nodiscard]]
-    inline LightMask get_mask(int index) const {
+    inline LightMask get_mask(int index) const noexcept {
         if (!(index >= 0 && index < width * height)) {
             return false;
         }
@@ -95,15 +96,15 @@ struct LightMap {
     }
 
     [[nodiscard]]
-    inline LightMask get_mask(TilePos pos) const {
+    inline LightMask get_mask(TilePos pos) const noexcept {
         return get_mask(pos.y * width + pos.x);
     }
 
-    inline void set_mask(size_t index, LightMask mask) {
+    inline void set_mask(size_t index, LightMask mask) noexcept {
         masks[index] = mask;
     }
 
-    inline void set_mask(TilePos pos, LightMask mask) {
+    inline void set_mask(TilePos pos, LightMask mask) noexcept {
         set_mask(pos.y * width + pos.x, mask);
     }
 

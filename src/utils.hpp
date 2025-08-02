@@ -20,7 +20,7 @@
 #define ARRAY_LEN(array) (sizeof(array)/sizeof(array[0]))
 
 template <class T>
-static const T& list_at(const std::list<T>& list, int index) {
+inline const T& list_at(const std::list<T>& list, int index) {
     auto it = list.cbegin();
     for (int i = 0; i < index; i++){
         ++it;
@@ -28,18 +28,18 @@ static const T& list_at(const std::list<T>& list, int index) {
     return *it;
 }
 
-static inline TilePos get_lightmap_pos(glm::vec2 pos) {
+inline TilePos get_lightmap_pos(glm::vec2 pos) noexcept {
     return glm::ivec2(pos * static_cast<float>(Constants::SUBDIVISION) / Constants::TILE_SIZE);
 }
 
 template <typename T, class F>
-static inline auto map(std::optional<T> a, F&& func) -> std::optional<decltype(func(a.value()))> {
+inline auto map(std::optional<T> a, F&& func) noexcept -> std::optional<decltype(func(a.value()))> {
     if (!a.has_value()) return std::nullopt;
     return func(a.value());
 }
 
 template <typename TNode, typename TGetNeighborsFunc, typename TProcessNodeFunc>
-static inline void bfs(TNode start_node, TGetNeighborsFunc&& get_neighbors_func, TProcessNodeFunc&& process_node_func) {
+inline void bfs(TNode start_node, TGetNeighborsFunc&& get_neighbors_func, TProcessNodeFunc&& process_node_func) {
     std::vector<TNode> q;
 
     q.push_back(start_node);

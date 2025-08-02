@@ -17,14 +17,14 @@ struct Neighbors {
     std::optional<T> bottom_right;
 
     [[nodiscard]]
-    inline bool any_exists() const {
+    inline bool any_exists() const noexcept {
         return top.has_value() || bottom.has_value() || left.has_value() || 
             right.has_value() || top_left.has_value() || top_right.has_value() || 
             bottom_left.has_value() || bottom_right.has_value();
     }
 
     [[nodiscard]]
-    inline bool any_not_exists() const {
+    inline bool any_not_exists() const noexcept {
         return !top.has_value() || !bottom.has_value() || !left.has_value() || 
             !right.has_value() || !top_left.has_value() || !top_right.has_value() || 
             !bottom_left.has_value() || !bottom_right.has_value();

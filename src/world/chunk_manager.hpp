@@ -46,10 +46,25 @@ public:
         }
     }
 
-    [[nodiscard]] inline const ChunkMap& render_chunks() const { return m_render_chunks; }
-    [[nodiscard]] inline const ChunkPosSet& visible_chunks() const { return m_visible_chunks; }
-    [[nodiscard]] inline std::deque<RenderChunk>& chunks_to_destroy() { return m_chunks_to_destroy; }
-    [[nodiscard]] inline bool any_chunks_to_destroy() { return !m_chunks_to_destroy.empty(); }
+    [[nodiscard]]
+    inline const ChunkMap& render_chunks() const noexcept {
+        return m_render_chunks;
+    }
+
+    [[nodiscard]]
+    inline const ChunkPosSet& visible_chunks() const noexcept {
+        return m_visible_chunks;
+    }
+
+    [[nodiscard]]
+    inline std::deque<RenderChunk>& chunks_to_destroy() noexcept {
+        return m_chunks_to_destroy;
+    }
+
+    [[nodiscard]]
+    inline bool any_chunks_to_destroy() noexcept {
+        return !m_chunks_to_destroy.empty();
+    }
 
     ~ChunkManager() {
         free(m_block_data_arena);

@@ -52,7 +52,10 @@ struct RenderChunk {
 
     void destroy();
 
-    [[nodiscard]] inline bool dirty() const { return blocks_dirty || walls_dirty; }
+    [[nodiscard]]
+    inline bool dirty() const noexcept {
+        return blocks_dirty || walls_dirty;
+    }
 };
 
 #endif

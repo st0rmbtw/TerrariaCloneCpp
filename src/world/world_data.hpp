@@ -36,23 +36,23 @@ struct WorldData {
     std::deque<std::pair<TilePos, int>> changed_tiles;
 
     [[nodiscard]]
-    inline uint32_t get_tile_index(TilePos pos) const {
+    inline uint32_t get_tile_index(TilePos pos) const noexcept {
         return (pos.y * this->area.width()) + pos.x;
     }
     
     [[nodiscard]]
-    inline bool is_tilepos_valid(TilePos pos) const {
+    inline bool is_tilepos_valid(TilePos pos) const noexcept {
         return (pos.x >= 0 && pos.y >= 0 && pos.x < this->area.width() && pos.y < this->area.height());
     }
 
     [[nodiscard]]
-    std::optional<Block> get_block(TilePos pos) const {
+    std::optional<Block> get_block(TilePos pos) const noexcept {
         if (!is_tilepos_valid(pos)) return std::nullopt;
         return this->blocks[get_tile_index(pos)];
     }
 
     [[nodiscard]]
-    std::optional<Wall> get_wall(TilePos pos) const {
+    std::optional<Wall> get_wall(TilePos pos) const noexcept {
         if (!is_tilepos_valid(pos)) return std::nullopt;
         return this->walls[get_tile_index(pos)];
     }
@@ -64,7 +64,7 @@ struct WorldData {
     Wall* get_wall_mut(TilePos pos);
 
     [[nodiscard]]
-    inline bool block_exists(TilePos pos) const {
+    inline bool block_exists(TilePos pos) const noexcept {
         if (!is_tilepos_valid(pos)) return false;
         return blocks[get_tile_index(pos)].has_value();
     }
@@ -80,13 +80,13 @@ struct WorldData {
     }
 
     [[nodiscard]]
-    inline bool wall_exists(TilePos pos) const {
+    inline bool wall_exists(TilePos pos) const noexcept {
         if (!is_tilepos_valid(pos)) return false;
         return walls[this->get_tile_index(pos)].has_value();
     }
 
     [[nodiscard]]
-    std::optional<BlockType> get_block_type(TilePos pos) const;
+    std::optional<BlockType> get_block_type(TilePos pos) const noexcept;
 
     [[nodiscard]]
     Neighbors<Block> get_block_neighbors(TilePos pos) const;
@@ -104,7 +104,7 @@ struct WorldData {
     Neighbors<Wall*> get_wall_neighbors_mut(TilePos pos);
     
     [[nodiscard]]
-    bool block_exists_with_type(TilePos pos, BlockType block_type) const {
+    bool block_exists_with_type(TilePos pos, BlockType block_type) const noexcept {
         const std::optional<BlockType> block = this->get_block_type(pos);
         if (!block.has_value()) return false;
         return block.value() == block_type;

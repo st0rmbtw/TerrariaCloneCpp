@@ -31,7 +31,7 @@ Wall* WorldData::get_wall_mut(TilePos pos) {
     return &this->walls[index].value();
 }
 
-std::optional<BlockType> WorldData::get_block_type(TilePos pos) const {
+std::optional<BlockType> WorldData::get_block_type(TilePos pos) const noexcept {
     if (!is_tilepos_valid(pos)) return std::nullopt;
 
     const std::optional<Block> block = get_block(pos);
