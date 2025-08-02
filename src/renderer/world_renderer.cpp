@@ -14,10 +14,9 @@
 #include <SGE/renderer/macros.hpp>
 #include <SGE/types/binding_layout.hpp>
 #include <SGE/defines.hpp>
+#include <SGE/profile.hpp>
 
 #include <glm/gtc/type_ptr.hpp>
-
-#include <tracy/Tracy.hpp>
 
 #include "../assets.hpp"
 #include "../world/chunk.hpp"
@@ -38,13 +37,14 @@ static constexpr float WALL_DEPTH = 0.1f;
 struct SGE_ALIGN(16) TileTextureData {
     glm::vec2 tex_size;
     glm::vec2 tex_padding;
+    glm::vec2 tex_offset;
     glm::vec2 size;
     glm::vec2 offset;
     float depth;
 };
 
 void WorldRenderer::init() {
-    ZoneScopedN("WorldRenderer::init");
+    ZoneScoped;
 
     using Constants::TILE_SIZE;
     using Constants::WALL_SIZE;
@@ -59,15 +59,22 @@ void WorldRenderer::init() {
     {
         const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Tiles).size());
         const glm::vec2 tile_padding = glm::vec2(Constants::TILE_TEXTURE_PADDING) / tile_tex_size;
+        const glm::vec2 tile_offset = glm::vec2(Constants::TILE_TEXTURE_PADDING) / tile_tex_size;
 
         const glm::vec2 wall_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Walls).size());
         const glm::vec2 wall_padding = glm::vec2(Constants::WALL_TEXTURE_PADDING) / wall_tex_size;
 
-        const TileTextureData texture_data[] = {
-            TileTextureData{tile_tex_size, tile_padding, glm::vec2(TILE_SIZE),  glm::vec2(0.0f), TILE_DEPTH}, // Tile
-            TileTextureData{wall_tex_size, wall_padding, glm::vec2(WALL_SIZE),  glm::vec2(-TILE_SIZE * 0.5f), WALL_DEPTH}, // Wall
-            TileTextureData{tile_tex_size, tile_padding, glm::vec2(TORCH_SIZE), glm::vec2(-2.0f, 0.0f), TILE_DEPTH}, // Torch
-        };
+        const glm::vec2 trees_size = Assets::GetTextureAtlas(TextureAsset::Tiles5).size();
+        const glm::vec2 tree_tops_size = Assets::GetTextureAtlas(TextureAsset::TreeTops).size();
+        const glm::vec2 tree_branches_size = Assets::GetTextureAtlas(TextureAsset::TreeBranches).size();
+
+        TileTextureData texture_data[TileType::Count];
+        texture_data[TileType::Block] = TileTextureData{tile_tex_size, tile_padding, glm::vec2(0.0f), glm::vec2(TILE_SIZE),  glm::vec2(0.0f), TILE_DEPTH}; // Tile
+        texture_data[TileType::Wall] = TileTextureData{wall_tex_size, wall_padding, glm::vec2(0.0f), glm::vec2(WALL_SIZE),  glm::vec2(-TILE_SIZE * 0.5f), WALL_DEPTH}; // Wall
+        texture_data[TileType::Torch] = TileTextureData{tile_tex_size, tile_padding, glm::vec2(0.0f), glm::vec2(TORCH_SIZE), glm::vec2(-2.0f, 0.0f), TILE_DEPTH}; // Torch
+        texture_data[TileType::Tree] = TileTextureData{tile_tex_size, tile_padding, tile_offset, trees_size, glm::vec2(0.0f, 0.0f), TILE_DEPTH}; // Tree
+        texture_data[TileType::TreeCrown] = TileTextureData{tile_tex_size, glm::vec2(0.0f), glm::vec2(0.0f), tree_tops_size, -tree_tops_size * 0.5f + glm::vec2(10.0f, 10.0f), TILE_DEPTH}; // Tree tops
+        texture_data[TileType::TreeBranch] = TileTextureData{tile_tex_size, tile_padding, tile_offset, tree_branches_size, glm::vec2(-15.0f), TILE_DEPTH}; // Tree branches
 
         LLGL::BufferDescriptor desc;
         desc.size = sizeof(texture_data);
@@ -277,7 +284,7 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
 }
 
 void WorldRenderer::init_textures(const WorldData& world) {
-    ZoneScopedN("WorldRenderer::init_textures");
+    ZoneScoped;
 
     using Constants::SUBDIVISION;
 
@@ -403,7 +410,7 @@ void WorldRenderer::update(World& world) {
 }
 
 void WorldRenderer::update_lightmap_texture(WorldData& world) {
-    ZoneScopedN("WorldRenderer::update_lightmap_texture");
+    ZoneScoped;
 
     const auto& context = m_renderer->Context();
 
@@ -416,7 +423,7 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
         const LightMapTaskResult result = task.result->load();
 
         if (result.is_complete) {
-            ZoneScopedN("WorldRenderer::process_lightmap_task_result");
+            ZoneScoped;
 
             internal_update_world_lightmap(world, result);
 
@@ -472,7 +479,7 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
 }
 
 void WorldRenderer::render(const ChunkManager& chunk_manager) {
-    ZoneScopedN("WorldRenderer::render");
+    ZoneScoped;
 
     auto* const commands = m_renderer->CommandBuffer();
 

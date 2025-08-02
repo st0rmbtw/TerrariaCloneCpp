@@ -4,14 +4,14 @@
 #include <memory>
 #include <thread>
 
-#include <tracy/Tracy.hpp>
-
 #include <SGE/defines.hpp>
+#include <SGE/profile.hpp>
+
 #include "lightmap.hpp"
 
 using Constants::SUBDIVISION;
 
-Tile* WorldData::get_tile_mut(TilePos pos) {
+Block* WorldData::get_block_mut(TilePos pos) {
     if (!is_tilepos_valid(pos)) return nullptr;
 
     const size_t index = this->get_tile_index(pos);
@@ -31,51 +31,51 @@ Wall* WorldData::get_wall_mut(TilePos pos) {
     return &this->walls[index].value();
 }
 
-std::optional<TileType> WorldData::get_tile_type(TilePos pos) const {
+std::optional<BlockType> WorldData::get_block_type(TilePos pos) const noexcept {
     if (!is_tilepos_valid(pos)) return std::nullopt;
 
-    const std::optional<Tile> block = get_tile(pos);
+    const std::optional<Block> block = get_block(pos);
     if (!block.has_value()) return std::nullopt;
 
     return block->type;
 }
 
-Neighbors<Tile> WorldData::get_tile_neighbors(TilePos pos) const {
-    return Neighbors<Tile> {
-        .top = get_tile(pos.offset(TileOffset::Top)),
-        .bottom = get_tile(pos.offset(TileOffset::Bottom)),
-        .left = get_tile(pos.offset(TileOffset::Left)),
-        .right = get_tile(pos.offset(TileOffset::Right)),
-        .top_left = get_tile(pos.offset(TileOffset::TopLeft)),
-        .top_right = get_tile(pos.offset(TileOffset::TopRight)),
-        .bottom_left = get_tile(pos.offset(TileOffset::BottomLeft)),
-        .bottom_right = get_tile(pos.offset(TileOffset::BottomRight)),
+Neighbors<Block> WorldData::get_block_neighbors(TilePos pos) const {
+    return Neighbors<Block> {
+        .top = get_block(pos.offset(TileOffset::Top)),
+        .bottom = get_block(pos.offset(TileOffset::Bottom)),
+        .left = get_block(pos.offset(TileOffset::Left)),
+        .right = get_block(pos.offset(TileOffset::Right)),
+        .top_left = get_block(pos.offset(TileOffset::TopLeft)),
+        .top_right = get_block(pos.offset(TileOffset::TopRight)),
+        .bottom_left = get_block(pos.offset(TileOffset::BottomLeft)),
+        .bottom_right = get_block(pos.offset(TileOffset::BottomRight)),
     };
 }
 
-Neighbors<TileType> WorldData::get_tile_type_neighbors(TilePos pos) const {
-    return Neighbors<TileType> {
-        .top = get_tile_type(pos.offset(TileOffset::Top)),
-        .bottom = get_tile_type(pos.offset(TileOffset::Bottom)),
-        .left = get_tile_type(pos.offset(TileOffset::Left)),
-        .right = get_tile_type(pos.offset(TileOffset::Right)),
-        .top_left = get_tile_type(pos.offset(TileOffset::TopLeft)),
-        .top_right = get_tile_type(pos.offset(TileOffset::TopRight)),
-        .bottom_left = get_tile_type(pos.offset(TileOffset::BottomLeft)),
-        .bottom_right = get_tile_type(pos.offset(TileOffset::BottomRight)),
+Neighbors<BlockType> WorldData::get_block_type_neighbors(TilePos pos) const {
+    return Neighbors<BlockType> {
+        .top = get_block_type(pos.offset(TileOffset::Top)),
+        .bottom = get_block_type(pos.offset(TileOffset::Bottom)),
+        .left = get_block_type(pos.offset(TileOffset::Left)),
+        .right = get_block_type(pos.offset(TileOffset::Right)),
+        .top_left = get_block_type(pos.offset(TileOffset::TopLeft)),
+        .top_right = get_block_type(pos.offset(TileOffset::TopRight)),
+        .bottom_left = get_block_type(pos.offset(TileOffset::BottomLeft)),
+        .bottom_right = get_block_type(pos.offset(TileOffset::BottomRight)),
     };
 }
 
-Neighbors<Tile*> WorldData::get_tile_neighbors_mut(TilePos pos) {
-    return Neighbors<Tile*> {
-        .top = this->get_tile_mut(pos.offset(TileOffset::Top)),
-        .bottom = this->get_tile_mut(pos.offset(TileOffset::Bottom)),
-        .left = this->get_tile_mut(pos.offset(TileOffset::Left)),
-        .right = this->get_tile_mut(pos.offset(TileOffset::Right)),
-        .top_left = this->get_tile_mut(pos.offset(TileOffset::TopLeft)),
-        .top_right = this->get_tile_mut(pos.offset(TileOffset::TopRight)),
-        .bottom_left = this->get_tile_mut(pos.offset(TileOffset::BottomLeft)),
-        .bottom_right = this->get_tile_mut(pos.offset(TileOffset::BottomRight)),
+Neighbors<Block*> WorldData::get_block_neighbors_mut(TilePos pos) {
+    return Neighbors<Block*> {
+        .top = get_block_mut(pos.offset(TileOffset::Top)),
+        .bottom = get_block_mut(pos.offset(TileOffset::Bottom)),
+        .left = get_block_mut(pos.offset(TileOffset::Left)),
+        .right = get_block_mut(pos.offset(TileOffset::Right)),
+        .top_left = get_block_mut(pos.offset(TileOffset::TopLeft)),
+        .top_right = get_block_mut(pos.offset(TileOffset::TopRight)),
+        .bottom_left = get_block_mut(pos.offset(TileOffset::BottomLeft)),
+        .bottom_right = get_block_mut(pos.offset(TileOffset::BottomRight)),
     };
 }
 
@@ -94,19 +94,19 @@ Neighbors<Wall> WorldData::get_wall_neighbors(TilePos pos) const {
 
 Neighbors<Wall*> WorldData::get_wall_neighbors_mut(TilePos pos) {
     return Neighbors<Wall*> {
-        .top = this->get_wall_mut(pos.offset(TileOffset::Top)),
-        .bottom = this->get_wall_mut(pos.offset(TileOffset::Bottom)),
-        .left = this->get_wall_mut(pos.offset(TileOffset::Left)),
-        .right = this->get_wall_mut(pos.offset(TileOffset::Right)),
-        .top_left = this->get_wall_mut(pos.offset(TileOffset::TopLeft)),
-        .top_right = this->get_wall_mut(pos.offset(TileOffset::TopRight)),
-        .bottom_left = this->get_wall_mut(pos.offset(TileOffset::BottomLeft)),
-        .bottom_right = this->get_wall_mut(pos.offset(TileOffset::BottomRight)),
+        .top = get_wall_mut(pos.offset(TileOffset::Top)),
+        .bottom = get_wall_mut(pos.offset(TileOffset::Bottom)),
+        .left = get_wall_mut(pos.offset(TileOffset::Left)),
+        .right = get_wall_mut(pos.offset(TileOffset::Right)),
+        .top_left = get_wall_mut(pos.offset(TileOffset::TopLeft)),
+        .top_right = get_wall_mut(pos.offset(TileOffset::TopRight)),
+        .bottom_left = get_wall_mut(pos.offset(TileOffset::BottomLeft)),
+        .bottom_right = get_wall_mut(pos.offset(TileOffset::BottomRight)),
     };
 }
 
 static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, const sge::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
-    ZoneScopedN("LightMap::init_area");
+    ZoneScoped;
 
     const int min_y = area.min.y * SUBDIVISION;
     const int max_y = area.max.y * SUBDIVISION;
@@ -120,9 +120,9 @@ static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, co
             const TilePos color_pos = TilePos(x, y);
             const TilePos tile_pos = tile_offset + color_pos / SUBDIVISION;
 
-            lightmap.set_mask(color_pos, world.tile_exists(tile_pos));
+            lightmap.set_mask(color_pos, world.solid_block_exists(tile_pos));
 
-            std::optional<glm::vec3> light = tile_light(world.get_tile_type(tile_pos));
+            std::optional<glm::vec3> light = block_light(world.get_block_type(tile_pos));
             if (light.has_value()) {
                 lightmap.set_color(color_pos, light.value());
                 continue;
@@ -133,7 +133,7 @@ static void internal_lightmap_init_area(WorldData& world, LightMap& lightmap, co
                 continue;
             }
 
-            if (tile_pos.x < world.playable_area.min.x || tile_pos.x > world.playable_area.max.x - 1 || world.tile_exists(tile_pos) || world.wall_exists(tile_pos)) {
+            if (tile_pos.x < world.playable_area.min.x || tile_pos.x > world.playable_area.max.x - 1 || world.solid_block_exists(tile_pos) || world.wall_exists(tile_pos)) {
                 lightmap.set_color(color_pos, glm::vec3(0.0f));
             } else {
                 lightmap.set_color(color_pos, glm::vec3(1.0f));
@@ -185,7 +185,7 @@ SGE_FORCE_INLINE static void blur_line(LightMap& lightmap, int start, int end, i
     }
 }
 
-SGE_FORCE_INLINE static void blur_horizontal(const WorldData& world, LightMap& lightmap, const sge::IRect& area, TilePos offset) {
+inline static void blur_horizontal(const WorldData& world, LightMap& lightmap, const sge::IRect& area, TilePos offset) {
     #pragma omp parallel for
     for (int y = area.min.y; y < area.max.y; ++y) {
         glm::vec3 prev_light = world.lightmap.get_color({offset.x + area.min.x, offset.y + y});
@@ -198,7 +198,7 @@ SGE_FORCE_INLINE static void blur_horizontal(const WorldData& world, LightMap& l
     }
 }
 
-SGE_FORCE_INLINE static void blur_vertical(const WorldData& world, LightMap& lightmap, const sge::IRect& area, TilePos offset) {
+inline static void blur_vertical(const WorldData& world, LightMap& lightmap, const sge::IRect& area, TilePos offset) {
     #pragma omp parallel for
     for (int x = area.min.x; x < area.max.x; ++x) {
         glm::vec3 prev_light = world.lightmap.get_color({offset.x + x, offset.y + area.min.y});
@@ -212,6 +212,8 @@ SGE_FORCE_INLINE static void blur_vertical(const WorldData& world, LightMap& lig
 }
 
 static void internal_lightmap_blur_area(WorldData& world, LightMap& lightmap, const sge::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
+    ZoneScoped;
+
     const sge::IRect lightmap_area = area * SUBDIVISION;
     const TilePos offset = {tile_offset.x * SUBDIVISION, tile_offset.y * SUBDIVISION};
 

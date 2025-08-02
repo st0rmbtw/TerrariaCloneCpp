@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <stdlib.h>
+#include <cstdint>
+#include <cstdlib>
 
 #include "texture_atlas_pos.hpp"
 
@@ -14,7 +14,7 @@ enum class WallType : uint8_t {
     WoodWall = 4,
 };
 
-inline constexpr static int16_t wall_hp(WallType /* wall_type */) {
+inline constexpr int16_t wall_hp(WallType /* wall_type */) {
     return 70;
 }
 

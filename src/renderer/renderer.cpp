@@ -13,13 +13,12 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-#include <tracy/Tracy.hpp>
-
 #include <SGE/engine.hpp>
 #include <SGE/renderer/macros.hpp>
 #include <SGE/renderer/batch.hpp>
 #include <SGE/types/binding_layout.hpp>
 #include <SGE/types/blend_mode.hpp>
+#include <SGE/profile.hpp>
 
 #include "../assets.hpp"
 #include "../utils.hpp"
@@ -183,7 +182,7 @@ void GameRenderer::UpdateLight() {
 }
 
 void GameRenderer::Begin(const sge::Camera& camera, World& world) {
-    ZoneScopedN("Renderer::Begin");
+    ZoneScoped;
 
     sge::Renderer& renderer = sge::Engine::Renderer();
     auto* const commands = renderer.CommandBuffer();
@@ -226,7 +225,7 @@ void GameRenderer::Begin(const sge::Camera& camera, World& world) {
 }
 
 void GameRenderer::Render(const sge::Camera& camera, const World& world) {
-    ZoneScopedN("Renderer::Render");
+    ZoneScoped;
 
     sge::Renderer& renderer = sge::Engine::Renderer();
     auto* const commands = renderer.CommandBuffer();
@@ -288,32 +287,32 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
     state.background_renderer.reset();
 }
 
-void GameRenderer::BeginOrderMode(int order, bool advance) {
+void GameRenderer::BeginOrderMode(int order, bool advance) noexcept {
     state.main_batch.BeginOrderMode(order, advance);
     state.world_batch.BeginOrderMode(order, advance);
     state.ui_batch.BeginOrderMode(order, advance);
 }
 
-void GameRenderer::EndOrderMode() {
+void GameRenderer::EndOrderMode() noexcept {
     state.main_batch.EndOrderMode();
     state.world_batch.EndOrderMode();
     state.ui_batch.EndOrderMode();
 }
 
-void GameRenderer::BeginBlendMode(sge::BlendMode blend_mode) {
+void GameRenderer::BeginBlendMode(sge::BlendMode blend_mode) noexcept {
     state.main_batch.BeginBlendMode(blend_mode);
     state.world_batch.BeginBlendMode(blend_mode);
     state.ui_batch.BeginBlendMode(blend_mode);
 }
 
-void GameRenderer::EndBlendMode() {
+void GameRenderer::EndBlendMode() noexcept {
     state.main_batch.EndBlendMode();
     state.world_batch.EndBlendMode();
     state.ui_batch.EndBlendMode();
 }
 
 uint32_t GameRenderer::DrawSprite(const sge::Sprite& sprite, sge::Order order) {
-    ZoneScopedN("Renderer::DrawSprite");
+    ZoneScoped;
 
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
@@ -322,7 +321,7 @@ uint32_t GameRenderer::DrawSprite(const sge::Sprite& sprite, sge::Order order) {
 }
 
 uint32_t GameRenderer::DrawSpriteWorld(const sge::Sprite& sprite, sge::Order order) {
-    ZoneScopedN("Renderer::DrawSprite");
+    ZoneScoped;
 
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
@@ -331,7 +330,7 @@ uint32_t GameRenderer::DrawSpriteWorld(const sge::Sprite& sprite, sge::Order ord
 }
 
 uint32_t GameRenderer::DrawSpriteUI(const sge::Sprite& sprite, sge::Order order) {
-    ZoneScopedN("Renderer::DrawSpriteUI");
+    ZoneScoped;
 
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.ui_frustum.intersects(aabb)) return 0;
@@ -340,7 +339,7 @@ uint32_t GameRenderer::DrawSpriteUI(const sge::Sprite& sprite, sge::Order order)
 }
 
 uint32_t GameRenderer::DrawAtlasSprite(const sge::TextureAtlasSprite& sprite, sge::Order order) {
-    ZoneScopedN("Renderer::DrawAtlasSprite");
+    ZoneScoped;
 
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
@@ -349,7 +348,7 @@ uint32_t GameRenderer::DrawAtlasSprite(const sge::TextureAtlasSprite& sprite, sg
 }
 
 uint32_t GameRenderer::DrawAtlasSpriteWorld(const sge::TextureAtlasSprite& sprite, sge::Order order) {
-    ZoneScopedN("Renderer::DrawAtlasSpriteWorld");
+    ZoneScoped;
 
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
@@ -358,7 +357,7 @@ uint32_t GameRenderer::DrawAtlasSpriteWorld(const sge::TextureAtlasSprite& sprit
 }
 
 uint32_t GameRenderer::DrawAtlasSpriteWorldPremultiplied(const sge::TextureAtlasSprite& sprite, sge::Order order) {
-    ZoneScopedN("Renderer::DrawAtlasSpriteWorldPremultiplied");
+    ZoneScoped;
 
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
@@ -371,7 +370,7 @@ uint32_t GameRenderer::DrawAtlasSpriteWorldPremultiplied(const sge::TextureAtlas
 }
 
 uint32_t GameRenderer::DrawAtlasSpriteUI(const sge::TextureAtlasSprite& sprite, sge::Order order) {
-    ZoneScopedN("Renderer::DrawAtlasSpriteUI");
+    ZoneScoped;
 
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.ui_frustum.intersects(aabb)) return 0;
@@ -380,7 +379,7 @@ uint32_t GameRenderer::DrawAtlasSpriteUI(const sge::TextureAtlasSprite& sprite, 
 }
 
 uint32_t GameRenderer::DrawNinePatchUI(const sge::NinePatch& ninepatch, sge::Order order) {
-    ZoneScopedN("Renderer::DrawNinePatchUI");
+    ZoneScoped;
 
     const sge::Rect aabb = ninepatch.calculate_aabb();
     if (!state.ui_frustum.intersects(aabb)) return 0;
@@ -389,19 +388,19 @@ uint32_t GameRenderer::DrawNinePatchUI(const sge::NinePatch& ninepatch, sge::Ord
 }
 
 uint32_t GameRenderer::DrawText(const sge::RichTextSection* sections, size_t size, const glm::vec2& position, const sge::Font& font, sge::Order order) {
-    ZoneScopedN("Renderer::DrawText");
+    ZoneScoped;
 
     return state.main_batch.DrawText(sections, size, position, font, order);
 }
 
 uint32_t GameRenderer::DrawTextUI(const sge::RichTextSection* sections, size_t size, const glm::vec2& position, const sge::Font& font, sge::Order order) {
-    ZoneScopedN("Renderer::DrawTextUI");
+    ZoneScoped;
 
     return state.ui_batch.DrawText(sections, size, position, font, order);
 }
 
 void GameRenderer::DrawBackground(const BackgroundLayer& layer) {
-    ZoneScopedN("Renderer::DrawBackground");
+    ZoneScoped;
 
     const sge::Rect aabb = sge::Rect::from_top_left(layer.position() - layer.anchor().to_vec2() * layer.size(), layer.size());
     if (!state.camera_frustums[layer.nonscale()].intersects(aabb)) return;
@@ -414,7 +413,7 @@ void GameRenderer::DrawBackground(const BackgroundLayer& layer) {
 }
 
 void GameRenderer::DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, sge::Order order, bool world) {
-    ZoneScopedN("Renderer::DrawParticle");
+    ZoneScoped;
 
     if (world)
         state.particle_renderer.draw_particle_world(position, rotation, scale, type, variant, order);

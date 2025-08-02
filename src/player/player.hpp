@@ -93,27 +93,47 @@ public:
     void update(World& world);
     void draw() const;
 
-    void set_position(const World& world, const glm::vec2& position);
+    void set_position(const World& world, const glm::vec2& position) noexcept;
 
     [[nodiscard]]
     inline glm::vec2 draw_position() const noexcept {
         return glm::vec2(m_position.x, m_position.y + m_draw_offset_y);
     }
 
-    [[nodiscard]] const glm::vec2& position() const { return m_position; }
-    [[nodiscard]] Direction direction() const { return m_direction; }
+    [[nodiscard]]
+    const glm::vec2& position() const noexcept {
+        return m_position;
+    }
 
-    [[nodiscard]] const Inventory& inventory() const { return m_inventory; }
-    [[nodiscard]] Inventory& inventory() { return m_inventory; }
+    [[nodiscard]]
+    Direction direction() const noexcept {
+        return m_direction;
+    }
+    
+    [[nodiscard]]
+    const Inventory& inventory() const noexcept {
+        return m_inventory;
+    }
 
-    [[nodiscard]] constexpr bool can_use_item() const { return true; }
+    [[nodiscard]]
+    Inventory& inventory() noexcept {
+        return m_inventory;
+    }
+
+    [[nodiscard]]
+    constexpr bool can_use_item() const noexcept {
+        return true;
+    }
     
 private:
     void horizontal_movement(bool handle_input);
     void vertical_movement(bool handle_input);
     void gravity();
     glm::vec2 check_collisions(const World& world);
-    void keep_in_world_bounds(const World& world);
+
+    [[nodiscard]]
+    void keep_in_world_bounds(const World& world) noexcept;
+
     void update_sprites();
     void update_walk_anim_timer();
     void update_sprites_index();
@@ -123,7 +143,8 @@ private:
     void spawn_particles_on_walk() const;
     void spawn_particles_grounded() const;
 
-    [[nodiscard]] float get_fall_distance() const;
+    [[nodiscard]]
+    float get_fall_distance() const;
 
     void use_item(const sge::Camera& camera, World& world);
     void interact(const sge::Camera& camera, World& world);
@@ -149,7 +170,7 @@ private:
     bool m_swing_anim = false;
     bool m_using_item_visible = false;
     bool m_prev_grounded = false;
-    std::optional<TileType> m_stand_on_tile = std::nullopt;
+    std::optional<BlockTypeWithData> m_stand_on_tile = std::nullopt;
 
     MovementState m_movement_state;
 

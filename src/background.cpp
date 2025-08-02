@@ -2,8 +2,7 @@
 
 #include <vector>
 
-#include <tracy/Tracy.hpp>
-
+#include <SGE/profile.hpp>
 #include <SGE/types/anchor.hpp>
 
 #include "types/background_layer.hpp"
@@ -91,7 +90,7 @@ void Background::SetupWorldBackground(const World& world) {
 }
 
 void Background::Update(const sge::Camera &camera, const World& world) {
-    ZoneScopedN("Background::Update");
+    ZoneScoped;
 
     const float offset = (camera.viewport().y - 600.0f) * 0.5f;
 
@@ -116,7 +115,7 @@ void Background::Update(const sge::Camera &camera, const World& world) {
 }
 
 void Background::Draw() {
-    ZoneScopedN("Background::Draw");
+    ZoneScoped;
 
     for (const BackgroundLayer& layer : state.layers) {
         GameRenderer::DrawBackground(layer);

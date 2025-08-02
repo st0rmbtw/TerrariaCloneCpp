@@ -295,11 +295,11 @@ void init_tile_rules() {
     state.grass_rules[15].emplace_back("F3", "J3",   0x1000, 0x10000000, 0x00000000, 0x0000);
 }
 
-void update_block_sprite_index(Tile& tile, const Neighbors<Tile>& neighbors) {
-    if (tile.type == TileType::Torch) {
-        AnchorData anchor = tile_anchor(tile.type);
+void update_block_sprite_index(Block& tile, const Neighbors<Block>& neighbors) {
+    if (tile.type == BlockType::Torch) {
+        const AnchorData anchor = block_anchor(tile.type);
 
-        const auto to_type = [](Tile tile) {
+        const auto to_type = [](Block tile) {
             return tile.type;
         };
 
@@ -312,6 +312,80 @@ void update_block_sprite_index(Tile& tile, const Neighbors<Tile>& neighbors) {
         tile.atlas_pos = TextureAtlasPos(index, 0);
 
         return;
+    } else if (tile.type == BlockType::Tree) {
+        switch (tile.data.tree.frame) {
+            case TreeFrameType::Trunk:
+                tile.atlas_pos = TextureAtlasPos(0, tile.variant);
+            break;
+            case TreeFrameType::TrunkBranchLeft:
+                tile.atlas_pos = TextureAtlasPos(4, tile.variant);
+            break;
+            case TreeFrameType::TrunkBranchRight:
+                tile.atlas_pos = TextureAtlasPos(3, 3 + tile.variant);
+            break;
+            case TreeFrameType::TrunkBranchBoth:
+                tile.atlas_pos = TextureAtlasPos(5, 3 + tile.variant);
+            break;
+            case TreeFrameType::TrunkHollowLeft:
+                tile.atlas_pos = TextureAtlasPos(0, 3 + tile.variant);
+            break;
+            case TreeFrameType::TrunkHollowRight:
+                tile.atlas_pos = TextureAtlasPos(1, tile.variant);
+            break;
+            case TreeFrameType::TrunkBranchCollarLeft:
+                tile.atlas_pos = TextureAtlasPos(1, 3 + tile.variant);
+            break;
+            case TreeFrameType::TrunkBranchCollarRight:
+                tile.atlas_pos = TextureAtlasPos(2, 3 + tile.variant);
+            break;
+            case TreeFrameType::RootLeft:
+                tile.atlas_pos = TextureAtlasPos(2, 6 + tile.variant);
+            break;
+            case TreeFrameType::RootRight:
+                tile.atlas_pos = TextureAtlasPos(1, 6 + tile.variant);
+            break;
+            case TreeFrameType::BaseBoth:
+                tile.atlas_pos = TextureAtlasPos(4, 6 + tile.variant);
+            break;
+            case TreeFrameType::BaseLeft:
+                tile.atlas_pos = TextureAtlasPos(3, 6 + tile.variant);
+            break;
+            case TreeFrameType::BaseRight:
+                tile.atlas_pos = TextureAtlasPos(0, 6 + tile.variant);
+            break;
+            case TreeFrameType::BranchLeftBare:
+                tile.atlas_pos = TextureAtlasPos(3, tile.variant);
+            break;
+            case TreeFrameType::BranchRightBare:
+                tile.atlas_pos = TextureAtlasPos(4, 3 + tile.variant);
+            break;
+            case TreeFrameType::BranchLeftLeaves:
+                tile.atlas_pos = TextureAtlasPos(0, tile.variant);
+            break;
+            case TreeFrameType::BranchRightLeaves:
+                tile.atlas_pos = TextureAtlasPos(1, tile.variant);
+            break;
+            case TreeFrameType::TopBare:
+                tile.atlas_pos = TextureAtlasPos(5, tile.variant);
+            break;
+            case TreeFrameType::TopLeaves:
+                tile.atlas_pos = TextureAtlasPos(tile.variant, 0);
+            break;
+            case TreeFrameType::TopBareJagged:
+                tile.atlas_pos = TextureAtlasPos(0, 9 + tile.variant);
+            break;
+            case TreeFrameType::StumpRootLeft:
+                tile.atlas_pos = TextureAtlasPos(7, tile.variant);
+            break;
+            case TreeFrameType::StumpRootRight:
+                tile.atlas_pos = TextureAtlasPos(7, 3 + tile.variant);
+            break;
+            case TreeFrameType::StumpRootBoth:
+                tile.atlas_pos = TextureAtlasPos(7, 6 + tile.variant);
+            break;
+        }
+
+        return;
     }
 
     if (tile.is_merged) return;
@@ -319,24 +393,24 @@ void update_block_sprite_index(Tile& tile, const Neighbors<Tile>& neighbors) {
     uint32_t neighbors_mask = 0;
     uint32_t blend_mask = 0;
 
-    if (tile_is_stone(tile.type)) {
-        neighbors_mask |= (neighbors.right.has_value()        && tile_is_stone(neighbors.right->type))        ? 0x00000001 : 0x0;
-        neighbors_mask |= (neighbors.top.has_value()          && tile_is_stone(neighbors.top->type))          ? 0x00000010 : 0x0;
-        neighbors_mask |= (neighbors.left.has_value()         && tile_is_stone(neighbors.left->type))         ? 0x00000100 : 0x0;
-        neighbors_mask |= (neighbors.bottom.has_value()       && tile_is_stone(neighbors.bottom->type))       ? 0x00001000 : 0x0;
-        neighbors_mask |= (neighbors.top_right.has_value()    && tile_is_stone(neighbors.top_right->type))    ? 0x00010000 : 0x0;
-        neighbors_mask |= (neighbors.top_left.has_value()     && tile_is_stone(neighbors.top_left->type))     ? 0x00100000 : 0x0;
-        neighbors_mask |= (neighbors.bottom_left.has_value()  && tile_is_stone(neighbors.bottom_left->type))  ? 0x01000000 : 0x0;
-        neighbors_mask |= (neighbors.bottom_right.has_value() && tile_is_stone(neighbors.bottom_right->type)) ? 0x10000000 : 0x0;
+    if (block_is_stone(tile.type)) {
+        neighbors_mask |= (neighbors.right.has_value()        && block_is_stone(neighbors.right->type))        ? 0x00000001 : 0x0;
+        neighbors_mask |= (neighbors.top.has_value()          && block_is_stone(neighbors.top->type))          ? 0x00000010 : 0x0;
+        neighbors_mask |= (neighbors.left.has_value()         && block_is_stone(neighbors.left->type))         ? 0x00000100 : 0x0;
+        neighbors_mask |= (neighbors.bottom.has_value()       && block_is_stone(neighbors.bottom->type))       ? 0x00001000 : 0x0;
+        neighbors_mask |= (neighbors.top_right.has_value()    && block_is_stone(neighbors.top_right->type))    ? 0x00010000 : 0x0;
+        neighbors_mask |= (neighbors.top_left.has_value()     && block_is_stone(neighbors.top_left->type))     ? 0x00100000 : 0x0;
+        neighbors_mask |= (neighbors.bottom_left.has_value()  && block_is_stone(neighbors.bottom_left->type))  ? 0x01000000 : 0x0;
+        neighbors_mask |= (neighbors.bottom_right.has_value() && block_is_stone(neighbors.bottom_right->type)) ? 0x10000000 : 0x0;
     } else {
-        neighbors_mask |= (neighbors.right.has_value()        && tile_merges_with(tile.type, neighbors.right->type))        ? 0x00000001 : 0x0;
-        neighbors_mask |= (neighbors.top.has_value()          && tile_merges_with(tile.type, neighbors.top->type))          ? 0x00000010 : 0x0;
-        neighbors_mask |= (neighbors.left.has_value()         && tile_merges_with(tile.type, neighbors.left->type))         ? 0x00000100 : 0x0;
-        neighbors_mask |= (neighbors.bottom.has_value()       && tile_merges_with(tile.type, neighbors.bottom->type))       ? 0x00001000 : 0x0;
-        neighbors_mask |= (neighbors.top_right.has_value()    && tile_merges_with(tile.type, neighbors.top_right->type))    ? 0x00010000 : 0x0;
-        neighbors_mask |= (neighbors.top_left.has_value()     && tile_merges_with(tile.type, neighbors.top_left->type))     ? 0x00100000 : 0x0;
-        neighbors_mask |= (neighbors.bottom_left.has_value()  && tile_merges_with(tile.type, neighbors.bottom_left->type))  ? 0x01000000 : 0x0;
-        neighbors_mask |= (neighbors.bottom_right.has_value() && tile_merges_with(tile.type, neighbors.bottom_right->type)) ? 0x10000000 : 0x0;
+        neighbors_mask |= (neighbors.right.has_value()        && block_merges_with(tile.type, neighbors.right->type))        ? 0x00000001 : 0x0;
+        neighbors_mask |= (neighbors.top.has_value()          && block_merges_with(tile.type, neighbors.top->type))          ? 0x00000010 : 0x0;
+        neighbors_mask |= (neighbors.left.has_value()         && block_merges_with(tile.type, neighbors.left->type))         ? 0x00000100 : 0x0;
+        neighbors_mask |= (neighbors.bottom.has_value()       && block_merges_with(tile.type, neighbors.bottom->type))       ? 0x00001000 : 0x0;
+        neighbors_mask |= (neighbors.top_right.has_value()    && block_merges_with(tile.type, neighbors.top_right->type))    ? 0x00010000 : 0x0;
+        neighbors_mask |= (neighbors.top_left.has_value()     && block_merges_with(tile.type, neighbors.top_left->type))     ? 0x00100000 : 0x0;
+        neighbors_mask |= (neighbors.bottom_left.has_value()  && block_merges_with(tile.type, neighbors.bottom_left->type))  ? 0x01000000 : 0x0;
+        neighbors_mask |= (neighbors.bottom_right.has_value() && block_merges_with(tile.type, neighbors.bottom_right->type)) ? 0x10000000 : 0x0;
 
         neighbors_mask |= (neighbors.right.has_value()        && neighbors.right->type        == tile.type) ? 0x00000001 : 0x0;
         neighbors_mask |= (neighbors.top.has_value()          && neighbors.top->type          == tile.type) ? 0x00000010 : 0x0;
@@ -350,27 +424,27 @@ void update_block_sprite_index(Tile& tile, const Neighbors<Tile>& neighbors) {
 
     if (!tile.is_merged) {
         bool check_ready = true;
-        check_ready &= (!neighbors.right.has_value()  || !tile_merges_with(tile.type, neighbors.right->type))  ? true : (neighbors.right->merge_id  != 0xFF);
-        check_ready &= (!neighbors.top.has_value()    || !tile_merges_with(tile.type, neighbors.top->type))    ? true : (neighbors.top->merge_id    != 0xFF);
-        check_ready &= (!neighbors.left.has_value()   || !tile_merges_with(tile.type, neighbors.left->type))   ? true : (neighbors.left->merge_id   != 0xFF);
-        check_ready &= (!neighbors.bottom.has_value() || !tile_merges_with(tile.type, neighbors.bottom->type)) ? true : (neighbors.bottom->merge_id != 0xFF);
+        check_ready &= (!neighbors.right.has_value()  || !block_merges_with(tile.type, neighbors.right->type))  ? true : (neighbors.right->merge_id  != 0xFF);
+        check_ready &= (!neighbors.top.has_value()    || !block_merges_with(tile.type, neighbors.top->type))    ? true : (neighbors.top->merge_id    != 0xFF);
+        check_ready &= (!neighbors.left.has_value()   || !block_merges_with(tile.type, neighbors.left->type))   ? true : (neighbors.left->merge_id   != 0xFF);
+        check_ready &= (!neighbors.bottom.has_value() || !block_merges_with(tile.type, neighbors.bottom->type)) ? true : (neighbors.bottom->merge_id != 0xFF);
 
         if (check_ready) {
-            neighbors_mask &= 0x11111110 | ((!neighbors.right.has_value()  || !tile_merges_with(tile.type, neighbors.right->type))  ? 0x00000001 : ((neighbors.right->merge_id  & 0x04) >> 2));
-            neighbors_mask &= 0x11111101 | ((!neighbors.top.has_value()    || !tile_merges_with(tile.type, neighbors.top->type))    ? 0x00000010 : ((neighbors.top->merge_id    & 0x08) << 1));
-            neighbors_mask &= 0x11111011 | ((!neighbors.left.has_value()   || !tile_merges_with(tile.type, neighbors.left->type))   ? 0x00000100 : ((neighbors.left->merge_id   & 0x01) << 8));
-            neighbors_mask &= 0x11110111 | ((!neighbors.bottom.has_value() || !tile_merges_with(tile.type, neighbors.bottom->type)) ? 0x00001000 : ((neighbors.bottom->merge_id & 0x02) << 11));
+            neighbors_mask &= 0x11111110 | ((!neighbors.right.has_value()  || !block_merges_with(tile.type, neighbors.right->type))  ? 0x00000001 : ((neighbors.right->merge_id  & 0x04) >> 2));
+            neighbors_mask &= 0x11111101 | ((!neighbors.top.has_value()    || !block_merges_with(tile.type, neighbors.top->type))    ? 0x00000010 : ((neighbors.top->merge_id    & 0x08) << 1));
+            neighbors_mask &= 0x11111011 | ((!neighbors.left.has_value()   || !block_merges_with(tile.type, neighbors.left->type))   ? 0x00000100 : ((neighbors.left->merge_id   & 0x01) << 8));
+            neighbors_mask &= 0x11110111 | ((!neighbors.bottom.has_value() || !block_merges_with(tile.type, neighbors.bottom->type)) ? 0x00001000 : ((neighbors.bottom->merge_id & 0x02) << 11));
             tile.is_merged = true;
         }
     }
 
     uint32_t bucket_id = ((neighbors_mask & 0x00001000) >> 9) + ((neighbors_mask & 0x00000100) >> 6) + ((neighbors_mask & 0x00000010) >> 3) + (neighbors_mask & 0x00000001);
 
-    std::optional<TileType> merge_with = tile_merge_with(tile.type);
+    std::optional<BlockType> merge_with = block_merge_with(tile.type);
 
     TextureAtlasPos index;
 
-    if (tile.type == TileType::Grass) {
+    if (tile.type == BlockType::Grass) {
         bool found = false;
         for (const TileRule& rule : state.grass_rules[bucket_id]) {
             if (rule.matches_relaxed(neighbors_mask, blend_mask)) {
@@ -449,7 +523,7 @@ void reset_tiles(const TilePos& initial_pos, World& world) {
     for (int y = initial_pos.y - 3; y < initial_pos.y + 3; ++y) {
         for (int x = initial_pos.x - 3; x < initial_pos.x + 3; ++x) {
             auto pos = TilePos(x, y);
-            Tile* tile = world.get_tile_mut(pos);
+            Block* tile = world.get_block_mut(pos);
 
             if (tile != nullptr) {
                 tile->is_merged = false;

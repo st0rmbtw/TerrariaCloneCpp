@@ -3,13 +3,13 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 #include <string_view>
-
 #include <optional>
 
 #include "block.hpp"
 #include "wall.hpp"
+#include "tool_flags.hpp"
 
 struct PlacesTile {
     enum Type : uint8_t {
@@ -17,16 +17,16 @@ struct PlacesTile {
         Wall
     };
 
-    PlacesTile(TileType tile_type) :
+    PlacesTile(BlockType tile_type) noexcept :
         tile(tile_type),
         type(Type::Block) {}
 
-    PlacesTile(WallType wall_type) :
+    PlacesTile(WallType wall_type) noexcept :
         wall(wall_type),
         type(Type::Wall) {}
 
     union {
-        TileType tile;
+        BlockType tile;
         WallType wall;
     };
     Type type;
@@ -35,10 +35,10 @@ struct PlacesTile {
 using ItemStack = uint16_t;
 
 class ItemId {
-private:
-    using id_type = uint16_t;
 public:
-    enum : id_type {
+    using IdType = uint16_t;
+
+    enum : IdType {
         DirtBlock = 2,
         StoneBlock = 3,
         Torch = 8,
@@ -49,26 +49,17 @@ public:
         CopperPickaxe = 3509
     };
 
-    ItemId(id_type id) : m_id(id) {}
+    ItemId(IdType id) : m_id(id) {}
 
-    inline constexpr operator id_type() const { return m_id; }
+    inline constexpr operator IdType() const noexcept { return m_id; }
 private:
-    id_type m_id;
+    IdType m_id;
 };
 
 enum class HoldStyle : uint8_t {
     None = 0,
     HoldFront,
 };
-
-namespace ToolFlags {
-    enum : uint8_t {
-        None = 0,
-        Axe = 1 << 0,
-        Pickaxe = 1 << 1,
-        Hammer = 1 << 2
-    };
-}
 
 struct Item {
     std::string_view name;
@@ -85,29 +76,32 @@ struct Item {
 
     [[nodiscard]]
     inline constexpr bool is_axe() const {
-        return (tool_flags & ToolFlags::Axe) == ToolFlags::Axe;
+        return (tool_flags & ToolFlags::Axe) != 0;
     }
 
     [[nodiscard]]
     inline constexpr bool is_pickaxe() const {
-        return (tool_flags & ToolFlags::Pickaxe) == ToolFlags::Pickaxe;
+        return (tool_flags & ToolFlags::Pickaxe) != 0;
     }
 
     [[nodiscard]]
     inline constexpr bool is_hammer() const {
-        return (tool_flags & ToolFlags::Hammer) == ToolFlags::Hammer;
+        return (tool_flags & ToolFlags::Hammer) != 0;
     }
 
+    [[nodiscard]]
     inline constexpr bool has_space() const {
         return stack < max_stack;
     }
 
+    [[nodiscard]]
     inline Item with_stack(ItemStack stack) const {
         Item new_item = *this;
         new_item.stack = std::min(max_stack, stack);
         return new_item;
     }
 
+    [[nodiscard]]
     inline Item with_max_stack() const {
         Item new_item = *this;
         new_item.stack = max_stack;

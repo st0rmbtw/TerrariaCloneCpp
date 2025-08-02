@@ -42,7 +42,11 @@ enum class TextureAsset : uint8_t {
     Tiles1,
     Tiles2,
     Tiles4,
+    Tiles5,
     Tiles30,
+
+    TreeTops,
+    TreeBranches,
 
     Flames0
 };

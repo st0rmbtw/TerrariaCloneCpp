@@ -21,7 +21,7 @@ struct TileDigAnimation {
     TextureAtlasPos atlas_pos;
     float progress;
     float scale;
-    TileType tile_type;
+    BlockTypeWithData block;
 };
 
 struct TileCracks {
@@ -35,10 +35,14 @@ public:
 
     void generate(uint32_t width, uint32_t height, uint32_t seed);
 
-    void set_tile(TilePos pos, const Tile& block);
-    void set_tile(TilePos pos, TileType block_type);
-    void remove_tile(TilePos pos);
-    void update_tile(TilePos pos, TileType new_type, uint8_t new_variant);
+    void set_block(TilePos pos, const Block& block);
+    void set_block(TilePos pos, BlockType block_type);
+    void remove_block(TilePos pos);
+    void update_block(TilePos pos, BlockTypeWithData new_block, uint8_t new_variant);
+
+    void update_block_variant(TilePos pos, uint8_t new_variant);
+    void update_block_type(TilePos pos, BlockType new_type);
+    void update_block_data(TilePos pos, BlockData new_data);
 
     void set_wall(TilePos pos, WallType wall_type);
     void remove_wall(TilePos pos);
@@ -50,60 +54,141 @@ public:
 
     void draw(const sge::Camera& camera) const;
 
-    [[nodiscard]] inline std::optional<Tile> get_tile(TilePos pos) const { return m_data.get_tile(pos); }
-    [[nodiscard]] inline Tile* get_tile_mut(TilePos pos) { return m_data.get_tile_mut(pos); }
+    [[nodiscard]]
+    inline std::optional<Block> get_block(TilePos pos) const {
+        return m_data.get_block(pos);
+    }
 
-    [[nodiscard]] inline std::optional<TileType> get_tile_type(TilePos pos) const { return m_data.get_tile_type(pos); }
+    [[nodiscard]]
+    inline Block* get_block_mut(TilePos pos) {
+        return m_data.get_block_mut(pos);
+    }
 
-    [[nodiscard]] inline bool tile_exists(TilePos pos) const { return m_data.tile_exists(pos); }
-    [[nodiscard]] inline bool tile_exists_with_type(TilePos pos, TileType block_type) const { return m_data.tile_exists_with_type(pos, block_type); }
-    [[nodiscard]] inline bool solid_tile_exists(TilePos pos) const { return m_data.solid_tile_exists(pos); }
+    [[nodiscard]]
+    inline std::optional<BlockType> get_block_type(TilePos pos) const {
+        return m_data.get_block_type(pos);
+    }
 
-    [[nodiscard]] inline Neighbors<Tile> get_tile_neighbors(TilePos pos) const { return m_data.get_tile_neighbors(pos); }
-    [[nodiscard]] inline Neighbors<TileType> get_tile_type_neighbors(TilePos pos) const { return m_data.get_tile_type_neighbors(pos); }
-    [[nodiscard]] inline Neighbors<Tile*> get_tile_neighbors_mut(TilePos pos) { return m_data.get_tile_neighbors_mut(pos); }
+    [[nodiscard]]
+    inline bool block_exists(TilePos pos) const {
+        return m_data.block_exists(pos);
+    }
 
-    [[nodiscard]] inline std::optional<Wall> get_wall(TilePos pos) const { return m_data.get_wall(pos); }
-    [[nodiscard]] inline Wall* get_wall_mut(TilePos pos) { return m_data.get_wall_mut(pos); }
+    [[nodiscard]]
+    inline bool block_exists_with_type(TilePos pos, BlockType block_type) const {
+        return m_data.block_exists_with_type(pos, block_type);
+    }
 
-    [[nodiscard]] inline bool wall_exists(TilePos pos) const { return m_data.wall_exists(pos); }
+    [[nodiscard]]
+    inline bool solid_block_exists(TilePos pos) const {
+        return m_data.solid_block_exists(pos);
+    }
 
-    [[nodiscard]] inline Neighbors<Wall> get_wall_neighbors(TilePos pos) const { return m_data.get_wall_neighbors(pos); }
-    [[nodiscard]] inline Neighbors<Wall*> get_wall_neighbors_mut(TilePos pos) { return m_data.get_wall_neighbors_mut(pos); }
+    [[nodiscard]]
+    inline Neighbors<Block> get_block_neighbors(TilePos pos) const {
+        return m_data.get_block_neighbors(pos);
+    }
 
-    [[nodiscard]] inline const sge::IRect& area() const { return m_data.area; }
-    [[nodiscard]] inline const sge::IRect& playable_area() const { return m_data.playable_area; }
-    [[nodiscard]] inline const glm::uvec2& spawn_point() const { return m_data.spawn_point; }
-    [[nodiscard]] inline const Layers& layers() const { return m_data.layers; }
+    [[nodiscard]]
+    inline Neighbors<BlockType> get_block_type_neighbors(TilePos pos) const {
+        return m_data.get_block_type_neighbors(pos);
+    }
 
-    [[nodiscard]] inline bool is_changed() const { return m_changed; }
-    [[nodiscard]] inline bool is_lightmap_changed() const { return m_lightmap_changed; }
+    [[nodiscard]]
+    inline Neighbors<Block*> get_block_neighbors_mut(TilePos pos) {
+        return m_data.get_block_neighbors_mut(pos);
+    }
 
-    [[nodiscard]] inline const ChunkManager& chunk_manager() const { return m_chunk_manager; }
-    [[nodiscard]] inline ChunkManager& chunk_manager() { return m_chunk_manager; }
+    [[nodiscard]]
+    inline std::optional<Wall> get_wall(TilePos pos) const {
+        return m_data.get_wall(pos);
+    }
 
-    [[nodiscard]] inline const WorldData& data() const { return m_data; }
-    [[nodiscard]] inline WorldData& data() { return m_data; }
+    [[nodiscard]]
+    inline Wall* get_wall_mut(TilePos pos) {
+        return m_data.get_wall_mut(pos);
+    }
 
-    inline void create_dig_tile_animation(const Tile& tile, TilePos pos) {
+    [[nodiscard]]
+    inline bool wall_exists(TilePos pos) const {
+        return m_data.wall_exists(pos);
+    }
+
+    [[nodiscard]]
+    inline Neighbors<Wall> get_wall_neighbors(TilePos pos) const {
+        return m_data.get_wall_neighbors(pos);
+    }
+
+    [[nodiscard]]
+    inline Neighbors<Wall*> get_wall_neighbors_mut(TilePos pos) {
+        return m_data.get_wall_neighbors_mut(pos);
+    }
+
+    [[nodiscard]]
+    inline const sge::IRect& area() const noexcept {
+        return m_data.area;
+    }
+
+    [[nodiscard]]
+    inline const sge::IRect& playable_area() const noexcept {
+        return m_data.playable_area;
+    }
+
+    [[nodiscard]]
+    inline const glm::uvec2& spawn_point() const noexcept {
+        return m_data.spawn_point;
+    }
+
+    [[nodiscard]]
+    inline const Layers& layers() const noexcept {
+        return m_data.layers;
+    }
+
+    [[nodiscard]]
+    inline bool is_changed() const noexcept {
+        return m_changed;
+    }
+
+    [[nodiscard]]
+    inline bool is_lightmap_changed() const noexcept {
+        return m_lightmap_changed;
+    }
+
+    [[nodiscard]]
+    inline const ChunkManager& chunk_manager() const noexcept {
+        return m_chunk_manager;
+    }
+
+    [[nodiscard]]
+    inline ChunkManager& chunk_manager() noexcept {
+        return m_chunk_manager;
+    }
+
+    [[nodiscard]]
+    inline const WorldData& data() const noexcept {
+        return m_data;
+    }
+
+    [[nodiscard]]
+    inline WorldData& data() noexcept {
+        return m_data;
+    }
+
+    inline void create_dig_tile_animation(const Block& block, TilePos pos) {
         m_tile_dig_animations.push_back(TileDigAnimation {
             .tile_pos = pos,
-            .atlas_pos = tile.atlas_pos,
+            .atlas_pos = block.atlas_pos,
             .progress = 0.0f,
             .scale = 0.0f,
-            .tile_type = tile.type
+            .block = block
         });
     }
 
-    inline void create_tile_cracks(TilePos pos, uint8_t cracks_index) {
-        m_tile_cracks[pos] = TileCracks {
+    inline void create_block_cracks(TilePos pos, uint8_t cracks_index) {
+        m_block_cracks[pos] = TileCracks {
             .tile_pos = pos,
             .cracks_index = cracks_index
         };
-    }
-
-    inline void remove_tile_cracks(TilePos pos) {
-        m_tile_cracks.erase(pos);
     }
 
     inline void create_wall_cracks(TilePos pos, uint8_t cracks_index) {
@@ -113,14 +198,19 @@ public:
         };
     }
 
-    inline void remove_wall_cracks(TilePos pos) {
-        m_wall_cracks.erase(pos);
+    [[nodiscard]]
+    inline const Light* lights() const noexcept {
+        return m_lights.data();
     }
 
-    [[nodiscard]] inline const Light* lights() const { return m_lights.data(); }
-    [[nodiscard]] inline uint32_t light_count() const { return m_light_count; }
+    [[nodiscard]]
+    inline uint32_t light_count() const noexcept {
+        return m_light_count;
+    }
 
-    inline void clear_lights() { m_light_count = 0; }
+    inline void clear_lights() noexcept {
+        m_light_count = 0;
+    }
 
     inline void add_light(Light light) {
         using Constants::WORLD_MAX_LIGHT_COUNT;
@@ -136,7 +226,7 @@ private:
     WorldData m_data;
     ChunkManager m_chunk_manager;
     std::vector<TileDigAnimation> m_tile_dig_animations;
-    std::unordered_map<TilePos, TileCracks> m_tile_cracks;
+    std::unordered_map<TilePos, TileCracks> m_block_cracks;
     std::unordered_map<TilePos, TileCracks> m_wall_cracks;
     sge::Timer m_anim_timer = sge::Timer::from_seconds(1.0f / 15.0f, sge::TimerMode::Repeating);
     LLGL::DynamicArray<Light> m_lights;

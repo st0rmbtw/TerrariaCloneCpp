@@ -3,13 +3,14 @@
 
 #pragma once
 
-#include <stdlib.h>
-#include <GLFW/glfw3.h>
+#include <cstdlib>
+#include <list>
+#include <vector>
+#include <unordered_set>
+#include <optional>
+
 #include <LLGL/LLGL.h>
 #include <glm/glm.hpp>
-#include <list>
-
-#include <optional>
 
 #include "types/tile_pos.hpp"
 
@@ -18,21 +19,8 @@
 
 #define ARRAY_LEN(array) (sizeof(array)/sizeof(array[0]))
 
-static inline int rand_range(int from, int to) {
-    return rand() % (to + 1 - from) + from;
-}
-
-static inline float rand_range(float from, float to) {
-    const float scale = rand() / (float) RAND_MAX;
-    return from + scale * (to - from);
-}
-
-static inline int rand_int(int from, int to) {
-    return from + rand() / (RAND_MAX / (to - from + 1) + 1);
-}
-
 template <class T>
-static const T& list_at(const std::list<T>& list, int index) {
+inline const T& list_at(const std::list<T>& list, int index) {
     auto it = list.cbegin();
     for (int i = 0; i < index; i++){
         ++it;
@@ -40,14 +28,33 @@ static const T& list_at(const std::list<T>& list, int index) {
     return *it;
 }
 
-static inline TilePos get_lightmap_pos(glm::vec2 pos) {
+inline TilePos get_lightmap_pos(glm::vec2 pos) noexcept {
     return glm::ivec2(pos * static_cast<float>(Constants::SUBDIVISION) / Constants::TILE_SIZE);
 }
 
 template <typename T, class F>
-static inline auto map(std::optional<T> a, F&& func) -> std::optional<decltype(func(a.value()))> {
+inline auto map(std::optional<T> a, F&& func) noexcept -> std::optional<decltype(func(a.value()))> {
     if (!a.has_value()) return std::nullopt;
     return func(a.value());
 }
+
+template <typename TNode, typename TGetNeighborsFunc, typename TProcessNodeFunc>
+inline void bfs(TNode start_node, TGetNeighborsFunc&& get_neighbors_func, TProcessNodeFunc&& process_node_func) {
+    std::vector<TNode> q;
+
+    q.push_back(start_node);
+
+    while (!q.empty()) {
+        TNode current_node = q.back();
+        q.pop_back();
+
+        process_node_func(current_node);
+
+        for (const TNode& neighbor : get_neighbors_func(current_node)) {
+            q.push_back(neighbor);
+        }
+    }
+}
+
 
 #endif

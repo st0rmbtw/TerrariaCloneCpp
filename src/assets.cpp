@@ -91,15 +91,15 @@ struct AssetComputeShader {
 };
 
 static const std::pair<TextureAsset, AssetTexture> TEXTURE_ASSETS[] = {
-    { TextureAsset::PlayerHair,         AssetTexture("assets/sprites/player/Player_Hair_1.png") },
-    { TextureAsset::PlayerHead,         AssetTexture("assets/sprites/player/Player_0_0.png") },
-    { TextureAsset::PlayerChest,        AssetTexture("assets/sprites/player/Player_Body.png") },
-    { TextureAsset::PlayerLegs,         AssetTexture("assets/sprites/player/Player_0_11.png") },
-    { TextureAsset::PlayerLeftHand,     AssetTexture("assets/sprites/player/Player_Left_Hand.png") },
-    { TextureAsset::PlayerLeftShoulder, AssetTexture("assets/sprites/player/Player_Left_Shoulder.png") },
-    { TextureAsset::PlayerRightArm,     AssetTexture("assets/sprites/player/Player_Right_Arm.png") },
-    { TextureAsset::PlayerLeftEye,      AssetTexture("assets/sprites/player/Player_0_1.png") },
-    { TextureAsset::PlayerRightEye,     AssetTexture("assets/sprites/player/Player_0_2.png") },
+    { TextureAsset::PlayerHair,         AssetTexture("assets/sprites/player/Player_Hair_1.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerHead,         AssetTexture("assets/sprites/player/Player_0_0.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerChest,        AssetTexture("assets/sprites/player/Player_Body.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerLegs,         AssetTexture("assets/sprites/player/Player_0_11.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerLeftHand,     AssetTexture("assets/sprites/player/Player_Left_Hand.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerLeftShoulder, AssetTexture("assets/sprites/player/Player_Left_Shoulder.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerRightArm,     AssetTexture("assets/sprites/player/Player_Right_Arm.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerLeftEye,      AssetTexture("assets/sprites/player/Player_0_1.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerRightEye,     AssetTexture("assets/sprites/player/Player_0_2.png", sge::TextureSampler::NearestMips) },
 
     { TextureAsset::UiCursorForeground,    AssetTexture("assets/sprites/ui/Cursor_0.png", sge::TextureSampler::Linear) },
     { TextureAsset::UiCursorBackground,    AssetTexture("assets/sprites/ui/Cursor_11.png", sge::TextureSampler::Linear) },
@@ -133,11 +133,14 @@ static const std::pair<TextureAsset, AssetTextureAtlas> TEXTURE_ATLAS_ASSETS[] =
 
 #define BLOCK_ASSET(BLOCK_TYPE, TEXTURE_ASSET, PATH, SIZE) std::make_tuple(static_cast<uint16_t>(BLOCK_TYPE), TEXTURE_ASSET, PATH, SIZE)
 static const std::array BLOCK_ASSETS = {
-    BLOCK_ASSET(TileType::Dirt, TextureAsset::Tiles0, "assets/sprites/tiles/Tiles_0.png", glm::uvec2(16)),
-    BLOCK_ASSET(TileType::Stone, TextureAsset::Tiles1, "assets/sprites/tiles/Tiles_1.png", glm::uvec2(16)),
-    BLOCK_ASSET(TileType::Grass, TextureAsset::Tiles2, "assets/sprites/tiles/Tiles_2.png", glm::uvec2(16)),
-    BLOCK_ASSET(TileType::Torch, TextureAsset::Tiles4, "assets/sprites/tiles/Tiles_4.png", glm::uvec2(20)),
-    BLOCK_ASSET(TileType::Wood, TextureAsset::Tiles30, "assets/sprites/tiles/Tiles_30.png", glm::uvec2(16)),
+    BLOCK_ASSET(TileTextureType::Dirt, TextureAsset::Tiles0, "assets/sprites/tiles/Tiles_0.png", glm::uvec2(16)),
+    BLOCK_ASSET(TileTextureType::Stone, TextureAsset::Tiles1, "assets/sprites/tiles/Tiles_1.png", glm::uvec2(16)),
+    BLOCK_ASSET(TileTextureType::Grass, TextureAsset::Tiles2, "assets/sprites/tiles/Tiles_2.png", glm::uvec2(16)),
+    BLOCK_ASSET(TileTextureType::Torch, TextureAsset::Tiles4, "assets/sprites/tiles/Tiles_4.png", glm::uvec2(20)),
+    BLOCK_ASSET(TileTextureType::TreeTrunk, TextureAsset::Tiles5, "assets/sprites/tiles/Tiles_5.png", glm::uvec2(20)),
+    BLOCK_ASSET(TileTextureType::TreeBranch, TextureAsset::TreeBranches, "assets/sprites/tiles/Tree_Branches_0.png", glm::uvec2(50, 40)),
+    BLOCK_ASSET(TileTextureType::TreeCrown, TextureAsset::TreeTops, "assets/sprites/tiles/Tree_Tops_0.png", glm::uvec2(88, 148)),
+    BLOCK_ASSET(TileTextureType::Wood, TextureAsset::Tiles30, "assets/sprites/tiles/Tiles_30.png", glm::uvec2(16)),
 };
 
 #define WALL_ASSET(WALL_TYPE, PATH) std::make_tuple(static_cast<uint16_t>(WALL_TYPE), TextureAsset::Stub, PATH, glm::uvec2(32))
@@ -290,17 +293,22 @@ bool Assets::Load() {
     const uint8_t data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
     state.textures[TextureAsset::Stub] = renderer.CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, 1, 1, 1, Assets::GetSampler(sge::TextureSampler::Nearest), data);
 
+    // There are some glitches in mipmaps on Metal
+    const bool mip_maps = !renderer.Backend().IsMetal();
+
     for (const auto& [key, asset] : TEXTURE_ASSETS) {
         sge::Texture texture;
-        if (!load_texture(asset.path.c_str(), asset.sampler, &texture)) {
+        const uint8_t sampler = !mip_maps ? sge::TextureSampler::DisableMips(asset.sampler) : asset.sampler;
+        if (!load_texture(asset.path.c_str(), sampler, &texture)) {
             return false;
         }
         state.textures[key] = texture;
     }
 
-    for (const auto& [block_type, asset_key, path, size] : BLOCK_ASSETS) {
+    for (const auto& [_, asset_key, path, size] : BLOCK_ASSETS) {
         sge::Texture texture;
-        if (!load_texture(path, sge::TextureSampler::Nearest, &texture)) {
+        const uint8_t sampler = mip_maps ? sge::TextureSampler::NearestMips : sge::TextureSampler::Nearest;
+        if (!load_texture(path, sampler, &texture)) {
             return false;
         }
         state.textures[asset_key] = texture;
@@ -329,9 +337,6 @@ bool Assets::Load() {
         }
         state.items[key] = texture;
     }
-
-    // There is some glitches in mipmaps on Metal
-    const bool mip_maps = !renderer.Backend().IsMetal();
 
     state.textures[TextureAsset::Tiles] = load_texture_array(BLOCK_ASSETS, mip_maps ? sge::TextureSampler::NearestMips : sge::TextureSampler::Nearest, mip_maps);
     state.textures[TextureAsset::Walls] = load_texture_array(WALL_ASSETS, sge::TextureSampler::Nearest);
@@ -566,7 +571,7 @@ static bool load_texture(const char* path, int sampler, sge::Texture* texture) {
 }
 
 template <size_t T>
-sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*, glm::uvec2>, T>& assets, int sampler, bool generate_mip_maps) {
+static sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*, glm::uvec2>, T>& assets, int sampler, bool generate_mip_maps) {
     uint32_t width = 0;
     uint32_t height = 0;
     uint32_t layers_count = 0;
@@ -580,8 +585,8 @@ sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAss
     std::unordered_map<uint16_t, Layer> layer_to_data_map;
     layer_to_data_map.reserve(assets.size());
 
-    for (const auto& [block_type, asset_key, path, _] : assets) {
-        layers_count = glm::max(layers_count, static_cast<uint32_t>(block_type));
+    for (const auto& [id, asset_key, path, _] : assets) {
+        layers_count = glm::max(layers_count, static_cast<uint32_t>(id));
 
         int w, h;
         uint8_t* layer_data = stbi_load(path, &w, &h, nullptr, 4);
@@ -590,7 +595,7 @@ sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAss
             continue;
         }
 
-        layer_to_data_map[block_type] = Layer {
+        layer_to_data_map[id] = Layer {
             .data = layer_data,
             .cols = static_cast<uint32_t>(w),
             .rows = static_cast<uint32_t>(h),

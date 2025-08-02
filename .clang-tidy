@@ -1,1 +1,1 @@
-Checks: 'clang-diagnostic-*,clang-analyzer-*,performance-*,modernize-*,-modernize-use-trailing-return-type,-modernize-avoid-c-arrays,-modernize-use-auto,-modernize-use-designated-initializers'
+Checks: 'clang-diagnostic-*,clang-analyzer-*,performance-*,modernize-*,-modernize-use-trailing-return-type,-modernize-avoid-c-arrays,-modernize-use-auto,-modernize-use-designated-initializers,-modernize-return-braced-init-list'

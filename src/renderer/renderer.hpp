@@ -73,13 +73,20 @@ namespace GameRenderer {
     void DrawBackground(const BackgroundLayer& layer);
     void DrawParticle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, sge::Order order = {}, bool world = false);
 
-    void BeginOrderMode(int order, bool advance);
-    inline void BeginOrderMode(int order = -1) { BeginOrderMode(order, true); }
-    inline void BeginOrderMode(bool advance) { BeginOrderMode(-1, advance); }
-    void EndOrderMode();
+    void BeginOrderMode(int order, bool advance) noexcept;
 
-    void BeginBlendMode(sge::BlendMode blend_mode);
-    void EndBlendMode();
+    inline void BeginOrderMode(int order = -1) noexcept {
+        BeginOrderMode(order, true);
+    }
+
+    inline void BeginOrderMode(bool advance) noexcept {
+        BeginOrderMode(-1, advance);
+    }
+
+    void EndOrderMode() noexcept;
+
+    void BeginBlendMode(sge::BlendMode blend_mode) noexcept;
+    void EndBlendMode() noexcept;
 
     void Terminate();
 

@@ -1,6 +1,6 @@
 #include "chunk_manager.hpp"
 
-#include <tracy/Tracy.hpp>
+#include <SGE/profile.hpp>
 
 #include "utils.hpp"
 
@@ -38,7 +38,7 @@ static sge::URect get_chunk_range(const sge::Rect& camera_fov, const glm::uvec2&
 }
 
 void ChunkManager::manage_chunks(const WorldData& world, const sge::Camera& camera) {
-    ZoneScopedN("ChunkManager::manage_chunks");
+    ZoneScoped;
 
     const sge::Rect camera_fov = utils::get_camera_fov(camera);
     const sge::URect chunk_range = get_chunk_range(camera_fov, world.area.size(), 2);

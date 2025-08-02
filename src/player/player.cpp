@@ -2,8 +2,6 @@
 
 #include <glm/gtc/random.hpp>
 
-#include <tracy/Tracy.hpp>
-
 #include <SGE/math/quat.hpp>
 #include <SGE/math/rect.hpp>
 #include <SGE/math/consts.hpp>
@@ -11,6 +9,8 @@
 #include <SGE/time/time.hpp>
 #include <SGE/time/timer.hpp>
 #include <SGE/time/stopwatch.hpp>
+#include <SGE/utils/random.hpp>
+#include <SGE/profile.hpp>
 
 #include "../assets.hpp"
 #include "../constants.hpp"
@@ -22,6 +22,7 @@
 #include "../particles.hpp"
 
 using Constants::TILE_SIZE;
+using namespace sge::random;
 
 static constexpr float PLAYER_WIDTH = 20.0f;
 static constexpr float PLAYER_HEIGHT = 42.0f;
@@ -49,12 +50,12 @@ static const glm::vec2 ITEM_HOLD_POINTS[] = {
 static constexpr float ITEM_ROTATION = 1.7;
 
 void spawn_particles_on_dig(const glm::vec2& position, Particle::Type particle, bool broken) {
-    const int count = broken ? rand_range(7, 15) : rand_range(3, 8);
+    const int count = broken ? rand_int(7, 15) : rand_int(3, 8);
 
     for (int i = 0; i < count; i++) {
-        const float rotation_speed = rand_range(0.0f, sge::consts::PI / 12.0f);
+        const float rotation_speed = rand_float(0.0f, sge::consts::PI / 12.0f);
 
-        const glm::vec2 velocity = glm::vec2(rand_range(-1.0f, 1.0f), rand_range(-2.0f, 2.0f));
+        const glm::vec2 velocity = glm::vec2(rand_float(-1.0f, 1.0f), rand_float(-2.0f, 2.0f));
         const glm::vec2 offset = particle == Particle::Type::Torch ? glm::diskRand(10.0f) : glm::vec2(0.0f);
         const float min_scale = broken ? 0.6f : 0.3f;
         const float scale = glm::linearRand(min_scale, 1.0f);
@@ -70,7 +71,7 @@ void spawn_particles_on_dig(const glm::vec2& position, Particle::Type particle, 
 }
 
 void Player::init() {
-    ZoneScopedN("Player::init");
+    ZoneScoped;
 
     m_hair = sge::TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerHair));
     m_head = sge::TextureAtlasSprite(Assets::GetTextureAtlas(TextureAsset::PlayerHead));
@@ -121,7 +122,7 @@ void Player::init() {
         .set_color(sge::LinearRgba(0.58, 0.55, 0.47));
 }
 
-void Player::set_position(const World& world, const glm::vec2& position) {
+void Player::set_position(const World& world, const glm::vec2& position) noexcept {
     m_position.x = position.x;
     m_position.y = position.y - PLAYER_HEIGHT_HALF;
     m_velocity.x = 0.0f;
@@ -130,7 +131,7 @@ void Player::set_position(const World& world, const glm::vec2& position) {
 }
 
 void Player::horizontal_movement(bool handle_input) {
-    ZoneScopedN("Player::horizontal_movement");
+    ZoneScoped;
 
     int8_t dir = 0;
 
@@ -157,7 +158,7 @@ void Player::horizontal_movement(bool handle_input) {
 }
 
 void Player::vertical_movement(bool handle_input) {
-    ZoneScopedN("Player::vertical_movement");
+    ZoneScoped;
 
     if (do_jump && m_collisions.down) {
         m_jump = JUMP_HEIGHT;
@@ -182,7 +183,7 @@ void Player::vertical_movement(bool handle_input) {
 }
 
 void Player::gravity() {
-    ZoneScopedN("Player::gravity");
+    ZoneScoped;
 
     if (!m_collisions.down && m_velocity.y > 0 && m_fall_start < 0) {
         m_fall_start = m_position.y;
@@ -193,7 +194,7 @@ void Player::gravity() {
 }
 
 glm::vec2 Player::check_collisions(const World& world) {
-    ZoneScopedN("Player::check_collisions");
+    ZoneScoped;
 
     glm::vec2 result = m_velocity;
     const glm::vec2 pos = m_position;
@@ -219,7 +220,7 @@ glm::vec2 Player::check_collisions(const World& world) {
 
     for (int y = top; y < bottom; ++y) {
         for (int x = left; x < right; ++x) {
-            if (!world.solid_tile_exists(TilePos(x, y))) continue;
+            if (!world.solid_block_exists(TilePos(x, y))) continue;
 
             const glm::vec2 tile_pos = glm::vec2(x * TILE_SIZE, y * TILE_SIZE);
 
@@ -233,7 +234,7 @@ glm::vec2 Player::check_collisions(const World& world) {
                     if (vx != hx) {
                         m_collisions.down = true;
                         m_jumping = false;
-                        m_stand_on_tile = world.get_tile_type(TilePos(x, y));
+                        m_stand_on_tile = world.get_block(TilePos(x, y));
 
                         result.y = tile_pos.y - (pos.y + PLAYER_HEIGHT_HALF);
                     }
@@ -290,7 +291,7 @@ glm::vec2 Player::check_collisions(const World& world) {
 
         for (int x = left; x <= right; ++x) {
             for (int y = bottom; y <= bottom + 1; ++y) {
-                if (!world.solid_tile_exists(TilePos(x, y))) continue;
+                if (!world.solid_block_exists(TilePos(x, y))) continue;
 
                 const glm::vec2 tile_pos = glm::vec2(x * TILE_SIZE, y * TILE_SIZE);
                 const sge::Rect player_rect = sge::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
@@ -317,9 +318,9 @@ glm::vec2 Player::check_collisions(const World& world) {
 
     if (
         hy == a && (
-            !world.solid_tile_exists(TilePos(hx, hy - 1)) &&
-            !world.solid_tile_exists(TilePos(hx, hy - 2)) &&
-            !world.solid_tile_exists(TilePos(hx, hy - 3))
+            !world.solid_block_exists(TilePos(hx, hy - 1)) &&
+            !world.solid_block_exists(TilePos(hx, hy - 2)) &&
+            !world.solid_block_exists(TilePos(hx, hy - 3))
         )
     ) {
         result.x = m_velocity.x;
@@ -334,7 +335,7 @@ glm::vec2 Player::check_collisions(const World& world) {
 }
 
 void Player::update_walk_anim_timer() {
-    ZoneScopedN("Player::update_walk_anim_timer");
+    ZoneScoped;
 
     if (m_velocity.x != 0.0) {
         const uint32_t time = glm::abs(100.0 / glm::abs(m_velocity.x));
@@ -343,7 +344,7 @@ void Player::update_walk_anim_timer() {
 }
 
 void Player::update_using_item_anim() {
-    ZoneScopedN("Player::update_using_item_anim");
+    ZoneScoped;
 
     if (m_use_cooldown > 0) m_use_cooldown -= 1;
     if (m_swing_counter > 0) m_swing_counter -= 1;
@@ -377,7 +378,7 @@ void Player::update_using_item_anim() {
 }
 
 void Player::update_hold_item() {
-    ZoneScopedN("Player::update_hold_item");
+    ZoneScoped;
 
     const std::optional<Item>& selected_item = m_inventory.get_selected_item().item;
     if (!selected_item.has_value()) return;
@@ -405,7 +406,7 @@ void Player::update_hold_item() {
 }
 
 void Player::update_sprites_index() {
-    ZoneScopedN("Player::update_sprites_index");
+    ZoneScoped;
 
     PlayerSprite* sprites[] = { &m_hair, &m_head, &m_body, &m_legs, &m_left_hand, &m_left_shoulder, &m_right_arm, &m_left_eye, &m_right_eye };
 
@@ -473,7 +474,7 @@ void Player::update_sprites_index() {
 }
 
 void Player::update_movement_state() {
-    ZoneScopedN("Player::update_movement_state");
+    ZoneScoped;
 
     if (abs(m_velocity.y) > 0.0 || m_jumping) {
         m_movement_state = MovementState::Flying;
@@ -485,7 +486,7 @@ void Player::update_movement_state() {
 }
 
 void Player::pre_update() {
-    ZoneScopedN("Player::pre_update");
+    ZoneScoped;
 
     if (sge::Input::JustPressed(sge::Key::Space)) {
         do_jump = true;
@@ -493,24 +494,24 @@ void Player::pre_update() {
 }
 
 void Player::spawn_particles_on_walk() const {
-    ZoneScopedN("Player::spawn_particles_on_walk");
+    ZoneScoped;
 
     if (m_movement_state != MovementState::Walking) return;
     if (!m_stand_on_tile.has_value()) return;
     if (glm::abs(m_velocity.x) < 1.0f) return;
 
-    const TileType tile = m_stand_on_tile.value();
-    if (!tile_dusty(tile)) return;
+    const BlockTypeWithData block = m_stand_on_tile.value();
+    if (!block_dusty(block.type)) return;
 
     const float direction = m_direction == Direction::Right ? -1.0f : 1.0f;
 
     const glm::vec2 position = draw_position() + glm::vec2(0., PLAYER_HEIGHT_HALF);
     const glm::vec2 velocity = random_point_cone(glm::vec2(direction, 0.0f), 45.0f);
-    const float scale = rand_range(0.0f, 1.0f);
+    const float scale = rand_float(0.0f, 1.0f);
     const float rotation_speed = sge::consts::PI / 12.0f;
 
     ParticleManager::SpawnParticle(
-        ParticleBuilder::create(Particle::get_by_tile(tile), position, velocity, 0.3f)
+        ParticleBuilder::create(Particle::get_by_block(block), position, velocity, 0.3f)
             .in_world_layer()
             .with_scale(scale)
             .with_rotation_speed(rotation_speed)
@@ -518,14 +519,14 @@ void Player::spawn_particles_on_walk() const {
 }
 
 void Player::spawn_particles_grounded() const {
-    ZoneScopedN("Player::spawn_particles_grounded");
+    ZoneScoped;
 
     if (!m_stand_on_tile.has_value()) return;
-    const TileType tile = m_stand_on_tile.value();
+    const BlockTypeWithData block = m_stand_on_tile.value();
 
-    if (!tile_dusty(tile)) return;
+    if (!block_dusty(block.type)) return;
 
-    const Particle::Type particle = Particle::get_by_tile(tile);
+    const Particle::Type particle = Particle::get_by_block(block);
 
     const float fall_distance = get_fall_distance();
     const float rotation_speed = sge::consts::PI / 12.0f;
@@ -533,7 +534,7 @@ void Player::spawn_particles_grounded() const {
 
     if (!m_prev_grounded && m_collisions.down && fall_distance > TILE_SIZE * 1.5) {
         for (int i = 0; i < 10; i++) {
-            const float scale = rand_range(0.0f, 1.0f);
+            const float scale = rand_float(0.0f, 1.0f);
             const glm::vec2 point = random_point_circle(1.0f, 0.5f) * PLAYER_WIDTH_HALF;
             const glm::vec2 velocity = glm::vec2(glm::normalize(point).x, -0.5f);
 
@@ -548,7 +549,7 @@ void Player::spawn_particles_grounded() const {
 }
 
 void Player::fixed_update(const sge::Camera& camera, World& world, bool handle_input) {
-    ZoneScopedN("Player::fixed_update");
+    ZoneScoped;
 
     m_using_item_visible = false;
 
@@ -603,7 +604,7 @@ void Player::fixed_update(const sge::Camera& camera, World& world, bool handle_i
 }
 
 void Player::update(World& world) {
-    ZoneScopedN("Player::update");
+    ZoneScoped;
 
     const std::optional<Item>& selected_item = m_inventory.get_selected_item().item;
     if (selected_item.has_value() && selected_item->id == ItemId::Torch) {
@@ -624,8 +625,8 @@ void Player::update(World& world) {
     }
 }
 
-void Player::keep_in_world_bounds(const World& world) {
-    ZoneScopedN("Player::keep_in_world_bounds");
+void Player::keep_in_world_bounds(const World& world) noexcept {
+    ZoneScoped;
 
     static constexpr float OFFSET = Constants::WORLD_BOUNDARY_OFFSET;
 
@@ -655,7 +656,7 @@ float Player::get_fall_distance() const {
 }
 
 void Player::update_sprites() {
-    ZoneScopedN("Player::update_sprites");
+    ZoneScoped;
 
     const bool flip_x = m_direction == Direction::Left;
 
@@ -691,7 +692,7 @@ void Player::update_sprites() {
 }
 
 void Player::draw() const {
-    ZoneScopedN("Player::draw");
+    ZoneScoped;
 
     GameRenderer::DrawAtlasSpriteWorld(m_head.sprite);
 
@@ -716,8 +717,67 @@ void Player::draw() const {
     GameRenderer::EndOrderMode();
 }
 
+static void break_tree(World& world, TilePos start_pos) {
+    const std::optional<Block> block = world.get_block(start_pos.offset(TileOffset::Bottom));
+
+    if (block.has_value() && block->type == BlockType::Tree) {
+        const bool left_root = world.block_exists_with_type(start_pos.offset(TileOffset::BottomLeft), BlockType::Tree);
+        const bool right_root = world.block_exists_with_type(start_pos.offset(TileOffset::BottomRight), BlockType::Tree);
+
+        TreeFrameType new_frame = TreeFrameType::TopBare;
+
+        if (left_root && right_root) {
+            new_frame = TreeFrameType::StumpRootBoth;
+        } else if (left_root) {
+            new_frame = TreeFrameType::StumpRootLeft;
+        } else if (right_root) {
+            new_frame = TreeFrameType::StumpRootRight;
+        }
+
+        world.update_block_data(
+            start_pos.offset(TileOffset::Bottom),
+            BlockData {
+                .tree = TreeData {
+                    .type = block->data.tree.type,
+                    .frame = new_frame
+                }
+            }
+        );
+    }
+
+    bfs(
+        start_pos,
+        [&world](TilePos pos) {
+            LLGL::SmallVector<TilePos, 4> positions;
+            
+            if (world.block_exists_with_type(pos.offset(TileOffset::Top), BlockType::Tree)) {
+                positions.push_back(pos.offset(TileOffset::Top));
+            }
+
+            if (world.block_exists_with_type(pos.offset(TileOffset::Left), BlockType::Tree)) {
+                positions.push_back(pos.offset(TileOffset::Left));
+            }
+
+            if (world.block_exists_with_type(pos.offset(TileOffset::Right), BlockType::Tree)) {
+                positions.push_back(pos.offset(TileOffset::Right));
+            }
+
+            return positions;
+        },
+        [&world](TilePos pos) {
+            const std::optional<Block> block = world.get_block(pos);
+            SGE_ASSERT(block.has_value());
+
+            world.remove_block(pos);
+            
+            const glm::vec2 position = pos.to_world_pos_center();
+            spawn_particles_on_dig(position, Particle::get_by_block(block.value()), true);
+        }
+    );
+}
+
 void Player::use_item(const sge::Camera& camera, World& world) {
-    ZoneScopedN("Player::use_item");
+    ZoneScoped;
 
     const ItemSlot taken_item = m_inventory.taken_item();
     const ItemSlot item_slot = taken_item.has_item() ? taken_item : m_inventory.get_selected_item();
@@ -744,34 +804,45 @@ void Player::use_item(const sge::Camera& camera, World& world) {
 
     bool used = false;
 
-    if (item->is_pickaxe() && world.tile_exists(tile_pos)) {
-        Tile* tile = world.get_tile_mut(tile_pos);
+    const std::optional<BlockType> block_type = world.get_block_type(tile_pos);
+    if (block_type.has_value()) {
+        const bool valid_tool = (item->tool_flags & block_required_tool(block_type.value())) != 0;
 
-        if (tile->hp > 0) {
-            tile->hp -= item->power;
-        }
+        if (valid_tool) {
+            Block* block = world.get_block_mut(tile_pos);
 
-        const glm::vec2 position = tile_pos.to_world_pos_center();
-        spawn_particles_on_dig(position, Particle::get_by_tile(tile->type), tile->hp <= 0);
-
-        if (tile->hp <= 0) {
-            world.remove_tile(tile_pos);
-            world.remove_tile_cracks(tile_pos);
-        } else {
-            uint8_t new_variant = rand() % 3;
-            TileType new_tile_type;
-            switch (tile->type) {
-                case TileType::Grass: new_tile_type = TileType::Dirt; break;
-                default: new_tile_type = tile->type;
+            if (block->hp > 0) {
+                block->hp -= item->power;
             }
 
-            world.update_tile(tile_pos, new_tile_type, new_variant);
+            const glm::vec2 position = tile_pos.to_world_pos_center();
+            spawn_particles_on_dig(position, Particle::get_by_block(*block), block->hp <= 0);
 
-            world.create_dig_tile_animation(*tile, tile_pos);
-            world.create_tile_cracks(tile_pos, map_range(tile_hp(tile->type), 0, 0, 3, tile->hp) * 6 + (rand() % 6));
+            if (block->hp <= 0) {
+                if (block_type == BlockType::Tree && tree_is_trunk(block->data.tree.frame)) {
+                    break_tree(world, tile_pos);
+                } else {
+                    world.remove_block(tile_pos);
+                }
+            } else {
+                uint8_t new_variant = rand() % 3;
+                BlockType new_tile_type;
+                switch (block->type) {
+                    case BlockType::Grass: new_tile_type = BlockType::Dirt; break;
+                    default: new_tile_type = block->type;
+                }
+
+                world.update_block_type(tile_pos, new_tile_type);
+
+                if (tile_is_block(*block)) {
+                    world.update_block_variant(tile_pos, new_variant);
+                    world.create_dig_tile_animation(*block, tile_pos);
+                }
+                world.create_block_cracks(tile_pos, map_range(block_hp(block->type), 0, 0, 3, block->hp) * 6 + (rand() % 6));
+            }
+
+            used = true;
         }
-
-        used = true;
     } else if (item->is_hammer() && world.wall_exists(tile_pos)) {
         Wall* wall = world.get_wall_mut(tile_pos);
 
@@ -784,7 +855,6 @@ void Player::use_item(const sge::Camera& camera, World& world) {
 
         if (wall->hp <= 0) {
             world.remove_wall(tile_pos);
-            world.remove_wall_cracks(tile_pos);
         } else {
             uint8_t new_variant = rand() % 3;
 
@@ -794,15 +864,15 @@ void Player::use_item(const sge::Camera& camera, World& world) {
 
         used = true;
     } else if (item->places_tile.has_value()) {
-        if (item->places_tile->type == PlacesTile::Block && !world.tile_exists(tile_pos)) {
+        if (item->places_tile->type == PlacesTile::Block && !world.block_exists(tile_pos)) {
             const sge::Rect player_rect = sge::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
             const sge::Rect tile_rect = sge::Rect::from_center_size(tile_pos.to_world_pos_center(), glm::vec2(TILE_SIZE));
 
             if (!player_rect.intersects(tile_rect)) {
-                const Neighbors<TileType> neighbors = world.get_tile_type_neighbors(tile_pos);
+                const Neighbors<BlockType> neighbors = world.get_block_type_neighbors(tile_pos);
 
-                if (check_anchor_data(tile_anchor(item->places_tile->tile), neighbors, world.wall_exists(tile_pos))) {
-                    world.set_tile(tile_pos, item->places_tile->tile);
+                if (check_anchor_data(block_anchor(item->places_tile->tile), neighbors, world.wall_exists(tile_pos))) {
+                    world.set_block(tile_pos, item->places_tile->tile);
                     used = true;
                 }
             }
@@ -820,10 +890,12 @@ void Player::interact(const sge::Camera& camera, World& world) {
     const glm::vec2 world_pos = camera.screen_to_world(screen_pos);
     const TilePos tile_pos = TilePos::from_world_pos(world_pos);
 
-    std::optional<TileType> tile = world.get_tile_type(tile_pos);
-    if (tile.has_value() && tile_hand_destroy(tile.value())) {
-        world.remove_tile(tile_pos);
-        const glm::vec2 position = tile_pos.to_world_pos_center();
-        spawn_particles_on_dig(position, Particle::get_by_tile(tile.value()), false);
+    const std::optional<BlockType> block_type = world.get_block_type(tile_pos);
+    if (block_type.has_value()) {
+        if ((block_required_tool(block_type.value()) & ToolFlags::Hand) != 0) {
+            world.remove_block(tile_pos);
+            const glm::vec2 position = tile_pos.to_world_pos_center();
+            spawn_particles_on_dig(position, Particle::get_by_block(block_type.value()), false);
+        }
     }
 }

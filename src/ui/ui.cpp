@@ -2,8 +2,6 @@
 
 #include <set>
 
-#include <tracy/Tracy.hpp>
-
 #include <LLGL/Container/DynamicArray.h>
 
 #include <SGE/time/time.hpp>
@@ -14,6 +12,7 @@
 #include <SGE/types/sprite.hpp>
 #include <SGE/utils/text.hpp>
 #include <SGE/input.hpp>
+#include <SGE/profile.hpp>
 
 #include "../renderer/renderer.hpp"
 #include "../assets.hpp"
@@ -111,8 +110,8 @@ static struct UiState {
 static void draw_inventory(const Inventory& inventory, const glm::vec2& window_size);
 static void update_cursor();
 
-void UI::Init() {
-    ZoneScopedN("UI::Init");
+void UI::Init() noexcept {
+    ZoneScoped;
 
     state.fps_update_timer = sge::Timer::from_seconds(0.5f, sge::TimerMode::Repeating);
     state.fps_update_timer.set_finished();
@@ -141,10 +140,10 @@ static SGE_FORCE_INLINE void select_hotbar_slot(Inventory& inventory, uint8_t sl
     inventory.set_selected_slot(slot);
 }
 
-void UI::FixedUpdate() {}
+void UI::FixedUpdate() noexcept {}
 
-void UI::PreUpdate(Inventory& inventory) {
-    ZoneScopedN("UI::PreUpdate");
+void UI::PreUpdate(Inventory& inventory) noexcept {
+    ZoneScoped;
 
     for (const Element& element : state.elements) {
         if (element.rect().contains(sge::Input::MouseScreenPosition())) {
@@ -171,8 +170,8 @@ void UI::PreUpdate(Inventory& inventory) {
     }
 }
 
-void UI::Update(Inventory& inventory) {
-    ZoneScopedN("UI::Update");
+void UI::Update(Inventory& inventory) noexcept {
+    ZoneScoped;
 
     update_cursor();
 
@@ -221,8 +220,8 @@ void UI::Update(Inventory& inventory) {
     }
 }
 
-void UI::PostUpdate() {
-    ZoneScopedN("UI::PostUpdate");
+void UI::PostUpdate() noexcept {
+    ZoneScoped;
 
     state.elements.clear();
 }
@@ -248,8 +247,8 @@ static inline void draw_item_with_stack(const sge::Font& font, const glm::vec2& 
     }
 }
 
-void UI::Draw(const sge::Camera& camera, const Player& player) {
-    ZoneScopedN("UI::Draw");
+void UI::Draw(const sge::Camera& camera, const Player& player) noexcept {
+    ZoneScoped;
 
     const glm::vec2& window_size = camera.viewport();
     const Inventory& inventory = player.inventory();
@@ -325,7 +324,7 @@ inline void draw_inventory_cell(UiElement element_type, uint8_t index, const glm
 }
 
 static void draw_inventory(const Inventory& inventory, const glm::vec2&) {
-    ZoneScopedN("UI::render_inventory");
+    ZoneScoped;
 
     static constexpr float TITLE_OFFSET = 4.0f;
     static constexpr float DEFAULT_TEXT_SIZE = 14.0f;

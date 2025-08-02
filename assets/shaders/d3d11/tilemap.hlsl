@@ -13,6 +13,7 @@ cbuffer GlobalUniformBuffer : register( b2 )
 struct TileData {
     float2 tex_size;
     float2 tex_padding;
+    float2 tex_offset;
     float2 size;
     float2 offset;
     float depth;
@@ -60,7 +61,7 @@ VSOutput VS(VSInput inp)
     const float depth = tile_data.depth;
     const float2 size = tile_data.size;
     const float2 tex_size = size / tile_data.tex_size;
-    const float2 start_uv = inp.i_atlas_pos * (tex_size + tile_data.tex_padding);
+    const float2 start_uv = tile_data.tex_offset + inp.i_atlas_pos * (tex_size + tile_data.tex_padding);
     const float2 tex_dims = tile_data.tex_size;
     const float2 offset = tile_data.offset;
 
