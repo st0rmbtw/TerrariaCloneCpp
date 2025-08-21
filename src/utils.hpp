@@ -3,6 +3,7 @@
 #ifndef UTILS_HPP_
 #define UTILS_HPP_
 
+#include <cstdlib>
 #include <list>
 #include <vector>
 #include <optional>

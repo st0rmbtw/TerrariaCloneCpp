@@ -3,7 +3,7 @@
 #ifndef MATH_MATH_HPP_
 #define MATH_MATH_HPP_
 
-#include <glm/glm.hpp>
+#include <glm/vec2.hpp>
 
 [[nodiscard]]
 inline float move_towards(float current, float target, float max_delta) noexcept {

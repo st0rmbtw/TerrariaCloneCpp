@@ -3,6 +3,7 @@
 #ifndef WORLD_WORLD_DATA_HPP_
 #define WORLD_WORLD_DATA_HPP_
 
+#include <vector>
 #include <deque>
 #include <unordered_set>
 
