@@ -1,7 +1,7 @@
-#ifndef ASSETS_HPP
-#define ASSETS_HPP
-
 #pragma once
+
+#ifndef ASSETS_HPP_
+#define ASSETS_HPP_
 
 #include <LLGL/Sampler.h>
 #include <LLGL/Utils/VertexFormat.h>

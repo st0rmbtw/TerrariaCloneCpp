@@ -1,7 +1,7 @@
-#ifndef WORLD_CHUNK_HPP
-#define WORLD_CHUNK_HPP
-
 #pragma once
+
+#ifndef WORLD_CHUNK_HPP_
+#define WORLD_CHUNK_HPP_
 
 #include <glm/glm.hpp>
 #include <glm/gtx/hash.hpp>

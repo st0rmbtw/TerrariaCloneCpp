@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef PLAYER_HPP
-#define PLAYER_HPP
+#ifndef PLAYER_HPP_
+#define PLAYER_HPP_
 
 #include "inventory.hpp"
 
@@ -131,7 +131,6 @@ private:
     void gravity();
     glm::vec2 check_collisions(const World& world);
 
-    [[nodiscard]]
     void keep_in_world_bounds(const World& world) noexcept;
 
     void update_sprites();

@@ -246,7 +246,7 @@ void World::update(const sge::Camera& camera) {
     m_chunk_manager.manage_chunks(m_data, camera);
 
     if (m_anim_timer.tick(sge::Time::Delta()).just_finished()) {
-        for (glm::vec2& offset : offsets) {
+        for (glm::vec2& offset : m_offsets) {
             offset.x = sge::random::rand_int(-10, 11) * 0.15f;
             offset.y = sge::random::rand_int(-10, 1) * 0.35f;
         }
@@ -283,7 +283,7 @@ void World::draw(const sge::Camera& camera) const {
 
     GameRenderer::BeginOrderMode();
         for (const TilePos& tile_pos : m_data.torches) {
-            for (const glm::vec2& offset : offsets) {
+            for (const glm::vec2& offset : m_offsets) {
                 const glm::vec2 flame_pos = tile_pos.to_world_pos() - glm::vec2((20.0f - 16.0f) / 2.0f, 0.0f);
                 flames.set_position(flame_pos + offset);
                 GameRenderer::DrawAtlasSpriteWorldPremultiplied(flames);

@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef INVENTORY_HPP
-#define INVENTORY_HPP
+#ifndef INVENTORY_HPP_
+#define INVENTORY_HPP_
 
 #include <optional>
 

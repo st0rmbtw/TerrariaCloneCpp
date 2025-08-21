@@ -1,7 +1,7 @@
-#ifndef TYPES_BLOCK_HPP
-#define TYPES_BLOCK_HPP
-
 #pragma once
+
+#ifndef TYPES_BLOCK_HPP_
+#define TYPES_BLOCK_HPP_
 
 #include <cstdint>
 #include <optional>

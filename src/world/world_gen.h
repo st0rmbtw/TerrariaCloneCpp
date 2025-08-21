@@ -1,7 +1,7 @@
-#ifndef WORLD_WORLD_GEN_H
-#define WORLD_WORLD_GEN_H
-
 #pragma once
+
+#ifndef WORLD_WORLD_GEN_H_
+#define WORLD_WORLD_GEN_H_
 
 #include "world_data.hpp"
 

@@ -1,7 +1,7 @@
-#ifndef RENDERER_HPP
-#define RENDERER_HPP
-
 #pragma once
+
+#ifndef RENDERER_HPP_
+#define RENDERER_HPP_
 
 #include <LLGL/SwapChain.h>
 #include <LLGL/RenderSystem.h>

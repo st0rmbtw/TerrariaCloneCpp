@@ -1,7 +1,7 @@
-#ifndef TYPES_BACKGROUND_LAYER
-#define TYPES_BACKGROUND_LAYER
-
 #pragma once
+
+#ifndef TYPES_BACKGROUND_LAYER_
+#define TYPES_BACKGROUND_LAYER_
 
 #include <glm/glm.hpp>
 #include <glm/gtx/vec_swizzle.hpp>

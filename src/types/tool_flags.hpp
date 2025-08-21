@@ -1,7 +1,7 @@
-#ifndef TYPES_TOOL_FLAGS_HPP
-#define TYPES_TOOL_FLAGS_HPP
-
 #pragma once
+
+#ifndef TYPES_TOOL_FLAGS_HPP_
+#define TYPES_TOOL_FLAGS_HPP_
 
 #include <cstdint>
 

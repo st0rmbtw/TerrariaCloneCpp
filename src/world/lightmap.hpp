@@ -1,5 +1,7 @@
-#ifndef WORLD_LIGHTMAP_HPP
-#define WORLD_LIGHTMAP_HPP
+#pragma once
+
+#ifndef WORLD_LIGHTMAP_HPP_
+#define WORLD_LIGHTMAP_HPP_
 
 #include <cstdint>
 #include <thread>

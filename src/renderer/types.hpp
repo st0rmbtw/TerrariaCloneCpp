@@ -1,7 +1,7 @@
-#ifndef RENDERER_TYPES_HPP
-#define RENDERER_TYPES_HPP
-
 #pragma once
+
+#ifndef RENDERER_TYPES_HPP_
+#define RENDERER_TYPES_HPP_
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>

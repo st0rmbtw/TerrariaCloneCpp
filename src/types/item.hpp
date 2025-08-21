@@ -1,7 +1,7 @@
-#ifndef TYPES_ITEM_HPP
-#define TYPES_ITEM_HPP
-
 #pragma once
+
+#ifndef TYPES_ITEM_HPP_
+#define TYPES_ITEM_HPP_
 
 #include <cstdint>
 #include <string_view>

@@ -1,7 +1,7 @@
-#ifndef WORLD_WORLD_DATA_HPP
-#define WORLD_WORLD_DATA_HPP
-
 #pragma once
+
+#ifndef WORLD_WORLD_DATA_HPP_
+#define WORLD_WORLD_DATA_HPP_
 
 #include <vector>
 #include <deque>

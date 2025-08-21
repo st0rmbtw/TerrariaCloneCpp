@@ -1,7 +1,7 @@
-#ifndef _RENDERER_PARTICLE_RENDERER_HPP_
-#define _RENDERER_PARTICLE_RENDERER_HPP_
-
 #pragma once
+
+#ifndef RENDERER_PARTICLE_RENDERER_HPP_
+#define RENDERER_PARTICLE_RENDERER_HPP_
 
 #include <LLGL/Buffer.h>
 #include <LLGL/BufferArray.h>

@@ -1,7 +1,7 @@
-#ifndef UTILS_HPP
-#define UTILS_HPP
-
 #pragma once
+
+#ifndef UTILS_HPP_
+#define UTILS_HPP_
 
 #include <cstdlib>
 #include <list>

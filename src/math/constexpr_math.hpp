@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef MATH_CONSTEXPR_MATH_HPP
 #define MATH_CONSTEXPR_MATH_HPP
 

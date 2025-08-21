@@ -1,7 +1,7 @@
-#ifndef WORLD_PARTICLES_HPP
-#define WORLD_PARTICLES_HPP
-
 #pragma once
+
+#ifndef WORLD_PARTICLES_HPP_
+#define WORLD_PARTICLES_HPP_
 
 #include <cstdint>
 #include <glm/glm.hpp>

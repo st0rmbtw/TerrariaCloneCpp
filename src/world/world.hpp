@@ -1,7 +1,7 @@
-#ifndef WORLD_WORLD_HPP
-#define WORLD_WORLD_HPP
-
 #pragma once
+
+#ifndef WORLD_WORLD_HPP_
+#define WORLD_WORLD_HPP_
 
 #include <cstdint>
 
@@ -225,14 +225,13 @@ private:
 private:
     WorldData m_data;
     ChunkManager m_chunk_manager;
-    std::vector<TileDigAnimation> m_tile_dig_animations;
     std::unordered_map<TilePos, TileCracks> m_block_cracks;
     std::unordered_map<TilePos, TileCracks> m_wall_cracks;
+    glm::vec2 m_offsets[7];
     sge::Timer m_anim_timer = sge::Timer::from_seconds(1.0f / 15.0f, sge::TimerMode::Repeating);
+    std::vector<TileDigAnimation> m_tile_dig_animations;
     LLGL::DynamicArray<Light> m_lights;
     uint32_t m_light_count = 0;
-
-    glm::vec2 offsets[7];
 
     bool m_changed = false;
     bool m_lightmap_changed = false;

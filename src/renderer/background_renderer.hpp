@@ -1,11 +1,11 @@
-#ifndef _RENDERER_BACKGROUND_RENDERER_HPP_
-#define _RENDERER_BACKGROUND_RENDERER_HPP_
-
-#include "LLGL/PipelineLayout.h"
 #pragma once
+
+#ifndef RENDERER_BACKGROUND_RENDERER_HPP_
+#define RENDERER_BACKGROUND_RENDERER_HPP_
 
 #include <LLGL/Buffer.h>
 #include <LLGL/PipelineState.h>
+#include <LLGL/PipelineLayout.h>
 
 #include <SGE/renderer/renderer.hpp>
 

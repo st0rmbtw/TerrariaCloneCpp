@@ -1,7 +1,7 @@
-#ifndef TYPES_TILE_POS_HPP
-#define TYPES_TILE_POS_HPP
-
 #pragma once
+
+#ifndef TYPES_TILE_POS_HPP_
+#define TYPES_TILE_POS_HPP_
 
 #include <cstdint>
 

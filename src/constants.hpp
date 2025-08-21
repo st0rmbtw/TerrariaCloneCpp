@@ -1,7 +1,7 @@
-#ifndef CONSTANTS_HPP
-#define CONSTANTS_HPP
-
 #pragma once
+
+#ifndef CONSTANTS_HPP_
+#define CONSTANTS_HPP_
 
 #include <cstdint>
 

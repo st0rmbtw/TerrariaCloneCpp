@@ -1,7 +1,7 @@
-#ifndef UI_HPP
-#define UI_HPP
-
 #pragma once
+
+#ifndef UI_HPP_
+#define UI_HPP_
 
 #include <SGE/renderer/camera.hpp>
 
