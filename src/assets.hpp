@@ -115,7 +115,7 @@ namespace Assets {
     const sge::Texture& GetTexture(TextureAsset key);
     const sge::TextureAtlas& GetTextureAtlas(TextureAsset key);
     const sge::Font& GetFont(FontAsset key);
-    const sge::Texture& GetItemTexture(uint16_t index);
+    const sge::Texture& GetItemTexture(uint16_t id);
     const sge::ShaderPipeline& GetShader(ShaderAsset key);
     LLGL::Shader* GetComputeShader(ComputeShaderAsset key);
     const sge::Sampler& GetSampler(size_t index);

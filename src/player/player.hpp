@@ -14,7 +14,14 @@
 
 #include "../world/world.hpp"
 
+#include "../types/collision.hpp"
+
 static constexpr size_t WALK_ANIMATION_LENGTH = 13;
+
+static constexpr float PLAYER_WIDTH = 20.0f;
+static constexpr float PLAYER_HEIGHT = 42.0f;
+static constexpr float PLAYER_WIDTH_HALF = PLAYER_WIDTH / 2.0f;
+static constexpr float PLAYER_HEIGHT_HALF = PLAYER_HEIGHT / 2.0f;
 
 enum class Direction : uint8_t {
     Left = 0,
@@ -77,13 +84,6 @@ struct PlayerSprite {
     }
 };
 
-struct Collisions {
-    bool up = false;
-    bool down = false;
-    bool left = false;
-    bool right = false;
-};
-
 class Player {
 public:
     void init();
@@ -103,6 +103,11 @@ public:
     [[nodiscard]]
     const glm::vec2& position() const noexcept {
         return m_position;
+    }
+
+    [[nodiscard]]
+    const sge::Rect rect() const noexcept {
+        return sge::Rect::from_center_half_size(m_position, glm::vec2{ PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF });
     }
 
     [[nodiscard]]
@@ -147,6 +152,7 @@ private:
 
     void use_item(const sge::Camera& camera, World& world);
     void interact(const sge::Camera& camera, World& world);
+    void throw_item(World& world);
 
 private:
     glm::vec2 m_position;
@@ -155,7 +161,7 @@ private:
     size_t m_walk_animation_index = 0;
     sge::Timer m_walk_anim_timer;
     sge::Timer m_walk_particles_timer;
-    Collisions m_collisions;
+    Collision m_collision;
     int m_jump = 0;
     float m_fall_start = -1;
     float m_step_speed = 1.0f;

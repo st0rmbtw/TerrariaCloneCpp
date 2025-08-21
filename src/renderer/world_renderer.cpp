@@ -223,14 +223,16 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
     m_target_texture = context->CreateTexture(texture_desc);
     m_static_lightmap_texture = context->CreateTexture(texture_desc);
 
-    LLGL::TextureDescriptor depth_texture_desc = texture_desc;
-    depth_texture_desc.type = samples > 1 ? LLGL::TextureType::Texture2DMS : LLGL::TextureType::Texture2D;
-    depth_texture_desc.samples = samples;
-    depth_texture_desc.extent.width = resolution.width;
-    depth_texture_desc.extent.height = resolution.height;
-    depth_texture_desc.format = swap_chain->GetDepthStencilFormat();
-    depth_texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::DepthStencilAttachment;
-    m_depth_texture = context->CreateTexture(depth_texture_desc);
+    if (swap_chain->GetDepthStencilFormat() != LLGL::Format::Undefined) {
+        LLGL::TextureDescriptor depth_texture_desc = texture_desc;
+        depth_texture_desc.type = samples > 1 ? LLGL::TextureType::Texture2DMS : LLGL::TextureType::Texture2D;
+        depth_texture_desc.samples = samples;
+        depth_texture_desc.extent.width = resolution.width;
+        depth_texture_desc.extent.height = resolution.height;
+        depth_texture_desc.format = swap_chain->GetDepthStencilFormat();
+        depth_texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::DepthStencilAttachment;
+        m_depth_texture = context->CreateTexture(depth_texture_desc);
+    }
 
     if (m_render_pass == nullptr) {
         LLGL::RenderPassDescriptor render_pass;

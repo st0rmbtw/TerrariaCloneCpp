@@ -9,6 +9,8 @@
 #include <unordered_set>
 #include <optional>
 
+#include <SGE/profile.hpp>
+
 #include <LLGL/LLGL.h>
 #include <glm/glm.hpp>
 
@@ -55,6 +57,5 @@ inline void bfs(TNode start_node, TGetNeighborsFunc&& get_neighbors_func, TProce
         }
     }
 }
-
 
 #endif

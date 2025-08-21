@@ -110,6 +110,28 @@ struct WorldData {
         return block.value() == block_type;
     }
 
+    inline glm::vec2 keep_in_world_bounds(glm::vec2 position, const glm::vec2& half_size) const noexcept {
+        static constexpr float OFFSET = Constants::WORLD_BOUNDARY_OFFSET;
+        using Constants::TILE_SIZE;
+
+        const sge::Rect area = playable_area * TILE_SIZE;
+
+        if (position.x - half_size.x < area.min.x + OFFSET) {
+            position.x = area.min.x + half_size.x + OFFSET;
+        }
+        if (position.x + half_size.x > area.max.x - OFFSET) {
+            position.x = area.max.x - half_size.x - OFFSET;
+        }
+        if (position.y - half_size.y < area.min.y) {
+            position.y = area.min.y + half_size.y;
+        }
+        if (position.y + half_size.y > area.max.y) {
+            position.y = area.max.y - half_size.y;
+        }
+
+        return position;
+    }
+
     void lightmap_update_area_async(sge::IRect area);
     void lightmap_blur_area_sync(const sge::IRect& area);
     void lightmap_init_area(const sge::IRect& area);

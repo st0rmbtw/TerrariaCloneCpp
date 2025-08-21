@@ -45,8 +45,14 @@ public:
     [[nodiscard]]
     inline ItemSlot get_item(uint8_t index) const noexcept {
         SGE_ASSERT(index < 51);
-
         return ItemSlot(m_items[index], index);
+    }
+
+    inline std::optional<Item> remove_item(uint8_t index) noexcept {
+        SGE_ASSERT(index < 51);
+        const std::optional<Item> item = m_items[index];
+        m_items[index] = std::nullopt;
+        return item;
     }
 
     inline void set_item(uint8_t index, const Item& item) noexcept {
@@ -114,6 +120,34 @@ public:
         }
 
         return remaining;
+    }
+
+    [[nodiscard]]
+    bool can_be_added(const Item& new_item) const {
+        ItemStack remaining = new_item.stack;
+
+        for (const std::optional<Item>& item : m_items) {
+            if (!item.has_value())
+                return true;
+
+            if (remaining == 0)
+                return true;
+
+            if (new_item.id != item->id)
+                continue;
+
+            if (item->stack == item->max_stack)
+                continue;
+
+            const ItemStack new_stack = item->stack + remaining;
+
+            if (new_stack <= item->max_stack)
+                return true;
+            
+            remaining -= remaining % item->max_stack;
+        }
+
+        return false;
     }
 
     [[nodiscard]]

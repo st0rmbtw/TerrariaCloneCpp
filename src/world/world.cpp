@@ -233,9 +233,6 @@ void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
     world_generate(m_data, width, height, seed);
 
     m_light_count = 0;
-    if (m_lights.data() == nullptr) {
-        m_lights = LLGL::DynamicArray<Light>(WORLD_MAX_LIGHT_COUNT, LLGL::UninitializeTag{});
-    }
 }
 
 void World::update(const sge::Camera& camera) {
@@ -269,6 +266,28 @@ void World::update(const sge::Camera& camera) {
         }
 
         it++;
+    }
+}
+
+void World::fixed_update(const sge::Rect& player_rect, Inventory& inventory) {
+    m_dropped_items.update_lookup();
+
+    GameRenderer::BeginOrderMode();
+        for (DroppedItem& item : m_dropped_items) {
+            item.update(m_data);
+        }
+    GameRenderer::EndOrderMode();
+
+    m_dropped_items.for_each_neighbor(player_rect.center(), [&](size_t index, DroppedItem& item) {
+        if (item.follow_player(player_rect, inventory)) {
+            inventory.add_item_stack(item.item());
+            m_pickedup_item_indices.insert(index);
+        }
+    });
+
+    for (auto it = m_pickedup_item_indices.begin(); it != m_pickedup_item_indices.end();) {
+        m_dropped_items.remove(*it);
+        it = m_pickedup_item_indices.erase(it);
     }
 }
 
@@ -329,6 +348,10 @@ void World::draw(const sge::Camera& camera) const {
             }
         }
     GameRenderer::EndOrderMode();
+
+    for (const DroppedItem& item : m_dropped_items) {
+        item.draw();
+    }
 }
 
 void World::update_neighbors(TilePos initial_pos) {

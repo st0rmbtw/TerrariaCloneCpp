@@ -3,10 +3,15 @@
 #ifndef MATH_MATH_HPP_
 #define MATH_MATH_HPP_
 
-#include <glm/vec2.hpp>
+#include <glm/glm.hpp>
 
 [[nodiscard]]
-float move_towards(float current, float target, float max_delta) noexcept;
+inline float move_towards(float current, float target, float max_delta) noexcept {
+    if (glm::abs(target - current) <= max_delta)
+        return target;
+    
+    return current + glm::sign(target - current) * max_delta;
+}
 
 [[nodiscard]]
 inline int map_range(int in_min, int in_max, int out_min, int out_max, int x) noexcept {

@@ -128,7 +128,7 @@ private:
     float m_y;
     uint16_t m_id = 0;
     sge::Anchor m_anchor;
-    BitFlags<Flags> m_flags = BitFlags({Flags::Nonscale, Flags::FollowCamera});
+    sge::BitFlags<Flags> m_flags = sge::BitFlags({Flags::Nonscale, Flags::FollowCamera});
 };
 
 #endif

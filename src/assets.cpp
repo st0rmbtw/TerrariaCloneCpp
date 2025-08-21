@@ -524,8 +524,8 @@ const sge::Font& Assets::GetFont(FontAsset key) {
     return entry->second;
 }
 
-const sge::Texture& Assets::GetItemTexture(uint16_t index) {
-    const auto entry = std::as_const(state.items).find(index);
+const sge::Texture& Assets::GetItemTexture(uint16_t id) {
+    const auto entry = std::as_const(state.items).find(id);
     SGE_ASSERT(entry != state.items.cend());
     return entry->second;
 }

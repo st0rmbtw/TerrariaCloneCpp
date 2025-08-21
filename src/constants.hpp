@@ -31,6 +31,8 @@ namespace Constants {
     constexpr int SUBDIVISION = 8;
     constexpr float LIGHT_EPSILON = 0.01;
 
+    constexpr float ITEM_GRAB_RANGE = 5.25f * Constants::TILE_SIZE;
+
     constexpr float LightDecay(bool solid) {
         if constexpr (SUBDIVISION == 8) {
             return solid ? 0.92 : 0.975;

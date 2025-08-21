@@ -1,3 +1,4 @@
+#include <cstring>
 #include <sstream>
 #include <stdio.h>
 #include <string>
@@ -60,15 +61,10 @@ int main(int argc, const char** argv) {
     };
 
 #ifdef PLATFORM_WINDOWS
-    const fs::path executable = source_dir / "glslang.exe";
+    const fs::path executable = "glslang.exe";
 #else
-    const fs::path executable = source_dir / "glslang";
+    const fs::path executable = "glslang";
 #endif
-
-    if (!fs::exists(executable)) {
-        printf("ERROR: %s doesn't exist.\n", executable.string().c_str());
-        return 0;
-    }
 
     const fs::path dir = source_dir / "assets" / "shaders" / "vulkan";
     if (!fs::exists(dir)) {
@@ -245,16 +241,16 @@ bool CompileVulkanShader(const std::string& executable, const std::string& stage
         }
 
         if (dup2(stdoutPipe[PIPE_WRITE], STDOUT_FILENO) == -1) {
-            printf("Couldn't redirect stdin pipe.\n");
+            printf("Couldn't redirect stdout pipe.\n");
             return false;
         }
 
         if (dup2(stdoutPipe[PIPE_WRITE], STDERR_FILENO) == -1) {
-            printf("Couldn't redirect stdin pipe.\n");
+            printf("Couldn't redirect stderr pipe.\n");
             return false;
         }
 
-        execl(executable.c_str(),
+        int ret = execlp(executable.c_str(),
             executable.c_str(),
             "--quiet",
             "-V",
@@ -264,6 +260,11 @@ bool CompileVulkanShader(const std::string& executable, const std::string& stage
             "-o", outputPath.c_str(),
             NULL
         );
+
+        if (ret < 0) {
+            printf("An error occured: %s\n", strerror(errno));
+            return false;
+        }
 
         close(stdoutPipe[PIPE_WRITE]);
     } else {

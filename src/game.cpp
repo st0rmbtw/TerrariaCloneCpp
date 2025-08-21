@@ -112,6 +112,7 @@ static void fixed_update() {
 #endif
 
     g.player.fixed_update(g.camera, g.world, handle_input);
+    g.world.fixed_update(g.player.rect(), g.player.inventory());
 
     UI::FixedUpdate();
 

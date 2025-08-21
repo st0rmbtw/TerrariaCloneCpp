@@ -24,14 +24,9 @@
 using Constants::TILE_SIZE;
 using namespace sge::random;
 
-static constexpr float PLAYER_WIDTH = 20.0f;
-static constexpr float PLAYER_HEIGHT = 42.0f;
-static constexpr float PLAYER_WIDTH_HALF = PLAYER_WIDTH / 2.0f;
-static constexpr float PLAYER_HEIGHT_HALF = PLAYER_HEIGHT / 2.0f;
-
 static constexpr float GRAVITY = 0.4f;
 static constexpr float ACCELERATION = 0.1f;
-static constexpr float SLOWDOWN = 0.2f;
+static constexpr float AIR_DRAG = 0.2f;
 
 static constexpr uint32_t JUMP_HEIGHT = 15;
 static constexpr float JUMP_SPEED = 5.01;
@@ -49,7 +44,7 @@ static const glm::vec2 ITEM_HOLD_POINTS[] = {
 
 static constexpr float ITEM_ROTATION = 1.7;
 
-void spawn_particles_on_dig(const glm::vec2& position, Particle::Type particle, bool broken) {
+static void spawn_particles_on_dig(const glm::vec2& position, Particle::Type particle, bool broken) {
     const int count = broken ? rand_int(7, 15) : rand_int(3, 8);
 
     for (int i = 0; i < count; i++) {
@@ -68,6 +63,10 @@ void spawn_particles_on_dig(const glm::vec2& position, Particle::Type particle, 
                 .with_scale(scale)
         );
     }
+}
+
+static inline constexpr float get_direction_value(Direction direction) {
+    return direction == Direction::Right ? 1.0f : -1.0f; 
 }
 
 void Player::init() {
@@ -151,7 +150,7 @@ void Player::horizontal_movement(bool handle_input) {
         }
         m_velocity.x -= ACCELERATION;
     } else {
-        m_velocity.x = move_towards(m_velocity.x, 0, SLOWDOWN);
+        m_velocity.x = move_towards(m_velocity.x, 0, AIR_DRAG);
     }
 
     m_velocity.x = glm::clamp(m_velocity.x, -MAX_WALK_SPEED, MAX_WALK_SPEED);
@@ -160,7 +159,7 @@ void Player::horizontal_movement(bool handle_input) {
 void Player::vertical_movement(bool handle_input) {
     ZoneScoped;
 
-    if (do_jump && m_collisions.down) {
+    if (do_jump && m_collision.down()) {
         m_jump = JUMP_HEIGHT;
         m_velocity.y = -JUMP_SPEED;
         m_jumping = true;
@@ -185,7 +184,7 @@ void Player::vertical_movement(bool handle_input) {
 void Player::gravity() {
     ZoneScoped;
 
-    if (!m_collisions.down && m_velocity.y > 0 && m_fall_start < 0) {
+    if (!m_collision.down() && m_velocity.y > 0 && m_fall_start < 0) {
         m_fall_start = m_position.y;
     }
 
@@ -216,7 +215,7 @@ glm::vec2 Player::check_collisions(const World& world) {
     int vx = -1;
     int vy = -1;
 
-    m_collisions = Collisions();
+    m_collision.reset();
 
     for (int y = top; y < bottom; ++y) {
         for (int x = left; x < right; ++x) {
@@ -232,7 +231,7 @@ glm::vec2 Player::check_collisions(const World& world) {
                     vx = x;
                     vy = y;
                     if (vx != hx) {
-                        m_collisions.down = true;
+                        m_collision.set_down(true);
                         m_jumping = false;
                         m_stand_on_tile = world.get_block(TilePos(x, y));
 
@@ -243,13 +242,13 @@ glm::vec2 Player::check_collisions(const World& world) {
                     hy = y;
                     if (hy != vy) {
                         result.x = tile_pos.x - (pos.x + PLAYER_WIDTH_HALF);
-                        m_collisions.right = true;
+                        m_collision.set_right(true);
                     }
                     if (vx == hx) {
                         result.y = m_velocity.y;
                     }
                 } else if (pos.x - PLAYER_WIDTH_HALF >= tile_pos.x + TILE_SIZE) {
-                    m_collisions.left = true;
+                    m_collision.set_left(true);
                     hx = x;
                     hy = y;
                     if (hy != vy) {
@@ -259,7 +258,7 @@ glm::vec2 Player::check_collisions(const World& world) {
                         result.y = m_velocity.y;
                     }
                 } else if (pos.y - PLAYER_HEIGHT_HALF >= tile_pos.y + TILE_SIZE) {
-                    m_collisions.up = true;
+                    m_collision.set_up(true);
 
                     vx = x;
                     vy = y;
@@ -357,7 +356,7 @@ void Player::update_using_item_anim() {
         m_swing_anim_index = 0;
     }
 
-    const float direction = m_direction == Direction::Right ? 1 : -1;
+    const float direction = get_direction_value(m_direction);
 
     glm::vec2 offset = ITEM_ANIMATION_POINTS[m_swing_anim_index];
     offset.x *= direction;
@@ -396,8 +395,7 @@ void Player::update_hold_item() {
         offset = ITEM_HOLD_POINTS[0];
     }
 
-    const float direction = m_direction == Direction::Right ? 1.0f : -1.0f;
-    offset.x *= direction;
+    offset.x *= get_direction_value(m_direction);
 
     const glm::vec2 item_position = draw_position() + offset;
     m_using_item.set_position(item_position);
@@ -503,8 +501,7 @@ void Player::spawn_particles_on_walk() const {
     const BlockTypeWithData block = m_stand_on_tile.value();
     if (!block_dusty(block.type)) return;
 
-    const float direction = m_direction == Direction::Right ? -1.0f : 1.0f;
-
+    const float direction = get_direction_value(m_direction);
     const glm::vec2 position = draw_position() + glm::vec2(0., PLAYER_HEIGHT_HALF);
     const glm::vec2 velocity = random_point_cone(glm::vec2(direction, 0.0f), 45.0f);
     const float scale = rand_float(0.0f, 1.0f);
@@ -532,7 +529,7 @@ void Player::spawn_particles_grounded() const {
     const float rotation_speed = sge::consts::PI / 12.0f;
     const glm::vec2 position = draw_position() + glm::vec2(0., PLAYER_HEIGHT_HALF);
 
-    if (!m_prev_grounded && m_collisions.down && fall_distance > TILE_SIZE * 1.5) {
+    if (!m_prev_grounded && m_collision.down() && fall_distance > TILE_SIZE * 1.5) {
         for (int i = 0; i < 10; i++) {
             const float scale = rand_float(0.0f, 1.0f);
             const glm::vec2 point = random_point_circle(1.0f, 0.5f) * PLAYER_WIDTH_HALF;
@@ -559,6 +556,10 @@ void Player::fixed_update(const sge::Camera& camera, World& world, bool handle_i
 
     if (sge::Input::Pressed(sge::MouseButton::Right) && !sge::Input::IsMouseOverUi()) {
         interact(camera, world);
+    }
+
+    if (sge::Input::JustPressed(sge::Key::T)) {
+        throw_item(world);
     }
 
     horizontal_movement(handle_input);
@@ -599,7 +600,7 @@ void Player::fixed_update(const sge::Camera& camera, World& world, bool handle_i
 
     spawn_particles_grounded();
 
-    m_prev_grounded = m_collisions.down;
+    m_prev_grounded = m_collision.down();
     m_fall_start = -1;
 }
 
@@ -608,7 +609,7 @@ void Player::update(World& world) {
 
     const std::optional<Item>& selected_item = m_inventory.get_selected_item().item;
     if (selected_item.has_value() && selected_item->id == ItemId::Torch) {
-        const float direction = m_direction == Direction::Right ? 1.0f : -1.0f;
+        const float direction = get_direction_value(m_direction);
         const glm::vec2 size = m_using_item.size() - glm::vec2(2.0f * direction, 4.0f) * m_using_item.scale();
 
         world.add_light(Light {
@@ -626,26 +627,13 @@ void Player::update(World& world) {
 }
 
 void Player::keep_in_world_bounds(const World& world) noexcept {
-    ZoneScoped;
+    const glm::vec2 new_pos = world.keep_in_world_bounds(m_position, glm::vec2{ PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF });
 
-    static constexpr float OFFSET = Constants::WORLD_BOUNDARY_OFFSET;
-
-    const sge::Rect area = world.playable_area() * TILE_SIZE;
-
-    if (m_position.x - PLAYER_WIDTH_HALF < area.min.x + OFFSET) {
-        m_position.x = area.min.x + PLAYER_WIDTH_HALF + OFFSET;
+    if (m_position.x != new_pos.x) {
         m_velocity.x = 0.0f;
     }
-    if (m_position.x + PLAYER_WIDTH_HALF > area.max.x - OFFSET) {
-        m_position.x = area.max.x - PLAYER_WIDTH_HALF - OFFSET;
-        m_velocity.x = 0.0f;
-    }
-    if (m_position.y - PLAYER_HEIGHT_HALF < area.min.y) {
-        m_position.y = area.min.y + PLAYER_HEIGHT_HALF;
-        m_velocity.y = 0.0f;
-    }
-    if (m_position.y + PLAYER_HEIGHT_HALF > area.max.y) {
-        m_position.y = area.max.y - PLAYER_HEIGHT_HALF;
+
+    if (m_position.y != new_pos.y) {
         m_velocity.y = 0.0f;
     }
 }
@@ -898,4 +886,17 @@ void Player::interact(const sge::Camera& camera, World& world) {
             spawn_particles_on_dig(position, Particle::get_by_block(block_type.value()), false);
         }
     }
+}
+
+void Player::throw_item(World& world) {
+    std::optional<Item> item = m_inventory.remove_item(m_inventory.selected_slot());
+
+    if (!item.has_value())
+        return;
+
+    glm::vec2 velocity{ 0.0f };
+    velocity.x = get_direction_value(m_direction) * 4.0f + m_velocity.x;
+    velocity.y = -2.0f;
+
+    world.drop_item(m_head.sprite.position(), velocity, item.value(), true);
 }

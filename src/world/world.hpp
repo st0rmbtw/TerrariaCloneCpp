@@ -8,13 +8,17 @@
 #include <SGE/math/rect.hpp>
 #include <SGE/renderer/camera.hpp>
 #include <SGE/time/timer.hpp>
+#include <SGE/time/time.hpp>
 
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
 #include "../types/tile_pos.hpp"
 #include "../types/light.hpp"
+#include "../types/item.hpp"
+#include "../lookup_list.hpp"
 
 #include "chunk_manager.hpp"
+#include "dropped_item.hpp"
 
 struct TileDigAnimation {
     TilePos tile_pos;
@@ -31,8 +35,6 @@ struct TileCracks {
 
 class World {
 public:
-    World() = default;
-
     void generate(uint32_t width, uint32_t height, uint32_t seed);
 
     void set_block(TilePos pos, const Block& block);
@@ -51,6 +53,7 @@ public:
     void update_tile_sprite_index(TilePos pos);
 
     void update(const sge::Camera& camera);
+    void fixed_update(const sge::Rect& player_rect, Inventory& inventory);
 
     void draw(const sge::Camera& camera) const;
 
@@ -122,6 +125,10 @@ public:
     [[nodiscard]]
     inline Neighbors<Wall*> get_wall_neighbors_mut(TilePos pos) {
         return m_data.get_wall_neighbors_mut(pos);
+    }
+
+    inline glm::vec2 keep_in_world_bounds(glm::vec2 position, const glm::vec2& half_size) const noexcept {
+        return m_data.keep_in_world_bounds(position, half_size);
     }
 
     [[nodiscard]]
@@ -200,7 +207,7 @@ public:
 
     [[nodiscard]]
     inline const Light* lights() const noexcept {
-        return m_lights.data();
+        return m_lights;
     }
 
     [[nodiscard]]
@@ -219,18 +226,25 @@ public:
         m_light_count = (m_light_count + 1) % WORLD_MAX_LIGHT_COUNT;
     }
 
+    inline void drop_item(const glm::vec2& position, const glm::vec2& velocity, const Item& item, bool set_timer = false) {
+        const std::optional<float> spawn_time = set_timer ? std::optional(sge::Time::FixedElapsedSeconds()) : std::nullopt;
+        m_dropped_items.add(DroppedItem(position, velocity, item, spawn_time));
+    }
+
 private:
     void update_neighbors(TilePos pos);
 
 private:
     WorldData m_data;
     ChunkManager m_chunk_manager;
+    LookupList<DroppedItem> m_dropped_items = LookupList<DroppedItem>(glm::vec2{ Constants::ITEM_GRAB_RANGE * 0.5f });
+    std::unordered_set<size_t> m_pickedup_item_indices;
     std::unordered_map<TilePos, TileCracks> m_block_cracks;
     std::unordered_map<TilePos, TileCracks> m_wall_cracks;
     glm::vec2 m_offsets[7];
     sge::Timer m_anim_timer = sge::Timer::from_seconds(1.0f / 15.0f, sge::TimerMode::Repeating);
     std::vector<TileDigAnimation> m_tile_dig_animations;
-    LLGL::DynamicArray<Light> m_lights;
+    Light* m_lights = new Light[Constants::WORLD_MAX_LIGHT_COUNT];
     uint32_t m_light_count = 0;
 
     bool m_changed = false;
