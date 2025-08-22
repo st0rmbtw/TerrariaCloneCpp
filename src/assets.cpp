@@ -18,7 +18,6 @@
 #include <SGE/types/texture.hpp>
 #include <SGE/types/attributes.hpp>
 #include <SGE/log.hpp>
-#include <SGE/utils/io.hpp>
 #include "types/block.hpp"
 #include "types/wall.hpp"
 
@@ -82,12 +81,10 @@ struct AssetShader {
 struct AssetComputeShader {
     std::string file_name;
     std::string func_name;
-    std::string glsl_file_name;
 
-    explicit AssetComputeShader(std::string file_name, std::string func_name, std::string glsl_file_name = {}) :
+    explicit AssetComputeShader(std::string file_name, std::string func_name) :
         file_name(std::move(file_name)),
-        func_name(std::move(func_name)),
-        glsl_file_name(std::move(glsl_file_name)) {}
+        func_name(std::move(func_name)) {}
 };
 
 static const std::pair<TextureAsset, AssetTexture> TEXTURE_ASSETS[] = {
@@ -195,10 +192,10 @@ const std::pair<ShaderAsset, AssetShader> SHADER_ASSETS[] = {
 };
 
 const std::pair<ComputeShaderAsset, AssetComputeShader> COMPUTE_SHADER_ASSETS[] = {
-    { ComputeShaderAsset::ParticleComputeTransformShader, AssetComputeShader("particle", "CSComputeTransform", "particle") },
-    { ComputeShaderAsset::LightVertical, AssetComputeShader("light", "CSComputeLightVertical", "light_blur_vertical") },
-    { ComputeShaderAsset::LightHorizontal, AssetComputeShader("light", "CSComputeLightHorizontal", "light_blur_horizontal") },
-    { ComputeShaderAsset::LightSetLightSources, AssetComputeShader("light", "CSComputeLightSetLightSources", "light_init") },
+    { ComputeShaderAsset::ParticleComputeTransformShader, AssetComputeShader("particle", "CSComputeTransform") },
+    { ComputeShaderAsset::LightVertical, AssetComputeShader("light", "CSComputeLightVertical") },
+    { ComputeShaderAsset::LightHorizontal, AssetComputeShader("light", "CSComputeLightHorizontal") },
+    { ComputeShaderAsset::LightSetLightSources, AssetComputeShader("light", "CSComputeLightSetLightSources") },
 };
 
 static struct AssetsState {
@@ -350,8 +347,6 @@ bool Assets::LoadShaders(const std::vector<sge::ShaderDef>& shader_defs) {
 
     sge::Renderer& renderer = sge::Engine::Renderer();
 
-    sge::RenderBackend backend = renderer.Backend();
-
     for (const auto& [key, asset] : SHADER_ASSETS) {
         sge::ShaderPipeline shader_pipeline;
 
@@ -381,9 +376,7 @@ bool Assets::LoadShaders(const std::vector<sge::ShaderDef>& shader_defs) {
     }
 
     for (const auto& [key, asset] : COMPUTE_SHADER_ASSETS) {
-        const std::string& file_name = backend.IsGLSL() ? asset.glsl_file_name : asset.file_name;
-
-        if (!(state.compute_shaders[key] = renderer.LoadShader(sge::ShaderPath(sge::ShaderType::Compute, file_name, asset.func_name), shader_defs)))
+        if (!(state.compute_shaders[key] = renderer.LoadShader(sge::ShaderPath(sge::ShaderType::Compute, asset.file_name, asset.func_name), shader_defs)))
             return false;
     }
 
@@ -396,21 +389,18 @@ bool Assets::LoadFonts() {
         const fs::path meta_file = fonts_folder / fs::path(name).concat(".meta");
         const fs::path atlas_file = fonts_folder / fs::path(name).concat(".png");
 
-        const std::string meta_file_str = meta_file.string();
-        const std::string atlas_file_str = atlas_file.string();
-
-        if (!sge::FileExists(meta_file_str.c_str())) {
-            SGE_LOG_ERROR("Failed to find the font meta file '{}'", meta_file_str.c_str());
+        if (!fs::exists(meta_file)) {
+            SGE_LOG_ERROR("Failed to find the font meta file '{}'", meta_file);
             return false;
         }
 
-        if (!sge::FileExists(atlas_file_str.c_str())) {
-            SGE_LOG_ERROR("Failed to find the font atlas file '{}'", atlas_file_str.c_str());
+        if (!fs::exists(atlas_file)) {
+            SGE_LOG_ERROR("Failed to find the font atlas file '{}'", atlas_file);
             return false;
         }
 
         sge::Font font;
-        if (!load_font(font, meta_file_str.c_str(), atlas_file_str.c_str())) return false;
+        if (!load_font(font, meta_file.c_str(), atlas_file.c_str())) return false;
 
         state.fonts[key] = font;
     }

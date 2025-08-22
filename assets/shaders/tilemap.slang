@@ -1,3 +1,4 @@
+[vk::binding(2)]
 cbuffer GlobalUniformBuffer : register( b2 )
 {
     float4x4 u_screen_projection;
@@ -19,6 +20,7 @@ struct TileData {
     float depth;
 };
 
+[vk::binding(3)]
 cbuffer TileDataBuffer : register(b3) {
     TileData u_tile_data[3];
 }
@@ -48,6 +50,7 @@ static float2 unpack_position(uint position) {
     return float2(float(x), float(y));
 }
 
+[shader("vertex")]
 VSOutput VS(VSInput inp)
 {
     const float2 world_pos = inp.i_world_pos;
@@ -87,14 +90,19 @@ VSOutput VS(VSInput inp)
 	return output;
 }
 
+[vk::binding(4)]
 Texture2DArray TextureArray : register(t4);
+
+[vk::binding(5)]
 SamplerState Sampler : register(s5);
 
+[shader("fragment")]
 float4 PS(VSOutput inp) : SV_Target
 {
     const float4 color = TextureArray.Sample(Sampler, float3(inp.uv, float(inp.tile_id)));
 
-    clip(color.a - 0.5);
+    if (color.a <= 0.5)
+        discard;
 
     return float4(color.rgb, 1.0f);
 };

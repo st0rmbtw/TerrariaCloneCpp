@@ -1,3 +1,4 @@
+[vk::binding(2)]
 cbuffer GlobalUniformBuffer : register( b2 )
 {
     float4x4 u_screen_projection;
@@ -21,6 +22,7 @@ struct VSOutput {
     float2 uv : UV;
 };
 
+[shader("vertex")]
 VSOutput VS(VSInput inp)
 {
     VSOutput output;
@@ -31,9 +33,13 @@ VSOutput VS(VSInput inp)
     return output;
 }
 
+[vk::binding(3)]
 Texture2D StaticLightMapChunk : register(t3);
+
+[vk::binding(4)]
 SamplerState Sampler : register(s4);
 
+[shader("fragment")]
 float4 PS(VSOutput inp) : SV_Target
 {
     const float4 color = StaticLightMapChunk.Sample(Sampler, inp.uv);
