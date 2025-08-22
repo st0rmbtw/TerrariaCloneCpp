@@ -390,12 +390,12 @@ bool Assets::LoadFonts() {
         const fs::path atlas_file = fonts_folder / fs::path(name).concat(".png");
 
         if (!fs::exists(meta_file)) {
-            SGE_LOG_ERROR("Failed to find the font meta file '{}'", meta_file);
+            SGE_LOG_ERROR("Failed to find the font meta file '{}'", meta_file.c_str());
             return false;
         }
 
         if (!fs::exists(atlas_file)) {
-            SGE_LOG_ERROR("Failed to find the font atlas file '{}'", atlas_file);
+            SGE_LOG_ERROR("Failed to find the font atlas file '{}'", atlas_file.c_str());
             return false;
         }
 

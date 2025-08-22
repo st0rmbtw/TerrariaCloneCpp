@@ -77,7 +77,7 @@ struct ResultFile {
     Slang::ComPtr<slang::IBlob> blob;
 };
 
-void DiagnoseIfNeeded(slang::IBlob* diagnosticsBlob) {
+static void DiagnoseIfNeeded(slang::IBlob* diagnosticsBlob) {
     if (diagnosticsBlob != nullptr) {
         printf("%s\n", (const char*)diagnosticsBlob->getBufferPointer());
     }
