@@ -227,8 +227,7 @@ public:
     }
 
     inline void drop_item(const glm::vec2& position, const glm::vec2& velocity, const Item& item, bool set_timer = false) {
-        const std::optional<float> spawn_time = set_timer ? std::optional(sge::Time::FixedElapsedSeconds()) : std::nullopt;
-        m_dropped_items.add(DroppedItem(position, velocity, item, spawn_time));
+        m_dropped_items.add(DroppedItem(position, velocity, item, set_timer));
     }
 
 private:

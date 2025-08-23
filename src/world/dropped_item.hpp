@@ -15,18 +15,18 @@
 class DroppedItem {
 public:
 
-    DroppedItem(const glm::vec2& position, const glm::vec2& velocity, const Item& item, std::optional<float> spawn_time = std::nullopt) :
+    DroppedItem(const glm::vec2& position, const glm::vec2& velocity, const Item& item, bool set_timer = false) :
         m_position{ position },
         m_velocity{ velocity },
         m_item{ item },
-        m_spawn_time{ spawn_time }
+        m_set_timer{ set_timer }
     {
         m_sprite.set_texture(Assets::GetItemTexture(item.id));
         m_sprite.set_position(position);
     }
 
     void draw() const;
-    void update(const WorldData& world);
+    void update(const WorldData& world, float dt);
 
     bool follow_player(const sge::Rect& player_rect, const Inventory& inventory);
 
@@ -55,8 +55,9 @@ private:
     Item m_item;
     Collision m_collision;
 
-    std::optional<float> m_spawn_time;
+    float m_timer = 0.0f;
 
+    bool m_set_timer = false;
     bool m_following = false;
 };
 

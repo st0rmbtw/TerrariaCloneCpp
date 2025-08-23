@@ -9,6 +9,7 @@
 static constexpr float GRAVITY = 0.1f;
 static constexpr float MAX_VERTICAL_SPEED = 7.f;
 static constexpr float MAX_HORIZONTAL_SPEED = 5.f;
+static constexpr float PLAYER_GRAB_DELAY = 1.5f;
 
 using Constants::ITEM_GRAB_RANGE;
 
@@ -16,8 +17,11 @@ void DroppedItem::draw() const {
     GameRenderer::DrawSpriteWorld(m_sprite);
 }
 
-void DroppedItem::update(const WorldData& world) {
+void DroppedItem::update(const WorldData& world, float dt) {
     ZoneScoped;
+
+    if (m_set_timer && m_timer < PLAYER_GRAB_DELAY)
+        m_timer += dt;
 
     apply_gravity();
     apply_air_drag();
@@ -160,9 +164,8 @@ bool DroppedItem::follow_player(const sge::Rect& player_rect, const Inventory& i
         return false;
     }
 
-    if (m_spawn_time.has_value()) {
-        const float elapsed = sge::Time::FixedElapsedSeconds() - m_spawn_time.value();
-        if (elapsed < 1.5f) return false;
+    if (m_timer && m_timer < PLAYER_GRAB_DELAY) {
+        return false;
     }
 
     const float distance = glm::length(player_rect.center() - item_rect.center());

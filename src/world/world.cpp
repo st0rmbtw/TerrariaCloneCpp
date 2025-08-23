@@ -272,11 +272,9 @@ void World::update(const sge::Camera& camera) {
 void World::fixed_update(const sge::Rect& player_rect, Inventory& inventory) {
     m_dropped_items.update_lookup();
 
-    GameRenderer::BeginOrderMode();
-        for (DroppedItem& item : m_dropped_items) {
-            item.update(m_data);
-        }
-    GameRenderer::EndOrderMode();
+    for (DroppedItem& item : m_dropped_items) {
+        item.update(m_data, sge::Time::FixedDeltaSeconds());
+    }
 
     m_dropped_items.for_each_neighbor(player_rect.center(), [&](size_t index, DroppedItem& item) {
         if (item.follow_player(player_rect, inventory)) {
@@ -349,9 +347,11 @@ void World::draw(const sge::Camera& camera) const {
         }
     GameRenderer::EndOrderMode();
 
-    for (const DroppedItem& item : m_dropped_items) {
-        item.draw();
-    }
+    GameRenderer::BeginOrderMode();
+        for (const DroppedItem& item : m_dropped_items) {
+            item.draw();
+        }
+    GameRenderer::EndOrderMode();
 }
 
 void World::update_neighbors(TilePos initial_pos) {

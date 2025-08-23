@@ -134,7 +134,7 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
     state.type[index] = particle_data.type;
     state.variant[index] = particle_data.variant;
 
-    state.active_count = ++state.active_count % MAX_PARTICLES_COUNT;
+    state.active_count = (state.active_count + 1) % MAX_PARTICLES_COUNT;
 }
 
 void ParticleManager::Draw() {

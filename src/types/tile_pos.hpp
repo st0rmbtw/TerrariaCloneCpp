@@ -7,10 +7,11 @@
 
 #include <glm/glm.hpp>
 #include <SGE/defines.hpp>
+#include <SGE/assert.hpp>
 
 #include "../constants.hpp"
 
-enum class TileOffset: uint8_t {
+enum class TileOffset : uint8_t {
     Top,
     Bottom,
     Left,
@@ -51,6 +52,7 @@ struct TilePos {
             return {this->x - 1, this->y + 1};
         case TileOffset::BottomRight:
             return {this->x + 1, this->y + 1};
+        default: SGE_UNREACHABLE()
         }
     }
 
