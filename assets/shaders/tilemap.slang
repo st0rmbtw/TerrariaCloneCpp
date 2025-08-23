@@ -45,8 +45,8 @@ static const uint TILE_TYPE_WALL = 1u;
 static const uint TILE_TYPE_TORCH = 2u;
 
 static float2 unpack_position(uint position) {
-    uint x = position & 0xFF;
-    uint y = (position >> 8) & 0xFF;
+    const uint x = position & 0xFF;
+    const uint y = (position >> 8) & 0xFF;
     return float2(float(x), float(y));
 }
 

@@ -1,13 +1,19 @@
-#ifndef DEF_SUBDIVISION
-#   error "Define DEF_SUBDIVISION macro."
-#endif
+#ifdef SLANG_COMPILING
+    #ifndef DEF_SUBDIVISION
+        #error "Define DEF_SUBDIVISION macro."
+    #endif
 
-#ifndef DEF_SOLID_DECAY
-#   error "Define DEF_SOLID_DECAY macro."
-#endif
+    #ifndef DEF_SOLID_DECAY
+        #error "Define DEF_SOLID_DECAY macro."
+    #endif
 
-#ifndef DEF_AIR_DECAY
-#   error "Define DEF_AIR_DECAY macro."
+    #ifndef DEF_AIR_DECAY
+        #error "Define DEF_AIR_DECAY macro."
+    #endif
+#else
+    #define DEF_SUBDIVISION 1
+    #define DEF_SOLID_DECAY 1
+    #define DEF_AIR_DECAY 1
 #endif
 
 [vk::binding(3)]
@@ -41,8 +47,8 @@ RWTexture2D<unorm float4> LightTexture : register(u6);
 static const float LIGHT_EPSILON = 0.0185f;
 
 static float get_decay(uint2 pos) {
-    uint tile = TileTexture[pos / DEF_SUBDIVISION].r;
-    if (tile == 1u) {
+    const uint tile = TileTexture[pos / DEF_SUBDIVISION].r;
+    if (tile == 1) {
         return DEF_SOLID_DECAY;
     } else {
         return DEF_AIR_DECAY;

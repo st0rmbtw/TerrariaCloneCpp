@@ -187,7 +187,7 @@ foreach(shader ${VULKAN_SHADERS})
         OUTPUT
             "${parent_dir}/opengl/${basename}"
         COMMAND
-            spirv-cross ${shader} --version 330 --output "${parent_dir}/opengl/${basename}"
+            spirv-cross ${shader} --no-es --remove-unused-variables --combined-samplers-inherit-bindings --version 430 --output "${parent_dir}/opengl/${basename}"
     )
 
     list(APPEND OPENGL_SHADERS_OUT "${parent_dir}/opengl/${basename}")

@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
 #elif SGE_PLATFORM_MACOS
     sge::RenderBackend backend = sge::RenderBackend::Metal;
 #else
-    sge::RenderBackend backend = sge::RenderBackend::OpenGL;
+    sge::RenderBackend backend = sge::RenderBackend::Vulkan;
 #endif
     AppConfig config;
 

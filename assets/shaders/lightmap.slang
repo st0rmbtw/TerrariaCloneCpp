@@ -29,7 +29,6 @@ VSOutput VS(VSInput inp)
     output.position = mul(u_view_projection, float4(inp.position, 0.0f, 1.0f));
     output.position.z = 1.0f;
     output.uv = inp.uv;
-
     return output;
 }
 

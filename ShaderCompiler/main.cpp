@@ -63,6 +63,7 @@ namespace TargetType {
 }
 
 static const std::array SHADER_DEFS = std::to_array<ShaderDef>({
+    { "SLANG_COMPILING", "1" },
     { "DEF_SUBDIVISION", std::to_string(Constants::SUBDIVISION) },
     { "DEF_SOLID_DECAY", std::to_string(Constants::LightDecay(true)) },
     { "DEF_AIR_DECAY", std::to_string(Constants::LightDecay(false)) },
@@ -461,20 +462,29 @@ static bool CompileSlangShaders(const fs::path& shaders_dir, const fs::path& out
     sessionDesc.preprocessorMacros = preprocessorMacroDesc.data();
     sessionDesc.preprocessorMacroCount = preprocessorMacroDesc.size();
 
+#if DEBUG
+    static constexpr int DEBUG_INFO = SLANG_DEBUG_INFO_LEVEL_MAXIMAL;
+    static constexpr int OPTIMIZATION = SLANG_OPTIMIZATION_LEVEL_NONE;
+#else
+    static constexpr int DEBUG_INFO = SLANG_DEBUG_INFO_LEVEL_NONE;
+    static constexpr int OPTIMIZATION = SLANG_OPTIMIZATION_LEVEL_HIGH;
+#endif
+
     std::array options = std::to_array<slang::CompilerOptionEntry>({
         {
             slang::CompilerOptionName::DebugInformation,
-            {slang::CompilerOptionValueKind::Int, SLANG_DEBUG_INFO_LEVEL_NONE, 0, nullptr, nullptr}
+            {slang::CompilerOptionValueKind::Int, DEBUG_INFO, 0, nullptr, nullptr}
         },
         {
             slang::CompilerOptionName::Optimization,
-            {slang::CompilerOptionValueKind::Int, SLANG_OPTIMIZATION_LEVEL_HIGH, 0, nullptr, nullptr}
+            {slang::CompilerOptionValueKind::Int, OPTIMIZATION, 0, nullptr, nullptr}
         },
         {
             slang::CompilerOptionName::MatrixLayoutColumn,
             {slang::CompilerOptionValueKind::Int, 1, 0, nullptr, nullptr}
         }
     });
+    
     sessionDesc.compilerOptionEntries = options.data();
     sessionDesc.compilerOptionEntryCount = options.size();
 
