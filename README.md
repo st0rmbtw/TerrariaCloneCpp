@@ -27,17 +27,23 @@ cmake --build ./build_release/
 
 ### CMake Options
 
-`ENABLE_DEBUG_TOOLS` Enable Debug Tools
+`ENABLE_DEBUG_TOOLS` - Enable debug tools.
 
 ### CLI Options
 
-`--backend <d3d11|d3d12|vulkan|opengl|metal>` Set a rendering backend (D3D11, D3D12 work only on Windows; Metal works only on macOS)
+`--backend <d3d11|d3d12|vulkan|opengl|metal>` - Set a rendering backend (D3D11, D3D12 work only on Windows; Metal works only on macOS).
 
-`--vsync` Enable vertical synchronization
+`--vsync` - Enable vertical synchronization.
 
-`--pause` Don't initialize the game until any key is pressed (Useful when debugging with `RenderDoc`)
+`--wait-key` - Wait for any key to be pressed before initializing the game (Useful when debugging with `RenderDoc`).
 
-`--fullscreen` Enable fullscreen mode
+`--fullscreen` - Enable fullscreen mode.
+
+`--samples <number of samples>` - Set MSAA sample count (**8** by default).
+
+`--world-width <width>` - Set the total world width to `width` blocks (**200** by default).
+
+`--world-height <height>` - Set the total world height to `height` blocks (**500** by default).
 
 ## Keymappings
 
