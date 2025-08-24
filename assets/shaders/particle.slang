@@ -31,16 +31,16 @@ struct VSOutput
 static const float2 PARTICLE_SIZE = float2(8.0, 8.0);
 
 [vk::binding(5)]
-RWBuffer<float4> transforms : register(u5);
+RWStructuredBuffer<float4> transforms : register(u5);
 
 [vk::binding(6)]
-Buffer<float2> positions : register(t6);
+StructuredBuffer<float2> positions : register(t6);
 
 [vk::binding(7)]
-Buffer<float4> rotations : register(t7);
+StructuredBuffer<float4> rotations : register(t7);
 
 [vk::binding(8)]
-Buffer<float> scales : register(t8);
+StructuredBuffer<float> scales : register(t8);
 
 [shader("vertex")]
 VSOutput VS(VSInput inp)

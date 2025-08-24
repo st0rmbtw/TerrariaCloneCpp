@@ -131,6 +131,7 @@ inline constexpr int16_t block_hp(BlockType tile_type) {
     case BlockType::Dirt:  case BlockType::Grass: return 50;
     case BlockType::Stone: case BlockType::Wood:  return 100;
     case BlockType::Tree:  return 500;
+    default: SGE_UNREACHABLE();
     }
 }
 
@@ -195,6 +196,7 @@ inline constexpr uint8_t tile_type(BlockTypeWithData tile) {
         default:
             return TileType::Tree;
         }
+    default: SGE_UNREACHABLE();
     }
 }
 
@@ -216,6 +218,7 @@ inline constexpr TileTextureType tile_texture_type(BlockTypeWithData tile) {
             return TileTextureType::TreeTrunk;
     }
     case BlockType::Wood:  return TileTextureType::Wood;
+    default: SGE_UNREACHABLE();
     }
 }
 
@@ -237,6 +240,7 @@ inline constexpr TextureAsset block_texture_asset(BlockTypeWithData block) {
             return TextureAsset::Tiles5;
         }
     case BlockType::Wood:  return TextureAsset::Tiles30;
+    default: SGE_UNREACHABLE();
     }
 }
 
@@ -281,6 +285,8 @@ inline constexpr uint8_t block_required_tool(BlockType tile_type) {
 
     case BlockType::Tree:
         return ToolFlags::Axe;
+    default:
+        SGE_UNREACHABLE();
     }
 }
 

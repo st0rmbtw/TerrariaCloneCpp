@@ -493,20 +493,20 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
     for (const glm::uvec2& pos : chunk_manager.visible_chunks()) {
         const RenderChunk& chunk = chunk_manager.render_chunks().find(pos)->second;
 
-        if (chunk.wall_count > 0) {
-            commands->SetVertexBufferArray(*chunk.wall_buffer_array);
+        if (chunk.wall_count() > 0) {
+            commands->SetVertexBufferArray(*chunk.wall_buffer_array());
             commands->SetResource(0, walls_texture);
             commands->SetResourceHeap(*m_resource_heap);
 
-            commands->DrawInstanced(4, 0, chunk.wall_count);
+            commands->DrawInstanced(4, 0, chunk.wall_count());
         }
 
-        if (chunk.block_count > 0) {
-            commands->SetVertexBufferArray(*chunk.block_buffer_array);
+        if (chunk.block_count() > 0) {
+            commands->SetVertexBufferArray(*chunk.block_buffer_array());
             commands->SetResource(0, tiles_texture);
             commands->SetResourceHeap(*m_resource_heap);
 
-            commands->DrawInstanced(4, 0, chunk.block_count);
+            commands->DrawInstanced(4, 0, chunk.block_count());
         }
     }
 }
