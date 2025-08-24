@@ -52,7 +52,7 @@ struct TilePos {
             return {this->x - 1, this->y + 1};
         case TileOffset::BottomRight:
             return {this->x + 1, this->y + 1};
-        default: SGE_UNREACHABLE()
+        default: SGE_UNREACHABLE();
         }
     }
 
