@@ -287,6 +287,51 @@ void World::fixed_update(const sge::Rect& player_rect, Inventory& inventory) {
         m_dropped_items.remove(*it);
         it = m_pickedup_item_indices.erase(it);
     }
+
+    m_dropped_items.update_lookup();
+
+    stack_dropped_items();
+}
+
+void World::stack_dropped_items() {
+    using Constants::ITEM_STACK_RANGE;
+
+    for (size_t i = 0; i < m_dropped_items.size(); ++i) {
+        DroppedItem& dropped_item_a = m_dropped_items[i];
+        m_dropped_items.for_each_neighbor(dropped_item_a.position(), [&](size_t index, DroppedItem& dropped_item_b) {
+            if (index == i) return;
+
+            Item& item_a = dropped_item_a.item();
+            Item& item_b = dropped_item_b.item();
+            const ItemStack item_max_stack = item_a.max_stack;
+
+            if (item_a.id != item_b.id)
+                return;
+
+            if (item_a.stack >= item_max_stack)
+                return;
+
+            const sge::Rect rect_b = sge::Rect::from_center_size(dropped_item_b.position(), dropped_item_b.size());
+            const sge::Rect stack_rect = sge::Rect::from_center_size(dropped_item_a.position(), glm::vec2(ITEM_STACK_RANGE));
+
+            if (!stack_rect.intersects(rect_b))
+                return;
+
+            if (item_a.stack + item_b.stack > item_max_stack) {
+                const ItemStack a = item_max_stack - item_a.stack;
+                item_a.stack += a;
+                item_b.stack -= a;
+            } else {
+                item_a.stack += item_b.stack;
+                item_b.stack = 0;
+            }
+
+            dropped_item_a.set_velocity((dropped_item_a.velocity() + dropped_item_b.velocity()) * 0.5f);
+            dropped_item_a.set_position((dropped_item_a.position() + dropped_item_b.position()) * 0.5f);
+
+            m_pickedup_item_indices.insert(index);
+        });
+    }
 }
 
 void World::draw(const sge::Camera& camera) const {

@@ -32,6 +32,7 @@ namespace Constants {
     constexpr float LIGHT_EPSILON = 0.01;
 
     constexpr float ITEM_GRAB_RANGE = 5.25f * Constants::TILE_SIZE;
+    constexpr float ITEM_STACK_RANGE = 1.5f * Constants::TILE_SIZE;
 
     constexpr float LightDecay(bool solid) {
         if constexpr (SUBDIVISION == 8) {

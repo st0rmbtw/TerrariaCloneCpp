@@ -93,6 +93,10 @@ public:
         return m_items.end();
     }
 
+    T& operator[](size_t index) {
+        return m_items[index];
+    }
+
     template <typename F>
     void for_each_neighbor(glm::vec2 position, F&& func) {
         ZoneScoped;

@@ -158,7 +158,7 @@ static void update() {
 
     Background::Update(g.camera, g.world);
 
-    UI::Update(g.player.inventory());
+    UI::Update(g.player, g.world);
 
     g.player.update(g.world);
 

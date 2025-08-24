@@ -146,14 +146,34 @@ void UI::PreUpdate(Inventory& inventory) noexcept {
                 switch (element.type()) {
                 case UiElement::HotbarCell:
                     if (state.show_extra_ui) {
-                        inventory.take_or_put_item(element.data());
+                        if (inventory.has_taken_item()) {
+                            inventory.put_item(element.data());
+                        } else {
+                            inventory.take_item(element.data());
+                        }
                     } else {
                         select_hotbar_slot(inventory, element.data());
                     }
                     break;
                 case UiElement::InventoryCell:
+                    if (inventory.has_taken_item()) {
+                        inventory.put_item(element.data());
+                    } else {
+                        inventory.take_item(element.data());
+                    }
+                    break;
+                }
+                break;
+            } else if (sge::Input::JustPressed(sge::MouseButton::Right)) {
+                switch (element.type()) {
+                case UiElement::HotbarCell:
                     if (state.show_extra_ui) {
-                        inventory.take_or_put_item(element.data());
+                        inventory.take_item(element.data(), 1);
+                    }
+                    break;
+                case UiElement::InventoryCell:
+                    if (state.show_extra_ui) {
+                        inventory.take_item(element.data(), 1);
                     }
                     break;
                 }
@@ -163,10 +183,12 @@ void UI::PreUpdate(Inventory& inventory) noexcept {
     }
 }
 
-void UI::Update(Inventory& inventory) noexcept {
+void UI::Update(Player& player, World& world) noexcept {
     ZoneScoped;
 
     update_cursor();
+
+    Inventory& inventory = player.inventory();
 
     if (sge::Input::JustPressed(sge::Key::Escape)) {
         state.show_extra_ui = !state.show_extra_ui;
@@ -175,6 +197,12 @@ void UI::Update(Inventory& inventory) noexcept {
 
     if (sge::Input::JustPressed(sge::Key::F10)) {
         state.show_fps = !state.show_fps;
+    }
+
+    if (state.show_extra_ui) {
+        if (!sge::Input::IsMouseOverUi() && inventory.has_taken_item() && sge::Input::JustPressed(sge::MouseButton::Right)) {
+            player.throw_item(world, TAKEN_ITEM_INDEX);
+        }
     }
 
     if (sge::Input::JustPressed(sge::Key::Digit1)) select_hotbar_slot(inventory, 0);

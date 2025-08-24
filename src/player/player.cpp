@@ -559,7 +559,7 @@ void Player::fixed_update(const sge::Camera& camera, World& world, bool handle_i
     }
 
     if (sge::Input::JustPressed(sge::Key::T)) {
-        throw_item(world);
+        throw_item(world, m_inventory.selected_slot());
     }
 
     horizontal_movement(handle_input);
@@ -888,8 +888,8 @@ void Player::interact(const sge::Camera& camera, World& world) {
     }
 }
 
-void Player::throw_item(World& world) {
-    std::optional<Item> item = m_inventory.remove_item(m_inventory.selected_slot());
+void Player::throw_item(World& world, uint8_t slot) {
+    std::optional<Item> item = m_inventory.remove_item(slot);
 
     if (!item.has_value())
         return;

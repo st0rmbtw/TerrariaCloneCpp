@@ -7,12 +7,13 @@
 
 #include "../player/inventory.hpp"
 #include "../player/player.hpp"
+#include "../world/world.hpp"
 
 namespace UI {
     void Init() noexcept;
     void FixedUpdate() noexcept;
     void PreUpdate(Inventory& inventory) noexcept;
-    void Update(Inventory& inventory) noexcept;
+    void Update(Player& player, World& world) noexcept;
     void PostUpdate() noexcept;
     void Draw(const sge::Camera& camera, const Player& player) noexcept;
 };

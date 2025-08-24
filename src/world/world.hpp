@@ -232,6 +232,7 @@ public:
 
 private:
     void update_neighbors(TilePos pos);
+    void stack_dropped_items();
 
 private:
     WorldData m_data;

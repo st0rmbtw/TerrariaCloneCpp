@@ -9,13 +9,15 @@
 
 #include "../types/item.hpp"
 
-static constexpr uint8_t ITEM_COUNT = 51;
-static constexpr uint8_t CELLS_IN_ROW = 10;
-static constexpr uint8_t INVENTORY_ROWS = 5;
-static constexpr uint8_t TAKEN_ITEM_INDEX = 50;
+using ItemIndex = uint8_t;
+
+static constexpr ItemIndex ITEM_COUNT = 51;
+static constexpr ItemIndex CELLS_IN_ROW = 10;
+static constexpr ItemIndex INVENTORY_ROWS = 5;
+static constexpr ItemIndex TAKEN_ITEM_INDEX = 50;
 
 struct ItemSlot {
-    explicit ItemSlot(const std::optional<Item>& item, uint8_t index = 0) noexcept :
+    explicit ItemSlot(const std::optional<Item>& item, ItemIndex index = 0) noexcept :
         item(item),
         index(index) {}
 
@@ -25,69 +27,115 @@ struct ItemSlot {
     }
 
     const std::optional<Item>& item;
-    uint8_t index = 0;
+    ItemIndex index = 0;
 };
 
 struct TakenItem {
     ItemSlot item_slot;
-    uint8_t taken_from;
+    ItemIndex taken_from;
 };
 
 class Inventory {
 public:
     Inventory() = default;
 
-    inline void set_selected_slot(uint8_t index) noexcept {
+    inline void set_selected_slot(ItemIndex index) noexcept {
         SGE_ASSERT(index < CELLS_IN_ROW);
         m_selected_slot = index;
     }
 
     [[nodiscard]]
-    inline ItemSlot get_item(uint8_t index) const noexcept {
-        SGE_ASSERT(index < 51);
+    inline ItemSlot get_item(ItemIndex index) const noexcept {
+        SGE_ASSERT(index < ITEM_COUNT);
         return ItemSlot(m_items[index], index);
     }
 
-    inline std::optional<Item> remove_item(uint8_t index) noexcept {
-        SGE_ASSERT(index < 51);
+    inline std::optional<Item> remove_item(ItemIndex index) noexcept {
+        SGE_ASSERT(index < ITEM_COUNT);
         const std::optional<Item> item = m_items[index];
         m_items[index] = std::nullopt;
         return item;
     }
 
-    inline void set_item(uint8_t index, const Item& item) noexcept {
-        SGE_ASSERT(index < 51);
+    inline void set_item(ItemIndex index, const Item& item) noexcept {
+        SGE_ASSERT(index < ITEM_COUNT);
         m_items[index] = item;
     }
 
     [[nodiscard]]
-    inline bool item_exits(uint8_t index) const noexcept {
-        SGE_ASSERT(index < 51);
+    inline bool item_exits(ItemIndex index) const noexcept {
+        SGE_ASSERT(index < ITEM_COUNT);
         return m_items[index].has_value();
     }
 
-    inline void take_or_put_item(uint8_t index) {
-        SGE_ASSERT(index < 51);
-        m_taken_item_index = index;
-        std::swap(m_items[index], m_items[TAKEN_ITEM_INDEX]);
+    inline void put_item(ItemIndex index) {
+        SGE_ASSERT(index < ITEM_COUNT);
+        move_item_stack(TAKEN_ITEM_INDEX, index);
     }
 
-    inline void return_taken_item() noexcept {
-        if (!m_items[TAKEN_ITEM_INDEX].has_value()) return;
-        m_items[m_taken_item_index] = m_items[TAKEN_ITEM_INDEX];
+    inline void take_item(ItemIndex index, ItemStack count = 0) {
+        SGE_ASSERT(index < ITEM_COUNT);
+        move_item_stack(index, TAKEN_ITEM_INDEX, count);
+    }
+
+    inline std::optional<Item> return_taken_item() noexcept {
+        if (!m_items[TAKEN_ITEM_INDEX].has_value()) return std::nullopt;
+
+        if (!m_items[m_taken_item_index]->has_space()) {
+            const ItemStack remaining = add_item_stack(m_items[TAKEN_ITEM_INDEX].value());
+            if (remaining > 0) {
+                return m_items[m_taken_item_index]->with_stack(remaining);
+            }
+        }
+
         m_items[TAKEN_ITEM_INDEX] = std::nullopt;
+
+        return std::nullopt;
     }
 
-    inline void consume_item(uint8_t index) noexcept {
-        SGE_ASSERT(index < 51);
+    inline void consume_item(ItemIndex index) noexcept {
+        SGE_ASSERT(index < ITEM_COUNT);
 
         std::optional<Item>& item = m_items[index];
         if (!item) return;
 
         if (!item->consumable) return;
 
-        if (item->stack > 1) item->stack -= 1;
-        else m_items[index] = std::nullopt;
+        update_item_stack(index, item->stack - 1);
+    }
+
+    inline ItemStack move_item_stack(ItemIndex from_index, ItemIndex to_index, ItemStack count = 0) {
+        SGE_ASSERT(from_index < ITEM_COUNT);
+        SGE_ASSERT(to_index < ITEM_COUNT);
+
+        std::optional<Item>& from = m_items[from_index];
+        if (!from.has_value())
+            return count;
+
+        std::optional<Item>& to = m_items[to_index];
+
+        if (count == 0)
+            count = from->stack;
+
+        SGE_ASSERT(count <= from->stack);
+
+        ItemStack remaining = count;
+
+        if (to.has_value()) {
+            if (from->id != to->id)
+                return count;
+
+            const ItemStack took = std::min(count, static_cast<ItemStack>(to->max_stack - to->stack));
+            to->stack += took;
+            remaining -= took;
+        } else {
+            m_items[to_index] = from->with_stack(count);
+            remaining -= count;
+        }
+
+        update_item_stack(from_index, from->stack - count - remaining);
+
+        return remaining;
     }
 
     /// Returns the number of remaining items
@@ -156,7 +204,7 @@ public:
     }
 
     [[nodiscard]]
-    inline uint8_t selected_slot() const noexcept {
+    inline ItemIndex selected_slot() const noexcept {
         return m_selected_slot;
     }
 
@@ -165,9 +213,24 @@ public:
         return ItemSlot(m_items[TAKEN_ITEM_INDEX], TAKEN_ITEM_INDEX);
     }
 
+
+    [[nodiscard]]
+    bool has_taken_item() const noexcept {
+        return m_items[TAKEN_ITEM_INDEX].has_value();
+    }
+
 private:
-    uint8_t m_selected_slot = 0;
-    uint8_t m_taken_item_index = 0;
+
+    void update_item_stack(ItemIndex index, ItemStack stack) {
+        if (stack > 0)
+            m_items[index]->stack = stack;
+        else
+            m_items[index] = std::nullopt;
+    }
+
+private:
+    ItemIndex m_selected_slot = 0;
+    ItemIndex m_taken_item_index = 0;
     std::optional<Item> m_items[ITEM_COUNT];
 };
 

@@ -30,13 +30,36 @@ public:
 
     bool follow_player(const sge::Rect& player_rect, const Inventory& inventory);
 
+    void set_position(const glm::vec2& position) noexcept {
+        m_position = position;
+    }
+    
+    void set_velocity(const glm::vec2& velocity) noexcept {
+        m_velocity = velocity;
+    }
+
     [[nodiscard]]
     const glm::vec2& position() const noexcept {
         return m_position;
     }
 
     [[nodiscard]]
+    const glm::vec2& velocity() const noexcept {
+        return m_velocity;
+    }
+
+    [[nodiscard]]
+    glm::vec2 size() const noexcept {
+        return m_sprite.size();
+    }
+
+    [[nodiscard]]
     const Item& item() const noexcept {
+        return m_item;
+    }
+
+    [[nodiscard]]
+    Item& item() noexcept {
         return m_item;
     }
 

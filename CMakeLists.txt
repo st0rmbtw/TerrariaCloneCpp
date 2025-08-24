@@ -16,7 +16,6 @@ endif()
 
 set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
 
-option(ENABLE_TRACY "Enable Tracy profiler" OFF)
 option(ENABLE_DEBUG_TOOLS "Enable Debug Tools" OFF)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")

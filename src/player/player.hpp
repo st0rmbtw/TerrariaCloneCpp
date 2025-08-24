@@ -129,6 +129,8 @@ public:
     constexpr bool can_use_item() const noexcept {
         return true;
     }
+
+    void throw_item(World& world, uint8_t slot);
     
 private:
     void horizontal_movement(bool handle_input);
@@ -152,7 +154,6 @@ private:
 
     void use_item(const sge::Camera& camera, World& world);
     void interact(const sge::Camera& camera, World& world);
-    void throw_item(World& world);
 
 private:
     glm::vec2 m_position;
