@@ -14,6 +14,7 @@
 #include <SGE/types/cursor_mode.hpp>
 #include <SGE/profile.hpp>
 
+#include "diagnostic/frametime.hpp"
 #include "renderer/renderer.hpp"
 #include "ui/ui.hpp"
 #include "world/autotile.hpp"
@@ -83,6 +84,8 @@ static glm::vec2 camera_free() {
 
 static void pre_update() {
     ZoneScoped;
+
+    FrameTime::Update(sge::Time::DeltaSeconds());
 
 #if DEBUG
     if (sge::Input::JustPressed(sge::Key::B)) {
