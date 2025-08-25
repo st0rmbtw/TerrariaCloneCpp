@@ -1,3 +1,4 @@
+[vk::binding(2)]
 cbuffer GlobalUniformBuffer : register( b2 )
 {
     float4x4 u_screen_projection;
@@ -37,15 +38,18 @@ struct VSOutput
 };
 
 // Bidirectional mod
-float fmodb(float a, float b) {
+static float fmodb(float a, float b) {
     float r = fmod(a, b);
     return r < 0.0 ? r + b : r;
 }
 
+[vk::binding(3)]
 Texture2DArray Texture : register(t3);
+
+[vk::binding(4)]
 SamplerState Sampler : register(s4);
 
-float2 scroll(
+static float2 scroll(
     float2 speed,
     float2 uv,
     float2 offset,
@@ -83,6 +87,7 @@ float2 scroll(
 
 static const int IGNORE_CAMERA_ZOOM_FLAG = 1 << 0;
 
+[shader("vertex")]
 VSOutput VS(VSInput inp)
 {
     const int flags = inp.i_flags;
@@ -115,6 +120,7 @@ VSOutput VS(VSInput inp)
 	return outp;
 }
 
+[shader("fragment")]
 float4 PS(VSOutput inp) : SV_Target
 {
     float2 uv = scroll(inp.speed, inp.uv, inp.offset, inp.tex_size, inp.texture_size, inp.size, inp.nonscale > 0);
@@ -127,7 +133,8 @@ float4 PS(VSOutput inp) : SV_Target
 
     const float4 color = Texture.Sample(Sampler, float3(uv, float(inp.id)));
 
-    clip(color.a - 0.05f);
+    if (color.a < 0.05f)
+        discard;
 
     return color;
 };

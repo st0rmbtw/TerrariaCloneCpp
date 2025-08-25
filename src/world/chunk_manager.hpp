@@ -1,7 +1,7 @@
-#ifndef WORLD_CHUNK_MANAGER_HPP
-#define WORLD_CHUNK_MANAGER_HPP
-
 #pragma once
+
+#ifndef WORLD_CHUNK_MANAGER_HPP_
+#define WORLD_CHUNK_MANAGER_HPP_
 
 #include <unordered_map>
 #include <unordered_set>

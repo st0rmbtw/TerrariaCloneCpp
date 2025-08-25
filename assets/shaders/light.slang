@@ -1,3 +1,22 @@
+#ifdef SLANG_COMPILING
+    #ifndef DEF_SUBDIVISION
+        #error "Define DEF_SUBDIVISION macro."
+    #endif
+
+    #ifndef DEF_SOLID_DECAY
+        #error "Define DEF_SOLID_DECAY macro."
+    #endif
+
+    #ifndef DEF_AIR_DECAY
+        #error "Define DEF_AIR_DECAY macro."
+    #endif
+#else
+    #define DEF_SUBDIVISION 1
+    #define DEF_SOLID_DECAY 1
+    #define DEF_AIR_DECAY 1
+#endif
+
+[vk::binding(3)]
 cbuffer GlobalUniformBuffer : register( b3 )
 {
     float4x4 u_screen_projection;
@@ -10,36 +29,36 @@ cbuffer GlobalUniformBuffer : register( b3 )
     float2 u_window_size;
 };
 
-cbuffer Uniforms : register(b2) {
-    uint2 uniform_min;
-    uint2 uniform_max;
-}
-
 struct Light {
     float4 color;
     uint2 pos;
     uint2 size;
 };
 
+[vk::binding(4)]
 StructuredBuffer<Light> LightBuffer : register(t4);
+
+[vk::binding(5)]
 Texture2D<uint> TileTexture : register(t5);
+
+[vk::binding(6)]
 RWTexture2D<unorm float4> LightTexture : register(u6);
 
 static const float LIGHT_EPSILON = 0.0185f;
 
-float get_decay(uint2 pos) {
-    uint tile = TileTexture[pos / DEF_SUBDIVISION].r;
-    if (tile == 1u) {
+static float get_decay(uint2 pos) {
+    const uint tile = TileTexture[pos / DEF_SUBDIVISION].r;
+    if (tile == 1) {
         return DEF_SOLID_DECAY;
     } else {
         return DEF_AIR_DECAY;
     }
 }
 
-void blur(uint2 pos, inout float3 prev_light, inout float prev_decay) {
+static void blur(uint2 pos, inout float3 prev_light, inout float prev_decay) {
     float4 this_light = LightTexture[pos];
 
-    prev_light = prev_light < LIGHT_EPSILON ? 0.0f : prev_light;
+    prev_light = select(prev_light < LIGHT_EPSILON, 0.0f, prev_light);
     
     if (prev_light.x < this_light.x) {
         prev_light.x = this_light.x;
@@ -65,6 +84,7 @@ void blur(uint2 pos, inout float3 prev_light, inout float prev_decay) {
     prev_decay = get_decay(pos);
 }
 
+[shader("compute")]
 [numthreads(1, 1, 1)]
 void CSComputeLightSetLightSources(uint3 thread_id : SV_DispatchThreadID)
 {
@@ -79,9 +99,13 @@ void CSComputeLightSetLightSources(uint3 thread_id : SV_DispatchThreadID)
     }
 }
 
+[shader("compute")]
 [numthreads(32, 1, 1)]
-void CSComputeLightVertical(uint3 thread_id : SV_DispatchThreadID)
-{
+void CSComputeLightVertical(
+    uint3 thread_id: SV_DispatchThreadID,
+    uniform uint2 uniform_min,
+    uniform uint2 uniform_max
+) {
     const uint x = uniform_min.x + thread_id.x;
 
     float3 prev_light = float3(0.0, 0.0, 0.0);
@@ -98,9 +122,13 @@ void CSComputeLightVertical(uint3 thread_id : SV_DispatchThreadID)
     }
 }
 
+[shader("compute")]
 [numthreads(32, 1, 1)]
-void CSComputeLightHorizontal(uint3 thread_id : SV_DispatchThreadID)
-{
+void CSComputeLightHorizontal(
+    uint3 thread_id: SV_DispatchThreadID,
+    uniform uint2 uniform_min,
+    uniform uint2 uniform_max
+) {
     const uint y = uniform_min.y + thread_id.x;
 
     float3 prev_light = float3(0.0, 0.0, 0.0);

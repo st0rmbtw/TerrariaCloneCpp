@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef BACKGROUND_HPP
-#define BACKGROUND_HPP
+#ifndef BACKGROUND_HPP_
+#define BACKGROUND_HPP_
 
 #include <SGE/renderer/camera.hpp>
 #include "world/world.hpp"

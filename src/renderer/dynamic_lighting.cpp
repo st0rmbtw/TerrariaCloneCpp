@@ -477,16 +477,21 @@ void AcceleratedDynamicLighting::init_pipeline() {
             LLGL::StageFlags::ComputeStage,
             {
                 sge::BindingLayoutItem::ConstantBuffer(3, "GlobalUniformBuffer"),
-                backend.IsOpenGL()
-                    ? sge::BindingLayoutItem::TextureStorage(5, "TileTexture")
-                    : sge::BindingLayoutItem::Texture(5, "TileTexture"),
+                sge::BindingLayoutItem::Texture(5, "TileTexture"),
                 sge::BindingLayoutItem::TextureStorage(6, "LightTexture")
             }
         );
-        lightBlurPipelineLayoutDesc.uniforms = {
-            LLGL::UniformDescriptor("uniform_min", LLGL::UniformType::UInt2),
-            LLGL::UniformDescriptor("uniform_max", LLGL::UniformType::UInt2),
-        };
+        if (backend.IsOpenGL()) {
+            lightBlurPipelineLayoutDesc.uniforms = {
+                LLGL::UniformDescriptor("entryPointParams.uniform_min", LLGL::UniformType::UInt2),
+                LLGL::UniformDescriptor("entryPointParams.uniform_max", LLGL::UniformType::UInt2),
+            };
+        } else {
+            lightBlurPipelineLayoutDesc.uniforms = {
+                LLGL::UniformDescriptor("uniform_min", LLGL::UniformType::UInt2),
+                LLGL::UniformDescriptor("uniform_max", LLGL::UniformType::UInt2),
+            };
+        }
 
         LLGL::PipelineLayout* lightBlurPipelineLayout = context->CreatePipelineLayout(lightBlurPipelineLayoutDesc);
 
@@ -519,7 +524,6 @@ void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
     using Constants::SUBDIVISION;
 
     auto& context = m_renderer->Context();
-    const sge::RenderBackend backend = m_renderer->Backend();
 
     SGE_RESOURCE_RELEASE(m_tile_texture);
 
@@ -528,7 +532,7 @@ void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
     tile_texture_desc.format    = LLGL::Format::R8UInt;
     tile_texture_desc.extent    = LLGL::Extent3D(world.area.width(), world.area.height(), 1);
     tile_texture_desc.miscFlags = 0;
-    tile_texture_desc.bindFlags = backend.IsOpenGL() ? LLGL::BindFlags::Storage : LLGL::BindFlags::Sampled;
+    tile_texture_desc.bindFlags = LLGL::BindFlags::Sampled;
     tile_texture_desc.mipLevels = 1;
 
     {

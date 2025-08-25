@@ -1,3 +1,4 @@
+[vk::binding(2)]
 cbuffer GlobalUniformBuffer : register( b2 )
 {
     float4x4 u_screen_projection;
@@ -34,6 +35,7 @@ inline float2 screen_to_world(float2 ndc) {
     return project_point2(u_inv_view_proj, ndc);
 }
 
+[shader("vertex")]
 VSOutput VS(VSInput inp)
 {
     const float2 world_pos = screen_to_world(inp.position);
@@ -47,22 +49,31 @@ VSOutput VS(VSInput inp)
 	return output;
 }
 
-Texture2D BackgroundTexture : register(t3); 
+[vk::binding(3)]
+Texture2D BackgroundTexture : register(t3);
+[vk::binding(4)]
 SamplerState BackgroundTextureSampler : register(s4);
 
+[vk::binding(5)]
 Texture2D WorldTexture : register(t5);
+[vk::binding(6)]
 SamplerState WorldTextureSampler : register(s6);
 
+[vk::binding(7)]
 Texture2D LightMap : register(t7);
+[vk::binding(8)]
 SamplerState LightMapSampler : register(s8);
 
+[vk::binding(9)]
 Texture2D Light : register(t9);
+[vk::binding(10)]
 SamplerState LightSampler : register(s10);
 
-float4 blend(float4 foreground, float4 background) {
+static float4 blend(float4 foreground, float4 background) {
     return foreground * foreground.a + background * (1.0 - foreground.a);
 }
 
+[shader("fragment")]
 float4 PS(VSOutput inp) : SV_Target
 {
     const float3 light = Light.Sample(LightSampler, inp.light_uv).rgb;

@@ -1,20 +1,26 @@
-#ifndef WORLD_WORLD_HPP
-#define WORLD_WORLD_HPP
-
 #pragma once
+
+#ifndef WORLD_WORLD_HPP_
+#define WORLD_WORLD_HPP_
 
 #include <cstdint>
 
 #include <SGE/math/rect.hpp>
 #include <SGE/renderer/camera.hpp>
 #include <SGE/time/timer.hpp>
+#include <SGE/time/time.hpp>
+#include <SGE/types/sprite.hpp>
+#include <SGE/utils/containers/swapbackvector.hpp>
 
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
 #include "../types/tile_pos.hpp"
 #include "../types/light.hpp"
+#include "../types/item.hpp"
+#include "../types/lookup_list.hpp"
 
 #include "chunk_manager.hpp"
+#include "dropped_item.hpp"
 
 struct TileDigAnimation {
     TilePos tile_pos;
@@ -24,14 +30,9 @@ struct TileDigAnimation {
     BlockTypeWithData block;
 };
 
-struct TileCracks {
-    TilePos tile_pos;
-    uint8_t cracks_index;
-};
-
 class World {
 public:
-    World() = default;
+    void init();
 
     void generate(uint32_t width, uint32_t height, uint32_t seed);
 
@@ -51,8 +52,9 @@ public:
     void update_tile_sprite_index(TilePos pos);
 
     void update(const sge::Camera& camera);
+    void fixed_update(const sge::Rect& player_rect, Inventory& inventory);
 
-    void draw(const sge::Camera& camera) const;
+    void draw(const sge::Camera& camera);
 
     [[nodiscard]]
     inline std::optional<Block> get_block(TilePos pos) const {
@@ -124,6 +126,10 @@ public:
         return m_data.get_wall_neighbors_mut(pos);
     }
 
+    inline glm::vec2 keep_in_world_bounds(glm::vec2 position, const glm::vec2& half_size) const noexcept {
+        return m_data.keep_in_world_bounds(position, half_size);
+    }
+
     [[nodiscard]]
     inline const sge::IRect& area() const noexcept {
         return m_data.area;
@@ -185,22 +191,16 @@ public:
     }
 
     inline void create_block_cracks(TilePos pos, uint8_t cracks_index) {
-        m_block_cracks[pos] = TileCracks {
-            .tile_pos = pos,
-            .cracks_index = cracks_index
-        };
+        m_block_cracks[pos] = cracks_index;
     }
 
     inline void create_wall_cracks(TilePos pos, uint8_t cracks_index) {
-        m_wall_cracks[pos] = TileCracks {
-            .tile_pos = pos,
-            .cracks_index = cracks_index
-        };
+        m_wall_cracks[pos] = cracks_index;
     }
 
     [[nodiscard]]
     inline const Light* lights() const noexcept {
-        return m_lights.data();
+        return m_lights;
     }
 
     [[nodiscard]]
@@ -219,20 +219,27 @@ public:
         m_light_count = (m_light_count + 1) % WORLD_MAX_LIGHT_COUNT;
     }
 
+    inline void drop_item(const glm::vec2& position, const glm::vec2& velocity, const Item& item, bool set_timer = false) {
+        m_dropped_items.add(DroppedItem(position, velocity, item, set_timer));
+    }
+
 private:
     void update_neighbors(TilePos pos);
+    void stack_dropped_items();
 
 private:
     WorldData m_data;
+    sge::TextureAtlasSprite m_flames_sprite;
+    sge::TextureAtlasSprite m_cracks_sprite;
     ChunkManager m_chunk_manager;
-    std::vector<TileDigAnimation> m_tile_dig_animations;
-    std::unordered_map<TilePos, TileCracks> m_block_cracks;
-    std::unordered_map<TilePos, TileCracks> m_wall_cracks;
+    LookupList<DroppedItem> m_dropped_items = LookupList<DroppedItem>(glm::vec2{ Constants::ITEM_GRAB_RANGE * 0.5f });
+    std::unordered_map<TilePos, uint8_t> m_block_cracks;
+    std::unordered_map<TilePos, uint8_t> m_wall_cracks;
+    glm::vec2 m_offsets[7];
     sge::Timer m_anim_timer = sge::Timer::from_seconds(1.0f / 15.0f, sge::TimerMode::Repeating);
-    LLGL::DynamicArray<Light> m_lights;
+    sge::SwapbackVector<TileDigAnimation> m_tile_dig_animations;
+    Light* m_lights = new Light[Constants::WORLD_MAX_LIGHT_COUNT];
     uint32_t m_light_count = 0;
-
-    glm::vec2 offsets[7];
 
     bool m_changed = false;
     bool m_lightmap_changed = false;

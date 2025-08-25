@@ -1,13 +1,13 @@
-#ifndef WORLD_WORLD_DATA_HPP
-#define WORLD_WORLD_DATA_HPP
-
 #pragma once
 
-#include <vector>
+#ifndef WORLD_WORLD_DATA_HPP_
+#define WORLD_WORLD_DATA_HPP_
+
 #include <deque>
 #include <unordered_set>
 
 #include <SGE/math/rect.hpp>
+#include <SGE/utils/containers/swapbackvector.hpp>
 
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
@@ -24,16 +24,16 @@ struct Layers {
 };
 
 struct WorldData {
-    std::optional<Block>* blocks;
-    std::optional<Wall>* walls;
+    std::deque<std::pair<TilePos, int>> changed_tiles;
+    std::unordered_set<TilePos> torches;
+    sge::SwapbackVector<LightMapTask> lightmap_tasks;
     LightMap lightmap;
     sge::IRect area;
     sge::IRect playable_area;
     Layers layers;
     glm::uvec2 spawn_point;
-    std::vector<LightMapTask> lightmap_tasks;
-    std::unordered_set<TilePos> torches;
-    std::deque<std::pair<TilePos, int>> changed_tiles;
+    std::optional<Block>* blocks;
+    std::optional<Wall>* walls;
 
     [[nodiscard]]
     inline uint32_t get_tile_index(TilePos pos) const noexcept {
@@ -108,6 +108,28 @@ struct WorldData {
         const std::optional<BlockType> block = this->get_block_type(pos);
         if (!block.has_value()) return false;
         return block.value() == block_type;
+    }
+
+    inline glm::vec2 keep_in_world_bounds(glm::vec2 position, const glm::vec2& half_size) const noexcept {
+        static constexpr float OFFSET = Constants::WORLD_BOUNDARY_OFFSET;
+        using Constants::TILE_SIZE;
+
+        const sge::Rect area = playable_area * TILE_SIZE;
+
+        if (position.x - half_size.x < area.min.x + OFFSET) {
+            position.x = area.min.x + half_size.x + OFFSET;
+        }
+        if (position.x + half_size.x > area.max.x - OFFSET) {
+            position.x = area.max.x - half_size.x - OFFSET;
+        }
+        if (position.y - half_size.y < area.min.y) {
+            position.y = area.min.y + half_size.y;
+        }
+        if (position.y + half_size.y > area.max.y) {
+            position.y = area.max.y - half_size.y;
+        }
+
+        return position;
     }
 
     void lightmap_update_area_async(sge::IRect area);

@@ -1,7 +1,7 @@
-#ifndef TYPES_WALL_HPP
-#define TYPES_WALL_HPP
-
 #pragma once
+
+#ifndef TYPES_WALL_HPP_
+#define TYPES_WALL_HPP_
 
 #include <cstdint>
 #include <cstdlib>

@@ -20,8 +20,8 @@ void RenderChunk::destroy() {
 
     const auto& context = sge::Engine::Renderer().Context();
 
-    SGE_RESOURCE_RELEASE(block_instance_buffer);
-    SGE_RESOURCE_RELEASE(wall_instance_buffer);
+    SGE_RESOURCE_RELEASE(m_block_instance_buffer);
+    SGE_RESOURCE_RELEASE(m_wall_instance_buffer);
 }
 
 static inline LLGL::BufferDescriptor GetBufferDescriptor() {
@@ -110,30 +110,30 @@ void RenderChunk::build_mesh(
 ) {
     ZoneScoped;
 
-    block_count = fill_block_buffer(world, block_data_arena, index, world_pos);
-    wall_count = fill_wall_buffer(world, wall_data_arena, index, world_pos);
+    m_block_count = fill_block_buffer(world, block_data_arena, m_index, m_world_pos);
+    m_wall_count = fill_wall_buffer(world, wall_data_arena, m_index, m_world_pos);
 
     const auto& context = sge::Engine::Renderer().Context();
 
     {
-        const size_t size = block_count * sizeof(ChunkInstance);
+        const size_t size = m_block_count * sizeof(ChunkInstance);
         const void* data = size > 0 ? block_data_arena : nullptr;
 
-        this->block_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
+        m_block_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
 
-        LLGL::Buffer* buffers[] = { GameRenderer::ChunkVertexBuffer(), block_instance_buffer };
+        LLGL::Buffer* buffers[] = { GameRenderer::ChunkVertexBuffer(), m_block_instance_buffer };
 
-        this->block_buffer_array = context->CreateBufferArray(2, buffers);
+        m_block_buffer_array = context->CreateBufferArray(2, buffers);
     }
     {
-        const size_t size = wall_count * sizeof(ChunkInstance);
+        const size_t size = m_wall_count * sizeof(ChunkInstance);
         const void* data = size > 0 ? wall_data_arena : nullptr;
 
-        this->wall_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
+        m_wall_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
 
-        LLGL::Buffer* buffers[] = { GameRenderer::ChunkVertexBuffer(), wall_instance_buffer };
+        LLGL::Buffer* buffers[] = { GameRenderer::ChunkVertexBuffer(), m_wall_instance_buffer };
 
-        this->wall_buffer_array = context->CreateBufferArray(2, buffers);
+        m_wall_buffer_array = context->CreateBufferArray(2, buffers);
     }
 }
 
@@ -146,20 +146,20 @@ void RenderChunk::rebuild_mesh(
 
     const auto& context = sge::Engine::Renderer().Context();
 
-    if (blocks_dirty) {
-        block_count = fill_block_buffer(world, block_data_arena, index, world_pos);
-        if (block_count > 0) {
-            context->WriteBuffer(*block_instance_buffer, 0, block_data_arena, block_count * sizeof(ChunkInstance));
+    if (m_blocks_dirty) {
+        m_block_count = fill_block_buffer(world, block_data_arena, m_index, m_world_pos);
+        if (m_block_count > 0) {
+            context->WriteBuffer(*m_block_instance_buffer, 0, block_data_arena, m_block_count * sizeof(ChunkInstance));
         }
     }
 
-    if (walls_dirty) {
-        wall_count = fill_wall_buffer(world, wall_data_arena, index, world_pos);
-        if (wall_count > 0) {
-            context->WriteBuffer(*wall_instance_buffer, 0, wall_data_arena, wall_count * sizeof(ChunkInstance));
+    if (m_walls_dirty) {
+        m_wall_count = fill_wall_buffer(world, wall_data_arena, m_index, m_world_pos);
+        if (m_wall_count > 0) {
+            context->WriteBuffer(*m_wall_instance_buffer, 0, wall_data_arena, m_wall_count * sizeof(ChunkInstance));
         }
     }
 
-    blocks_dirty = false;
-    walls_dirty = false;
+    m_blocks_dirty = false;
+    m_walls_dirty = false;
 }

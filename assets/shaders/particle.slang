@@ -1,3 +1,4 @@
+[vk::binding(2)]
 cbuffer GlobalUniformBuffer : register( b2 )
 {
     float4x4 u_screen_projection;
@@ -29,11 +30,19 @@ struct VSOutput
 
 static const float2 PARTICLE_SIZE = float2(8.0, 8.0);
 
-RWBuffer<float4> transforms : register(u5);
-Buffer<float2> positions : register(t6);
-Buffer<float4> rotations : register(t7);
-Buffer<float> scales : register(t8);
+[vk::binding(5)]
+RWStructuredBuffer<float4> transforms : register(u5);
 
+[vk::binding(6)]
+StructuredBuffer<float2> positions : register(t6);
+
+[vk::binding(7)]
+StructuredBuffer<float4> rotations : register(t7);
+
+[vk::binding(8)]
+StructuredBuffer<float> scales : register(t8);
+
+[shader("vertex")]
 VSOutput VS(VSInput inp)
 {
     const float2 position = inp.position;
@@ -56,6 +65,7 @@ VSOutput VS(VSInput inp)
 	return output;
 }
 
+[shader("compute")]
 [numthreads(64, 1, 1)]
 void CSComputeTransform(uint3 thread_id : SV_DispatchThreadID)
 {
@@ -119,14 +129,19 @@ void CSComputeTransform(uint3 thread_id : SV_DispatchThreadID)
     transforms[id * 4 + 3] = mvp[3];
 }
 
+[vk::binding(3)]
 Texture2D Texture : register(t3);
+
+[vk::binding(4)]
 SamplerState Sampler : register(s4);
 
+[shader("fragment")]
 float4 PS(VSOutput inp) : SV_Target
 {
     float4 color = Texture.Sample(Sampler, inp.uv);
 
-    clip(color.a - 0.5f);
+    if (color.a < 0.5f)
+        discard;
 
     return color;
 };

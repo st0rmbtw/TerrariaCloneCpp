@@ -14,6 +14,7 @@
 #include <SGE/types/cursor_mode.hpp>
 #include <SGE/profile.hpp>
 
+#include "diagnostic/frametime.hpp"
 #include "renderer/renderer.hpp"
 #include "ui/ui.hpp"
 #include "world/autotile.hpp"
@@ -84,6 +85,8 @@ static glm::vec2 camera_free() {
 static void pre_update() {
     ZoneScoped;
 
+    FrameTime::Update(sge::Time::DeltaSeconds());
+
 #if DEBUG
     if (sge::Input::JustPressed(sge::Key::B)) {
         SGE_DEBUG_BREAK();
@@ -112,6 +115,7 @@ static void fixed_update() {
 #endif
 
     g.player.fixed_update(g.camera, g.world, handle_input);
+    g.world.fixed_update(g.player.rect(), g.player.inventory());
 
     UI::FixedUpdate();
 
@@ -154,7 +158,7 @@ static void update() {
 
     Background::Update(g.camera, g.world);
 
-    UI::Update(g.player.inventory());
+    UI::Update(g.player, g.world);
 
     g.player.update(g.world);
 
@@ -301,6 +305,7 @@ bool Game::Init(sge::RenderBackend backend, AppConfig config, int16_t world_widt
 
     init_tile_rules();
 
+    g.world.init();
     g.world.generate(world_width, world_height, 0);
 
     g.camera.set_viewport(glm::uvec2(resolution.width, resolution.height));

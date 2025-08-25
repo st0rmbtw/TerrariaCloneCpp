@@ -1,13 +1,14 @@
-#ifndef WORLD_PARTICLES_HPP
-#define WORLD_PARTICLES_HPP
-
 #pragma once
+
+#ifndef WORLD_PARTICLES_HPP_
+#define WORLD_PARTICLES_HPP_
 
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
 #include <SGE/math/quat.hpp>
+#include <SGE/assert.hpp>
 
 #include "world/world.hpp"
 #include "types/block.hpp"
@@ -38,6 +39,7 @@ namespace Particle {
         }
         case BlockType::Wood: return Particle::Type::Wood;
         case BlockType::Torch: return Particle::Type::Torch;
+        default: SGE_UNREACHABLE();
         }
     }
 
@@ -46,6 +48,7 @@ namespace Particle {
         case WallType::DirtWall: return Particle::Type::Dirt;
         case WallType::StoneWall: return Particle::Type::Stone;
         case WallType::WoodWall: return Particle::Type::Wood;
+        default: SGE_UNREACHABLE();
         }
     }
 }

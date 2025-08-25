@@ -95,6 +95,8 @@ static bool generate_font_assets(FT_Library ft, const fs::path& input_path, cons
     uint8_t* texture_data = new uint8_t[texture_width * texture_height];
     memset(texture_data, 0, texture_width * texture_height * sizeof(uint8_t));
 
+    fs::create_directories(output_path.parent_path());
+
     const fs::path meta_path = output_path.parent_path() / output_path.stem().concat(".meta");
     std::ofstream font_metadata(meta_path, std::ios::binary | std::ios::out);
 

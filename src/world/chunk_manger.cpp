@@ -79,7 +79,7 @@ void ChunkManager::set_blocks_changed(TilePos tile_pos) {
 
     const auto chunk = m_render_chunks.find(chunk_pos);
     if (chunk != m_render_chunks.end()) {
-        chunk->second.blocks_dirty = true;
+        chunk->second.set_blocks_dirty();
     }
 }
 
@@ -88,6 +88,6 @@ void ChunkManager::set_walls_changed(TilePos tile_pos) {
 
     const auto chunk = m_render_chunks.find(chunk_pos);
     if (chunk != m_render_chunks.end()) {
-        chunk->second.walls_dirty = true;
+        chunk->second.set_walls_dirty();
     }
 }

@@ -676,8 +676,8 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
     SGE_LOG_DEBUG("  Cavern: {}", layers.cavern);
     SGE_LOG_DEBUG("  Dirt Height: {}", layers.dirt_height);
 
-    world.blocks = new std::optional<Block>[area.width() * area.height()];
-    world.walls = new std::optional<Wall>[area.width() * area.height()];
+    world.blocks = new std::optional<Block>[static_cast<size_t>(area.width() * area.height())];
+    world.walls = new std::optional<Wall>[static_cast<size_t>(area.width() * area.height())];
     world.lightmap = LightMap(area.width(), area.height());
     world.playable_area = playable_area;
     world.area = area;

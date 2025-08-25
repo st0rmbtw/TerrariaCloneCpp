@@ -1,7 +1,7 @@
-#ifndef TYPES_TEXTURE_ATLAS_POS_HPP
-#define TYPES_TEXTURE_ATLAS_POS_HPP
-
 #pragma once
+
+#ifndef TYPES_TEXTURE_ATLAS_POS_HPP_
+#define TYPES_TEXTURE_ATLAS_POS_HPP_
 
 #include <cstdint>
 

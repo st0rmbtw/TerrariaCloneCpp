@@ -1,5 +1,7 @@
-#ifndef WORLD_UTILS_HPP
-#define WORLD_UTILS_HPP
+#pragma once
+
+#ifndef WORLD_UTILS_HPP_
+#define WORLD_UTILS_HPP_
 
 #include <glm/glm.hpp>
 

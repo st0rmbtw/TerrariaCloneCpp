@@ -1,13 +1,13 @@
-#ifndef UTILS_HPP
-#define UTILS_HPP
-
 #pragma once
 
-#include <cstdlib>
+#ifndef UTILS_HPP_
+#define UTILS_HPP_
+
 #include <list>
 #include <vector>
-#include <unordered_set>
 #include <optional>
+
+#include <SGE/profile.hpp>
 
 #include <LLGL/LLGL.h>
 #include <glm/glm.hpp>
@@ -54,6 +54,11 @@ inline void bfs(TNode start_node, TGetNeighborsFunc&& get_neighbors_func, TProce
             q.push_back(neighbor);
         }
     }
+}
+
+template <class T>
+inline void hash_combine(std::size_t& hash, const T& v) {
+    hash ^= std::hash<T>{}(v) + 0x9e3779b9 + (hash<<6) + (hash>>2);
 }
 
 

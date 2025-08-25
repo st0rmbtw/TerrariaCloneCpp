@@ -1,5 +1,7 @@
-#ifndef _RENDERER_DYNAMIC_LIGHTING_HPP_
-#define _RENDERER_DYNAMIC_LIGHTING_HPP_
+#pragma once
+
+#ifndef RENDERER_DYNAMIC_LIGHTING_HPP_
+#define RENDERER_DYNAMIC_LIGHTING_HPP_
 
 #include <cstdint>
 

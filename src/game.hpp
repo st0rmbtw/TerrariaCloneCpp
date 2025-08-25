@@ -1,7 +1,7 @@
-#ifndef GAME_HPP
-#define GAME_HPP
-
 #pragma once
+
+#ifndef GAME_HPP_
+#define GAME_HPP_
 
 #include <SGE/types/backend.hpp>
 
