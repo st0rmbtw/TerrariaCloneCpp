@@ -163,15 +163,15 @@ struct BlockTypeWithData {
         type(block_type) {}
 
     constexpr BlockTypeWithData(BlockType block_type, BlockData block_data) :
-        type(block_type),
-        data(block_data) {}
+        data(block_data),
+        type(block_type) {}
 
     constexpr BlockTypeWithData(const Block& block) :
-        type(block.type),
-        data(block.data) {}
+        data(block.data),
+        type(block.type) {}
 
-    BlockType type;
     BlockData data;
+    BlockType type;
 };
 
 inline constexpr uint8_t tile_type(BlockTypeWithData tile) {

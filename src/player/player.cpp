@@ -558,10 +558,6 @@ void Player::fixed_update(const sge::Camera& camera, World& world, bool handle_i
         interact(camera, world);
     }
 
-    if (sge::Input::JustPressed(sge::Key::T)) {
-        throw_item(world, m_inventory.selected_slot());
-    }
-
     horizontal_movement(handle_input);
     vertical_movement(handle_input);
     gravity();
@@ -606,6 +602,10 @@ void Player::fixed_update(const sge::Camera& camera, World& world, bool handle_i
 
 void Player::update(World& world) {
     ZoneScoped;
+
+    if (sge::Input::JustPressed(sge::Key::T)) {
+        throw_item(world, m_inventory.selected_slot());
+    }
 
     const std::optional<Item>& selected_item = m_inventory.get_selected_item().item;
     if (selected_item.has_value() && selected_item->id == ItemId::Torch) {

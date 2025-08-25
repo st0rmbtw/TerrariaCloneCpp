@@ -305,6 +305,7 @@ bool Game::Init(sge::RenderBackend backend, AppConfig config, int16_t world_widt
 
     init_tile_rules();
 
+    g.world.init();
     g.world.generate(world_width, world_height, 0);
 
     g.camera.set_viewport(glm::uvec2(resolution.width, resolution.height));

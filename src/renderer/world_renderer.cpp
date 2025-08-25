@@ -420,12 +420,12 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
     image_view.format   = LLGL::ImageFormat::RGBA;
     image_view.dataType = LLGL::DataType::UInt8;
 
-    for (auto it = world.lightmap_tasks.cbegin(); it != world.lightmap_tasks.cend();) {
-        const LightMapTask& task = *it;
+    for (size_t i = 0; i < world.lightmap_tasks.size(); ++i) {
+        const LightMapTask& task = world.lightmap_tasks[i];
         const LightMapTaskResult result = task.result->load();
 
         if (result.is_complete) {
-            ZoneScoped;
+            ZoneScopedN("WorldRenderer::HandleLightTaskCompletion");
 
             internal_update_world_lightmap(world, result);
 
@@ -471,11 +471,8 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
 
             delete[] result.data;
             delete[] result.mask;
-            it = world.lightmap_tasks.erase(it);
-            continue;
+            world.lightmap_tasks.erase(i);
         }
-
-        ++it;
     }
 
 }

@@ -3,11 +3,11 @@
 #ifndef WORLD_WORLD_DATA_HPP_
 #define WORLD_WORLD_DATA_HPP_
 
-#include <vector>
 #include <deque>
 #include <unordered_set>
 
 #include <SGE/math/rect.hpp>
+#include <SGE/utils/containers/swapbackvector.hpp>
 
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
@@ -24,16 +24,16 @@ struct Layers {
 };
 
 struct WorldData {
-    std::optional<Block>* blocks;
-    std::optional<Wall>* walls;
+    std::deque<std::pair<TilePos, int>> changed_tiles;
+    std::unordered_set<TilePos> torches;
+    sge::SwapbackVector<LightMapTask> lightmap_tasks;
     LightMap lightmap;
     sge::IRect area;
     sge::IRect playable_area;
     Layers layers;
     glm::uvec2 spawn_point;
-    std::vector<LightMapTask> lightmap_tasks;
-    std::unordered_set<TilePos> torches;
-    std::deque<std::pair<TilePos, int>> changed_tiles;
+    std::optional<Block>* blocks;
+    std::optional<Wall>* walls;
 
     [[nodiscard]]
     inline uint32_t get_tile_index(TilePos pos) const noexcept {

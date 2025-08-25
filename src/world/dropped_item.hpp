@@ -38,6 +38,10 @@ public:
         m_velocity = velocity;
     }
 
+    void set_picked() noexcept {
+        m_picked = true;
+    }
+
     [[nodiscard]]
     const glm::vec2& position() const noexcept {
         return m_position;
@@ -63,6 +67,11 @@ public:
         return m_item;
     }
 
+    [[nodiscard]]
+    bool picked() const noexcept {
+        return m_picked;
+    }
+
 private:
     void apply_gravity();
     void apply_air_drag();
@@ -82,6 +91,7 @@ private:
 
     bool m_set_timer = false;
     bool m_following = false;
+    bool m_picked = false;
 };
 
 #endif

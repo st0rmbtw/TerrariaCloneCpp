@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef LOOKUP_LIST_
-#define LOOKUP_LIST_
+#ifndef TYPES_LOOKUP_LIST_
+#define TYPES_LOOKUP_LIST_
 
 #include <vector>
 #include <algorithm>
@@ -11,6 +11,9 @@
 #include <LLGL/Tags.h>
 
 #include <SGE/profile.hpp>
+#include <SGE/utils/containers/swapbackvector.hpp>
+
+#include "../utils.hpp"
 
 template <typename T>
 class LookupList {
@@ -44,12 +47,8 @@ public:
         m_start_indices.resize(size());
     }
 
-    inline void remove(size_t index) {
-        m_items.erase(const_iterator(&m_items[index]));
-    }
-
-    inline void remove(const_iterator iterator) {
-        m_items.erase(iterator);
+    inline void erase(size_t index) {
+        m_items.erase(index);
     }
 
     inline void reserve(size_t n) {
@@ -179,11 +178,6 @@ private:
         return glm::vec2{ x, y };
     }
 
-    template <class V>
-    inline void hash_combine(std::size_t& s, const V& v) {
-        s ^= std::hash<V>{}(v) + 0x9e3779b9 + (s<< 6) + (s>> 2);
-    }
-
     inline size_t hash_cell(glm::ivec2 pos) {
         size_t hash = 0;
         hash_combine(hash, pos.x);
@@ -194,7 +188,7 @@ private:
 private:
     std::vector<Cell> m_spatial_lookup;
     LLGL::DynamicArray<size_t> m_start_indices;
-    std::vector<T> m_items;
+    sge::SwapbackVector<T> m_items;
 
     glm::vec2 m_cell_size;
 };

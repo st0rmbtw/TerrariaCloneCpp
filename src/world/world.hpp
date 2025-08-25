@@ -9,13 +9,15 @@
 #include <SGE/renderer/camera.hpp>
 #include <SGE/time/timer.hpp>
 #include <SGE/time/time.hpp>
+#include <SGE/types/sprite.hpp>
+#include <SGE/utils/containers/swapbackvector.hpp>
 
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
 #include "../types/tile_pos.hpp"
 #include "../types/light.hpp"
 #include "../types/item.hpp"
-#include "../lookup_list.hpp"
+#include "../types/lookup_list.hpp"
 
 #include "chunk_manager.hpp"
 #include "dropped_item.hpp"
@@ -28,13 +30,10 @@ struct TileDigAnimation {
     BlockTypeWithData block;
 };
 
-struct TileCracks {
-    TilePos tile_pos;
-    uint8_t cracks_index;
-};
-
 class World {
 public:
+    void init();
+
     void generate(uint32_t width, uint32_t height, uint32_t seed);
 
     void set_block(TilePos pos, const Block& block);
@@ -55,7 +54,7 @@ public:
     void update(const sge::Camera& camera);
     void fixed_update(const sge::Rect& player_rect, Inventory& inventory);
 
-    void draw(const sge::Camera& camera) const;
+    void draw(const sge::Camera& camera);
 
     [[nodiscard]]
     inline std::optional<Block> get_block(TilePos pos) const {
@@ -192,17 +191,11 @@ public:
     }
 
     inline void create_block_cracks(TilePos pos, uint8_t cracks_index) {
-        m_block_cracks[pos] = TileCracks {
-            .tile_pos = pos,
-            .cracks_index = cracks_index
-        };
+        m_block_cracks[pos] = cracks_index;
     }
 
     inline void create_wall_cracks(TilePos pos, uint8_t cracks_index) {
-        m_wall_cracks[pos] = TileCracks {
-            .tile_pos = pos,
-            .cracks_index = cracks_index
-        };
+        m_wall_cracks[pos] = cracks_index;
     }
 
     [[nodiscard]]
@@ -236,14 +229,15 @@ private:
 
 private:
     WorldData m_data;
+    sge::TextureAtlasSprite m_flames_sprite;
+    sge::TextureAtlasSprite m_cracks_sprite;
     ChunkManager m_chunk_manager;
     LookupList<DroppedItem> m_dropped_items = LookupList<DroppedItem>(glm::vec2{ Constants::ITEM_GRAB_RANGE * 0.5f });
-    std::unordered_set<size_t> m_pickedup_item_indices;
-    std::unordered_map<TilePos, TileCracks> m_block_cracks;
-    std::unordered_map<TilePos, TileCracks> m_wall_cracks;
+    std::unordered_map<TilePos, uint8_t> m_block_cracks;
+    std::unordered_map<TilePos, uint8_t> m_wall_cracks;
     glm::vec2 m_offsets[7];
     sge::Timer m_anim_timer = sge::Timer::from_seconds(1.0f / 15.0f, sge::TimerMode::Repeating);
-    std::vector<TileDigAnimation> m_tile_dig_animations;
+    sge::SwapbackVector<TileDigAnimation> m_tile_dig_animations;
     Light* m_lights = new Light[Constants::WORLD_MAX_LIGHT_COUNT];
     uint32_t m_light_count = 0;
 
