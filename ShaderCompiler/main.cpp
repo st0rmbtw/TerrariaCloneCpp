@@ -294,7 +294,7 @@ static std::optional<std::vector<ResultFile>> GenerateHLSLTarget(const Slang::Co
                 DiagnoseIfNeeded(diagnosticsBlob);
                 
                 if (SLANG_SUCCEEDED(result)) {
-                    std::string name = std::format("{}.{}.hlsl", functionName, slangModule->getName());
+                    std::string name = std::format("{}.{}.comp.hlsl", functionName, slangModule->getName());
                     resultFiles.push_back(ResultFile{ std::move(name), outputBlob });
                 }
             }
@@ -518,7 +518,7 @@ static bool CompileSlangShaders(const fs::path& shaders_dir, const fs::path& out
         if (!entry.is_regular_file()) continue;
         if (entry.path().extension() != ".slang") continue;
 
-        printf("Compiling %s ...\n", entry.path().c_str());
+        printf("Compiling %s ...\n", entry.path().string().c_str());
 
         std::ifstream shader(entry.path());
         std::stringstream content;
@@ -530,8 +530,8 @@ static bool CompileSlangShaders(const fs::path& shaders_dir, const fs::path& out
         Slang::ComPtr<slang::IModule> slangModule;
         {
             Slang::ComPtr<slang::IBlob> diagnosticsBlob;
-            const std::string moduleName = entry.path().stem();
-            const std::string modulePath = entry.path().filename();
+            const std::string moduleName = entry.path().stem().string();
+            const std::string modulePath = entry.path().filename().string();
             slangModule = session->loadModuleFromSourceString(moduleName.c_str(), modulePath.c_str(), source.c_str(), diagnosticsBlob.writeRef());
             DiagnoseIfNeeded(diagnosticsBlob);
             if (!slangModule) {

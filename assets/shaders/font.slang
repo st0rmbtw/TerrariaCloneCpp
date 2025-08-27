@@ -1,5 +1,7 @@
 struct VSOutput
 {
+    float4 position : SV_Position;
+    
     float2 uv : UV;
     nointerpolation float3 color : Color;
 };

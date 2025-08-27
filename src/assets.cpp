@@ -386,8 +386,8 @@ bool Assets::LoadShaders(const std::vector<sge::ShaderDef>& shader_defs) {
 bool Assets::LoadFonts() {
     for (const auto& [key, name] : FONT_ASSETS) {
         const fs::path fonts_folder = fs::path("assets") / "fonts";
-        const fs::path meta_file = fonts_folder / fs::path(name).concat(".meta");
-        const fs::path atlas_file = fonts_folder / fs::path(name).concat(".png");
+        const std::string meta_file = (fonts_folder / fs::path(name).concat(".meta")).string();
+        const std::string atlas_file = (fonts_folder / fs::path(name).concat(".png")).string();
 
         if (!fs::exists(meta_file)) {
             SGE_LOG_ERROR("Failed to find the font meta file '{}'", meta_file.c_str());
