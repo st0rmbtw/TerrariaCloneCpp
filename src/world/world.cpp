@@ -286,7 +286,7 @@ void World::fixed_update(const sge::Rect& player_rect, Inventory& inventory) {
     }
 
     m_dropped_items.for_each_neighbor(player_rect.center(), [&](size_t, DroppedItem& item) {
-        if (item.follow_player(player_rect, inventory)) {
+        if (!item.picked() && item.follow_player(player_rect, inventory)) {
             inventory.add_item_stack(item.item());
             item.set_picked();
         }
@@ -319,6 +319,9 @@ void World::stack_dropped_items() {
                 return;
 
             if (item_a.stack >= item_max_stack)
+                return;
+            
+            if (item_b.stack >= item_max_stack)
                 return;
 
             const sge::Rect rect_b = sge::Rect::from_center_size(dropped_item_b.position(), dropped_item_b.size());

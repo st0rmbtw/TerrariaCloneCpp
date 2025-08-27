@@ -163,7 +163,7 @@ public:
                 break;
             } else {
                 item->stack = item->max_stack;
-                remaining -= new_stack - item->max_stack;
+                remaining = new_stack - item->max_stack;
             }
         }
 
