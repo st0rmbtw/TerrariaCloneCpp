@@ -1,7 +1,9 @@
 #include "particles.hpp"
 
-#include <immintrin.h>
-#include <xmmintrin.h>
+#if __AVX__
+    #include <immintrin.h>
+    #include <xmmintrin.h>
+#endif
 
 #include <SGE/time/time.hpp>
 #include <SGE/defines.hpp>
@@ -134,7 +136,7 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
     state.type[index] = particle_data.type;
     state.variant[index] = particle_data.variant;
 
-    state.active_count = ++state.active_count % MAX_PARTICLES_COUNT;
+    state.active_count = (state.active_count + 1) % MAX_PARTICLES_COUNT;
 }
 
 void ParticleManager::Draw() {
@@ -171,7 +173,7 @@ void ParticleManager::Update(World& world) {
 
     const float dt = sge::Time::FixedDeltaSeconds();
 
-#if defined(__AVX__)
+#if __AVX__
     // The size of a float type is 32 bit, so it can be packed as 8 into 256 bit vector.
     for (size_t i = 0; i < state.active_count; i += 8) {
         const __m256 lifetime = _mm256_load_ps(&state.lifetime[i]);

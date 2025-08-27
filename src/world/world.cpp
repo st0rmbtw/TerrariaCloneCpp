@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <SGE/time/time.hpp>
 #include <SGE/types/color.hpp>
+#include <SGE/types/sprite.hpp>
 #include <SGE/utils/random.hpp>
 #include <SGE/profile.hpp>
 
@@ -22,6 +23,16 @@ static void update_lightmap(WorldData& world_data, TilePos pos) {
 
     const sge::IRect light_area = sge::IRect::from_center_half_size(pos, size).clamp(world_data.area);
     world_data.lightmap_update_area_async(light_area);
+}
+
+void World::init() {
+    m_flames_sprite = sge::TextureAtlasSprite{ Assets::GetTextureAtlas(TextureAsset::Flames0) };
+    m_flames_sprite.set_anchor(sge::Anchor::TopLeft);
+    m_flames_sprite.set_z(0.4f);
+    m_flames_sprite.set_index(0, 0);
+    m_flames_sprite.set_color(sge::LinearRgba(150, 150, 150, 7));
+
+    m_cracks_sprite = sge::TextureAtlasSprite{ Assets::GetTextureAtlas(TextureAsset::TileCracks) };
 }
 
 void World::set_block(TilePos pos, const Block& tile) {
@@ -108,7 +119,7 @@ void World::update_block(TilePos pos, BlockTypeWithData new_block, uint8_t new_v
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
-    const size_t index = m_data.get_tile_index(pos);
+    const auto index = m_data.get_tile_index(pos);
 
     if (m_data.blocks[index]->type == BlockType::Torch && new_block.type != BlockType::Torch) {
         m_data.torches.erase(pos);
@@ -129,7 +140,7 @@ void World::update_block_data(TilePos pos, BlockData new_data) {
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
-    const size_t index = m_data.get_tile_index(pos);
+    const auto index = m_data.get_tile_index(pos);
 
     m_data.blocks[index]->data = new_data;
 
@@ -144,7 +155,7 @@ void World::update_block_variant(TilePos pos, uint8_t new_variant) {
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
-    const size_t index = m_data.get_tile_index(pos);
+    const auto index = m_data.get_tile_index(pos);
 
     m_data.blocks[index]->variant = new_variant;
 
@@ -159,7 +170,7 @@ void World::update_block_type(TilePos pos, BlockType new_type) {
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
-    const size_t index = m_data.get_tile_index(pos);
+    const auto index = m_data.get_tile_index(pos);
 
     m_data.blocks[index]->type = new_type;
 
@@ -174,7 +185,7 @@ void World::set_wall(TilePos pos, WallType wall_type) {
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
-    const size_t index = m_data.get_tile_index(pos);
+    const auto index = m_data.get_tile_index(pos);
 
     m_data.walls[index] = Wall(wall_type);
     m_changed = true;
@@ -192,7 +203,7 @@ void World::remove_wall(TilePos pos) {
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
-    const size_t index = m_data.get_tile_index(pos);
+    const auto index = m_data.get_tile_index(pos);
 
     if (m_data.walls[index].has_value()) {
         m_chunk_manager.set_walls_changed(pos);
@@ -216,7 +227,7 @@ void World::update_wall(TilePos pos, WallType new_type, uint8_t new_variant) {
 
     if (!m_data.is_tilepos_valid(pos)) return;
 
-    const size_t index = m_data.get_tile_index(pos);
+    const auto index = m_data.get_tile_index(pos);
     m_data.walls[index]->type = new_type;
     m_data.walls[index]->variant = new_variant;
 
@@ -233,9 +244,6 @@ void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
     world_generate(m_data, width, height, seed);
 
     m_light_count = 0;
-    if (m_lights.data() == nullptr) {
-        m_lights = LLGL::DynamicArray<Light>(WORLD_MAX_LIGHT_COUNT, LLGL::UninitializeTag{});
-    }
 }
 
 void World::update(const sge::Camera& camera) {
@@ -246,17 +254,17 @@ void World::update(const sge::Camera& camera) {
     m_chunk_manager.manage_chunks(m_data, camera);
 
     if (m_anim_timer.tick(sge::Time::Delta()).just_finished()) {
-        for (glm::vec2& offset : offsets) {
+        for (glm::vec2& offset : m_offsets) {
             offset.x = sge::random::rand_int(-10, 11) * 0.15f;
             offset.y = sge::random::rand_int(-10, 1) * 0.35f;
         }
     }
 
-    for (auto it = m_tile_dig_animations.begin(); it != m_tile_dig_animations.end();) {
-        TileDigAnimation& anim = *it;
+    for (size_t i = 0; i < m_tile_dig_animations.size(); ++i) {
+        TileDigAnimation& anim = m_tile_dig_animations[i];
 
         if (anim.progress >= 1.0f) {
-            it = m_tile_dig_animations.erase(it);
+            m_tile_dig_animations.erase(i);
             continue;
         }
 
@@ -267,47 +275,110 @@ void World::update(const sge::Camera& camera) {
         } else {
             anim.scale = anim.progress;
         }
-
-        it++;
     }
 }
 
-void World::draw(const sge::Camera& camera) const {
-    ZoneScoped;
+void World::fixed_update(const sge::Rect& player_rect, Inventory& inventory) {
+    m_dropped_items.update_lookup();
 
-    sge::TextureAtlasSprite flames(Assets::GetTextureAtlas(TextureAsset::Flames0));
-    flames.set_anchor(sge::Anchor::TopLeft);
-    flames.set_z(0.4f);
-    flames.set_index(0, 0);
-    flames.set_color(sge::LinearRgba(150, 150, 150, 7));
+    for (DroppedItem& item : m_dropped_items) {
+        item.update(m_data, sge::Time::FixedDeltaSeconds());
+    }
+
+    m_dropped_items.for_each_neighbor(player_rect.center(), [&](size_t, DroppedItem& item) {
+        if (!item.picked() && item.follow_player(player_rect, inventory)) {
+            inventory.add_item_stack(item.item());
+            item.set_picked();
+        }
+    });
+
+    for (size_t i = 0; i < m_dropped_items.size(); ++i) {
+        if (m_dropped_items[i].picked()) {
+            m_dropped_items.erase(i);
+        }
+    }
+
+    m_dropped_items.update_lookup();
+
+    stack_dropped_items();
+}
+
+void World::stack_dropped_items() {
+    using Constants::ITEM_STACK_RANGE;
+
+    for (size_t i = 0; i < m_dropped_items.size(); ++i) {
+        DroppedItem& dropped_item_a = m_dropped_items[i];
+        m_dropped_items.for_each_neighbor(dropped_item_a.position(), [&](size_t index, DroppedItem& dropped_item_b) {
+            if (index == i) return;
+
+            Item& item_a = dropped_item_a.item();
+            Item& item_b = dropped_item_b.item();
+            const ItemStack item_max_stack = item_a.max_stack;
+
+            if (item_a.id != item_b.id)
+                return;
+
+            if (item_a.stack >= item_max_stack)
+                return;
+            
+            if (item_b.stack >= item_max_stack)
+                return;
+
+            const sge::Rect rect_b = sge::Rect::from_center_size(dropped_item_b.position(), dropped_item_b.size());
+            const sge::Rect stack_rect = sge::Rect::from_center_size(dropped_item_a.position(), glm::vec2(ITEM_STACK_RANGE));
+
+            if (!stack_rect.intersects(rect_b))
+                return;
+
+            if (item_a.stack + item_b.stack > item_max_stack) {
+                const ItemStack a = item_max_stack - item_a.stack;
+                item_a.stack += a;
+                item_b.stack -= a;
+            } else {
+                item_a.stack += item_b.stack;
+                item_b.stack = 0;
+            }
+
+            dropped_item_a.set_velocity((dropped_item_a.velocity() + dropped_item_b.velocity()) * 0.5f);
+            dropped_item_a.set_position((dropped_item_a.position() + dropped_item_b.position()) * 0.5f);
+
+            dropped_item_b.set_picked();
+        });
+    }
+}
+
+void World::draw(const sge::Camera& camera) {
+    ZoneScoped;
 
     GameRenderer::BeginOrderMode();
         for (const TilePos& tile_pos : m_data.torches) {
-            for (const glm::vec2& offset : offsets) {
+            for (const glm::vec2& offset : m_offsets) {
                 const glm::vec2 flame_pos = tile_pos.to_world_pos() - glm::vec2((20.0f - 16.0f) / 2.0f, 0.0f);
-                flames.set_position(flame_pos + offset);
-                GameRenderer::DrawAtlasSpriteWorldPremultiplied(flames);
+                m_flames_sprite.set_position(flame_pos + offset);
+                GameRenderer::DrawAtlasSpriteWorldPremultiplied(m_flames_sprite);
             }
         }
     GameRenderer::EndOrderMode();
 
-    for (const auto& [pos, cracks] : m_block_cracks) {
-        sge::TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));
-        sprite.set_position(pos.to_world_pos_center());
-        sprite.set_index(cracks.cracks_index);
-        sprite.set_z(0.4f);
+    m_cracks_sprite.set_scale(1.0f);
 
-        GameRenderer::DrawAtlasSpriteWorld(sprite);
+    for (const auto& [pos, cracks] : m_block_cracks) {
+        m_cracks_sprite.set_position(pos.to_world_pos_center());
+        m_cracks_sprite.set_index(cracks);
+        m_cracks_sprite.set_z(0.4f);
+
+        GameRenderer::DrawAtlasSpriteWorld(m_cracks_sprite);
     }
 
     for (const auto& [pos, cracks] : m_wall_cracks) {
-        sge::TextureAtlasSprite sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks));
-        sprite.set_position(pos.to_world_pos_center());
-        sprite.set_index(cracks.cracks_index);
-        sprite.set_z(0.2f);
+        m_cracks_sprite.set_position(pos.to_world_pos_center());
+        m_cracks_sprite.set_index(cracks);
+        m_cracks_sprite.set_z(0.2f);
 
-        GameRenderer::DrawAtlasSpriteWorld(sprite);
+        GameRenderer::DrawAtlasSpriteWorld(m_cracks_sprite);
     }
+
+    m_cracks_sprite.set_z(1.0f);
 
     GameRenderer::BeginOrderMode();
         for (const TileDigAnimation& anim : m_tile_dig_animations) {
@@ -322,11 +393,18 @@ void World::draw(const sge::Camera& camera) const {
 
             const auto cracks = m_block_cracks.find(anim.tile_pos);
             if (cracks != m_block_cracks.end()) {
-                sge::TextureAtlasSprite cracks_sprite(Assets::GetTextureAtlas(TextureAsset::TileCracks), position, scale);
-                cracks_sprite.set_index(cracks->second.cracks_index);
+                m_cracks_sprite.set_position(position);
+                m_cracks_sprite.set_scale(scale);
+                m_cracks_sprite.set_index(cracks->second);
 
-                GameRenderer::DrawAtlasSpriteWorld(cracks_sprite, sge::Order(1));
+                GameRenderer::DrawAtlasSpriteWorld(m_cracks_sprite, sge::Order(1));
             }
+        }
+    GameRenderer::EndOrderMode();
+
+    GameRenderer::BeginOrderMode();
+        for (const DroppedItem& item : m_dropped_items) {
+            item.draw();
         }
     GameRenderer::EndOrderMode();
 }

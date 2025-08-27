@@ -1,7 +1,7 @@
-#ifndef TYPES_BACKGROUND_LAYER
-#define TYPES_BACKGROUND_LAYER
-
 #pragma once
+
+#ifndef TYPES_BACKGROUND_LAYER_
+#define TYPES_BACKGROUND_LAYER_
 
 #include <glm/glm.hpp>
 #include <glm/gtx/vec_swizzle.hpp>
@@ -128,7 +128,7 @@ private:
     float m_y;
     uint16_t m_id = 0;
     sge::Anchor m_anchor;
-    BitFlags<Flags> m_flags = BitFlags({Flags::Nonscale, Flags::FollowCamera});
+    sge::BitFlags<Flags> m_flags = sge::BitFlags({Flags::Nonscale, Flags::FollowCamera});
 };
 
 #endif

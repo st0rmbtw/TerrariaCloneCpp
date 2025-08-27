@@ -14,6 +14,7 @@
 #include <SGE/input.hpp>
 #include <SGE/profile.hpp>
 
+#include "../diagnostic/frametime.hpp"
 #include "../renderer/renderer.hpp"
 #include "../assets.hpp"
 
@@ -25,8 +26,6 @@ static constexpr float HOTBAR_SLOT_SIZE = 40;
 static constexpr float INVENTORY_SLOT_SIZE = HOTBAR_SLOT_SIZE * 1.15;
 static constexpr float HOTBAR_SLOT_SIZE_SELECTED = HOTBAR_SLOT_SIZE * 1.3;
 static constexpr float INVENTORY_CELL_MARGIN = 4;
-
-static constexpr uint16_t FRAMETIME_RECORD_MAX_COUNT = 120;
 
 enum class AnimationDirection: uint8_t {
     Backward = 0,
@@ -90,10 +89,6 @@ static struct UiState {
     sge::LinearRgba cursor_foreground_color;
     sge::LinearRgba cursor_background_color;
 
-    LLGL::DynamicArray<float> frametime_records;
-    uint16_t frametime_record_index = 0;
-    float frametime_record_sum = 0.0f;
-
     float cursor_anim_progress;
     float cursor_scale = 1.0f;
 
@@ -130,8 +125,6 @@ void UI::Init() noexcept {
         .set_texture(Assets::GetTexture(TextureAsset::UiCursorForeground))
         .set_color(state.cursor_foreground_color)
         .set_anchor(sge::Anchor::TopLeft);
-
-    state.frametime_records = LLGL::DynamicArray<float>(FRAMETIME_RECORD_MAX_COUNT);
 }
 
 static SGE_FORCE_INLINE void select_hotbar_slot(Inventory& inventory, uint8_t slot) {
@@ -153,14 +146,34 @@ void UI::PreUpdate(Inventory& inventory) noexcept {
                 switch (element.type()) {
                 case UiElement::HotbarCell:
                     if (state.show_extra_ui) {
-                        inventory.take_or_put_item(element.data());
+                        if (inventory.has_taken_item()) {
+                            inventory.put_item(element.data());
+                        } else {
+                            inventory.take_item(element.data());
+                        }
                     } else {
                         select_hotbar_slot(inventory, element.data());
                     }
                     break;
                 case UiElement::InventoryCell:
+                    if (inventory.has_taken_item()) {
+                        inventory.put_item(element.data());
+                    } else {
+                        inventory.take_item(element.data());
+                    }
+                    break;
+                }
+                break;
+            } else if (sge::Input::JustPressed(sge::MouseButton::Right)) {
+                switch (element.type()) {
+                case UiElement::HotbarCell:
                     if (state.show_extra_ui) {
-                        inventory.take_or_put_item(element.data());
+                        inventory.take_item(element.data(), 1);
+                    }
+                    break;
+                case UiElement::InventoryCell:
+                    if (state.show_extra_ui) {
+                        inventory.take_item(element.data(), 1);
                     }
                     break;
                 }
@@ -170,10 +183,12 @@ void UI::PreUpdate(Inventory& inventory) noexcept {
     }
 }
 
-void UI::Update(Inventory& inventory) noexcept {
+void UI::Update(Player& player, World& world) noexcept {
     ZoneScoped;
 
     update_cursor();
+
+    Inventory& inventory = player.inventory();
 
     if (sge::Input::JustPressed(sge::Key::Escape)) {
         state.show_extra_ui = !state.show_extra_ui;
@@ -182,6 +197,12 @@ void UI::Update(Inventory& inventory) noexcept {
 
     if (sge::Input::JustPressed(sge::Key::F10)) {
         state.show_fps = !state.show_fps;
+    }
+
+    if (state.show_extra_ui) {
+        if (!sge::Input::IsMouseOverUi() && inventory.has_taken_item() && sge::Input::JustPressed(sge::MouseButton::Right)) {
+            player.throw_item(world, TAKEN_ITEM_INDEX);
+        }
     }
 
     if (sge::Input::JustPressed(sge::Key::Digit1)) select_hotbar_slot(inventory, 0);
@@ -201,15 +222,9 @@ void UI::Update(Inventory& inventory) noexcept {
         select_hotbar_slot(inventory, static_cast<uint8_t>(new_index));
     }
 
-    const float frametime = sge::Time::DeltaSeconds();
-    state.frametime_record_sum -= state.frametime_records[state.frametime_record_index];
-    state.frametime_record_sum += frametime;
-    state.frametime_records[state.frametime_record_index] = frametime;
-    state.frametime_record_index = (state.frametime_record_index + 1) % FRAMETIME_RECORD_MAX_COUNT;
-
     if (state.show_fps) {
         if (state.fps_update_timer.tick(sge::Time::Delta()).just_finished()) {
-            const int fps = (int) (1.0f / (state.frametime_record_sum / FRAMETIME_RECORD_MAX_COUNT));
+            const int fps = FrameTime::GetAverageFPS();
             state.fps_text = std::to_string(fps);
         }
     }

@@ -223,14 +223,16 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
     m_target_texture = context->CreateTexture(texture_desc);
     m_static_lightmap_texture = context->CreateTexture(texture_desc);
 
-    LLGL::TextureDescriptor depth_texture_desc = texture_desc;
-    depth_texture_desc.type = samples > 1 ? LLGL::TextureType::Texture2DMS : LLGL::TextureType::Texture2D;
-    depth_texture_desc.samples = samples;
-    depth_texture_desc.extent.width = resolution.width;
-    depth_texture_desc.extent.height = resolution.height;
-    depth_texture_desc.format = swap_chain->GetDepthStencilFormat();
-    depth_texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::DepthStencilAttachment;
-    m_depth_texture = context->CreateTexture(depth_texture_desc);
+    if (swap_chain->GetDepthStencilFormat() != LLGL::Format::Undefined) {
+        LLGL::TextureDescriptor depth_texture_desc = texture_desc;
+        depth_texture_desc.type = samples > 1 ? LLGL::TextureType::Texture2DMS : LLGL::TextureType::Texture2D;
+        depth_texture_desc.samples = samples;
+        depth_texture_desc.extent.width = resolution.width;
+        depth_texture_desc.extent.height = resolution.height;
+        depth_texture_desc.format = swap_chain->GetDepthStencilFormat();
+        depth_texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::DepthStencilAttachment;
+        m_depth_texture = context->CreateTexture(depth_texture_desc);
+    }
 
     if (m_render_pass == nullptr) {
         LLGL::RenderPassDescriptor render_pass;
@@ -418,12 +420,12 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
     image_view.format   = LLGL::ImageFormat::RGBA;
     image_view.dataType = LLGL::DataType::UInt8;
 
-    for (auto it = world.lightmap_tasks.cbegin(); it != world.lightmap_tasks.cend();) {
-        const LightMapTask& task = *it;
+    for (size_t i = 0; i < world.lightmap_tasks.size(); ++i) {
+        const LightMapTask& task = world.lightmap_tasks[i];
         const LightMapTaskResult result = task.result->load();
 
         if (result.is_complete) {
-            ZoneScoped;
+            ZoneScopedN("WorldRenderer::HandleLightTaskCompletion");
 
             internal_update_world_lightmap(world, result);
 
@@ -469,11 +471,8 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
 
             delete[] result.data;
             delete[] result.mask;
-            it = world.lightmap_tasks.erase(it);
-            continue;
+            world.lightmap_tasks.erase(i);
         }
-
-        ++it;
     }
 
 }
@@ -491,20 +490,20 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
     for (const glm::uvec2& pos : chunk_manager.visible_chunks()) {
         const RenderChunk& chunk = chunk_manager.render_chunks().find(pos)->second;
 
-        if (chunk.wall_count > 0) {
-            commands->SetVertexBufferArray(*chunk.wall_buffer_array);
+        if (chunk.wall_count() > 0) {
+            commands->SetVertexBufferArray(*chunk.wall_buffer_array());
             commands->SetResource(0, walls_texture);
             commands->SetResourceHeap(*m_resource_heap);
 
-            commands->DrawInstanced(4, 0, chunk.wall_count);
+            commands->DrawInstanced(4, 0, chunk.wall_count());
         }
 
-        if (chunk.block_count > 0) {
-            commands->SetVertexBufferArray(*chunk.block_buffer_array);
+        if (chunk.block_count() > 0) {
+            commands->SetVertexBufferArray(*chunk.block_buffer_array());
             commands->SetResource(0, tiles_texture);
             commands->SetResourceHeap(*m_resource_heap);
 
-            commands->DrawInstanced(4, 0, chunk.block_count);
+            commands->DrawInstanced(4, 0, chunk.block_count());
         }
     }
 }

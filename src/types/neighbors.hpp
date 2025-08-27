@@ -1,7 +1,7 @@
-#ifndef TYPES_NEIGHBORS
-#define TYPES_NEIGHBORS
-
 #pragma once
+
+#ifndef TYPES_NEIGHBORS_
+#define TYPES_NEIGHBORS_
 
 #include <optional>
 

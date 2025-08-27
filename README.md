@@ -6,37 +6,44 @@ It's a clone of the `Terraria` game in `C++` using the [LLGL](https://github.com
 
 Requirements:
 
-* cmake 3.18+
-* ninja
-* [_Optional_] glslang executable in the root folder of the project to compile vulkan shaders.
+* `cmake` 3.18+
+* `slang` to compile shaders
 
 ### Debug build
 
-```
-cmake -S . -B ./build/ -G "Ninja" -DCMAKE_BUILD_TYPE=Debug
+```console
+cmake -S . -B ./build/ -G "Ninja" -DCMAKE_BUILD_TYPE=Debug [CMake Options]
 cmake --build ./build/
-./build/TerrariaClone.exe [options]
+./build/TerrariaClone.exe [CLI Options]
 ```
 
 ### Release build
 
-_Debug tools don't work in release build_
-
-```
-cmake -S . -B ./build_release/ -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+```console
+cmake -S . -B ./build_release/ -G "Ninja" -DCMAKE_BUILD_TYPE=Release [CMake Options]
 cmake --build ./build_release/
-./build_release/TerrariaClone.exe [options]
+./build_release/TerrariaClone.exe [CLI Options]
 ```
 
-### Options
+### CMake Options
 
-`--backend <d3d11|d3d12|vulkan|opengl|metal>` Set a rendering backend (D3D11, D3D12 work only on Windows; Metal works only on macOS)
+`ENABLE_DEBUG_TOOLS` - Enable debug tools.
 
-`--vsync` Enable vertical synchronization
+### CLI Options
 
-`--pause` Don't initialize the game until any key is pressed (Useful when debugging with `RenderDoc`)
+`--backend <d3d11|d3d12|vulkan|opengl|metal>` - Set a rendering backend (D3D11, D3D12 work only on Windows; Metal works only on macOS).
 
-`--fullscreen` Enable fullscreen mode
+`--vsync` - Enable vertical synchronization.
+
+`--wait-key` - Wait for any key to be pressed before initializing the game (Useful when debugging with `RenderDoc`).
+
+`--fullscreen` - Enable fullscreen mode.
+
+`--samples <number of samples>` - Set MSAA sample count (**8** by default).
+
+`--world-width <width>` - Set the total world width to `width` blocks (**200** by default).
+
+`--world-height <height>` - Set the total world height to `height` blocks (**500** by default).
 
 ## Keymappings
 
@@ -80,11 +87,11 @@ cmake --build ./build_release/
 
 `F10` - Hide/Show FPS (in the bottom left corner)
 
-### Debug
+### Debug Tools
 
 `F` - Toggle free camera mode
 
-### When in free camera mode
+#### When in free camera mode
 
 `W` - Move the camera upward
 

@@ -1,5 +1,7 @@
-#ifndef _RENDERER_UTILS_HPP_
-#define _RENDERER_UTILS_HPP_
+#pragma once
+
+#ifndef RENDERER_UTILS_HPP_
+#define RENDERER_UTILS_HPP_
 
 #include <SGE/renderer/renderer.hpp>
 

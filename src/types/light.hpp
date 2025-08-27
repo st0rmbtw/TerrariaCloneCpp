@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef TYPES_LIGHT_HPP
-#define TYPES_LIGHT_HPP
+#ifndef TYPES_LIGHT_HPP_
+#define TYPES_LIGHT_HPP_
 
 #include <glm/vec3.hpp>
 

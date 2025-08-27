@@ -6,16 +6,6 @@
 #include <SGE/math/consts.hpp>
 #include <SGE/utils/random.hpp>
 
-#include "../utils.hpp"
-
-float move_towards(float current, float target, float max_delta) noexcept {
-    if (glm::abs(target - current) <= max_delta) {
-        return target;
-    }
-
-    return current + glm::sign(target - current) * max_delta;
-}
-
 glm::vec2 random_point_cone(glm::vec2 direction, float angle, float radius) {
     SGE_ASSERT(-1.0f <= direction.x && direction.x <= 1.0f);
     SGE_ASSERT(-1.0f <= direction.y && direction.y <= 1.0f);

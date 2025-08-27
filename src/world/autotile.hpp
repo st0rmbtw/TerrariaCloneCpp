@@ -1,7 +1,7 @@
-#ifndef WORLD_AUTOTILE_HPP
-#define WORLD_AUTOTILE_HPP
-
 #pragma once
+
+#ifndef WORLD_AUTOTILE_HPP_
+#define WORLD_AUTOTILE_HPP_
 
 #include "../types/block.hpp"
 #include "world.hpp"

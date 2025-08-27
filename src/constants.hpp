@@ -1,7 +1,7 @@
-#ifndef CONSTANTS_HPP
-#define CONSTANTS_HPP
-
 #pragma once
+
+#ifndef CONSTANTS_HPP_
+#define CONSTANTS_HPP_
 
 #include <cstdint>
 
@@ -30,6 +30,9 @@ namespace Constants {
     constexpr uint8_t RENDER_CHUNK_SIZE_U = 50u;
     constexpr int SUBDIVISION = 8;
     constexpr float LIGHT_EPSILON = 0.01;
+
+    constexpr float ITEM_GRAB_RANGE = 5.25f * Constants::TILE_SIZE;
+    constexpr float ITEM_STACK_RANGE = 1.5f * Constants::TILE_SIZE;
 
     constexpr float LightDecay(bool solid) {
         if constexpr (SUBDIVISION == 8) {

@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
 #elif SGE_PLATFORM_MACOS
     sge::RenderBackend backend = sge::RenderBackend::Metal;
 #else
-    sge::RenderBackend backend = sge::RenderBackend::OpenGL;
+    sge::RenderBackend backend = sge::RenderBackend::Vulkan;
 #endif
     AppConfig config;
 
@@ -32,8 +32,8 @@ int main(int argc, char** argv) {
     int16_t world_height = 500;
 
     for (int i = 1; i < argc; i++) {
-        if (str_eq(argv[i], "--pause")) {
-            fmt::println("Initialization is paused. Press any key to continue...");
+        if (str_eq(argv[i], "--wait-key")) {
+            fmt::println("Press any key to continue...");
             getchar();
         } else if (str_eq(argv[i], "--backend")) {
             if (i >= argc-1) {
