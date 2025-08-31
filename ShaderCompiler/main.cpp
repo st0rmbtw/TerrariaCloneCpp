@@ -3,8 +3,10 @@
 #include <string>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <array>
+#include <optional>
 
 #include <slang.h>
 #include <slang-com-ptr.h>
