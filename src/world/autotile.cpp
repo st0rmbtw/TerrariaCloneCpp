@@ -304,9 +304,9 @@ void update_block_sprite_index(Block& tile, const Neighbors<Block>& neighbors) {
         };
 
         uint16_t index;
-        if (check_anchor_vertical(map(neighbors.bottom, to_type), anchor.bottom)) index = 0;
-        else if (check_anchor_horizontal(map(neighbors.left, to_type), anchor.left)) index = 1;
-        else if (check_anchor_horizontal(map(neighbors.right, to_type), anchor.right)) index = 2;
+        if (block_check_anchor_vertical(map(neighbors.bottom, to_type), anchor.bottom)) index = 0;
+        else if (block_check_anchor_horizontal(map(neighbors.left, to_type), anchor.left)) index = 1;
+        else if (block_check_anchor_horizontal(map(neighbors.right, to_type), anchor.right)) index = 2;
         else index = 0;
 
         tile.atlas_pos = TextureAtlasPos(index, 0);

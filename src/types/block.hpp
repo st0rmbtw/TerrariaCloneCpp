@@ -9,6 +9,7 @@
 #include "texture_atlas_pos.hpp"
 #include "neighbors.hpp"
 #include "tool_flags.hpp"
+#include "anchor.hpp"
 
 #include "../assets.hpp"
 #include "../utils.hpp"
@@ -103,26 +104,6 @@ struct TreeData {
 
 union BlockData {
     TreeData tree;
-};
-
-namespace AnchorType {
-    using Type = uint8_t;
-    enum : Type { 
-        None = 0,
-        SolidSide = 1 << 0,
-        SolidTile = 1 << 1,
-        Tree = 1 << 2
-    };
-
-    static constexpr Type Default = SolidTile | SolidSide;
-}
-
-struct AnchorData {
-    AnchorType::Type left = AnchorType::Default;
-    AnchorType::Type right = AnchorType::Default;
-    AnchorType::Type bottom = AnchorType::Default;
-    AnchorType::Type top = AnchorType::Default;
-    bool wall = true;
 };
 
 inline constexpr int16_t block_hp(BlockType tile_type) {
@@ -359,7 +340,7 @@ inline constexpr bool block_is_solid(std::optional<BlockType> tile_type) {
     }
 }
 
-inline constexpr bool check_anchor_horizontal(std::optional<BlockType> tile, AnchorType::Type anchor) {
+inline constexpr bool block_check_anchor_horizontal(std::optional<BlockType> tile, AnchorType::Type anchor) {
     if (anchor == AnchorType::None && tile.has_value()) return false;
     if (anchor != AnchorType::None && !tile.has_value()) return false;
 
@@ -368,16 +349,16 @@ inline constexpr bool check_anchor_horizontal(std::optional<BlockType> tile, Anc
     return true;
 }
 
-inline constexpr bool check_anchor_vertical(std::optional<BlockType> tile, AnchorType::Type anchor) {
+inline constexpr bool block_check_anchor_vertical(std::optional<BlockType> tile, AnchorType::Type anchor) {
     if (BITFLAG_CHECK(anchor, AnchorType::SolidTile) && block_is_solid(tile)) return true;
     return false;
 }
 
-inline constexpr bool check_anchor_data(AnchorData anchor, const Neighbors<BlockType>& neighbors, bool has_wall) {
-    if (check_anchor_horizontal(neighbors.left, anchor.left)) return true;
-    if (check_anchor_horizontal(neighbors.right, anchor.right)) return true;
-    if (check_anchor_vertical(neighbors.top, anchor.top)) return true;
-    if (check_anchor_vertical(neighbors.bottom, anchor.bottom)) return true;
+inline constexpr bool block_check_anchor_data(AnchorData anchor, const Neighbors<BlockType>& neighbors, bool has_wall) {
+    if (block_check_anchor_horizontal(neighbors.left, anchor.left)) return true;
+    if (block_check_anchor_horizontal(neighbors.right, anchor.right)) return true;
+    if (block_check_anchor_vertical(neighbors.top, anchor.top)) return true;
+    if (block_check_anchor_vertical(neighbors.bottom, anchor.bottom)) return true;
     if (anchor.wall && has_wall) return true;
 
     return false;

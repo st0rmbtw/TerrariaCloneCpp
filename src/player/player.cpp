@@ -764,6 +764,10 @@ static void break_tree(World& world, TilePos start_pos) {
     );
 }
 
+static constexpr bool is_tool_valid(BlockType block_type, const Item& item) {
+    return (item.tool_flags & block_required_tool(block_type)) != 0;
+}
+
 void Player::use_item(const sge::Camera& camera, World& world) {
     ZoneScoped;
 
@@ -792,11 +796,52 @@ void Player::use_item(const sge::Camera& camera, World& world) {
 
     bool used = false;
 
-    const std::optional<BlockType> block_type = world.get_block_type(tile_pos);
-    if (block_type.has_value()) {
-        const bool valid_tool = (item->tool_flags & block_required_tool(block_type.value())) != 0;
+    if (item->places_tile.has_value()) {
+        if (item->places_tile->type == PlacesTile::Block && !world.block_exists(tile_pos)) {
+            const sge::Rect player_rect = sge::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
+            const sge::Rect tile_rect = sge::Rect::from_center_size(tile_pos.to_world_pos_center(), glm::vec2(TILE_SIZE));
 
-        if (valid_tool) {
+            if (!player_rect.intersects(tile_rect)) {
+                const Neighbors<BlockType> neighbors = world.get_block_type_neighbors(tile_pos);
+
+                if (block_check_anchor_data(block_anchor(item->places_tile->tile), neighbors, world.wall_exists(tile_pos))) {
+                    world.set_block(tile_pos, item->places_tile->tile);
+                    used = true;
+                }
+            }
+        } else if (item->places_tile->type == PlacesTile::Wall && !world.wall_exists(tile_pos)) {
+            const Neighbors<WallType> neighbors = world.get_wall_type_neighbors(tile_pos);
+            const bool has_neighbors = neighbors.vertical_exists() || neighbors.horizontal_exists();
+            const bool block_exists = world.solid_block_exists(tile_pos);
+
+            if (has_neighbors || block_exists) {
+                world.set_wall(tile_pos, item->places_tile->wall);
+                used = true;
+            }
+        }
+    } else if (item->is_hammer() && world.wall_exists(tile_pos)) {
+        Wall* wall = world.get_wall_mut(tile_pos);
+
+        if (wall->hp > 0) {
+            wall->hp -= item->power;
+        }
+
+        const glm::vec2 position = tile_pos.to_world_pos_center();
+        spawn_particles_on_dig(position, Particle::get_by_wall(wall->type), wall->hp <= 0);
+
+        if (wall->hp <= 0) {
+            world.remove_wall(tile_pos);
+        } else {
+            uint8_t new_variant = rand() % 3;
+
+            world.update_wall(tile_pos, wall->type, new_variant);
+            world.create_wall_cracks(tile_pos, map_range(wall_hp(wall->type), 0, 0, 3, wall->hp) * 6 + (rand() % 6));
+        }
+
+        used = true;
+    } else {
+        const std::optional<BlockType> block_type = world.get_block_type(tile_pos);
+        if (block_type.has_value() && is_tool_valid(block_type.value(), item.value())) {
             Block* block = world.get_block_mut(tile_pos);
 
             if (block->hp > 0) {
@@ -829,43 +874,6 @@ void Player::use_item(const sge::Camera& camera, World& world) {
                 world.create_block_cracks(tile_pos, map_range(block_hp(block->type), 0, 0, 3, block->hp) * 6 + (rand() % 6));
             }
 
-            used = true;
-        }
-    } else if (item->is_hammer() && world.wall_exists(tile_pos)) {
-        Wall* wall = world.get_wall_mut(tile_pos);
-
-        if (wall->hp > 0) {
-            wall->hp -= item->power;
-        }
-
-        const glm::vec2 position = tile_pos.to_world_pos_center();
-        spawn_particles_on_dig(position, Particle::get_by_wall(wall->type), wall->hp <= 0);
-
-        if (wall->hp <= 0) {
-            world.remove_wall(tile_pos);
-        } else {
-            uint8_t new_variant = rand() % 3;
-
-            world.update_wall(tile_pos, wall->type, new_variant);
-            world.create_wall_cracks(tile_pos, map_range(wall_hp(wall->type), 0, 0, 3, wall->hp) * 6 + (rand() % 6));
-        }
-
-        used = true;
-    } else if (item->places_tile.has_value()) {
-        if (item->places_tile->type == PlacesTile::Block && !world.block_exists(tile_pos)) {
-            const sge::Rect player_rect = sge::Rect::from_center_half_size(m_position, glm::vec2(PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF));
-            const sge::Rect tile_rect = sge::Rect::from_center_size(tile_pos.to_world_pos_center(), glm::vec2(TILE_SIZE));
-
-            if (!player_rect.intersects(tile_rect)) {
-                const Neighbors<BlockType> neighbors = world.get_block_type_neighbors(tile_pos);
-
-                if (check_anchor_data(block_anchor(item->places_tile->tile), neighbors, world.wall_exists(tile_pos))) {
-                    world.set_block(tile_pos, item->places_tile->tile);
-                    used = true;
-                }
-            }
-        } else if (item->places_tile->type == PlacesTile::Wall && !world.wall_exists(tile_pos)) {
-            world.set_wall(tile_pos, item->places_tile->wall);
             used = true;
         }
     }

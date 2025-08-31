@@ -3,7 +3,6 @@
 #ifndef WORLD_WORLD_DATA_HPP_
 #define WORLD_WORLD_DATA_HPP_
 
-#include <vector>
 #include <deque>
 #include <unordered_set>
 
@@ -90,13 +89,19 @@ struct WorldData {
     std::optional<BlockType> get_block_type(TilePos pos) const noexcept;
 
     [[nodiscard]]
+    std::optional<WallType> get_wall_type(TilePos pos) const noexcept;
+
+    [[nodiscard]]
     Neighbors<Block> get_block_neighbors(TilePos pos) const;
 
     [[nodiscard]]
-    Neighbors<BlockType> get_block_type_neighbors(TilePos pos) const;
+    Neighbors<BlockType> get_block_type_neighbors(TilePos pos) const noexcept;
 
     [[nodiscard]]
     Neighbors<Block*> get_block_neighbors_mut(TilePos pos);
+
+    [[nodiscard]]
+    Neighbors<WallType> get_wall_type_neighbors(TilePos pos) const noexcept;
 
     [[nodiscard]]
     Neighbors<Wall> get_wall_neighbors(TilePos pos) const;

@@ -122,6 +122,11 @@ public:
     }
 
     [[nodiscard]]
+    inline Neighbors<WallType> get_wall_type_neighbors(TilePos pos) const {
+        return m_data.get_wall_type_neighbors(pos);
+    }
+
+    [[nodiscard]]
     inline Neighbors<Wall*> get_wall_neighbors_mut(TilePos pos) {
         return m_data.get_wall_neighbors_mut(pos);
     }

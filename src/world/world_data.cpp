@@ -32,12 +32,17 @@ Wall* WorldData::get_wall_mut(TilePos pos) {
 }
 
 std::optional<BlockType> WorldData::get_block_type(TilePos pos) const noexcept {
-    if (!is_tilepos_valid(pos)) return std::nullopt;
-
     const std::optional<Block> block = get_block(pos);
     if (!block.has_value()) return std::nullopt;
 
     return block->type;
+}
+
+std::optional<WallType> WorldData::get_wall_type(TilePos pos) const noexcept {
+    const std::optional<Wall> wall = get_wall(pos);
+    if (!wall.has_value()) return std::nullopt;
+
+    return wall->type;
 }
 
 Neighbors<Block> WorldData::get_block_neighbors(TilePos pos) const {
@@ -53,7 +58,7 @@ Neighbors<Block> WorldData::get_block_neighbors(TilePos pos) const {
     };
 }
 
-Neighbors<BlockType> WorldData::get_block_type_neighbors(TilePos pos) const {
+Neighbors<BlockType> WorldData::get_block_type_neighbors(TilePos pos) const noexcept {
     return Neighbors<BlockType> {
         .top = get_block_type(pos.offset(TileOffset::Top)),
         .bottom = get_block_type(pos.offset(TileOffset::Bottom)),
@@ -89,6 +94,19 @@ Neighbors<Wall> WorldData::get_wall_neighbors(TilePos pos) const {
         .top_right = get_wall(pos.offset(TileOffset::TopRight)),
         .bottom_left = get_wall(pos.offset(TileOffset::BottomLeft)),
         .bottom_right = get_wall(pos.offset(TileOffset::BottomRight)),
+    };
+}
+
+Neighbors<WallType> WorldData::get_wall_type_neighbors(TilePos pos) const noexcept {
+    return Neighbors<WallType> {
+        .top = get_wall_type(pos.offset(TileOffset::Top)),
+        .bottom = get_wall_type(pos.offset(TileOffset::Bottom)),
+        .left = get_wall_type(pos.offset(TileOffset::Left)),
+        .right = get_wall_type(pos.offset(TileOffset::Right)),
+        .top_left = get_wall_type(pos.offset(TileOffset::TopLeft)),
+        .top_right = get_wall_type(pos.offset(TileOffset::TopRight)),
+        .bottom_left = get_wall_type(pos.offset(TileOffset::BottomLeft)),
+        .bottom_right = get_wall_type(pos.offset(TileOffset::BottomRight)),
     };
 }
 
