@@ -12,6 +12,8 @@
 #include <slang-com-ptr.h>
 #include <slang-com-helper.h>
 
+#define SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS
+
 #include <spirv_cross/spirv.hpp>
 #include <spirv_cross/spirv_cross.hpp>
 #include <spirv_cross/spirv_glsl.hpp>
@@ -546,10 +548,6 @@ static std::optional<std::string> TranslateSpirvToGlsl(const fs::path& file_path
     for (auto& resource : resources.uniform_buffers) {
         const std::string& name = compiler.get_name(resource.id);
         compiler.set_name(resource.base_type_id, name);
-
-        const spirv_cross::Bitset& decor = compiler.get_decoration_bitset(resource.id);
-
-        printf("%lu\n", decor.get_lower());
     }
 
     for (auto& resource : resources.storage_buffers) {
