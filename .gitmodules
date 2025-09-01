@@ -2,3 +2,6 @@
 	path = thirdparty/SGE
 	url = https://github.com/st0rmbtw/SGE.git
 	ignore = dirty
+[submodule "ShaderCompiler/thirdparty/SPIRV-Cross"]
+	path = ShaderCompiler/thirdparty/SPIRV-Cross
+	url = https://github.com/KhronosGroup/SPIRV-Cross.git

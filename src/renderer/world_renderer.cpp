@@ -93,13 +93,13 @@ void WorldRenderer::init() {
             }
         );
         pipelineLayoutDesc.bindings = {
-            LLGL::BindingDescriptor("u_texture_array", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4)),
+            LLGL::BindingDescriptor("TextureArray", LLGL::ResourceType::Texture, LLGL::BindFlags::Sampled, LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4)),
         };
         pipelineLayoutDesc.staticSamplers = {
-            LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, 5, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
+            LLGL::StaticSamplerDescriptor("Sampler", LLGL::StageFlags::FragmentStage, 5, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
         };
         pipelineLayoutDesc.combinedTextureSamplers = {
-            LLGL::CombinedTextureSamplerDescriptor{ "u_texture_array", "u_texture_array", "u_sampler", 4 }
+            LLGL::CombinedTextureSamplerDescriptor{ "TextureArray", "TextureArray", "Sampler", 4 }
         };
 
         LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
@@ -149,13 +149,13 @@ void WorldRenderer::init() {
             sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer", LLGL::StageFlags::VertexStage)
         });
         lightmapPipelineLayoutDesc.bindings = sge::BindingLayout({
-            sge::BindingLayoutItem::Texture(3, "u_texture", LLGL::StageFlags::FragmentStage)
+            sge::BindingLayoutItem::Texture(3, "StaticLightMapChunk", LLGL::StageFlags::FragmentStage)
         });
         lightmapPipelineLayoutDesc.staticSamplers = {
-            LLGL::StaticSamplerDescriptor("u_sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4), Assets::GetSampler(sge::TextureSampler::Nearest).descriptor())
+            LLGL::StaticSamplerDescriptor("Sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4), Assets::GetSampler(sge::TextureSampler::Nearest).descriptor())
         };
         lightmapPipelineLayoutDesc.combinedTextureSamplers = {
-            LLGL::CombinedTextureSamplerDescriptor{ "u_texture", "u_texture", "u_sampler", 3 }
+            LLGL::CombinedTextureSamplerDescriptor{ "StaticLightMapChunk", "StaticLightMapChunk", "Sampler", 3 }
         };
 
         LLGL::PipelineLayout* lightmapPipelineLayout = context->CreatePipelineLayout(lightmapPipelineLayoutDesc);

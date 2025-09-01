@@ -77,23 +77,23 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.staticSamplers = {
-        LLGL::StaticSamplerDescriptor("u_background_sampler", LLGL::StageFlags::FragmentStage, 4, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
-        LLGL::StaticSamplerDescriptor("u_world_sampler", LLGL::StageFlags::FragmentStage, 6, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
-        LLGL::StaticSamplerDescriptor("u_lightmap_sampler", LLGL::StageFlags::FragmentStage, 8, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
-        LLGL::StaticSamplerDescriptor("u_light_sampler", LLGL::StageFlags::FragmentStage, 10, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("BackgroundTextureSampler", LLGL::StageFlags::FragmentStage, 4, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("WorldTextureSampler", LLGL::StageFlags::FragmentStage, 6, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("LightMapSampler", LLGL::StageFlags::FragmentStage, 8, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("LightSampler", LLGL::StageFlags::FragmentStage, 10, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
     };
     pipelineLayoutDesc.combinedTextureSamplers = {
-        LLGL::CombinedTextureSamplerDescriptor{ "u_background_texture", "u_background_texture", "u_background_sampler", 3 },
-        LLGL::CombinedTextureSamplerDescriptor{ "u_world_texture", "u_world_texture", "u_world_sampler", 5 },
-        LLGL::CombinedTextureSamplerDescriptor{ "u_lightmap_texture", "u_lightmap_texture", "u_lightmap_sampler", 7 },
-        LLGL::CombinedTextureSamplerDescriptor{ "u_light_texture", "u_light_texture", "u_light_sampler", 9 },
+        LLGL::CombinedTextureSamplerDescriptor{ "BackgroundTexture", "BackgroundTexture", "BackgroundTextureSampler", 3 },
+        LLGL::CombinedTextureSamplerDescriptor{ "WorldTexture", "WorldTexture", "WorldTextureSampler", 5 },
+        LLGL::CombinedTextureSamplerDescriptor{ "LightMap", "LightMap", "LightMapSampler", 7 },
+        LLGL::CombinedTextureSamplerDescriptor{ "Light", "Light", "LightSampler", 9 },
     };
     pipelineLayoutDesc.heapBindings = sge::BindingLayout({
         sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer", LLGL::StageFlags::VertexStage),
         sge::BindingLayoutItem::Texture(3, "u_background_texture", LLGL::StageFlags::FragmentStage),
-        sge::BindingLayoutItem::Texture(5, "u_world_texture", LLGL::StageFlags::FragmentStage),
-        sge::BindingLayoutItem::Texture(7, "u_lightmap_texture", LLGL::StageFlags::FragmentStage),
-        sge::BindingLayoutItem::Texture(9, "u_light_texture", LLGL::StageFlags::FragmentStage),
+        sge::BindingLayoutItem::Texture(5, "WorldTexture", LLGL::StageFlags::FragmentStage),
+        sge::BindingLayoutItem::Texture(7, "LightMap", LLGL::StageFlags::FragmentStage),
+        sge::BindingLayoutItem::Texture(9, "Light", LLGL::StageFlags::FragmentStage),
     });
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);

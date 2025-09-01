@@ -31,26 +31,26 @@ struct VSOutput
 static const float2 PARTICLE_SIZE = float2(8.0, 8.0);
 
 [vk::binding(5)]
-RWStructuredBuffer<float4> transforms : register(u5);
+RWStructuredBuffer<float4> TransformBuffer : register(u5);
 
 [vk::binding(6)]
-StructuredBuffer<float2> positions : register(t6);
+StructuredBuffer<float2> PositionBuffer : register(t6);
 
 [vk::binding(7)]
-StructuredBuffer<float4> rotations : register(t7);
+StructuredBuffer<float4> RotationBuffer : register(t7);
 
 [vk::binding(8)]
-StructuredBuffer<float> scales : register(t8);
+StructuredBuffer<float> ScaleBuffer : register(t8);
 
 [shader("vertex")]
 VSOutput VS(VSInput inp)
 {
     const float2 position = inp.position;
     const float4x4 mvp = float4x4(
-        transforms[inp.i_id * 4 + 0],
-        transforms[inp.i_id * 4 + 1],
-        transforms[inp.i_id * 4 + 2],
-        transforms[inp.i_id * 4 + 3]
+        TransformBuffer[inp.i_id * 4 + 0],
+        TransformBuffer[inp.i_id * 4 + 1],
+        TransformBuffer[inp.i_id * 4 + 2],
+        TransformBuffer[inp.i_id * 4 + 3]
     );
 
     const float2 uv = inp.i_uv / inp.tex_size;
@@ -71,9 +71,9 @@ void CSComputeTransform(uint3 thread_id : SV_DispatchThreadID)
 {
     const uint id = thread_id.x;
 
-    const float2 position = positions[id];
-    const float4 rotation = rotations[id];
-    const float scale = scales[id];
+    const float2 position = PositionBuffer[id];
+    const float4 rotation = RotationBuffer[id];
+    const float scale = ScaleBuffer[id];
 
     const float qxx = rotation.x * rotation.x;
     const float qyy = rotation.y * rotation.y;
@@ -123,10 +123,10 @@ void CSComputeTransform(uint3 thread_id : SV_DispatchThreadID)
 
     const float4x4 mvp = mul(u_view_projection, transform);
 
-    transforms[id * 4 + 0] = mvp[0];
-    transforms[id * 4 + 1] = mvp[1];
-    transforms[id * 4 + 2] = mvp[2];
-    transforms[id * 4 + 3] = mvp[3];
+    TransformBuffer[id * 4 + 0] = mvp[0];
+    TransformBuffer[id * 4 + 1] = mvp[1];
+    TransformBuffer[id * 4 + 2] = mvp[2];
+    TransformBuffer[id * 4 + 3] = mvp[3];
 }
 
 [vk::binding(3)]

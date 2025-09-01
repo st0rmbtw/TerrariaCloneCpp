@@ -4,6 +4,8 @@ project(ShaderCompiler CXX)
 
 find_package(Slang REQUIRED)
 
+add_subdirectory(./thirdparty/SPIRV-Cross)
+
 add_executable(${PROJECT_NAME} main.cpp)
 if(RELEASE_BUILD)
     target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG=0)
@@ -21,4 +23,4 @@ else()
     endif()
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE slang::slang)
+target_link_libraries(${PROJECT_NAME} PRIVATE slang::slang spirv-cross-glsl)
