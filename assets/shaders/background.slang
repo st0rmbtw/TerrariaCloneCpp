@@ -1,5 +1,6 @@
 #include "common.slang"
 
+[vk::binding(2)]
 cbuffer GlobalUniformBuffer : register(b2) {
     GlobalUniforms uniforms;
 }

@@ -82,6 +82,7 @@ void CSComputeLightSetLightSources(uint3 thread_id : SV_DispatchThreadID)
     }
 }
 
+[vk::binding(2)]
 cbuffer UniformBuffer : register(b2) {
     uint2 blur_min;
     uint2 blur_max;
