@@ -90,7 +90,7 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
     };
     pipelineLayoutDesc.heapBindings = sge::BindingLayout({
         sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer", LLGL::StageFlags::VertexStage),
-        sge::BindingLayoutItem::Texture(3, "u_background_texture", LLGL::StageFlags::FragmentStage),
+        sge::BindingLayoutItem::Texture(3, "BackgroundTexture", LLGL::StageFlags::FragmentStage),
         sge::BindingLayoutItem::Texture(5, "WorldTexture", LLGL::StageFlags::FragmentStage),
         sge::BindingLayoutItem::Texture(7, "LightMap", LLGL::StageFlags::FragmentStage),
         sge::BindingLayoutItem::Texture(9, "Light", LLGL::StageFlags::FragmentStage),

@@ -2,6 +2,8 @@
 
 #include <LLGL/Container/DynamicArray.h>
 #include <LLGL/Tags.h>
+#include <LLGL/BufferFlags.h>
+#include <LLGL/ResourceFlags.h>
 
 #include <SGE/engine.hpp>
 #include <SGE/renderer/macros.hpp>
@@ -433,20 +435,26 @@ void AcceleratedDynamicLighting::init_pipeline() {
     using Constants::WORLD_MAX_LIGHT_COUNT;
 
     const auto& context = m_renderer->Context();
-    const sge::RenderBackend backend = m_renderer->Backend();
 
-    LLGL::BufferDescriptor light_buffer;
-    light_buffer.bindFlags = LLGL::BindFlags::Sampled;
-    light_buffer.stride = sizeof(Light);
-    light_buffer.size = sizeof(Light) * WORLD_MAX_LIGHT_COUNT;
-    m_light_buffer = context->CreateBuffer(light_buffer);
+    {
+        LLGL::BufferDescriptor light_buffer;
+        light_buffer.bindFlags = LLGL::BindFlags::Sampled;
+        light_buffer.stride = sizeof(Light);
+        light_buffer.size = sizeof(Light) * WORLD_MAX_LIGHT_COUNT;
+        m_light_buffer = context->CreateBuffer(light_buffer);
+    }
+    {
+        LLGL::BufferDescriptor uniform_buffer;
+        uniform_buffer.bindFlags = LLGL::BindFlags::ConstantBuffer;
+        uniform_buffer.size = sizeof(UniformBuffer);
+        m_uniform_buffer = context->CreateBuffer(uniform_buffer);
+    }
 
     {
         LLGL::PipelineLayoutDescriptor lightInitPipelineLayoutDesc;
         lightInitPipelineLayoutDesc.heapBindings = sge::BindingLayout(
             LLGL::StageFlags::ComputeStage,
             {
-                sge::BindingLayoutItem::ConstantBuffer(3, "GlobalUniformBuffer"),
                 sge::BindingLayoutItem::Buffer(4, "LightBuffer"),
                 sge::BindingLayoutItem::TextureStorage(6, "LightTexture")
             }
@@ -454,9 +462,7 @@ void AcceleratedDynamicLighting::init_pipeline() {
 
         LLGL::PipelineLayout* lightInitPipelineLayout = context->CreatePipelineLayout(lightInitPipelineLayoutDesc);
 
-        const LLGL::ResourceViewDescriptor lightInitResourceViews[] = {
-            m_renderer->GlobalUniformBuffer(), m_light_buffer, nullptr
-        };
+        const LLGL::ResourceViewDescriptor lightInitResourceViews[] = { m_light_buffer, nullptr };
 
         LLGL::ResourceHeapDescriptor lightResourceHeapDesc;
         lightResourceHeapDesc.pipelineLayout = lightInitPipelineLayout;
@@ -476,28 +482,15 @@ void AcceleratedDynamicLighting::init_pipeline() {
         lightBlurPipelineLayoutDesc.heapBindings = sge::BindingLayout(
             LLGL::StageFlags::ComputeStage,
             {
-                sge::BindingLayoutItem::ConstantBuffer(3, "GlobalUniformBuffer"),
+                sge::BindingLayoutItem::ConstantBuffer(2, "UniformBuffer"),
                 sge::BindingLayoutItem::Texture(5, "TileTexture"),
                 sge::BindingLayoutItem::TextureStorage(6, "LightTexture")
             }
         );
-        if (backend.IsOpenGL()) {
-            lightBlurPipelineLayoutDesc.uniforms = {
-                LLGL::UniformDescriptor("entryPointParams.uniform_min", LLGL::UniformType::UInt2),
-                LLGL::UniformDescriptor("entryPointParams.uniform_max", LLGL::UniformType::UInt2),
-            };
-        } else {
-            lightBlurPipelineLayoutDesc.uniforms = {
-                LLGL::UniformDescriptor("uniform_min", LLGL::UniformType::UInt2),
-                LLGL::UniformDescriptor("uniform_max", LLGL::UniformType::UInt2),
-            };
-        }
 
         LLGL::PipelineLayout* lightBlurPipelineLayout = context->CreatePipelineLayout(lightBlurPipelineLayoutDesc);
 
-        const LLGL::ResourceViewDescriptor lightBlurResourceViews[] = {
-            m_renderer->GlobalUniformBuffer(), nullptr, nullptr
-        };
+        const LLGL::ResourceViewDescriptor lightBlurResourceViews[] = { m_uniform_buffer, nullptr, nullptr };
 
         LLGL::ResourceHeapDescriptor lightBlurResourceHeapDesc;
         lightBlurResourceHeapDesc.pipelineLayout = lightBlurPipelineLayout;
@@ -554,7 +547,7 @@ void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
         m_tile_texture = context->CreateTexture(tile_texture_desc, &image_view);
     }
 
-    context->WriteResourceHeap(*m_light_init_resource_heap, 2, {m_light_texture});
+    context->WriteResourceHeap(*m_light_init_resource_heap, 1, {m_light_texture});
     context->WriteResourceHeap(*m_light_blur_resource_heap, 1, {m_tile_texture, m_light_texture});
 }
 
@@ -581,6 +574,14 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
 
     if (grid_w * grid_h == 0) return;
 
+    {
+        UniformBuffer uniform_buffer {
+            .blur_min = blur_area.min,
+            .blur_max = blur_area.max  
+        };
+        commands->UpdateBuffer(*m_uniform_buffer, 0, &uniform_buffer, sizeof(uniform_buffer));
+    }
+
     commands->PushDebugGroup("CS Light SetLightSources");
     {
         commands->SetPipelineState(*m_light_set_light_sources_pipeline);
@@ -589,13 +590,11 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
     }
     commands->PopDebugGroup();
 
-    const auto blur_horizontal = [&blur_area, commands, grid_w, this] {
+    const auto blur_horizontal = [commands, grid_w, this] {
         commands->PushDebugGroup("CS Light BlurHorizontal");
         {
             commands->SetPipelineState(*m_light_horizontal_pipeline);
             commands->SetResourceHeap(*m_light_blur_resource_heap);
-            commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
-            commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
 
             if (is_metal) {
                 blur_dispatch_metal(commands, grid_w);
@@ -606,13 +605,11 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
         commands->PopDebugGroup();
     };
 
-    const auto blur_vertical = [&blur_area, commands, grid_h, this] {
+    const auto blur_vertical = [commands, grid_h, this] {
         commands->PushDebugGroup("CS Light BlurVertical");
         {
             commands->SetPipelineState(*m_light_vertical_pipeline);
             commands->SetResourceHeap(*m_light_blur_resource_heap);
-            commands->SetUniforms(0, &blur_area.min, sizeof(blur_area.min));
-            commands->SetUniforms(1, &blur_area.max, sizeof(blur_area.max));
 
             if (is_metal) {
                 blur_dispatch_metal(commands, grid_h);

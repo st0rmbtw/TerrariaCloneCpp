@@ -52,6 +52,12 @@ struct LightMapChunk {
 };
 
 class AcceleratedDynamicLighting : public IDynamicLighting {
+private:
+    struct UniformBuffer {
+        glm::uvec2 blur_min;
+        glm::uvec2 blur_max;
+    };
+
 public:
     AcceleratedDynamicLighting(const WorldData& world, LLGL::Texture* light_texture);
 
@@ -74,6 +80,7 @@ private:
     sge::Renderer* m_renderer = nullptr;
 
     LLGL::Buffer* m_light_buffer = nullptr;
+    LLGL::Buffer* m_uniform_buffer = nullptr;
     LLGL::Texture* m_tile_texture = nullptr;
     LLGL::ResourceHeap* m_light_init_resource_heap = nullptr;
     LLGL::ResourceHeap* m_light_blur_resource_heap = nullptr;

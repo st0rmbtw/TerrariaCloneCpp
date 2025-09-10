@@ -16,19 +16,6 @@
     #define DEF_AIR_DECAY 1
 #endif
 
-[vk::binding(3)]
-cbuffer GlobalUniformBuffer : register( b3 )
-{
-    float4x4 u_screen_projection;
-    float4x4 u_view_projection;
-    float4x4 u_nonscale_view_projection;
-    float4x4 u_nonscale_projection;
-    float4x4 u_transform_matrix;
-    float4x4 u_inv_view_proj;
-    float2 u_camera_position;
-    float2 u_window_size;
-};
-
 struct Light {
     float4 color;
     uint2 pos;
@@ -48,11 +35,7 @@ static const float LIGHT_EPSILON = 0.0185f;
 
 static float get_decay(uint2 pos) {
     const uint tile = TileTexture[pos / DEF_SUBDIVISION].r;
-    if (tile == 1) {
-        return DEF_SOLID_DECAY;
-    } else {
-        return DEF_AIR_DECAY;
-    }
+    return select(tile == 1, DEF_SOLID_DECAY, DEF_AIR_DECAY);
 }
 
 static void blur(uint2 pos, inout float3 prev_light, inout float prev_decay) {
@@ -99,14 +82,17 @@ void CSComputeLightSetLightSources(uint3 thread_id : SV_DispatchThreadID)
     }
 }
 
+cbuffer UniformBuffer : register(b2) {
+    uint2 blur_min;
+    uint2 blur_max;
+}
+
 [shader("compute")]
 [numthreads(32, 1, 1)]
 void CSComputeLightVertical(
-    uint3 thread_id: SV_DispatchThreadID,
-    uniform uint2 uniform_min,
-    uniform uint2 uniform_max
+    uint3 thread_id: SV_DispatchThreadID
 ) {
-    const uint x = uniform_min.x + thread_id.x;
+    const uint x = blur_min.x + thread_id.x;
 
     float3 prev_light = float3(0.0, 0.0, 0.0);
     float prev_decay = 0.0;
@@ -114,11 +100,11 @@ void CSComputeLightVertical(
     float3 prev_light2 = float3(0.0, 0.0, 0.0);
     float prev_decay2 = 0.0;
 
-    const uint height = uniform_max.y - uniform_min.y;
+    const uint height = blur_max.y - blur_min.y;
 
     for (uint y = 0; y < height; ++y) {
-        blur(uint2(x, uniform_min.y + y), prev_light, prev_decay);
-        blur(uint2(x, uniform_max.y - 1 - y), prev_light2, prev_decay2);
+        blur(uint2(x, blur_min.y + y), prev_light, prev_decay);
+        blur(uint2(x, blur_max.y - 1 - y), prev_light2, prev_decay2);
     }
 }
 
@@ -126,10 +112,8 @@ void CSComputeLightVertical(
 [numthreads(32, 1, 1)]
 void CSComputeLightHorizontal(
     uint3 thread_id: SV_DispatchThreadID,
-    uniform uint2 uniform_min,
-    uniform uint2 uniform_max
 ) {
-    const uint y = uniform_min.y + thread_id.x;
+    const uint y = blur_min.y + thread_id.x;
 
     float3 prev_light = float3(0.0, 0.0, 0.0);
     float prev_decay = 0.0;
@@ -137,10 +121,10 @@ void CSComputeLightHorizontal(
     float3 prev_light2 = float3(0.0, 0.0, 0.0);
     float prev_decay2 = 0.0;
 
-    const uint width = uniform_max.x - uniform_min.x;
+    const uint width = blur_max.x - blur_min.x;
 
     for (uint x = 0; x < width; ++x) {
-        blur(uint2(uniform_min.x + x, y), prev_light, prev_decay);
-        blur(uint2(uniform_max.x - 1 - x, y), prev_light2, prev_decay2);
+        blur(uint2(blur_min.x + x, y), prev_light, prev_decay);
+        blur(uint2(blur_max.x - 1 - x, y), prev_light2, prev_decay2);
     }
 }

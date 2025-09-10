@@ -6,7 +6,7 @@ find_package(Slang REQUIRED)
 
 set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON CACHE BOOL "" FORCE)
 
-add_subdirectory(./thirdparty/SPIRV-Cross)
+add_subdirectory(thirdparty/SPIRV-Cross)
 
 add_executable(${PROJECT_NAME} main.cpp)
 if(RELEASE_BUILD)

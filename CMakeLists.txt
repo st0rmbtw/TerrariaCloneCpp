@@ -162,38 +162,13 @@ add_custom_target(COPY_ASSETS ALL DEPENDS ${ASSETS_OUTPUT})
 
 # ===================== Compile Shaders =====================
 
-# add_custom_target(
-#     CompileShadersTarget
-#     COMMAND $<TARGET_FILE:ShaderCompiler> ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
-#     DEPENDS ShaderCompiler
-# )
+add_custom_target(
+    CompileShadersTarget
+    COMMAND $<TARGET_FILE:ShaderCompiler> ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS ShaderCompiler
+)
 
-# add_dependencies(${PROJECT_NAME} CompileShadersTarget)
-
-# ===================== Compile OpenGL Shaders =====================
-
-# file(GLOB_RECURSE VULKAN_SHADERS CONFIGURE_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/assets/shaders/vulkan/*.*)
-# file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/assets/shaders/opengl)
-
-# set(OPENGL_SHADERS_OUT)
-
-# foreach(shader ${VULKAN_SHADERS})
-#     get_filename_component(basename ${shader} NAME_WLE)
-#     get_filename_component(dir ${shader} DIRECTORY)
-#     cmake_path(GET dir PARENT_PATH parent_dir)
-
-#     add_custom_command(
-#         OUTPUT
-#             "${parent_dir}/opengl/${basename}"
-#         COMMAND
-#             spirv-cross ${shader} --no-es --remove-unused-variables --glsl-emit-ubo-as-plain-uniforms --no-420pack-extension --version 410 --output "${parent_dir}/opengl/${basename}.glsl"
-#     )
-
-#     list(APPEND OPENGL_SHADERS_OUT "${parent_dir}/opengl/${basename}")
-# endforeach()
-
-# add_custom_target(CompileOpenGLShaders DEPENDS CompileShadersTarget ${OPENGL_SHADERS_OUT})
-# add_dependencies(${PROJECT_NAME} CompileOpenGLShaders)
+add_dependencies(${PROJECT_NAME} CompileShadersTarget)
 
 # ===================== Generate Font Assets =====================
 

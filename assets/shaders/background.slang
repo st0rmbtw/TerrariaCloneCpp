@@ -1,15 +1,8 @@
-[vk::binding(2)]
-cbuffer GlobalUniformBuffer : register( b2 )
-{
-    float4x4 u_screen_projection;
-    float4x4 u_view_projection;
-    float4x4 u_nonscale_view_projection;
-    float4x4 u_nonscale_projection;
-    float4x4 u_transform_matrix;
-    float4x4 u_inv_view_proj;
-    float2 u_camera_position;
-    float2 u_window_size;
-};
+#include "common.slang"
+
+cbuffer GlobalUniformBuffer : register(b2) {
+    GlobalUniforms uniforms;
+}
 
 struct VSInput
 {
@@ -40,7 +33,7 @@ struct VSOutput
 // Bidirectional mod
 static float fmodb(float a, float b) {
     float r = fmod(a, b);
-    return r < 0.0 ? r + b : r;
+    return select(r < 0.0, r + b, r);
 }
 
 [vk::binding(3)]
@@ -93,9 +86,9 @@ VSOutput VS(VSInput inp)
     const int flags = inp.i_flags;
     const bool ignore_camera_zoom = (flags & IGNORE_CAMERA_ZOOM_FLAG) == IGNORE_CAMERA_ZOOM_FLAG;
 
-    const float4x4 view_proj = ignore_camera_zoom ? u_nonscale_view_projection : u_view_projection;
+    const float4x4 view_proj = select(ignore_camera_zoom, uniforms.nonscale_view_projection, uniforms.view_projection);
 
-    const float2 offset = mul(u_nonscale_projection, float4(u_camera_position.x, u_camera_position.y, 0.0, 1.0)).xy;
+    const float2 offset = mul(uniforms.nonscale_projection, float4(uniforms.camera_position.x, uniforms.camera_position.y, 0.0, 1.0)).xy;
 
     const float2 position = inp.i_position.xy + inp.i_size * inp.position;
 

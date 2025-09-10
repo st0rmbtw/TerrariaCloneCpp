@@ -1,14 +1,9 @@
+#include "common.slang"
+
 [vk::binding(2)]
 cbuffer GlobalUniformBuffer : register( b2 )
 {
-    float4x4 u_screen_projection;
-    float4x4 u_view_projection;
-    float4x4 u_nonscale_view_projection;
-    float4x4 u_nonscale_projection;
-    float4x4 u_transform_matrix;
-    float4x4 u_inv_view_proj;
-    float2 u_camera_position;
-    float2 u_window_size;
+    GlobalUniforms uniforms;
 };
 
 struct VSInput
@@ -32,7 +27,7 @@ inline float2 project_point2(float4x4 mat, float2 p) {
 }
 
 inline float2 screen_to_world(float2 ndc) {
-    return project_point2(u_inv_view_proj, ndc);
+    return project_point2(uniforms.inv_view_proj, ndc);
 }
 
 [shader("vertex")]

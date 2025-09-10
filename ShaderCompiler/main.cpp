@@ -14,9 +14,9 @@
 
 #define SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS
 
-#include <spirv_cross/spirv.hpp>
-#include <spirv_cross/spirv_cross.hpp>
-#include <spirv_cross/spirv_glsl.hpp>
+#include <spirv.hpp>
+#include <spirv_cross.hpp>
+#include <spirv_glsl.hpp>
 
 #include "../src/constants.hpp"
 
@@ -380,13 +380,22 @@ static bool CompileSlangShaders(const fs::path& shaders_dir, const fs::path& out
             {slang::CompilerOptionValueKind::Int, OPTIMIZATION, 0, nullptr, nullptr}
         },
         {
-            slang::CompilerOptionName::MatrixLayoutColumn,
-            {slang::CompilerOptionValueKind::Int, 1, 0, nullptr, nullptr}
-        }
+            slang::CompilerOptionName::NoMangle,
+            {slang::CompilerOptionValueKind::Int, 1, 1, nullptr, nullptr}
+        },
+    });
+
+    const std::string shaders_dir_str = shaders_dir.string();
+
+    std::array searchPaths = std::to_array({
+        shaders_dir_str.c_str()
     });
     
     sessionDesc.compilerOptionEntries = options.data();
     sessionDesc.compilerOptionEntryCount = options.size();
+    sessionDesc.searchPaths = searchPaths.data();
+    sessionDesc.searchPathCount = searchPaths.size();
+    sessionDesc.defaultMatrixLayoutMode = SLANG_MATRIX_LAYOUT_COLUMN_MAJOR;
 
     std::array<slang::TargetDesc, TargetType::Count> targets;
     targets[TargetType::SPIRV] = {
@@ -527,7 +536,7 @@ static std::optional<std::string> TranslateSpirvToGlsl(const fs::path& file_path
     spirv_cross::CompilerGLSL compiler(spirv);
     spirv_cross::CompilerGLSL::Options options;
     {
-        options.version = 410;
+        options.version = 430;
         options.es = false;
         options.enable_420pack_extension = false;
         options.emit_line_directives = false;

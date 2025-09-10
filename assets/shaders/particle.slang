@@ -1,14 +1,9 @@
+#include "common.slang"
+
 [vk::binding(2)]
 cbuffer GlobalUniformBuffer : register( b2 )
 {
-    float4x4 u_screen_projection;
-    float4x4 u_view_projection;
-    float4x4 u_nonscale_view_projection;
-    float4x4 u_nonscale_projection;
-    float4x4 u_transform_matrix;
-    float4x4 u_inv_view_proj;
-    float2 u_camera_position;
-    float2 u_window_size;
+    GlobalUniforms uniforms;
 };
 
 struct VSInput
@@ -121,7 +116,7 @@ void CSComputeTransform(uint3 thread_id : SV_DispatchThreadID)
     transform[2][1] = transform[2][1] * size[1];
     transform[3][1] = transform[3][1] * size[1];
 
-    const float4x4 mvp = mul(u_view_projection, transform);
+    const float4x4 mvp = mul(uniforms.view_projection, transform);
 
     TransformBuffer[id * 4 + 0] = mvp[0];
     TransformBuffer[id * 4 + 1] = mvp[1];

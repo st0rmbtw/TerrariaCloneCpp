@@ -1,14 +1,9 @@
+#include "common.slang"
+
 [vk::binding(2)]
 cbuffer GlobalUniformBuffer : register( b2 )
 {
-    float4x4 u_screen_projection;
-    float4x4 u_view_projection;
-    float4x4 u_nonscale_view_projection;
-    float4x4 u_nonscale_projection;
-    float4x4 u_transform_matrix;
-    float4x4 u_inv_view_proj;
-    float2 u_camera_position;
-    float2 u_window_size;
+    GlobalUniforms uniforms;
 };
 
 struct TileData {
@@ -75,7 +70,7 @@ VSOutput VS(VSInput inp)
         float4(0.0, 0.0, 0.0, 1.0)
     );
 
-    const float4x4 mvp = mul(u_view_projection, transform);
+    const float4x4 mvp = mul(uniforms.view_projection, transform);
     const float2 position = unpack_position(inp.i_position) * 16.0 + inp.position * size + offset;
     const float2 uv = start_uv + inp.position * tex_size;
 

@@ -131,6 +131,7 @@ public:
         return m_data.get_wall_neighbors_mut(pos);
     }
 
+    [[nodiscard]]
     inline glm::vec2 keep_in_world_bounds(glm::vec2 position, const glm::vec2& half_size) const noexcept {
         return m_data.keep_in_world_bounds(position, half_size);
     }
