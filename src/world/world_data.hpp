@@ -32,8 +32,8 @@ struct WorldData {
     sge::IRect playable_area;
     Layers layers;
     glm::uvec2 spawn_point;
-    std::optional<Block>* blocks;
-    std::optional<Wall>* walls;
+    std::optional<Block>* blocks = nullptr;
+    std::optional<Wall>* walls = nullptr;
 
     [[nodiscard]]
     inline uint32_t get_tile_index(TilePos pos) const noexcept {
@@ -149,8 +149,13 @@ struct WorldData {
     }
 
     inline void destroy() {
-        delete[] blocks;
-        delete[] walls;
+        if (blocks) {
+            delete[] blocks;
+        }
+        
+        if (walls) {
+            delete[] walls;
+        }
     }
 
     ~WorldData() {

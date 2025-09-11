@@ -593,12 +593,6 @@ static void world_update_tile_sprite_index(WorldData& world) {
             update_tile_sprite_index(world, {x, y});
         }
     }
-
-    for (int y = 0; y < world.area.height(); ++y) {
-        for (int x = 0; x < world.area.width(); ++x) {
-            update_tile_sprite_index(world, {x, y});
-        }
-    }
 }
 
 static bool grassify_is_valid(const WorldData& world, const TilePos& pos) {
@@ -654,6 +648,8 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
     world.destroy();
 
     srand(seed);
+
+    SGE_ASSERT(height >= 500);
 
     const sge::IRect area = sge::IRect::from_corners(glm::vec2(0), glm::ivec2(width, height) + glm::ivec2(16));
     const sge::IRect playable_area = area.inset(-8);

@@ -4,7 +4,7 @@
 #include <SGE/defines.hpp>
 #include <fmt/base.h>
 
-#include "game.hpp"
+#include "app.hpp"
 
 inline void print_render_backends() {
     #if SGE_PLATFORM_WINDOWS
@@ -102,10 +102,10 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (Game::Init(backend, config, world_width, world_height)) {
-        Game::Run();
+    if (App::Init(backend, config, world_width, world_height)) {
+        App::Run();
     }
-    Game::Destroy();
+    App::Destroy();
 
     return 0;
 }

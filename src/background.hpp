@@ -10,7 +10,8 @@ namespace Background {
     void SetupWorldBackground(const World& world);
     void SetupMenuBackground();
     
-    void Update(const sge::Camera& camera, const World& world);
+    void UpdateInGame(const sge::Camera& camera, const World& world);
+    void UpdateMainMenu(const sge::Camera& camera);
     void Draw();
 };
 

@@ -21,6 +21,8 @@ static struct BackgroundState {
 } state;
 
 void Background::SetupMenuBackground() {
+    state.layers.clear();
+
     const float pos = 150.0f;
 
     setup_sky_background(0.0f, true);
@@ -89,7 +91,7 @@ void Background::SetupWorldBackground(const World& world) {
     setup_cavern_background(world);
 }
 
-void Background::Update(const sge::Camera &camera, const World& world) {
+void Background::UpdateInGame(const sge::Camera &camera, const World& world) {
     ZoneScoped;
 
     const float offset = (camera.viewport().y - 600.0f) * 0.5f;

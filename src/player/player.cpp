@@ -12,6 +12,7 @@
 #include <SGE/utils/random.hpp>
 #include <SGE/profile.hpp>
 
+#include "../ui/ui.hpp"
 #include "../assets.hpp"
 #include "../constants.hpp"
 #include "../types/item.hpp"
@@ -550,11 +551,11 @@ void Player::fixed_update(const sge::Camera& camera, World& world, bool handle_i
 
     m_using_item_visible = false;
 
-    if (sge::Input::Pressed(sge::MouseButton::Left) && !sge::Input::IsMouseOverUi()) {
+    if (sge::Input::Pressed(sge::MouseButton::Left) && !UI::IsMouseOverUi()) {
         use_item(camera, world);
     }
 
-    if (sge::Input::Pressed(sge::MouseButton::Right) && !sge::Input::IsMouseOverUi()) {
+    if (sge::Input::Pressed(sge::MouseButton::Right) && !UI::IsMouseOverUi()) {
         interact(camera, world);
     }
 
