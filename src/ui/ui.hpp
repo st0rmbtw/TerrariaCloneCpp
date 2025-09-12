@@ -4,16 +4,11 @@
 #define UI_HPP_
 
 #include <cstdint>
+#include <cstddef>
 #include <glm/vec2.hpp>
 
+#include <SGE/input.hpp>
 #include <SGE/types/sprite.hpp>
-
-namespace ReservedTypeID {
-    enum : uint8_t {
-        Container = 0,
-        Count
-    };
-}
 
 class UiRect {
 public:
@@ -177,29 +172,29 @@ enum class Alignment : uint8_t {
 
 class RootDesc {
 public:
-    RootDesc(const glm::vec2& dimensions) : m_size(dimensions) {}
+    RootDesc(const glm::vec2 dimensions) : m_size(dimensions) {}
 
     RootDesc& with_gap(float gap) noexcept {
         m_gap = gap;
         return *this;
     }
 
-    RootDesc& with_padding(const UiRect& padding) noexcept {
+    RootDesc& with_padding(const UiRect padding) noexcept {
         m_padding = padding;
         return *this;
     }
 
-    inline RootDesc& with_horizontal_alignment(Alignment alignment) noexcept {
+    inline RootDesc& with_horizontal_alignment(const Alignment alignment) noexcept {
         m_horizontal_alignment = alignment;
         return *this;
     }
 
-    inline RootDesc& with_vertical_alignment(Alignment alignment) noexcept {
+    inline RootDesc& with_vertical_alignment(const Alignment alignment) noexcept {
         m_vertical_alignment = alignment;
         return *this;
     }
 
-    RootDesc& with_orientation(LayoutOrientation orientation) noexcept {
+    RootDesc& with_orientation(const LayoutOrientation orientation) noexcept {
         m_orientation = orientation;
         return *this;
     }
@@ -225,12 +220,12 @@ public:
     }
 
     [[nodiscard]]
-    inline const UiRect& padding() const noexcept {
+    inline const UiRect padding() const noexcept {
         return m_padding;
     }
 
     [[nodiscard]]
-    inline const glm::vec2& size() const noexcept {
+    inline const glm::vec2 size() const noexcept {
         return m_size;
     }
 
@@ -243,37 +238,99 @@ private:
     Alignment m_vertical_alignment{ Alignment::Start };
 };
 
+struct ElementID {
+    std::string_view string_id{};
+    uint32_t id = 0;
+    uint32_t offset = 0;
+    uint32_t base_id = 0;
+};
+
+template <>
+struct std::hash<ElementID> {
+    std::size_t operator()(const ElementID& id) const noexcept {
+        return id.id;
+    }
+};
+
+inline bool operator==(const ElementID& a, const ElementID& b) noexcept {
+    return a.id == b.id;
+}
+
+inline ElementID HashNumber(const uint32_t offset, const uint32_t seed) {
+    uint32_t hash = seed;
+    hash += (offset + 48);
+    hash += (hash << 10);
+    hash ^= (hash >> 6);
+
+    hash += (hash << 3);
+    hash ^= (hash >> 11);
+    hash += (hash << 15);
+    
+    return ElementID {
+        .string_id = {},
+        .id = hash + 1, // +1 because the element with the id of 0 is the root element
+        .offset = offset,
+        .base_id = seed
+    };
+}
+
+inline ElementID HashString(const std::string_view key, const uint32_t seed) {
+    uint32_t hash = seed;
+
+    for (size_t i = 0; i < key.size(); i++) {
+        hash += key.data()[i];
+        hash += (hash << 10);
+        hash ^= (hash >> 6);
+    }
+
+    hash += (hash << 3);
+    hash ^= (hash >> 11);
+    hash += (hash << 15);
+
+    // +1 because the element with the id of 0 is the root element
+    return ElementID {
+        .string_id = key,
+        .id = hash + 1,
+        .offset = 0,
+        .base_id = hash + 1,
+    };
+}
+
 class ElementDesc {
 public:
     ElementDesc() = default;
-    ElementDesc(const UiSize& size) : m_size(size) {}
+
+    inline ElementDesc& with_id(const ElementID& id) noexcept {
+        m_id = id;
+        return *this;
+    }
 
     inline ElementDesc& with_gap(float gap) noexcept {
         m_gap = gap;
         return *this;
     }
 
-    inline ElementDesc& with_padding(const UiRect& padding) noexcept {
+    inline ElementDesc& with_padding(const UiRect padding) noexcept {
         m_padding = padding;
         return *this;
     }
 
-    inline ElementDesc& with_horizontal_alignment(Alignment alignment) noexcept {
+    inline ElementDesc& with_horizontal_alignment(const Alignment alignment) noexcept {
         m_horizontal_alignment = alignment;
         return *this;
     }
 
-    inline ElementDesc& with_vertical_alignment(Alignment alignment) noexcept {
+    inline ElementDesc& with_vertical_alignment(const Alignment alignment) noexcept {
         m_vertical_alignment = alignment;
         return *this;
     }
 
-    inline ElementDesc& with_orientation(LayoutOrientation orientation) noexcept {
+    inline ElementDesc& with_orientation(const LayoutOrientation orientation) noexcept {
         m_orientation = orientation;
         return *this;
     }
 
-    inline ElementDesc& with_size(UiSize size) noexcept {
+    inline ElementDesc& with_size(const UiSize size) noexcept {
         m_size = size;
         return *this;
     }
@@ -299,16 +356,22 @@ public:
     }
 
     [[nodiscard]]
-    inline const UiRect& padding() const noexcept {
+    inline const UiRect padding() const noexcept {
         return m_padding;
     }
 
     [[nodiscard]]
-    inline const UiSize& size() const noexcept {
+    inline const UiSize size() const noexcept {
         return m_size;
     }
 
+    [[nodiscard]]
+    inline const ElementID& id() const noexcept {
+        return m_id;
+    }
+
 private:
+    ElementID m_id{};
     UiRect m_padding{};
     UiSize m_size{};
     float m_gap{ 0.0f };
@@ -317,77 +380,75 @@ private:
     Alignment m_vertical_alignment{ Alignment::Start };
 };
 
-namespace Interaction {
-    using Type = uint8_t;
-
-    enum : Type {
-        None = 0,
-        Pressed = (1 << 0),
-        Hovered = (1 << 1)
-    };
-}
-
-struct ElementState {
-    glm::vec2 position = glm::vec2(0.0f);
-    Interaction::Type interaction = Interaction::None;
-
-    [[nodiscard]]
-    inline bool pressed() const noexcept {
-        return (interaction & Interaction::Pressed) != 0;
-    }
-
-    [[nodiscard]]
-    inline bool hovered() const noexcept {
-        return (interaction & Interaction::Hovered) != 0;
-    }
-};
-
 struct UiElement {
     glm::vec2 position = glm::vec2(0.0f);
     glm::vec2 size = glm::vec2(0.0f);
 
+    ElementID unique_id{};
+
     const void* custom_data = nullptr;
     size_t custom_data_size = 0;
 
-    uint32_t unique_id = 0;
     uint32_t type_id = 0;
 
     uint32_t z_index = 0;
 };
 
 namespace UI {
+    void Update();
+
     void Start(const RootDesc& desc);
-    void BeginElement(uint32_t type_id, const ElementDesc& desc, const void* custom_data, size_t custom_data_size);
-    
-    inline void BeginElement(const ElementDesc& desc) {
-        BeginElement(ReservedTypeID::Container, desc, nullptr, 0);
-    }
-    
-    template <typename T>
-    inline void BeginElement(uint32_t type_id, const ElementDesc& desc, const T& custom_data) {
-        BeginElement(type_id, desc, &custom_data, sizeof(custom_data));
+    void BeginElement(uint32_t type_id, const ElementDesc& desc, bool render = true);
+
+    inline void BeginContainer(const ElementDesc& desc) {
+        BeginElement(0, desc, false);
     }
 
-    inline void BeginElement(uint32_t type_id, const ElementDesc& desc) {
-        BeginElement(type_id, desc, nullptr, 0);
-    }
+    void SetCustomData(const void* custom_data, size_t custom_data_size, size_t custom_data_alignment = alignof(std::max_align_t));
 
     void EndElement();
 
-    inline void AddElement(uint32_t type_id, const ElementDesc& desc, const void* custom_data = nullptr, size_t custom_data_size = 0) {
-        BeginElement(type_id, desc, custom_data, custom_data_size);
+    inline void AddElement(uint32_t type_id, const ElementDesc& desc) {
+        BeginElement(type_id, desc);
         EndElement();
     }
 
     template <typename T>
     inline void AddElement(uint32_t type_id, const ElementDesc& desc, const T& custom_data) {
-        AddElement(type_id, desc, &custom_data, sizeof(custom_data));
+        BeginElement(type_id, desc);
+        SetCustomData(&custom_data, sizeof(custom_data), alignof(T));
+        EndElement();
     }
+
+    template <typename T>
+    inline void SetCustomData(const T& custom_data) {
+        SetCustomData(&custom_data, sizeof(custom_data), alignof(T));
+    }
+
+    void OnClick(std::function<void(sge::MouseButton)>&& on_press);
+
+    bool IsHovered();
+
+    uint32_t GetParentID();
+    const ElementID& GetElementID();
 
     const std::vector<UiElement>& Finish();
 
     [[nodiscard]]
     bool IsMouseOverUi();
+};
+
+namespace ID {
+    [[nodiscard]]
+    inline static ElementID Local(const std::string_view key) {
+        const uint32_t parent_id = UI::GetParentID();
+        return HashString(key, parent_id);
+    }
+
+    [[nodiscard]]
+    inline static ElementID Global(const std::string_view key, uint32_t index = 0) {
+        return HashString(key, index);
+    }
 };
 
 #endif

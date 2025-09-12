@@ -46,6 +46,14 @@ private:
     void draw_item(const glm::vec2& item_size, const glm::vec2& position, const Item& item, sge::Order item_order = {});
     void draw_item_with_stack(const sge::Font& font, const glm::vec2& item_size, float stack_size, const glm::vec2& position, const Item& item, sge::Order item_order = {}, sge::Order stack_order = {});
 
+    inline void select_hotbar_slot(Inventory& inventory, uint8_t slot) {
+        if (slot == inventory.selected_slot()) return;
+
+        m_hotbar_slot_anim = 0.0f;
+        m_previous_selected_slot = inventory.selected_slot();
+        inventory.set_selected_slot(slot);
+    }
+
     glm::vec2 camera_follow_player() noexcept;
 
     #if DEBUG_TOOLS

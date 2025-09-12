@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <unordered_set>
 #include <vector>
 #include <new>
 
@@ -22,14 +23,14 @@ public:
     void* allocate(size_t size, size_t alignment = alignof(std::max_align_t)) {
         const size_t aligned_offset = (m_current_offset + alignment - 1) & ~(alignment - 1);
 
-        SGE_ASSERT(aligned_offset + size <= m_capacity);
+        SGE_ASSERT(aligned_offset + size < m_capacity);
 
         void* ptr = m_data + aligned_offset;
         m_current_offset = aligned_offset + size;
         return ptr;
     }
 
-    void clear() {
+    void reset() {
         m_current_offset = 0;
     }
 
@@ -39,44 +40,51 @@ private:
     size_t m_capacity = 0;
 };
 
-struct Node {
-    std::vector<size_t> children;
+using NodeID = ElementID;
 
-    glm::vec2 pos = glm::vec2(0.0f);
-    glm::vec2 size = glm::vec2(0.0f);
+struct Node {
+    NodeID unique_id{};
+    std::function<void(sge::MouseButton)> on_press_callback = nullptr;
+
+    std::vector<size_t> children;
 
     UiRect padding;
     UiSize sizing;
+
+    glm::vec2 pos = glm::vec2(0.0f);
+    glm::vec2 size = glm::vec2(0.0f);
 
     void* custom_data = nullptr;
     size_t custom_data_size = 0;
 
     float gap = 0.0f;
     
-    uint32_t unique_id = 0;
-    uint32_t type_id = ReservedTypeID::Container;
+    uint32_t type_id = 0;
 
     uint32_t z_index = 0;
     
     LayoutOrientation orientation = LayoutOrientation::Horizontal;
     Alignment horizontal_alignment = Alignment::Start;
     Alignment vertical_alignment = Alignment::Start;
+    bool render = false;
 };
 
 static struct {
     size_t node_stack[MAX_NODE_STACK_SIZE];
-    size_t node_stack_size = 0;
-
+    
+    std::unordered_set<NodeID> hovered_ids{};
+    std::unordered_set<NodeID> search_visited{};
+    sge::SwapbackVector<Node*> search_stack{};
+    sge::SwapbackVector<Node*> postorder_stack{};
+    
     Arena arena{ ARENA_SIZE };
 
     std::vector<Node> nodes{};
     std::vector<UiElement> render_elements{};
+    
+    size_t node_stack_size = 0;
 
-    std::vector<uint32_t> search_visited{};
-    sge::SwapbackVector<Node*> search_stack{};
-
-    uint32_t active_id = 0;
-    uint32_t next_id = 0;
+    NodeID active_id{};
 
     bool any_hovered = false;
 } state;
@@ -85,6 +93,12 @@ static Node& TopNode() {
     SGE_ASSERT(state.node_stack_size > 0);
 
     const size_t index = state.node_stack[state.node_stack_size-1];
+    return state.nodes[index];
+}
+
+static Node& ParentNode() {
+    SGE_ASSERT(state.node_stack_size > 1);
+    const size_t index = state.node_stack[state.node_stack_size-2];
     return state.nodes[index];
 }
 
@@ -113,64 +127,123 @@ bool UI::IsMouseOverUi() {
     return state.any_hovered;
 }
 
-static Interaction::Type CheckInteraction(uint32_t id, const glm::vec2& pos, const glm::vec2& size) {
-    const sge::Rect element_rect = sge::Rect::from_top_left(pos, size);
-
+static bool CheckIfPressed(NodeID id, const sge::Rect element_rect, sge::MouseButton button) {
     const bool hovered = element_rect.contains(sge::Input::MouseScreenPosition());
 
-    state.any_hovered = state.any_hovered || hovered;
-
-    Interaction::Type interaction = hovered ? Interaction::Hovered : Interaction::None;
-
-    if (state.active_id == 0) {
-        if (hovered && sge::Input::JustPressed(sge::MouseButton::Left)) {
+    if (state.active_id.id == 0) {
+        if (hovered && sge::Input::JustPressed(button)) {
             state.active_id = id;
         }
     } else if (state.active_id == id) {
-        if (sge::Input::JustReleased(sge::MouseButton::Left)) {
-            state.active_id = 0;
+        if (sge::Input::JustReleased(button)) {
+            state.active_id = NodeID();
             if (hovered) {
-                interaction |= Interaction::Pressed;
+                return true;
             }
         }
     }
 
-    return interaction;
+    return false;
+}
+
+void UI::Update() {
+    state.hovered_ids.clear();
+    state.any_hovered = false;
+
+    if (state.nodes.empty())
+        return;
+
+    state.search_stack.clear();
+    state.search_stack.push_back(&state.nodes[0]);
+
+    state.search_visited.clear();
+    state.search_visited.insert(state.nodes[0].unique_id);
+
+    state.postorder_stack.clear();
+
+    while (!state.search_stack.empty()) {
+        Node* current_node = state.search_stack.back();
+        state.search_stack.pop_back();
+
+        const sge::Rect element_rect = sge::Rect::from_top_left(current_node->pos, current_node->size);
+        const bool hovered = element_rect.contains(sge::Input::MouseScreenPosition());
+
+        if (hovered) {
+            state.hovered_ids.insert(current_node->unique_id);
+            state.any_hovered = true;
+        }
+
+        const bool clickable = current_node->on_press_callback != nullptr;
+        if (clickable) {
+            state.postorder_stack.push_back(current_node);
+        }
+
+        for (uint32_t child_index : current_node->children) {
+            Node& child = state.nodes[child_index];
+
+            if (state.search_visited.contains(child.unique_id)) {
+                continue;
+            }
+
+            state.search_stack.push_back(&child);
+            state.search_visited.insert(child.unique_id);
+        }
+    }
+
+    while (!state.postorder_stack.empty()) {
+        Node* node = state.postorder_stack.back();
+        state.postorder_stack.pop_back();
+
+        const sge::Rect element_rect = sge::Rect::from_top_left(node->pos, node->size);
+
+        if (CheckIfPressed(node->unique_id, element_rect, sge::MouseButton::Left)) {
+            node->on_press_callback(sge::MouseButton::Left);
+            break;
+        }
+
+        if (CheckIfPressed(node->unique_id, element_rect, sge::MouseButton::Right)) {
+            node->on_press_callback(sge::MouseButton::Right);
+            break;
+        }
+
+        if (CheckIfPressed(node->unique_id, element_rect, sge::MouseButton::Middle)) {
+            node->on_press_callback(sge::MouseButton::Middle);
+            break;
+        }
+    }
 }
 
 void UI::Start(const RootDesc& desc) {
-    state.arena.clear();
+    state.arena.reset();
     state.nodes.clear();
     state.render_elements.clear();
-    state.any_hovered = false;
-    state.active_id = 0;
-    state.next_id = 0;
 
     state.node_stack_size = 0;
 
+    // Create root node
     Node node;
-    node.children = {};
-    node.pos = glm::vec2(0.0f);
-    node.size = desc.size();
-    node.padding = desc.padding();
-    node.sizing = UiSize::Fixed(desc.size().x, desc.size().y);
-    node.gap = desc.gap();
-    node.unique_id = state.next_id++;
-    node.type_id = 0;
-    node.orientation = desc.orientation();
-    node.horizontal_alignment = desc.vertical_alignment();
+    {
+        node.children = {};
+        node.pos = glm::vec2(0.0f);
+        node.size = desc.size();
+        node.padding = desc.padding();
+        node.sizing = UiSize::Fixed(desc.size().x, desc.size().y);
+        node.gap = desc.gap();
+        node.unique_id = NodeID();
+        node.type_id = 0;
+        node.orientation = desc.orientation();
+        node.horizontal_alignment = desc.vertical_alignment();
+        node.render = false;
+    }
     PushNode(std::move(node));
 }
 
-void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, const void* custom_data_ptr, size_t custom_data_size) {
-    const uint32_t id = state.next_id++;
+static ElementID GenerateId(Node& parent) {
+    ElementID id = HashNumber(parent.children.size(), parent.unique_id.id);
+    return id;
+}
 
-    void* custom_data = nullptr;
-    if (custom_data_ptr != nullptr && custom_data_size != 0) {
-        custom_data = state.arena.allocate(custom_data_size);
-        memcpy(custom_data, custom_data_ptr, custom_data_size);
-    }
-
+void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, bool render) {
     glm::vec2 size = glm::vec2(0.0f);
     if (desc.size().width().type() == Sizing::Type::Fixed) {
         size.x = desc.size().width().value();
@@ -179,66 +252,71 @@ void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, const void* cus
         size.y = desc.size().height().value();
     }
 
-    Node& top_node = TopNode();
+    Node& parent = TopNode();
+
+    NodeID id = desc.id();
+    if (id.id == 0) {
+        id = GenerateId(parent);
+    }
 
     Node new_node;
-    new_node.children = {};
-    new_node.pos = glm::vec2(0.0f);
-    new_node.size = size;
-    new_node.padding = desc.padding();
-    new_node.sizing = desc.size();
-    new_node.custom_data = custom_data;
-    new_node.custom_data_size = custom_data_size;
-    new_node.gap = desc.gap();
-    new_node.unique_id = id;
-    new_node.type_id = type_id;
-    new_node.orientation = desc.orientation();
-    new_node.horizontal_alignment = desc.horizontal_alignment();
-    new_node.vertical_alignment = desc.vertical_alignment();
-
-    NodeAddElement(top_node, std::move(new_node));
+    {
+        new_node.children = {};
+        new_node.pos = glm::vec2(0.0f);
+        new_node.size = size;
+        new_node.padding = desc.padding();
+        new_node.sizing = desc.size();
+        new_node.custom_data = nullptr;
+        new_node.custom_data_size = 0;
+        new_node.gap = desc.gap();
+        new_node.unique_id = id;
+        new_node.type_id = type_id;
+        new_node.orientation = desc.orientation();
+        new_node.horizontal_alignment = desc.horizontal_alignment();
+        new_node.vertical_alignment = desc.vertical_alignment();
+        new_node.render = render;
+    }
+    NodeAddElement(parent, std::move(new_node));
 }
 
 void UI::EndElement() {
     SGE_ASSERT(state.node_stack_size > 0);
 
-    Node& child = TopNode();
+    Node& node = TopNode();
     --state.node_stack_size;
 
-    Node& parent = TopNode();
+    const float horizontal_padding = node.padding.left() + node.padding.right();
+    const float vertical_padding = node.padding.top() + node.padding.bottom();
 
-    const float horizontal_padding = child.padding.left() + child.padding.right();
-    const float vertical_padding = child.padding.top() + child.padding.bottom();
-
-    if (parent.orientation == LayoutOrientation::Horizontal) {
-        if (parent.sizing.width().type() != Sizing::Type::Fixed) {
-            const float gap = (std::max<size_t>(child.children.size(), 1) - 1) * parent.gap;
-            parent.size.x = horizontal_padding + gap;
+    if (node.orientation == LayoutOrientation::Horizontal) {
+        if (node.sizing.width().type() != Sizing::Type::Fixed) {
+            const float gap = (std::max<size_t>(node.children.size(), 1) - 1) * node.gap;
+            node.size.x += horizontal_padding + gap;
         }
 
-        for (uint32_t child_index : parent.children) {
+        for (uint32_t child_index : node.children) {
             const Node& child = state.nodes[child_index];
 
-            if (parent.sizing.width().type() != Sizing::Type::Fixed)
-                parent.size.x += child.size.x;
+            if (node.sizing.width().type() != Sizing::Type::Fixed)
+                node.size.x += child.size.x;
 
-            if (parent.sizing.height().type() != Sizing::Type::Fixed)
-                parent.size.y = std::max(parent.size.y, child.size.y + vertical_padding);
+            if (node.sizing.height().type() != Sizing::Type::Fixed)
+                node.size.y = std::max(node.size.y, child.size.y + vertical_padding);
         }
 
-    } else if (parent.orientation == LayoutOrientation::Vertical) {
-        if (parent.sizing.height().type() != Sizing::Type::Fixed) {
-            const float gap = (std::max<size_t>(child.children.size(), 1) - 1) * parent.gap;
-            parent.size.y = vertical_padding + gap;
+    } else if (node.orientation == LayoutOrientation::Vertical) {
+        if (node.sizing.height().type() != Sizing::Type::Fixed) {
+            const float gap = (std::max<size_t>(node.children.size(), 1) - 1) * node.gap;
+            node.size.y += vertical_padding + gap;
         }
-        for (uint32_t child_index : parent.children) {
+        for (uint32_t child_index : node.children) {
             const Node& child = state.nodes[child_index];
 
-            if (parent.sizing.width().type() != Sizing::Type::Fixed)
-                parent.size.x = std::max(parent.size.x, child.size.x + horizontal_padding);
+            if (node.sizing.width().type() != Sizing::Type::Fixed)
+                node.size.x = std::max(node.size.x, child.size.x + horizontal_padding);
 
-            if (parent.sizing.height().type() != Sizing::Type::Fixed)
-                parent.size.y += child.size.y;
+            if (node.sizing.height().type() != Sizing::Type::Fixed)
+                node.size.y += child.size.y;
         }
     }
 }
@@ -247,17 +325,20 @@ static void FinalizeLayout() {
     state.search_stack.clear();
     state.search_stack.push_back(&state.nodes[0]);
 
+    state.search_visited.clear();
+    state.search_visited.insert(state.nodes[0].unique_id);
+
     while (!state.search_stack.empty()) {
         Node* current_node = state.search_stack.front();
         state.search_stack.pop_front();
 
-        if (current_node->type_id != ReservedTypeID::Container) {
+        if (current_node->render) {
             state.render_elements.push_back(UiElement {
                 .position = current_node->pos,
                 .size = current_node->size,
+                .unique_id = current_node->unique_id,
                 .custom_data = current_node->custom_data,
                 .custom_data_size = current_node->custom_data_size,
-                .unique_id = current_node->unique_id,
                 .type_id = current_node->type_id,
                 .z_index = current_node->z_index
             });
@@ -267,7 +348,13 @@ static void FinalizeLayout() {
 
         for (uint32_t child_index : current_node->children) {
             Node& child = state.nodes[child_index];
+
+            if (state.search_visited.contains(child.unique_id)) {
+                continue;
+            }
+
             state.search_stack.push_back(&child);
+            state.search_visited.insert(child.unique_id);
             
             child.pos = pos;
             
@@ -293,6 +380,39 @@ static void FinalizeLayout() {
             }
         }
     }
+}
+
+void UI::SetCustomData(const void* custom_data_ptr, size_t custom_data_size, size_t custom_data_alignment) {
+    Node& node = TopNode();
+
+    void* custom_data = nullptr;
+    if (custom_data_ptr != nullptr && custom_data_size > 0 && custom_data_alignment > 0) {
+        custom_data = state.arena.allocate(custom_data_size, custom_data_alignment);
+        memcpy(custom_data, custom_data_ptr, custom_data_size);
+    }
+
+    node.custom_data = custom_data;
+    node.custom_data_size = custom_data_size;
+}
+
+void UI::OnClick(std::function<void(sge::MouseButton)>&& on_press) {
+    Node& node = TopNode();
+    node.on_press_callback = std::move(on_press);
+}
+
+uint32_t UI::GetParentID() {
+    const Node& node = ParentNode();
+    return node.unique_id.id;
+}
+
+const ElementID& UI::GetElementID() {
+    const Node& node = TopNode();
+    return node.unique_id;
+}
+
+bool UI::IsHovered() {
+    const Node& node = TopNode();
+    return state.hovered_ids.contains(node.unique_id);
 }
 
 const std::vector<UiElement>& UI::Finish() {

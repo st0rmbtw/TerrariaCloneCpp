@@ -314,6 +314,8 @@ void InGameState::update_ui_cursor() noexcept {
 }
 
 void InGameState::update_ui() noexcept {
+    UI::Update();
+
     update_ui_cursor();
 
     Inventory& inventory = m_player.inventory();
@@ -327,17 +329,11 @@ void InGameState::update_ui() noexcept {
         m_ui_show_fps = !m_ui_show_fps;
     }
 
-    // if (m_show_extra_ui) {
-    //     if (!sge::Input::IsMouseOverUi() && inventory.has_taken_item() && sge::Input::JustPressed(sge::MouseButton::Right)) {
-    //         m_player.throw_item(m_world, TAKEN_ITEM_INDEX);
-    //     }
-    // }
-
-    auto select_hotbar_slot = [this](Inventory& inventory, uint8_t slot) {
-        m_hotbar_slot_anim = 0.0f;
-        m_previous_selected_slot = inventory.selected_slot();
-        inventory.set_selected_slot(slot);
-    };
+    if (m_show_extra_ui) {
+        if (!UI::IsMouseOverUi() && inventory.has_taken_item() && sge::Input::JustPressed(sge::MouseButton::Right)) {
+            m_player.throw_item(m_world, TAKEN_ITEM_INDEX);
+        }
+    }
 
     if (sge::Input::JustPressed(sge::Key::Digit1)) select_hotbar_slot(inventory, 0);
     if (sge::Input::JustPressed(sge::Key::Digit2)) select_hotbar_slot(inventory, 1);
@@ -541,7 +537,7 @@ void InGameState::draw_cursor() noexcept {
 void InGameState::draw_inventory() noexcept {
     Inventory& inventory = m_player.inventory();
 
-    UI::BeginElement(ElementDesc()
+    UI::BeginContainer(ElementDesc()
         .with_gap(INVENTORY_GAP)
         .with_padding(UiRect::top_left(INVENTORY_PADDING))
         .with_orientation(LayoutOrientation::Vertical));
@@ -552,7 +548,7 @@ void InGameState::draw_inventory() noexcept {
         const glm::vec2 hotbar_unselected_size = glm::mix(glm::vec2(HOTBAR_SLOT_SIZE_SELECTED), glm::vec2(HOTBAR_SLOT_SIZE), m_hotbar_slot_anim);
 
         for (uint32_t j = 0; j < rows_count; ++j) {
-            UI::BeginElement(ElementDesc()
+            UI::BeginContainer(ElementDesc()
                 .with_size(UiSize(Sizing::Fit(), m_show_extra_ui ? Sizing::Fit() : Sizing::Fixed(HOTBAR_SLOT_SIZE_SELECTED)))
                 .with_gap(INVENTORY_GAP)
                 .with_vertical_alignment(Alignment::Center)
@@ -590,11 +586,12 @@ void InGameState::draw_inventory() noexcept {
                         ElementDesc()
                             .with_size(UiSize::Fixed(back_size))
                             .with_vertical_alignment(Alignment::Center)
-                            .with_horizontal_alignment(Alignment::Center),
-                        UiHotbarSlotData {
+                            .with_horizontal_alignment(Alignment::Center));
+                    {
+                        UI::SetCustomData(UiHotbarSlotData {
                             .texture = texture
                         });
-                    {
+
                         if (item_slot.has_item()) {
                             UI::AddElement(
                                 UiTypeID::InventorySlotItem,
@@ -604,6 +601,42 @@ void InGameState::draw_inventory() noexcept {
                                     .item_id = item_slot.item->id
                                 }
                             );
+                        }
+
+                        if (i < CELLS_IN_ROW) {
+                            if (m_show_extra_ui) {
+                                UI::OnClick([&inventory, index](sge::MouseButton button) {
+                                    if (button == sge::MouseButton::Left) {
+                                        if (inventory.has_taken_item()) {
+                                            inventory.put_item(index);
+                                        } else {
+                                            inventory.take_item(index);
+                                        }
+                                    } else if (button == sge::MouseButton::Right) {
+                                        inventory.take_item(index, 1);
+                                    }
+                                });    
+                            } else {
+                                UI::OnClick([this, &inventory, index](sge::MouseButton button) {
+                                    if (button == sge::MouseButton::Left) {
+                                        select_hotbar_slot(inventory, index);
+                                    }
+                                });
+                            }
+                        } else {
+                            UI::OnClick([this, &inventory, index](sge::MouseButton button) {
+                                if (button == sge::MouseButton::Left) {
+                                    if (inventory.has_taken_item()) {
+                                        inventory.put_item(index);
+                                    } else {
+                                        inventory.take_item(index);
+                                    }
+                                } else if (button == sge::MouseButton::Right) {
+                                    if (m_show_extra_ui) {
+                                        inventory.take_item(index, 1);
+                                    }
+                                }
+                            });
                         }
                     }
                     UI::EndElement();
