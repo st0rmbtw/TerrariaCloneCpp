@@ -40,7 +40,7 @@ inline auto map(std::optional<T> a, F&& func) noexcept -> std::optional<decltype
 }
 
 template <typename TNode, typename TGetNeighborsFunc, typename TProcessNodeFunc>
-inline void bfs(TNode start_node, TGetNeighborsFunc&& get_neighbors_func, TProcessNodeFunc&& process_node_func) {
+inline void dfs(TNode start_node, TGetNeighborsFunc&& get_neighbors_func, TProcessNodeFunc&& process_node_func) {
     std::vector<TNode> q;
 
     q.push_back(start_node);

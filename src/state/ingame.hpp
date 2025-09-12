@@ -41,7 +41,7 @@ private:
     void update_ui() noexcept;
     void draw_ui() noexcept;
     void draw_inventory() noexcept;
-    void draw_inventory_cell(uint8_t index, const glm::vec2& size, const glm::vec2& position, TextureAsset texture, sge::Order order);
+    void draw_cursor() noexcept;
 
     void draw_item(const glm::vec2& item_size, const glm::vec2& position, const Item& item, sge::Order item_order = {});
     void draw_item_with_stack(const sge::Font& font, const glm::vec2& item_size, float stack_size, const glm::vec2& position, const Item& item, sge::Order item_order = {}, sge::Order stack_order = {});

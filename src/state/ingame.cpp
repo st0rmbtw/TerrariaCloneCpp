@@ -14,13 +14,29 @@
 #include "ingame.hpp"
 
 static constexpr float INVENTORY_TITLE_SIZE = 22.0f;
-static constexpr float MIN_CURSOR_SCALE = 1.2;
-static constexpr float MAX_CURSOR_SCALE = MIN_CURSOR_SCALE + 0.1;
-static constexpr float INVENTORY_PADDING = 10;
+static constexpr float MIN_CURSOR_SCALE = 1.2f;
+static constexpr float MAX_CURSOR_SCALE = MIN_CURSOR_SCALE + 0.1f;
+static constexpr float INVENTORY_PADDING = 10.0f;
 static constexpr float HOTBAR_SLOT_SIZE = 40.0f;
-static constexpr float INVENTORY_SLOT_SIZE = HOTBAR_SLOT_SIZE * 1.15;
-static constexpr float HOTBAR_SLOT_SIZE_SELECTED = HOTBAR_SLOT_SIZE * 1.3;
-static constexpr float INVENTORY_CELL_MARGIN = 4.0f;
+static constexpr float INVENTORY_SLOT_SIZE = HOTBAR_SLOT_SIZE * 1.15f;
+static constexpr float HOTBAR_SLOT_SIZE_SELECTED = HOTBAR_SLOT_SIZE * 1.3f;
+static constexpr float INVENTORY_GAP = 4.0f;
+
+namespace UiTypeID {
+    enum : uint8_t {
+        HotbarSlot = 1,
+        InventorySlot,
+        InventorySlotItem
+    };
+}
+
+struct UiHotbarSlotData {
+    TextureAsset texture;
+};
+
+struct UiInventorySlotItemData {
+    ItemId item_id;
+};
 
 InGameState::InGameState() :
     m_camera{ sge::CameraOrigin::Center, sge::CoordinateSystem {
@@ -498,76 +514,106 @@ void InGameState::draw_inventory() noexcept {
 
 #else
 
-void InGameState::draw_inventory() noexcept {
-    GameRenderer::BeginOrderMode();
-
+void InGameState::draw_cursor() noexcept {
+    const sge::Font& font = Assets::GetFont(FontAsset::AndyBold);
     Inventory& inventory = m_player.inventory();
 
-    UI::BeginLayout(LayoutDesc(LayoutOrientation::Vertical).with_gap(4.0f).with_padding(UiRect(10.0f, 0.0f, 10.0f, 0.0f)));
-    {
-        ElementState element;
+    GameRenderer::DrawSpriteUI(m_cursor_background);
+    GameRenderer::DrawSpriteUI(m_cursor_foreground);
 
+    const ItemSlot& taken_item = inventory.taken_item();
+    const ItemSlot& selected_item = inventory.get_selected_item();
+    const glm::vec2 position = m_cursor_background.position() + m_cursor_background.size();
+
+    if (m_show_extra_ui && taken_item.has_item()) {
+        const sge::Texture& texture = Assets::GetItemTexture(taken_item.item->id);
+        const glm::vec2 size = glm::vec2(texture.size()) * m_cursor_scale;
+
+        draw_item_with_stack(font, size, 16.0f * m_cursor_scale, position, taken_item.item.value());
+    } else if (m_player.can_use_item() && selected_item.has_item() && !UI::IsMouseOverUi()) {
+        const sge::Texture& texture = Assets::GetItemTexture(selected_item.item->id);
+        const glm::vec2 size = glm::vec2(texture.size()) * m_cursor_scale;
+
+        draw_item(size, position, *selected_item.item);
+    }
+}
+
+void InGameState::draw_inventory() noexcept {
+    Inventory& inventory = m_player.inventory();
+
+    UI::BeginElement(ElementDesc()
+        .with_gap(INVENTORY_GAP)
+        .with_padding(UiRect::top_left(INVENTORY_PADDING))
+        .with_orientation(LayoutOrientation::Vertical));
+    {
         const uint32_t rows_count = m_show_extra_ui ? INVENTORY_ROWS : 1;
 
         const glm::vec2 hotbar_selected_size = glm::mix(glm::vec2(HOTBAR_SLOT_SIZE), glm::vec2(HOTBAR_SLOT_SIZE_SELECTED), m_hotbar_slot_anim);
         const glm::vec2 hotbar_unselected_size = glm::mix(glm::vec2(HOTBAR_SLOT_SIZE_SELECTED), glm::vec2(HOTBAR_SLOT_SIZE), m_hotbar_slot_anim);
 
-        UI::BeginLayout(LayoutDesc(LayoutOrientation::Horizontal).with_gap(4.0f));
-        {
-            for (uint32_t i = 0; i < CELLS_IN_ROW; ++i) {
-                const bool selected = inventory.selected_slot() == i;
+        for (uint32_t j = 0; j < rows_count; ++j) {
+            UI::BeginElement(ElementDesc()
+                .with_size(UiSize(Sizing::Fit(), m_show_extra_ui ? Sizing::Fit() : Sizing::Fixed(HOTBAR_SLOT_SIZE_SELECTED)))
+                .with_gap(INVENTORY_GAP)
+                .with_vertical_alignment(Alignment::Center)
+                .with_orientation(LayoutOrientation::Horizontal));
+            {
+                for (uint32_t i = 0; i < CELLS_IN_ROW; ++i) {
+                    const uint32_t index = j * CELLS_IN_ROW + i;
+                    const ItemSlot& item_slot = inventory.get_item(index);
+                    const bool selected = inventory.selected_slot() == index;
 
-                TextureAsset texture = TextureAsset::UiInventoryBackground;
-                glm::vec2 size = glm::vec2(0.0f);
+                    TextureAsset texture = TextureAsset::UiInventoryBackground;
+                    glm::vec2 back_size = glm::vec2(0.0f);
+                    glm::vec2 item_size = glm::vec2(0.0f);
 
-                if (m_show_extra_ui) {
-                    size = glm::vec2(INVENTORY_SLOT_SIZE);
-                    texture = TextureAsset::UiInventoryBackground;
-                } else if (selected) {
-                    size = hotbar_selected_size;
-                    texture = TextureAsset::UiInventorySelected;
-                } else {
-                    texture = TextureAsset::UiInventoryHotbar;
-                    size = hotbar_unselected_size;
-                }
+                    if (item_slot.has_item()) {
+                        item_size = Assets::GetItemTexture(item_slot.item->id).size();
+                        item_size = glm::min(item_size, glm::vec2(32.0f));
+                    }
 
-                element = UI::Element(size);
-                {
-                    sge::Sprite cell_sprite(Assets::GetTexture(texture));
-                    cell_sprite.set_position(element.position);
-                    cell_sprite.set_anchor(sge::Anchor::TopLeft);
-                    cell_sprite.set_custom_size(size);
-                    cell_sprite.set_color(sge::LinearRgba(1.0f, 1.0f, 1.0f, 0.8f));
-                    GameRenderer::DrawSpriteUI(cell_sprite);
-                }
-            }
-        }
-        UI::EndLayout();
+                    if (m_show_extra_ui) {
+                        back_size = glm::vec2(INVENTORY_SLOT_SIZE);
+                        item_size *= 0.95f;
+                        texture = TextureAsset::UiInventoryBackground;
+                    } else if (selected) {
+                        back_size = hotbar_selected_size;
+                        texture = TextureAsset::UiInventorySelected;
+                    } else {
+                        texture = TextureAsset::UiInventoryHotbar;
+                        back_size = m_previous_selected_slot == i ? hotbar_unselected_size : glm::vec2(HOTBAR_SLOT_SIZE);
+                        item_size *= 0.9f;
+                    }
 
-        if (m_show_extra_ui) {
-            const glm::vec2 size = glm::vec2(INVENTORY_SLOT_SIZE);
-
-            for (uint32_t j = 1; j < rows_count; ++j) {
-                UI::BeginLayout(LayoutDesc(LayoutOrientation::Horizontal).with_gap(4.0f));
-                {
-                    for (uint32_t i = 0; i < CELLS_IN_ROW; ++i) {
-                        element = UI::Element(size);
-                        {
-                            sge::Sprite cell_sprite(Assets::GetTexture(TextureAsset::UiInventoryBackground));
-                            cell_sprite.set_position(element.position);
-                            cell_sprite.set_anchor(sge::Anchor::TopLeft);
-                            cell_sprite.set_custom_size(size);
-                            cell_sprite.set_color(sge::LinearRgba(1.0f, 1.0f, 1.0f, 0.8f));
-                            GameRenderer::DrawSpriteUI(cell_sprite);
+                    UI::BeginElement(
+                        UiTypeID::HotbarSlot,
+                        ElementDesc()
+                            .with_size(UiSize::Fixed(back_size))
+                            .with_vertical_alignment(Alignment::Center)
+                            .with_horizontal_alignment(Alignment::Center),
+                        UiHotbarSlotData {
+                            .texture = texture
+                        });
+                    {
+                        if (item_slot.has_item()) {
+                            UI::AddElement(
+                                UiTypeID::InventorySlotItem,
+                                ElementDesc()
+                                    .with_size(UiSize::Fixed(item_size)),
+                                UiInventorySlotItemData {
+                                    .item_id = item_slot.item->id
+                                }
+                            );
                         }
                     }
+                    UI::EndElement();
                 }
-                UI::EndLayout(); 
             }
+            UI::EndElement();
         }
 
     }
-    UI::EndLayout();
+    UI::EndElement();
 
     GameRenderer::EndOrderMode();
 }
@@ -595,19 +641,11 @@ void InGameState::draw_item_with_stack(const sge::Font& font, const glm::vec2& i
     }
 }
 
-void InGameState::draw_inventory_cell(uint8_t index, const glm::vec2& size, const glm::vec2& position, TextureAsset texture, sge::Order order) {
-    sge::Sprite cell_sprite(Assets::GetTexture(texture));
-    cell_sprite.set_position(position);
-    cell_sprite.set_anchor(sge::Anchor::TopLeft);
-    cell_sprite.set_custom_size(size);
-    cell_sprite.set_color(sge::LinearRgba(1.0f, 1.0f, 1.0f, 0.8f));
-    GameRenderer::DrawSpriteUI(cell_sprite, order);
-}
-
 void InGameState::draw_ui() noexcept {
+    UI::Start(RootDesc(m_camera.viewport()));
+
     draw_inventory();
 
-    const Inventory& inventory = m_player.inventory();
     const sge::Font& font = Assets::GetFont(FontAsset::AndyBold);
 
     if (m_ui_show_fps) {
@@ -615,24 +653,45 @@ void InGameState::draw_ui() noexcept {
         GameRenderer::DrawTextUI(text, glm::vec2(10.0f, m_camera.viewport().y - 10.0f - 22.0f), font, sge::Order(0, false));
     }
 
-    GameRenderer::DrawSpriteUI(m_cursor_background);
-    GameRenderer::DrawSpriteUI(m_cursor_foreground);
+    const std::vector<UiElement>& elements = UI::Finish();
 
-    const ItemSlot& taken_item = inventory.taken_item();
-    const ItemSlot& selected_item = inventory.get_selected_item();
-    const glm::vec2 position = m_cursor_background.position() + m_cursor_background.size();
+    sge::Sprite sprite(Assets::GetTexture(TextureAsset::Stub));
+    for (const UiElement& element : elements) {
+        switch (element.type_id) {
+            case UiTypeID::HotbarSlot: {
+                const UiHotbarSlotData* data = static_cast<const UiHotbarSlotData*>(element.custom_data);
 
-    if (m_show_extra_ui && taken_item.has_item()) {
-        const sge::Texture& texture = Assets::GetItemTexture(taken_item.item->id);
-        const glm::vec2 size = glm::vec2(texture.size()) * m_cursor_scale;
+                sprite.set_texture(Assets::GetTexture(data->texture));
+                sprite.set_position(element.position);
+                sprite.set_anchor(sge::Anchor::TopLeft);
+                sprite.set_custom_size(element.size);
+                sprite.set_color(sge::LinearRgba(1.0f, 1.0f, 1.0f, 0.8f));
+                GameRenderer::DrawSpriteUI(sprite);
+            } break;
 
-        draw_item_with_stack(font, size, 16.0f * m_cursor_scale, position, taken_item.item.value());
-    } else if (m_player.can_use_item() && selected_item.has_item() && !UI::IsMouseOverUi()) {
-        const sge::Texture& texture = Assets::GetItemTexture(selected_item.item->id);
-        const glm::vec2 size = glm::vec2(texture.size()) * m_cursor_scale;
+            case UiTypeID::InventorySlot: {
+                sprite.set_texture(Assets::GetTexture(TextureAsset::UiInventoryBackground));
+                sprite.set_position(element.position);
+                sprite.set_anchor(sge::Anchor::TopLeft);
+                sprite.set_custom_size(element.size);
+                sprite.set_color(sge::LinearRgba(1.0f, 1.0f, 1.0f, 0.8f));
+                GameRenderer::DrawSpriteUI(sprite);
+            } break;
 
-        draw_item(size, position, *selected_item.item);
+            case UiTypeID::InventorySlotItem: {
+                const UiInventorySlotItemData* data = static_cast<const UiInventorySlotItemData*>(element.custom_data);
+
+                sprite.set_texture(Assets::GetItemTexture(data->item_id));
+                sprite.set_position(element.position);
+                sprite.set_anchor(sge::Anchor::TopLeft);
+                sprite.set_custom_size(element.size);
+                sprite.set_color(sge::LinearRgba(1.0f, 1.0f, 1.0f, 0.8f));
+                GameRenderer::DrawSpriteUI(sprite);
+            } break;
+        }
     }
+
+    draw_cursor();
 }
 
 BaseState* InGameState::GetNextState() {

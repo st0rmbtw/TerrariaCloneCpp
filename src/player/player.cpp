@@ -734,7 +734,7 @@ static void break_tree(World& world, TilePos start_pos) {
         );
     }
 
-    bfs(
+    dfs(
         start_pos,
         [&world](TilePos pos) {
             LLGL::SmallVector<TilePos, 4> positions;
