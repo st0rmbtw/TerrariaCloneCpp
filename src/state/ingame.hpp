@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef STATE_PLAY_INGAME_HPP_
-#define STATE_PLAY_INGAME_HPP_
+#ifndef STATE_INGAME_HPP_
+#define STATE_INGAME_HPP_
 
 #include <SGE/renderer/camera.hpp>
 #include <SGE/time/timer.hpp>

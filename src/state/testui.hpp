@@ -1,15 +1,16 @@
 #pragma once
 
-#ifndef STATE_MENU_HPP_
-#define STATE_MENU_HPP_
+#ifndef STATE_TESTUI_HPP_
+#define STATE_TESTUI_HPP_
 
 #include <SGE/renderer/camera.hpp>
+#include <SGE/renderer/batch.hpp>
 
 #include "base.hpp"
 
-class MenuState : public BaseState {
+class TestUI : public BaseState {
 public:
-    MenuState();
+    TestUI();
     void Render() override;
     void Update() override;
 
@@ -18,11 +19,11 @@ public:
         m_camera.update();
     }
 
-    BaseState* GetNextState() override;
-    ~MenuState() override;
+    ~TestUI() override;
 
 private:
     sge::Camera m_camera;
+    sge::Batch m_batch;
 };
 
 #endif

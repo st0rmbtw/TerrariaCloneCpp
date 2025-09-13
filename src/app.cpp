@@ -16,9 +16,11 @@
 
 #include "diagnostic/frametime.hpp"
 #include "renderer/renderer.hpp"
+#include "state/menu.hpp"
 #include "world/autotile.hpp"
 #include "state/base.hpp"
 #include "state/ingame.hpp"
+#include "state/testui.hpp"
 
 #include "particles.hpp"
 #include "assets.hpp"

@@ -3,17 +3,16 @@
 #ifndef UI_HPP_
 #define UI_HPP_
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
+#include <optional>
 #include <glm/vec2.hpp>
-
 #include <SGE/input.hpp>
 #include <SGE/types/sprite.hpp>
 
 class UiRect {
 public:
     UiRect() = default;
-
     UiRect(float left, float right, float top, float bottom) :
         m_left(left),
         m_right(right),
@@ -33,6 +32,16 @@ public:
     [[nodiscard]]
     inline static UiRect top_left(float value) {
         return UiRect(value, 0.0f, value, 0.0f);
+    }
+
+    [[nodiscard]]
+    inline static UiRect all(float value) {
+        return UiRect(value, value, value, value);
+    }
+
+    [[nodiscard]]
+    inline static UiRect axes(float horizontal, float vertical) {
+        return UiRect(horizontal, horizontal, vertical, vertical);
     }
 
     [[nodiscard]]
@@ -68,7 +77,7 @@ public:
         Fixed = 0,
         Percent,
         Fit,
-        Grow
+        Fill
     };
 
 public:
@@ -98,9 +107,9 @@ public:
     }
 
     [[nodiscard]]
-    inline static Sizing Grow() {
+    inline static Sizing Fill() {
         Sizing sizing;
-        sizing.m_type = Type::Grow;
+        sizing.m_type = Type::Fill;
         return sizing;
     }
 
@@ -135,6 +144,16 @@ public:
     }
 
     [[nodiscard]]
+    inline static UiSize Width(Sizing sizing) {
+        return UiSize(sizing, Sizing::Fixed(0.0f));
+    }
+
+    [[nodiscard]]
+    inline static UiSize Height(Sizing sizing) {
+        return UiSize(Sizing::Fixed(0.0f), sizing);
+    }
+
+    [[nodiscard]]
     inline static UiSize Percent(float width_percent, float height_percent) {
         return UiSize(Sizing::Percent(width_percent), Sizing::Percent(height_percent));
     }
@@ -142,6 +161,11 @@ public:
     [[nodiscard]]
     inline static UiSize Fit() {
         return UiSize(Sizing::Fit(), Sizing::Fit());
+    }
+
+    [[nodiscard]]
+    inline static UiSize Fill() {
+        return UiSize(Sizing::Fill(), Sizing::Fill());
     }
 
     [[nodiscard]]
@@ -161,13 +185,14 @@ private:
 
 enum class LayoutOrientation : uint8_t {
     Horizontal = 0,
-    Vertical = 1
+    Vertical,
+    Stack
 };
 
 enum class Alignment : uint8_t {
     Start = 0,
-    Center = 1,
-    End = 2
+    Center,
+    End
 };
 
 class RootDesc {
@@ -256,49 +281,10 @@ inline bool operator==(const ElementID& a, const ElementID& b) noexcept {
     return a.id == b.id;
 }
 
-inline ElementID HashNumber(const uint32_t offset, const uint32_t seed) {
-    uint32_t hash = seed;
-    hash += (offset + 48);
-    hash += (hash << 10);
-    hash ^= (hash >> 6);
-
-    hash += (hash << 3);
-    hash ^= (hash >> 11);
-    hash += (hash << 15);
-    
-    return ElementID {
-        .string_id = {},
-        .id = hash + 1, // +1 because the element with the id of 0 is the root element
-        .offset = offset,
-        .base_id = seed
-    };
-}
-
-inline ElementID HashString(const std::string_view key, const uint32_t seed) {
-    uint32_t hash = seed;
-
-    for (size_t i = 0; i < key.size(); i++) {
-        hash += key.data()[i];
-        hash += (hash << 10);
-        hash ^= (hash >> 6);
-    }
-
-    hash += (hash << 3);
-    hash ^= (hash >> 11);
-    hash += (hash << 15);
-
-    // +1 because the element with the id of 0 is the root element
-    return ElementID {
-        .string_id = key,
-        .id = hash + 1,
-        .offset = 0,
-        .base_id = hash + 1,
-    };
-}
-
 class ElementDesc {
 public:
     ElementDesc() = default;
+    ElementDesc(const UiSize size) : m_size{ size } {}
 
     inline ElementDesc& with_id(const ElementID& id) noexcept {
         m_id = id;
@@ -322,6 +308,11 @@ public:
 
     inline ElementDesc& with_vertical_alignment(const Alignment alignment) noexcept {
         m_vertical_alignment = alignment;
+        return *this;
+    }
+
+    inline ElementDesc& with_self_alignment(const Alignment alignment) noexcept {
+        m_self_alignment = alignment;
         return *this;
     }
 
@@ -351,6 +342,11 @@ public:
     }
 
     [[nodiscard]]
+    inline std::optional<Alignment> self_alignment() const noexcept {
+        return m_self_alignment;
+    }
+
+    [[nodiscard]]
     inline float gap() const noexcept {
         return m_gap;
     }
@@ -375,7 +371,8 @@ private:
     UiRect m_padding{};
     UiSize m_size{};
     float m_gap{ 0.0f };
-    LayoutOrientation m_orientation{ LayoutOrientation::Horizontal };
+    LayoutOrientation m_orientation{ LayoutOrientation::Stack };
+    std::optional<Alignment> m_self_alignment{ std::nullopt };
     Alignment m_horizontal_alignment{ Alignment::Start };
     Alignment m_vertical_alignment{ Alignment::Start };
 };
@@ -404,9 +401,16 @@ namespace UI {
         BeginElement(0, desc, false);
     }
 
+    void EndElement();
+    
+    void OnClick(std::function<void(sge::MouseButton)>&& on_press);
+
     void SetCustomData(const void* custom_data, size_t custom_data_size, size_t custom_data_alignment = alignof(std::max_align_t));
 
-    void EndElement();
+    inline void Spacer(const UiSize size = UiSize::Fill()) {
+        BeginContainer(ElementDesc(size));
+        EndElement();
+    }
 
     inline void AddElement(uint32_t type_id, const ElementDesc& desc) {
         BeginElement(type_id, desc);
@@ -425,13 +429,16 @@ namespace UI {
         SetCustomData(&custom_data, sizeof(custom_data), alignof(T));
     }
 
-    void OnClick(std::function<void(sge::MouseButton)>&& on_press);
-
+    [[nodiscard]]
     bool IsHovered();
 
+    [[nodiscard]]
     uint32_t GetParentID();
+
+    [[nodiscard]]
     const ElementID& GetElementID();
 
+    [[nodiscard]]
     const std::vector<UiElement>& Finish();
 
     [[nodiscard]]
@@ -440,15 +447,10 @@ namespace UI {
 
 namespace ID {
     [[nodiscard]]
-    inline static ElementID Local(const std::string_view key) {
-        const uint32_t parent_id = UI::GetParentID();
-        return HashString(key, parent_id);
-    }
+    ElementID Local(const std::string_view key);
 
     [[nodiscard]]
-    inline static ElementID Global(const std::string_view key, uint32_t index = 0) {
-        return HashString(key, index);
-    }
+    ElementID Global(const std::string_view key, uint32_t index = 0);
 };
 
 #endif

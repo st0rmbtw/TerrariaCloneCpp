@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef STATE_GAME_STATE_HPP_
-#define STATE_GAME_STATE_HPP_
+#ifndef STATE_BASE_HPP_
+#define STATE_BASE_HPP_
 
 #include <glm/vec2.hpp>
 
@@ -20,7 +20,9 @@ public:
     }
     virtual void OnWindowSizeChanged(glm::uvec2 /* size */) {
     }
-    virtual BaseState* GetNextState() = 0;
+    virtual BaseState* GetNextState() {
+        return nullptr;
+    }
     virtual ~BaseState() = default;
 };
 

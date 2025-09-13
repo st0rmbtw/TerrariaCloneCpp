@@ -44,7 +44,7 @@ using NodeID = ElementID;
 
 struct Node {
     NodeID unique_id{};
-    std::function<void(sge::MouseButton)> on_press_callback = nullptr;
+    std::function<void(sge::MouseButton)> on_click_callback = nullptr;
 
     std::vector<size_t> children;
 
@@ -64,6 +64,7 @@ struct Node {
     uint32_t z_index = 0;
     
     LayoutOrientation orientation = LayoutOrientation::Horizontal;
+    std::optional<Alignment> self_alignment = Alignment::Start;
     Alignment horizontal_alignment = Alignment::Start;
     Alignment vertical_alignment = Alignment::Start;
     bool render = false;
@@ -76,6 +77,8 @@ static struct {
     std::unordered_set<NodeID> search_visited{};
     sge::SwapbackVector<Node*> search_stack{};
     sge::SwapbackVector<Node*> postorder_stack{};
+
+    sge::SwapbackVector<Node*> growable_nodes{};
     
     Arena arena{ ARENA_SIZE };
 
@@ -122,12 +125,52 @@ static size_t PushNode(Node&& node) {
     return index;
 }
 
+static inline ElementID HashNumber(const uint32_t offset, const uint32_t seed) {
+    uint32_t hash = seed;
+    hash += (offset + 48);
+    hash += (hash << 10);
+    hash ^= (hash >> 6);
+
+    hash += (hash << 3);
+    hash ^= (hash >> 11);
+    hash += (hash << 15);
+
+    return ElementID {
+        .string_id = {},
+        .id = hash + 1, // +1 because the element with the id of 0 is the root element
+        .offset = offset,
+        .base_id = seed
+    };
+}
+
+static inline ElementID HashString(const std::string_view key, const uint32_t seed) {
+    uint32_t hash = seed;
+
+    for (size_t i = 0; i < key.size(); i++) {
+        hash += key.data()[i];
+        hash += (hash << 10);
+        hash ^= (hash >> 6);
+    }
+
+    hash += (hash << 3);
+    hash ^= (hash >> 11);
+    hash += (hash << 15);
+
+    // +1 because the element with the id of 0 is the root element
+    return ElementID{
+        .string_id = key,
+        .id = hash + 1,
+        .offset = 0,
+        .base_id = hash + 1,
+    };
+}
+
 [[nodiscard]]
 bool UI::IsMouseOverUi() {
     return state.any_hovered;
 }
 
-static bool CheckIfPressed(NodeID id, const sge::Rect element_rect, sge::MouseButton button) {
+static bool CheckIfPressed(const NodeID id, const sge::Rect element_rect, const sge::MouseButton button) {
     const bool hovered = element_rect.contains(sge::Input::MouseScreenPosition());
 
     if (state.active_id.id == 0) {
@@ -173,7 +216,7 @@ void UI::Update() {
             state.any_hovered = true;
         }
 
-        const bool clickable = current_node->on_press_callback != nullptr;
+        const bool clickable = current_node->on_click_callback != nullptr;
         if (clickable) {
             state.postorder_stack.push_back(current_node);
         }
@@ -197,17 +240,17 @@ void UI::Update() {
         const sge::Rect element_rect = sge::Rect::from_top_left(node->pos, node->size);
 
         if (CheckIfPressed(node->unique_id, element_rect, sge::MouseButton::Left)) {
-            node->on_press_callback(sge::MouseButton::Left);
+            node->on_click_callback(sge::MouseButton::Left);
             break;
         }
 
         if (CheckIfPressed(node->unique_id, element_rect, sge::MouseButton::Right)) {
-            node->on_press_callback(sge::MouseButton::Right);
+            node->on_click_callback(sge::MouseButton::Right);
             break;
         }
 
         if (CheckIfPressed(node->unique_id, element_rect, sge::MouseButton::Middle)) {
-            node->on_press_callback(sge::MouseButton::Middle);
+            node->on_click_callback(sge::MouseButton::Middle);
             break;
         }
     }
@@ -231,6 +274,7 @@ void UI::Start(const RootDesc& desc) {
         node.gap = desc.gap();
         node.unique_id = NodeID();
         node.type_id = 0;
+        node.z_index = 0;
         node.orientation = desc.orientation();
         node.horizontal_alignment = desc.vertical_alignment();
         node.render = false;
@@ -271,12 +315,116 @@ void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, bool render) {
         new_node.gap = desc.gap();
         new_node.unique_id = id;
         new_node.type_id = type_id;
+        new_node.z_index = parent.z_index + 1;
         new_node.orientation = desc.orientation();
         new_node.horizontal_alignment = desc.horizontal_alignment();
         new_node.vertical_alignment = desc.vertical_alignment();
+        new_node.self_alignment = desc.self_alignment();
         new_node.render = render;
     }
     NodeAddElement(parent, std::move(new_node));
+}
+
+static void GrowElementsHorizontally(Node& parent) {
+    if (parent.children.empty()) return;
+
+    float remaining_width = parent.size.x - parent.padding.left() - parent.padding.right();
+
+    if (parent.orientation == LayoutOrientation::Horizontal) {
+        for (uint32_t child_index : parent.children) {
+            Node& child = state.nodes[child_index];
+            remaining_width -= child.size.x;
+        }
+        remaining_width -= (parent.children.size() - 1) * parent.gap;
+    } 
+
+    state.growable_nodes.clear();
+
+    for (uint32_t child_index : parent.children) {
+        Node& child = state.nodes[child_index];
+        if (child.sizing.width().type() == Sizing::Type::Fill) {
+            state.growable_nodes.push_back(&child);
+        }
+    }
+
+    if (state.growable_nodes.size() > 0) {
+        while (remaining_width > 0) {
+            float smallest = state.growable_nodes[0]->size.x;
+            float second_smallest = INFINITY;
+            float width_to_add = remaining_width;
+            for (Node* child : state.growable_nodes) {
+                if (child->size.x < smallest) {
+                    second_smallest = smallest;
+                    smallest = child->size.x;
+                }
+
+                if (child->size.x > smallest) {
+                    second_smallest = std::min(second_smallest, child->size.x);
+                    width_to_add = second_smallest - smallest;
+                }
+            }
+
+            width_to_add = std::min(width_to_add, remaining_width / state.growable_nodes.size());
+
+            for (Node* child : state.growable_nodes) {
+                if (sge::approx_equals(child->size.x, smallest)) {
+                    child->size.x += width_to_add;
+                    remaining_width -= width_to_add;
+                }
+            }
+        }
+    }
+}
+
+static void GrowElementsVertically(Node& parent) {
+    if (parent.children.empty()) return;
+
+    float remaining_height = parent.size.y - parent.padding.top() - parent.padding.bottom();
+
+    if (parent.orientation == LayoutOrientation::Vertical) {
+        for (uint32_t child_index : parent.children) {
+            Node& child = state.nodes[child_index];
+            remaining_height -= child.size.y;
+        }
+        remaining_height -= (parent.children.size() - 1) * parent.gap;
+    }
+
+    state.growable_nodes.clear();
+
+    for (uint32_t child_index : parent.children) {
+        Node& child = state.nodes[child_index];
+        if (child.sizing.height().type() == Sizing::Type::Fill) {
+            state.growable_nodes.push_back(&child);
+        }
+    }
+    
+    if (state.growable_nodes.size() > 0) {
+        while (remaining_height > 0) {
+            float smallest = state.growable_nodes[0]->size.y;
+            float second_smallest = INFINITY;
+            float height_to_add = remaining_height;
+            for (Node* child : state.growable_nodes) {
+                if (child->size.y < smallest) {
+                    second_smallest = smallest;
+                    smallest = child->size.y;
+                }
+
+                if (child->size.y > smallest) {
+                    second_smallest = std::min(second_smallest, child->size.y);
+                    height_to_add = second_smallest - smallest;
+                }
+            }
+
+            height_to_add = std::min(height_to_add, remaining_height / state.growable_nodes.size());
+
+            for (Node* child : state.growable_nodes) {
+                if (sge::approx_equals(child->size.y, smallest)) {
+                    child->size.y += height_to_add;
+                    remaining_height -= height_to_add;
+                }
+            }
+        }
+    }
 }
 
 void UI::EndElement() {
@@ -285,11 +433,19 @@ void UI::EndElement() {
     Node& node = TopNode();
     --state.node_stack_size;
 
+    if (node.orientation == LayoutOrientation::Stack) {
+        uint32_t z_index = node.z_index;
+        for (uint32_t child_index : node.children) {
+            Node& child = state.nodes[child_index];
+            child.z_index = ++z_index;
+        }
+    }
+
     const float horizontal_padding = node.padding.left() + node.padding.right();
     const float vertical_padding = node.padding.top() + node.padding.bottom();
 
     if (node.orientation == LayoutOrientation::Horizontal) {
-        if (node.sizing.width().type() != Sizing::Type::Fixed) {
+        if (node.sizing.width().type() == Sizing::Type::Fit) {
             const float gap = (std::max<size_t>(node.children.size(), 1) - 1) * node.gap;
             node.size.x += horizontal_padding + gap;
         }
@@ -297,25 +453,24 @@ void UI::EndElement() {
         for (uint32_t child_index : node.children) {
             const Node& child = state.nodes[child_index];
 
-            if (node.sizing.width().type() != Sizing::Type::Fixed)
+            if (node.sizing.width().type() == Sizing::Type::Fit)
                 node.size.x += child.size.x;
 
-            if (node.sizing.height().type() != Sizing::Type::Fixed)
+            if (node.sizing.height().type() == Sizing::Type::Fit)
                 node.size.y = std::max(node.size.y, child.size.y + vertical_padding);
         }
-
     } else if (node.orientation == LayoutOrientation::Vertical) {
-        if (node.sizing.height().type() != Sizing::Type::Fixed) {
+        if (node.sizing.height().type() == Sizing::Type::Fit) {
             const float gap = (std::max<size_t>(node.children.size(), 1) - 1) * node.gap;
             node.size.y += vertical_padding + gap;
         }
         for (uint32_t child_index : node.children) {
             const Node& child = state.nodes[child_index];
 
-            if (node.sizing.width().type() != Sizing::Type::Fixed)
+            if (node.sizing.width().type() == Sizing::Type::Fit)
                 node.size.x = std::max(node.size.x, child.size.x + horizontal_padding);
 
-            if (node.sizing.height().type() != Sizing::Type::Fixed)
+            if (node.sizing.height().type() == Sizing::Type::Fit)
                 node.size.y += child.size.y;
         }
     }
@@ -332,6 +487,9 @@ static void FinalizeLayout() {
         Node* current_node = state.search_stack.front();
         state.search_stack.pop_front();
 
+        GrowElementsHorizontally(*current_node);
+        GrowElementsVertically(*current_node);
+
         if (current_node->render) {
             state.render_elements.push_back(UiElement {
                 .position = current_node->pos,
@@ -346,6 +504,9 @@ static void FinalizeLayout() {
 
         glm::vec2 pos = current_node->pos + glm::vec2(current_node->padding.left(), current_node->padding.top());
 
+        float remaining_width = current_node->size.x - current_node->padding.left() - current_node->padding.right();
+        float remaining_height = current_node->size.y - current_node->padding.top() - current_node->padding.bottom();
+
         for (uint32_t child_index : current_node->children) {
             Node& child = state.nodes[child_index];
 
@@ -356,27 +517,60 @@ static void FinalizeLayout() {
             state.search_stack.push_back(&child);
             state.search_visited.insert(child.unique_id);
             
-            child.pos = pos;
+            if (current_node->orientation == LayoutOrientation::Horizontal) {
+                remaining_height = current_node->size.y - child.size.y - current_node->padding.top() - current_node->padding.bottom();
+            } else if (current_node->orientation == LayoutOrientation::Vertical) {
+                remaining_width = current_node->size.x - child.size.x - current_node->padding.left() - current_node->padding.right();
+            } else if (current_node->orientation == LayoutOrientation::Stack) {
+                remaining_width = current_node->size.x - child.size.x - current_node->padding.left() - current_node->padding.right();
+                remaining_height = current_node->size.y - child.size.y - current_node->padding.top() - current_node->padding.bottom();
+            }
             
+            child.pos = pos;
+
+            bool horizontally_aligned = false;
+            bool vertically_aligned = false;
+
+            if (child.self_alignment && current_node->orientation == LayoutOrientation::Horizontal) {
+                if (child.self_alignment == Alignment::Center) {
+                    child.pos.y += remaining_height * 0.5f;
+                } else if (child.self_alignment == Alignment::End) {
+                    child.pos.y += remaining_height;
+                }
+                vertically_aligned = true;
+            }
+
+            if (child.self_alignment && current_node->orientation == LayoutOrientation::Vertical) {
+                if (child.self_alignment == Alignment::Center) {
+                    child.pos.x += remaining_width * 0.5f;
+                } else if (child.self_alignment == Alignment::End) {
+                    child.pos.x += remaining_width;
+                }
+                horizontally_aligned = true;
+            }
+
+            if (!horizontally_aligned) {
+                if (current_node->horizontal_alignment == Alignment::Center) {
+                    child.pos.x += remaining_width * 0.5f;
+                } else if (current_node->horizontal_alignment == Alignment::End) {
+                    child.pos.x += remaining_width;
+                }
+            }
+
+            if (!vertically_aligned) {
+                if (current_node->vertical_alignment == Alignment::Center) {
+                    child.pos.y += remaining_height * 0.5f;
+                } else if (current_node->vertical_alignment == Alignment::End) {
+                    child.pos.y += remaining_height;
+                }
+            }
+
             if (current_node->orientation == LayoutOrientation::Horizontal) {
                 pos.x += child.size.x + current_node->gap;
+                remaining_width -= child.size.x;
             } else if (current_node->orientation == LayoutOrientation::Vertical) {
                 pos.y += child.size.y + current_node->gap;
-            }
-
-            const float remaining_width = current_node->size.x - child.size.x;
-            const float remaining_height = current_node->size.y - child.size.y;
-
-            if (current_node->horizontal_alignment == Alignment::Center) {
-                child.pos.x += remaining_width * 0.5f;
-            } else if (current_node->horizontal_alignment == Alignment::End) {
-                child.pos.x += remaining_width;
-            }
-
-            if (current_node->vertical_alignment == Alignment::Center) {
-                child.pos.y += remaining_height * 0.5f;
-            } else if (current_node->vertical_alignment == Alignment::End) {
-                child.pos.y += remaining_height;
+                remaining_height -= child.size.y;
             }
         }
     }
@@ -397,7 +591,7 @@ void UI::SetCustomData(const void* custom_data_ptr, size_t custom_data_size, siz
 
 void UI::OnClick(std::function<void(sge::MouseButton)>&& on_press) {
     Node& node = TopNode();
-    node.on_press_callback = std::move(on_press);
+    node.on_click_callback = std::move(on_press);
 }
 
 uint32_t UI::GetParentID() {
@@ -419,3 +613,19 @@ const std::vector<UiElement>& UI::Finish() {
     FinalizeLayout();
     return state.render_elements;
 };
+
+[[nodiscard]]
+ElementID ID::Local(const std::string_view key) {
+    const uint32_t parent_id = UI::GetParentID();
+    char* str = static_cast<char*>(state.arena.allocate(key.size() + 1, alignof(std::string_view::value_type)));
+    memcpy(str, key.data(), key.size());
+    str[key.size()] = '\0';
+    return HashString(std::string_view{ str, key.size() + 1 }, parent_id);
+}
+
+ElementID ID::Global(const std::string_view key, uint32_t index) {
+    char* str = static_cast<char*>(state.arena.allocate(key.size() + 1, alignof(std::string_view::value_type)));
+    memcpy(str, key.data(), key.size());
+    str[key.size()] = '\0';
+    return HashString(std::string_view{ str, key.size() + 1 }, index);
+}
