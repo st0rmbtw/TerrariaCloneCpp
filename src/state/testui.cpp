@@ -42,54 +42,47 @@ void TestUI::Render() {
 
     UI::Start(RootDesc(m_camera.viewport()));
 
-    UI::BeginElement(
-        UiTypeID::Rectangle,
-        ElementDesc(UiSize::Fill())
-            .with_padding(UiRect::all(100.0f))
-    );
-    {
+    UI::Element(UiTypeID::Rectangle, {
+        .padding = UiRect::All(100.0f),
+        .size = UiSize::Fill(),
+    }, [] {
         UI::SetCustomData(UiRectangleData {
             .color = sge::LinearRgba(0.8f, 0.2f, 0.2f)
         });
 
-        UI::BeginElement(
-            UiTypeID::Rectangle,
-            ElementDesc(UiSize::Fill())
-                .with_orientation(LayoutOrientation::Horizontal)
-                .with_gap(10.0f)
-        );
-        {
+        UI::Element(UiTypeID::Rectangle, {
+            .size = UiSize::Fill(),
+            .gap = 10.0f,
+            .orientation = LayoutOrientation::Horizontal
+        }, [] {
             UI::SetCustomData(UiRectangleData {
                 .color = sge::LinearRgba(0.2f, 0.8f, 0.2f)
             });
 
             for (int i = 0; i < 10; ++i) {
-                UI::BeginElement(
-                    UiTypeID::Rectangle,
-                    ElementDesc(UiSize::Fixed(50.0f, 50.0f))
-                        .with_id(ID::Local(temp_format("ListItem{}", i)))
-                        .with_self_alignment(Alignment::Center)
-                        .with_padding(UiRect::all(10.0f))
-                );
-                {
+                UI::Element(UiTypeID::Rectangle, {
+                    .id = ID::Local(temp_format("ListItem{}", i)),
+                    .padding = UiRect::All(10.0f),
+                    .size = UiSize::Fixed(50.0f, 50.0f),
+                    .self_alignment = Alignment::Center,
+                }, [] {
                     UI::SetCustomData(UiRectangleData {
                         .color = sge::LinearRgba(0.2f, 0.2f, 0.8f)
                     });
                     
                     UI::AddElement(
                         UiTypeID::Rectangle,
-                        ElementDesc(UiSize::Fill()),
+                        {
+                            .size = UiSize::Fill()
+                        },
                         UiRectangleData {
                             .color = sge::LinearRgba(0.2f, 0.8f, 0.8f)
                         }
                     );
-                }
-                UI::EndElement();
+                });
             }
-        }
-        UI::EndElement();
-    }
-    UI::EndElement();
+        });
+    });
 
     const std::vector<UiElement>& elements = UI::Finish();
 

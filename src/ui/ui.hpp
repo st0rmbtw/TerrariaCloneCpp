@@ -20,28 +20,53 @@ public:
         m_bottom(bottom) {}
 
     [[nodiscard]]
-    inline static UiRect horizontal(float value) {
+    inline static UiRect Horizontal(float value) {
         return UiRect(value, value, 0.0f, 0.0f);
     }
 
     [[nodiscard]]
-    inline static UiRect vertical(float value) {
+    inline static UiRect Vertical(float value) {
         return UiRect(0.0f, 0.0f, value, value);
     }
 
     [[nodiscard]]
-    inline static UiRect top_left(float value) {
+    inline static UiRect TopLeft(float value) {
         return UiRect(value, 0.0f, value, 0.0f);
     }
 
     [[nodiscard]]
-    inline static UiRect all(float value) {
+    inline static UiRect All(float value) {
         return UiRect(value, value, value, value);
     }
 
     [[nodiscard]]
     inline static UiRect axes(float horizontal, float vertical) {
         return UiRect(horizontal, horizontal, vertical, vertical);
+    }
+
+    [[nodiscard]]
+    inline static UiRect axes(glm::vec2 axes) {
+        return UiRect(axes.x, axes.x, axes.y, axes.y);
+    }
+
+    inline UiRect& top(float value) {
+        m_top = value;
+        return *this;
+    }
+
+    inline UiRect& bottom(float value) {
+        m_bottom = value;
+        return *this;
+    }
+
+    inline UiRect& left(float value) {
+        m_left = value;
+        return *this;
+    }
+
+    inline UiRect& right(float value) {
+        m_right = value;
+        return *this;
     }
 
     [[nodiscard]]
@@ -281,100 +306,15 @@ inline bool operator==(const ElementID& a, const ElementID& b) noexcept {
     return a.id == b.id;
 }
 
-class ElementDesc {
-public:
-    ElementDesc() = default;
-    ElementDesc(const UiSize size) : m_size{ size } {}
-
-    inline ElementDesc& with_id(const ElementID& id) noexcept {
-        m_id = id;
-        return *this;
-    }
-
-    inline ElementDesc& with_gap(float gap) noexcept {
-        m_gap = gap;
-        return *this;
-    }
-
-    inline ElementDesc& with_padding(const UiRect padding) noexcept {
-        m_padding = padding;
-        return *this;
-    }
-
-    inline ElementDesc& with_horizontal_alignment(const Alignment alignment) noexcept {
-        m_horizontal_alignment = alignment;
-        return *this;
-    }
-
-    inline ElementDesc& with_vertical_alignment(const Alignment alignment) noexcept {
-        m_vertical_alignment = alignment;
-        return *this;
-    }
-
-    inline ElementDesc& with_self_alignment(const Alignment alignment) noexcept {
-        m_self_alignment = alignment;
-        return *this;
-    }
-
-    inline ElementDesc& with_orientation(const LayoutOrientation orientation) noexcept {
-        m_orientation = orientation;
-        return *this;
-    }
-
-    inline ElementDesc& with_size(const UiSize size) noexcept {
-        m_size = size;
-        return *this;
-    }
-
-    [[nodiscard]]
-    inline LayoutOrientation orientation() const noexcept {
-        return m_orientation;
-    }
-
-    [[nodiscard]]
-    inline Alignment horizontal_alignment() const noexcept {
-        return m_horizontal_alignment;
-    }
-
-    [[nodiscard]]
-    inline Alignment vertical_alignment() const noexcept {
-        return m_vertical_alignment;
-    }
-
-    [[nodiscard]]
-    inline std::optional<Alignment> self_alignment() const noexcept {
-        return m_self_alignment;
-    }
-
-    [[nodiscard]]
-    inline float gap() const noexcept {
-        return m_gap;
-    }
-
-    [[nodiscard]]
-    inline const UiRect padding() const noexcept {
-        return m_padding;
-    }
-
-    [[nodiscard]]
-    inline const UiSize size() const noexcept {
-        return m_size;
-    }
-
-    [[nodiscard]]
-    inline const ElementID& id() const noexcept {
-        return m_id;
-    }
-
-private:
-    ElementID m_id{};
-    UiRect m_padding{};
-    UiSize m_size{};
-    float m_gap{ 0.0f };
-    LayoutOrientation m_orientation{ LayoutOrientation::Stack };
-    std::optional<Alignment> m_self_alignment{ std::nullopt };
-    Alignment m_horizontal_alignment{ Alignment::Start };
-    Alignment m_vertical_alignment{ Alignment::Start };
+struct ElementDesc {
+    ElementID id{};
+    UiRect padding{};
+    UiSize size{};
+    float gap{ 0.0f };
+    LayoutOrientation orientation{ LayoutOrientation::Stack };
+    std::optional<Alignment> self_alignment{ std::nullopt };
+    Alignment horizontal_alignment{ Alignment::Start };
+    Alignment vertical_alignment{ Alignment::Start };
 };
 
 struct UiElement {
@@ -408,7 +348,7 @@ namespace UI {
     void SetCustomData(const void* custom_data, size_t custom_data_size, size_t custom_data_alignment = alignof(std::max_align_t));
 
     inline void Spacer(const UiSize size = UiSize::Fill()) {
-        BeginContainer(ElementDesc(size));
+        BeginContainer(ElementDesc{ .size = size });
         EndElement();
     }
 
@@ -427,6 +367,20 @@ namespace UI {
     template <typename T>
     inline void SetCustomData(const T& custom_data) {
         SetCustomData(&custom_data, sizeof(custom_data), alignof(T));
+    }
+
+    template <typename F>
+    inline void Container(const ElementDesc& desc, F&& children) {
+        BeginContainer(desc);
+            std::forward<F>(children)();
+        EndElement();
+    }
+
+    template <typename F>
+    inline void Element(uint32_t type_id, const ElementDesc& desc, F&& children) {
+        BeginElement(type_id, desc);
+            std::forward<F>(children)();
+        EndElement();
     }
 
     [[nodiscard]]

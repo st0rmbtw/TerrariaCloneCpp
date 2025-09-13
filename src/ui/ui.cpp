@@ -289,16 +289,16 @@ static ElementID GenerateId(Node& parent) {
 
 void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, bool render) {
     glm::vec2 size = glm::vec2(0.0f);
-    if (desc.size().width().type() == Sizing::Type::Fixed) {
-        size.x = desc.size().width().value();
+    if (desc.size.width().type() == Sizing::Type::Fixed) {
+        size.x = desc.size.width().value();
     }
-    if (desc.size().height().type() == Sizing::Type::Fixed) {
-        size.y = desc.size().height().value();
+    if (desc.size.height().type() == Sizing::Type::Fixed) {
+        size.y = desc.size.height().value();
     }
 
     Node& parent = TopNode();
 
-    NodeID id = desc.id();
+    NodeID id = desc.id;
     if (id.id == 0) {
         id = GenerateId(parent);
     }
@@ -308,18 +308,18 @@ void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, bool render) {
         new_node.children = {};
         new_node.pos = glm::vec2(0.0f);
         new_node.size = size;
-        new_node.padding = desc.padding();
-        new_node.sizing = desc.size();
+        new_node.padding = desc.padding;
+        new_node.sizing = desc.size;
         new_node.custom_data = nullptr;
         new_node.custom_data_size = 0;
-        new_node.gap = desc.gap();
+        new_node.gap = desc.gap;
         new_node.unique_id = id;
         new_node.type_id = type_id;
         new_node.z_index = parent.z_index + 1;
-        new_node.orientation = desc.orientation();
-        new_node.horizontal_alignment = desc.horizontal_alignment();
-        new_node.vertical_alignment = desc.vertical_alignment();
-        new_node.self_alignment = desc.self_alignment();
+        new_node.orientation = desc.orientation;
+        new_node.horizontal_alignment = desc.horizontal_alignment;
+        new_node.vertical_alignment = desc.vertical_alignment;
+        new_node.self_alignment = desc.self_alignment;
         new_node.render = render;
     }
     NodeAddElement(parent, std::move(new_node));

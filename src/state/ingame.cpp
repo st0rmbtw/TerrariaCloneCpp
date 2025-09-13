@@ -48,7 +48,7 @@ struct UiInventorySlotIndexData {
     FontAsset font;
 };
 
-struct UiInventorySlotQuantityData {
+struct UiTextData {
     sge::LinearRgba color;
     float size;
     uint32_t quantity;
@@ -552,37 +552,37 @@ void InGameState::draw_cursor() noexcept {
 }
 
 void InGameState::draw_inventory() noexcept {
-    Inventory& inventory = m_player.inventory();
+    UI::Container({
+        .padding = UiRect::TopLeft(INVENTORY_PADDING),
+        .gap = INVENTORY_GAP,
+        .orientation = LayoutOrientation::Vertical
+    }, [this] {
+        Inventory& inventory = m_player.inventory();
 
-    const ItemSlot& taken_item = inventory.taken_item();
-    const bool item_is_taken = taken_item.has_item();
+        const ItemSlot& taken_item = inventory.taken_item();
+        const bool item_is_taken = taken_item.has_item();
 
-    const sge::Font& font = Assets::GetFont(FontAsset::AndyBold);
+        const sge::Font& font = Assets::GetFont(FontAsset::AndyBold);
 
-    UI::BeginContainer(ElementDesc()
-        .with_gap(INVENTORY_GAP)
-        .with_padding(UiRect::top_left(INVENTORY_PADDING))
-        .with_orientation(LayoutOrientation::Vertical));
-    {
         const uint32_t rows_count = m_show_extra_ui ? INVENTORY_ROWS : 1;
 
         const glm::vec2 hotbar_selected_size = glm::mix(glm::vec2(HOTBAR_SLOT_SIZE), glm::vec2(HOTBAR_SLOT_SIZE_SELECTED), m_hotbar_slot_anim);
         const glm::vec2 hotbar_unselected_size = glm::mix(glm::vec2(HOTBAR_SLOT_SIZE_SELECTED), glm::vec2(HOTBAR_SLOT_SIZE), m_hotbar_slot_anim);
 
         for (uint32_t j = 0; j < rows_count; ++j) {
-            UI::BeginContainer(ElementDesc()
-                .with_size(UiSize(Sizing::Fit(), m_show_extra_ui ? Sizing::Fit() : Sizing::Fixed(HOTBAR_SLOT_SIZE_SELECTED)))
-                .with_gap(INVENTORY_GAP)
-                .with_vertical_alignment(Alignment::Center)
-                .with_orientation(LayoutOrientation::Horizontal));
-            {
+            UI::Container({
+                .size = UiSize(Sizing::Fit(), m_show_extra_ui ? Sizing::Fit() : Sizing::Fixed(HOTBAR_SLOT_SIZE_SELECTED)),
+                .gap = INVENTORY_GAP,
+                .orientation = LayoutOrientation::Horizontal,
+                .vertical_alignment = Alignment::Center,
+            }, [=, this, &inventory]() {
                 TextureAsset texture = TextureAsset::UiInventoryBackground;
                 glm::vec2 back_size = glm::vec2(0.0f);
                 glm::vec2 item_size = glm::vec2(0.0f);
                 
                 for (uint32_t i = 0; i < CELLS_IN_ROW; ++i) {
                     const uint32_t index = j * CELLS_IN_ROW + i;
-                    const ItemSlot& item_slot = inventory.get_item(index);
+                    const ItemSlot item_slot = inventory.get_item(index);
                     const bool selected = inventory.selected_slot() == index;
                     float text_size = 14.0f;
                     
@@ -607,12 +607,11 @@ void InGameState::draw_inventory() noexcept {
                         text_size = m_previous_selected_slot == i ? glm::mix(text_size * 1.3f, text_size, m_hotbar_slot_anim) : text_size;
                     }
 
-                    UI::BeginElement(
-                        UiTypeID::HotbarSlot,
-                        ElementDesc(UiSize::Fixed(back_size))
-                            .with_vertical_alignment(Alignment::Center)
-                            .with_horizontal_alignment(Alignment::Center));
-                    {
+                    UI::Element(UiTypeID::HotbarSlot, {
+                        .size = UiSize::Fixed(back_size),
+                        .horizontal_alignment = Alignment::Center,
+                        .vertical_alignment = Alignment::Center,
+                    }, [=, this, &inventory] {
                         UI::SetCustomData(UiHotbarSlotData {
                             .texture = texture
                         });
@@ -620,7 +619,9 @@ void InGameState::draw_inventory() noexcept {
                         if (item_slot.has_item()) {
                             UI::AddElement(
                                 UiTypeID::InventorySlotItem,
-                                ElementDesc(UiSize::Fixed(item_size)),
+                                {
+                                    .size = UiSize::Fixed(item_size)
+                                },
                                 UiInventorySlotItemData {
                                     .item_id = item_slot.item->id
                                 }
@@ -629,12 +630,11 @@ void InGameState::draw_inventory() noexcept {
 
                         const glm::vec2 padding = glm::vec2(5.0f + (back_size - HOTBAR_SLOT_SIZE) * 0.25f);
 
-                        UI::BeginContainer(
-                            ElementDesc(UiSize::Fill())
-                                .with_orientation(LayoutOrientation::Vertical)
-                                .with_padding(UiRect::axes(padding.x, padding.y))
-                        );
-                        {
+                        UI::Container({
+                            .padding = UiRect::Horizontal(padding.x).top(padding.y).bottom(padding.y * 0.5f),
+                            .size = UiSize::Fill(),
+                            .orientation = LayoutOrientation::Vertical,
+                        }, [=, this, &font] {
                             if (index < CELLS_IN_ROW && (item_slot.has_item() || m_show_extra_ui)) {
                                 float index_size = text_size;
                                 float index_color = 0.9f;
@@ -648,8 +648,10 @@ void InGameState::draw_inventory() noexcept {
                                 const glm::vec2 size = sge::calculate_text_bounds(font, 1, &index, index_size);
                                 UI::AddElement(
                                     UiTypeID::InventorySlotIndex,
-                                    ElementDesc(UiSize::Fixed(size))
-                                        .with_self_alignment(Alignment::End),
+                                    {
+                                        .size = UiSize::Fixed(size),
+                                        .self_alignment = Alignment::End
+                                    },
                                     UiInventorySlotIndexData {
                                         .color = sge::LinearRgba(index_color),
                                         .size = index_size,
@@ -667,9 +669,11 @@ void InGameState::draw_inventory() noexcept {
 
                                 UI::AddElement(
                                     UiTypeID::InventorySlotQuantity,
-                                    ElementDesc(UiSize::Fixed(quantity_size))
-                                        .with_self_alignment(Alignment::Center),
-                                    UiInventorySlotQuantityData {
+                                    {
+                                        .size = UiSize::Fixed(quantity_size),
+                                        .self_alignment = Alignment::Center
+                                    },
+                                    UiTextData {
                                         .color = color,
                                         .size = text_size,
                                         .quantity = item_slot.item->stack,
@@ -677,8 +681,7 @@ void InGameState::draw_inventory() noexcept {
                                     }
                                 );
                             }
-                        }
-                        UI::EndElement();
+                        });
 
                         if (index < CELLS_IN_ROW) {
                             if (m_show_extra_ui) {
@@ -715,16 +718,11 @@ void InGameState::draw_inventory() noexcept {
                                 }
                             });
                         }
-                    }
-                    UI::EndElement();
+                    });
                 }
-            }
-            UI::EndElement();
+            });
         }
-    }
-    UI::EndElement();
-
-    GameRenderer::EndOrderMode();
+    });
 }
 
 #endif
@@ -808,7 +806,7 @@ void InGameState::draw_ui() noexcept {
             } break;
 
             case UiTypeID::InventorySlotQuantity: {
-                const UiInventorySlotQuantityData* data = static_cast<const UiInventorySlotQuantityData*>(element.custom_data);
+                const UiTextData* data = static_cast<const UiTextData*>(element.custom_data);
                
                 const sge::RichText text = sge::rich_text(temp_format("{}", data->quantity), data->size, data->color);
 
