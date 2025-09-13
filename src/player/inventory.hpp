@@ -38,6 +38,8 @@ struct TakenItem {
 class Inventory {
 public:
     Inventory() = default;
+    Inventory(const Inventory&) = delete;
+    Inventory& operator =(const Inventory&) = delete;
 
     inline void set_selected_slot(ItemIndex index) noexcept {
         SGE_ASSERT(index < CELLS_IN_ROW);

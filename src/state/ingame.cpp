@@ -11,6 +11,7 @@
 #include "../renderer/renderer.hpp"
 #include "../background.hpp"
 #include "../diagnostic/frametime.hpp"
+#include "SGE/types/rich_text.hpp"
 
 #include "ingame.hpp"
 
@@ -25,11 +26,11 @@ static constexpr float INVENTORY_GAP = 4.0f;
 
 namespace UiTypeID {
     enum : uint8_t {
-        HotbarSlot = 1,
+        HotbarSlot = 0,
         InventorySlot,
         InventorySlotItem,
         InventorySlotIndex,
-        InventorySlotQuantity
+        Text
     };
 }
 
@@ -45,13 +46,6 @@ struct UiInventorySlotIndexData {
     sge::LinearRgba color;
     float size;
     char index;
-    FontAsset font;
-};
-
-struct UiTextData {
-    sge::LinearRgba color;
-    float size;
-    uint32_t quantity;
     FontAsset font;
 };
 
@@ -553,139 +547,164 @@ void InGameState::draw_cursor() noexcept {
 
 void InGameState::draw_inventory() noexcept {
     UI::Container({
-        .padding = UiRect::TopLeft(INVENTORY_PADDING),
-        .gap = INVENTORY_GAP,
+        .padding = UiRect(INVENTORY_PADDING, 0.0f, 4.0f, 0.0f),
         .orientation = LayoutOrientation::Vertical
     }, [this] {
         Inventory& inventory = m_player.inventory();
-
-        const ItemSlot& taken_item = inventory.taken_item();
-        const bool item_is_taken = taken_item.has_item();
-
         const sge::Font& font = Assets::GetFont(FontAsset::AndyBold);
 
-        const uint32_t rows_count = m_show_extra_ui ? INVENTORY_ROWS : 1;
+        const ItemSlot item_slot = inventory.get_item(inventory.selected_slot());
+        
+        const std::string_view title = m_show_extra_ui
+            ? temp_format("Inventory")
+            : item_slot.has_item()
+                ? item_slot.item->name
+                : "Items";
+        
+        UI::Text<UiTypeID::Text>(
+            font,
+            sge::rich_text(title, INVENTORY_TITLE_SIZE, sge::LinearRgba(0.8f)),
+            {
+                .self_alignment = m_show_extra_ui ? Alignment::Start : Alignment::Center
+            }
+        );
 
-        const glm::vec2 hotbar_selected_size = glm::mix(glm::vec2(HOTBAR_SLOT_SIZE), glm::vec2(HOTBAR_SLOT_SIZE_SELECTED), m_hotbar_slot_anim);
-        const glm::vec2 hotbar_unselected_size = glm::mix(glm::vec2(HOTBAR_SLOT_SIZE_SELECTED), glm::vec2(HOTBAR_SLOT_SIZE), m_hotbar_slot_anim);
+        UI::Container({
+            .gap = INVENTORY_GAP,
+            .orientation = LayoutOrientation::Vertical,
+        }, [&] {
+            const uint32_t rows_count = m_show_extra_ui ? INVENTORY_ROWS : 1;
 
-        for (uint32_t j = 0; j < rows_count; ++j) {
-            UI::Container({
-                .size = UiSize(Sizing::Fit(), m_show_extra_ui ? Sizing::Fit() : Sizing::Fixed(HOTBAR_SLOT_SIZE_SELECTED)),
-                .gap = INVENTORY_GAP,
-                .orientation = LayoutOrientation::Horizontal,
-                .vertical_alignment = Alignment::Center,
-            }, [=, this, &inventory]() {
-                TextureAsset texture = TextureAsset::UiInventoryBackground;
-                glm::vec2 back_size = glm::vec2(0.0f);
-                glm::vec2 item_size = glm::vec2(0.0f);
-                
-                for (uint32_t i = 0; i < CELLS_IN_ROW; ++i) {
-                    const uint32_t index = j * CELLS_IN_ROW + i;
-                    const ItemSlot item_slot = inventory.get_item(index);
-                    const bool selected = inventory.selected_slot() == index;
-                    float text_size = 14.0f;
+            const glm::vec2 hotbar_selected_size = glm::mix(glm::vec2(HOTBAR_SLOT_SIZE), glm::vec2(HOTBAR_SLOT_SIZE_SELECTED), m_hotbar_slot_anim);
+            const glm::vec2 hotbar_unselected_size = glm::mix(glm::vec2(HOTBAR_SLOT_SIZE_SELECTED), glm::vec2(HOTBAR_SLOT_SIZE), m_hotbar_slot_anim);
+
+            for (uint32_t j = 0; j < rows_count; ++j) {
+                UI::Container({
+                    .size = UiSize(Sizing::Fit(), m_show_extra_ui ? Sizing::Fit() : Sizing::Fixed(HOTBAR_SLOT_SIZE_SELECTED)),
+                    .gap = INVENTORY_GAP,
+                    .orientation = LayoutOrientation::Horizontal,
+                    .vertical_alignment = Alignment::Center,
+                }, [&] () {
+                    const bool item_is_taken = inventory.taken_item().has_item();
+
+                    TextureAsset texture = TextureAsset::UiInventoryBackground;
+                    glm::vec2 back_size = glm::vec2(0.0f);
+                    glm::vec2 item_size = glm::vec2(0.0f);
                     
-                    if (item_slot.has_item()) {
-                        item_size = Assets::GetItemTexture(item_slot.item->id).size();
-                        item_size = glm::min(item_size, glm::vec2(32.0f));
-                    }
-
-                    if (m_show_extra_ui) {
-                        texture = TextureAsset::UiInventoryBackground;
-                        back_size = glm::vec2(INVENTORY_SLOT_SIZE);
-                        item_size *= 0.95f;
-                        text_size *= 1.15f;
-                    } else if (selected) {
-                        texture = TextureAsset::UiInventorySelected;
-                        back_size = hotbar_selected_size;
-                        text_size = glm::mix(text_size, text_size * 1.3f, m_hotbar_slot_anim);
-                    } else {
-                        texture = TextureAsset::UiInventoryHotbar;
-                        item_size *= 0.9f;
-                        back_size = m_previous_selected_slot == i ? hotbar_unselected_size : glm::vec2(HOTBAR_SLOT_SIZE);
-                        text_size = m_previous_selected_slot == i ? glm::mix(text_size * 1.3f, text_size, m_hotbar_slot_anim) : text_size;
-                    }
-
-                    UI::Element(UiTypeID::HotbarSlot, {
-                        .size = UiSize::Fixed(back_size),
-                        .horizontal_alignment = Alignment::Center,
-                        .vertical_alignment = Alignment::Center,
-                    }, [=, this, &inventory] {
-                        UI::SetCustomData(UiHotbarSlotData {
-                            .texture = texture
-                        });
-
+                    for (uint32_t i = 0; i < CELLS_IN_ROW; ++i) {
+                        const uint32_t index = j * CELLS_IN_ROW + i;
+                        const ItemSlot item_slot = inventory.get_item(index);
+                        const bool selected = inventory.selected_slot() == index;
+                        float text_size = 14.0f;
+                        
                         if (item_slot.has_item()) {
-                            UI::AddElement(
-                                UiTypeID::InventorySlotItem,
-                                {
-                                    .size = UiSize::Fixed(item_size)
-                                },
-                                UiInventorySlotItemData {
-                                    .item_id = item_slot.item->id
-                                }
-                            );
+                            item_size = Assets::GetItemTexture(item_slot.item->id).size();
+                            item_size = glm::min(item_size, glm::vec2(32.0f));
                         }
 
-                        const glm::vec2 padding = glm::vec2(5.0f + (back_size - HOTBAR_SLOT_SIZE) * 0.25f);
+                        if (m_show_extra_ui) {
+                            texture = TextureAsset::UiInventoryBackground;
+                            back_size = glm::vec2(INVENTORY_SLOT_SIZE);
+                            item_size *= 0.95f;
+                            text_size *= 1.15f;
+                        } else if (selected) {
+                            texture = TextureAsset::UiInventorySelected;
+                            back_size = hotbar_selected_size;
+                            text_size = glm::mix(text_size, text_size * 1.3f, m_hotbar_slot_anim);
+                        } else {
+                            texture = TextureAsset::UiInventoryHotbar;
+                            item_size *= 0.9f;
+                            back_size = m_previous_selected_slot == i ? hotbar_unselected_size : glm::vec2(HOTBAR_SLOT_SIZE);
+                            text_size = m_previous_selected_slot == i ? glm::mix(text_size * 1.3f, text_size, m_hotbar_slot_anim) : text_size;
+                        }
 
-                        UI::Container({
-                            .padding = UiRect::Horizontal(padding.x).top(padding.y).bottom(padding.y * 0.5f),
-                            .size = UiSize::Fill(),
-                            .orientation = LayoutOrientation::Vertical,
-                        }, [=, this, &font] {
-                            if (index < CELLS_IN_ROW && (item_slot.has_item() || m_show_extra_ui)) {
-                                float index_size = text_size;
-                                float index_color = 0.9f;
-                                if (m_show_extra_ui && selected && !item_is_taken) {
-                                    index_size *= 1.15f;
-                                    index_color = 1.0f;
+                        UI::Element<UiTypeID::HotbarSlot>({
+                            .size = UiSize::Fixed(back_size),
+                            .horizontal_alignment = Alignment::Center,
+                            .vertical_alignment = Alignment::Center,
+                        }, [&] {
+                            UI::SetCustomData(UiHotbarSlotData {
+                                .texture = texture
+                            });
+
+                            if (item_slot.has_item()) {
+                                UI::AddElement<UiTypeID::InventorySlotItem>(
+                                    {
+                                        .size = UiSize::Fixed(item_size)
+                                    },
+                                    UiInventorySlotItemData {
+                                        .item_id = item_slot.item->id
+                                    }
+                                );
+                            }
+
+                            const glm::vec2 padding = glm::vec2(5.0f + (back_size - HOTBAR_SLOT_SIZE) * 0.25f);
+
+                            UI::Container({
+                                .padding = UiRect::Horizontal(padding.x).top(padding.y).bottom(padding.y * 0.5f),
+                                .size = UiSize::Fill(),
+                                .orientation = LayoutOrientation::Vertical,
+                            }, [&] {
+                                if (index < CELLS_IN_ROW && (item_slot.has_item() || m_show_extra_ui)) {
+                                    float index_size = text_size;
+                                    float index_color = 0.9f;
+                                    if (m_show_extra_ui && selected && !item_is_taken) {
+                                        index_size *= 1.15f;
+                                        index_color = 1.0f;
+                                    }
+                                    const char index = '0' + (i + 1) % 10;
+
+                                    const glm::vec2 size = sge::calculate_text_bounds(font, 1, &index, index_size);
+                                    UI::AddElement<UiTypeID::InventorySlotIndex>(
+                                        {
+                                            .size = UiSize::Fixed(size),
+                                            .self_alignment = Alignment::End
+                                        },
+                                        UiInventorySlotIndexData {
+                                            .color = sge::LinearRgba(index_color),
+                                            .size = index_size,
+                                            .index = index,
+                                            .font = FontAsset::AndyBold,
+                                        }
+                                    );
                                 }
-                                const char index = '0' + (i + 1) % 10;
 
-                                // TODO: Implement UI::Text()
-                                const glm::vec2 size = sge::calculate_text_bounds(font, 1, &index, index_size);
-                                UI::AddElement(
-                                    UiTypeID::InventorySlotIndex,
-                                    {
-                                        .size = UiSize::Fixed(size),
-                                        .self_alignment = Alignment::End
-                                    },
-                                    UiInventorySlotIndexData {
-                                        .color = sge::LinearRgba(index_color),
-                                        .size = index_size,
-                                        .index = index,
-                                        .font = FontAsset::AndyBold,
-                                    }
-                                );
-                            }
+                                if (item_slot.has_item() && item_slot.item->stack > 1) {
+                                    sge::LinearRgba color = sge::LinearRgba(0.9f);
+                                    UI::Spacer();
 
-                            if (item_slot.has_item() && item_slot.item->stack > 1) {
-                                sge::LinearRgba color = sge::LinearRgba(0.9f);
-                                UI::Spacer();
+                                    UI::Text<UiTypeID::Text>(
+                                        font,
+                                        sge::rich_text(temp_format("{}", item_slot.item->stack), text_size, color),
+                                        {
+                                            .self_alignment = Alignment::Center
+                                        }
+                                    );
+                                }
+                            });
 
-                                const glm::vec2 quantity_size = sge::calculate_text_bounds(font, text_size, temp_format("{}", item_slot.item->stack));
-
-                                UI::AddElement(
-                                    UiTypeID::InventorySlotQuantity,
-                                    {
-                                        .size = UiSize::Fixed(quantity_size),
-                                        .self_alignment = Alignment::Center
-                                    },
-                                    UiTextData {
-                                        .color = color,
-                                        .size = text_size,
-                                        .quantity = item_slot.item->stack,
-                                        .font = FontAsset::AndyBold,
-                                    }
-                                );
-                            }
-                        });
-
-                        if (index < CELLS_IN_ROW) {
-                            if (m_show_extra_ui) {
-                                UI::OnClick([&inventory, index](sge::MouseButton button) {
+                            if (index < CELLS_IN_ROW) {
+                                if (m_show_extra_ui) {
+                                    UI::OnClick([&inventory, index](sge::MouseButton button) {
+                                        if (button == sge::MouseButton::Left) {
+                                            if (inventory.has_taken_item()) {
+                                                inventory.put_item(index);
+                                            } else {
+                                                inventory.take_item(index);
+                                            }
+                                        } else if (button == sge::MouseButton::Right) {
+                                            inventory.take_item(index, 1);
+                                        }
+                                    });    
+                                } else {
+                                    UI::OnClick([this, &inventory, index](sge::MouseButton button) {
+                                        if (button == sge::MouseButton::Left) {
+                                            select_hotbar_slot(inventory, index);
+                                        }
+                                    });
+                                }
+                            } else {
+                                UI::OnClick([this, &inventory, index](sge::MouseButton button) {
                                     if (button == sge::MouseButton::Left) {
                                         if (inventory.has_taken_item()) {
                                             inventory.put_item(index);
@@ -693,35 +712,17 @@ void InGameState::draw_inventory() noexcept {
                                             inventory.take_item(index);
                                         }
                                     } else if (button == sge::MouseButton::Right) {
-                                        inventory.take_item(index, 1);
-                                    }
-                                });    
-                            } else {
-                                UI::OnClick([this, &inventory, index](sge::MouseButton button) {
-                                    if (button == sge::MouseButton::Left) {
-                                        select_hotbar_slot(inventory, index);
+                                        if (m_show_extra_ui) {
+                                            inventory.take_item(index, 1);
+                                        }
                                     }
                                 });
                             }
-                        } else {
-                            UI::OnClick([this, &inventory, index](sge::MouseButton button) {
-                                if (button == sge::MouseButton::Left) {
-                                    if (inventory.has_taken_item()) {
-                                        inventory.put_item(index);
-                                    } else {
-                                        inventory.take_item(index);
-                                    }
-                                } else if (button == sge::MouseButton::Right) {
-                                    if (m_show_extra_ui) {
-                                        inventory.take_item(index, 1);
-                                    }
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-        }
+                        });
+                    }
+                });
+            }
+        });
     });
 }
 
@@ -805,12 +806,9 @@ void InGameState::draw_ui() noexcept {
                 GameRenderer::DrawCharUI(data->index, element.position, data->size, data->color, font, order);
             } break;
 
-            case UiTypeID::InventorySlotQuantity: {
-                const UiTextData* data = static_cast<const UiTextData*>(element.custom_data);
-               
-                const sge::RichText text = sge::rich_text(temp_format("{}", data->quantity), data->size, data->color);
-
-                GameRenderer::DrawTextUI(text, element.position, font, order);
+            case UiTypeID::Text: {
+                const TextData* data = static_cast<const TextData*>(element.text_data);
+                GameRenderer::DrawTextUI(data->sections, data->sections_count, element.position, font, order);
             } break;
         }
     }

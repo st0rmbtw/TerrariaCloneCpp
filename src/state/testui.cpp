@@ -42,7 +42,7 @@ void TestUI::Render() {
 
     UI::Start(RootDesc(m_camera.viewport()));
 
-    UI::Element(UiTypeID::Rectangle, {
+    UI::Element<UiTypeID::Rectangle>({
         .padding = UiRect::All(100.0f),
         .size = UiSize::Fill(),
     }, [] {
@@ -50,7 +50,7 @@ void TestUI::Render() {
             .color = sge::LinearRgba(0.8f, 0.2f, 0.2f)
         });
 
-        UI::Element(UiTypeID::Rectangle, {
+        UI::Element<UiTypeID::Rectangle>({
             .size = UiSize::Fill(),
             .gap = 10.0f,
             .orientation = LayoutOrientation::Horizontal
@@ -60,7 +60,7 @@ void TestUI::Render() {
             });
 
             for (int i = 0; i < 10; ++i) {
-                UI::Element(UiTypeID::Rectangle, {
+                UI::Element<UiTypeID::Rectangle>({
                     .id = ID::Local(temp_format("ListItem{}", i)),
                     .padding = UiRect::All(10.0f),
                     .size = UiSize::Fixed(50.0f, 50.0f),
@@ -70,8 +70,7 @@ void TestUI::Render() {
                         .color = sge::LinearRgba(0.2f, 0.2f, 0.8f)
                     });
                     
-                    UI::AddElement(
-                        UiTypeID::Rectangle,
+                    UI::AddElement<UiTypeID::Rectangle>(
                         {
                             .size = UiSize::Fill()
                         },

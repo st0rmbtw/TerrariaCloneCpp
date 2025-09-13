@@ -9,9 +9,11 @@
 #include <SGE/utils/containers/swapbackvector.hpp>
 
 #include "ui.hpp"
+#include "SGE/types/rich_text.hpp"
+#include "SGE/utils/text.hpp"
 
 inline constexpr size_t MAX_NODE_STACK_SIZE = 100;
-inline constexpr size_t ARENA_SIZE = 1024 * 1024;
+inline constexpr size_t ARENA_CAPACITY = 1024 * 1024;
 
 class Arena {
 public:
@@ -46,28 +48,30 @@ struct Node {
     NodeID unique_id{};
     std::function<void(sge::MouseButton)> on_click_callback = nullptr;
 
-    std::vector<size_t> children;
-
+    std::vector<size_t> children{};
+    
     UiRect padding;
     UiSize sizing;
-
+    
     glm::vec2 pos = glm::vec2(0.0f);
     glm::vec2 size = glm::vec2(0.0f);
-
+    
     void* custom_data = nullptr;
     size_t custom_data_size = 0;
-
+    
     float gap = 0.0f;
     
     uint32_t type_id = 0;
-
     uint32_t z_index = 0;
+    uint32_t text_data_index = 0;
     
     LayoutOrientation orientation = LayoutOrientation::Horizontal;
     std::optional<Alignment> self_alignment = Alignment::Start;
     Alignment horizontal_alignment = Alignment::Start;
     Alignment vertical_alignment = Alignment::Start;
+
     bool render = false;
+    bool text_node = false;
 };
 
 static struct {
@@ -80,9 +84,10 @@ static struct {
 
     sge::SwapbackVector<Node*> growable_nodes{};
     
-    Arena arena{ ARENA_SIZE };
+    Arena arena{ ARENA_CAPACITY };
 
     std::vector<Node> nodes{};
+    std::vector<TextData> text_data{};
     std::vector<UiElement> render_elements{};
     
     size_t node_stack_size = 0;
@@ -106,6 +111,16 @@ static Node& ParentNode() {
 }
 
 static void NodeAddElement(Node& parent, Node&& child) {
+    SGE_ASSERT(!parent.text_node);
+
+    const size_t index = state.nodes.size();
+    parent.children.push_back(index);
+    state.nodes.push_back(std::move(child));
+}
+
+static void PushNode(Node& parent, Node&& child) {
+    SGE_ASSERT(!parent.text_node);
+
     const size_t index = state.nodes.size();
     parent.children.push_back(index);
     
@@ -165,6 +180,13 @@ static inline ElementID HashString(const std::string_view key, const uint32_t se
     };
 }
 
+static inline std::string_view CopyStringToArena(std::string_view string) {
+    char* str = static_cast<char*>(state.arena.allocate(string.size() + 1, alignof(std::string_view::value_type)));
+    memcpy(str, string.data(), string.size());
+    str[string.size()] = '\0'; // Add a null terminator just in case
+    return { str, string.size() + 1 };
+}
+
 [[nodiscard]]
 bool UI::IsMouseOverUi() {
     return state.any_hovered;
@@ -207,6 +229,9 @@ void UI::Update() {
     while (!state.search_stack.empty()) {
         Node* current_node = state.search_stack.back();
         state.search_stack.pop_back();
+
+        if (current_node->text_node)
+            continue;
 
         const sge::Rect element_rect = sge::Rect::from_top_left(current_node->pos, current_node->size);
         const bool hovered = element_rect.contains(sge::Input::MouseScreenPosition());
@@ -260,6 +285,7 @@ void UI::Start(const RootDesc& desc) {
     state.arena.reset();
     state.nodes.clear();
     state.render_elements.clear();
+    state.text_data.clear();
 
     state.node_stack_size = 0;
 
@@ -278,11 +304,13 @@ void UI::Start(const RootDesc& desc) {
         node.orientation = desc.orientation();
         node.horizontal_alignment = desc.vertical_alignment();
         node.render = false;
+        node.text_node = false;
     }
     PushNode(std::move(node));
 }
 
 static ElementID GenerateId(Node& parent) {
+    SGE_ASSERT(!parent.text_node);
     ElementID id = HashNumber(parent.children.size(), parent.unique_id.id);
     return id;
 }
@@ -322,10 +350,11 @@ void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, bool render) {
         new_node.self_alignment = desc.self_alignment;
         new_node.render = render;
     }
-    NodeAddElement(parent, std::move(new_node));
+    PushNode(parent, std::move(new_node));
 }
 
 static void GrowElementsHorizontally(Node& parent) {
+    if (parent.text_node) return;
     if (parent.children.empty()) return;
 
     float remaining_width = parent.size.x - parent.padding.left() - parent.padding.right();
@@ -377,6 +406,7 @@ static void GrowElementsHorizontally(Node& parent) {
 }
 
 static void GrowElementsVertically(Node& parent) {
+    if (parent.text_node) return;
     if (parent.children.empty()) return;
 
     float remaining_height = parent.size.y - parent.padding.top() - parent.padding.bottom();
@@ -433,6 +463,8 @@ void UI::EndElement() {
     Node& node = TopNode();
     --state.node_stack_size;
 
+    if (node.text_node) return;
+
     if (node.orientation == LayoutOrientation::Stack) {
         uint32_t z_index = node.z_index;
         for (uint32_t child_index : node.children) {
@@ -476,6 +508,51 @@ void UI::EndElement() {
     }
 }
 
+void UI::Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSection* sections, const size_t count, const TextElementDesc desc) {
+    glm::vec2 measured_size = glm::vec2(0.0f);
+
+    for (size_t i = 0; i < count; ++i) {
+        const sge::RichTextSection& section = sections[i];
+        measured_size = glm::max(measured_size, calculate_text_bounds(font, section.text.size(), section.text.data(), section.size));
+    }
+
+    // Copy section contents
+    sge::RichTextSection* arena_sections = static_cast<sge::RichTextSection*>(state.arena.allocate(sizeof(sge::RichTextSection) * count, alignof(sge::RichTextSection)));
+    for (size_t i = 0; i < count; ++i) {
+        const sge::RichTextSection& section = sections[i];
+        arena_sections->size = section.size;
+        arena_sections->color = section.color;
+        arena_sections->text = CopyStringToArena(section.text);
+    }
+
+    const size_t text_data_index = state.text_data.size();
+    state.text_data.push_back(TextData {
+        .font = font,
+        .sections = arena_sections,
+        .sections_count = count
+    });
+
+    Node& parent = TopNode();
+
+    const NodeID id = GenerateId(parent);
+
+    Node new_node;
+    {
+        new_node.children = {};
+        new_node.pos = glm::vec2(0.0f);
+        new_node.size = measured_size;
+        new_node.sizing = UiSize::Fixed(measured_size);
+        new_node.text_data_index = text_data_index;
+        new_node.unique_id = id;
+        new_node.type_id = type_id;
+        new_node.z_index = parent.z_index + 1;
+        new_node.render = true;
+        new_node.text_node = true;
+        new_node.self_alignment = desc.self_alignment;
+    }
+    NodeAddElement(parent, std::move(new_node));
+}
+
 static void FinalizeLayout() {
     state.search_stack.clear();
     state.search_stack.push_back(&state.nodes[0]);
@@ -491,16 +568,25 @@ static void FinalizeLayout() {
         GrowElementsVertically(*current_node);
 
         if (current_node->render) {
+            TextData* text_data = nullptr;
+            if (current_node->text_node) {
+                text_data = &state.text_data[current_node->text_data_index];
+            }
+
             state.render_elements.push_back(UiElement {
+                .unique_id = current_node->unique_id,
                 .position = current_node->pos,
                 .size = current_node->size,
-                .unique_id = current_node->unique_id,
                 .custom_data = current_node->custom_data,
                 .custom_data_size = current_node->custom_data_size,
+                .text_data = text_data,
                 .type_id = current_node->type_id,
                 .z_index = current_node->z_index
             });
         }
+
+        if (current_node->text_node)
+            continue;
 
         glm::vec2 pos = current_node->pos + glm::vec2(current_node->padding.left(), current_node->padding.top());
 
@@ -617,15 +703,10 @@ const std::vector<UiElement>& UI::Finish() {
 [[nodiscard]]
 ElementID ID::Local(const std::string_view key) {
     const uint32_t parent_id = UI::GetParentID();
-    char* str = static_cast<char*>(state.arena.allocate(key.size() + 1, alignof(std::string_view::value_type)));
-    memcpy(str, key.data(), key.size());
-    str[key.size()] = '\0';
-    return HashString(std::string_view{ str, key.size() + 1 }, parent_id);
+    return HashString(CopyStringToArena(key), parent_id);
 }
 
 ElementID ID::Global(const std::string_view key, uint32_t index) {
-    char* str = static_cast<char*>(state.arena.allocate(key.size() + 1, alignof(std::string_view::value_type)));
-    memcpy(str, key.data(), key.size());
-    str[key.size()] = '\0';
-    return HashString(std::string_view{ str, key.size() + 1 }, index);
+    CopyStringToArena(key);
+    return HashString(CopyStringToArena(key), index);
 }

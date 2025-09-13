@@ -6,9 +6,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <functional>
 #include <glm/vec2.hpp>
 #include <SGE/input.hpp>
-#include <SGE/types/sprite.hpp>
+#include <SGE/types/rich_text.hpp>
+#include <SGE/types/font.hpp>
 
 class UiRect {
 public:
@@ -317,17 +319,28 @@ struct ElementDesc {
     Alignment vertical_alignment{ Alignment::Start };
 };
 
+struct TextElementDesc {
+    std::optional<Alignment> self_alignment{ std::nullopt };
+};
+
+struct TextData {
+    const sge::Font& font;
+    const sge::RichTextSection* sections;
+    size_t sections_count;
+};
+
 struct UiElement {
+    ElementID unique_id{};
+
     glm::vec2 position = glm::vec2(0.0f);
     glm::vec2 size = glm::vec2(0.0f);
-
-    ElementID unique_id{};
 
     const void* custom_data = nullptr;
     size_t custom_data_size = 0;
 
-    uint32_t type_id = 0;
+    const TextData* text_data = nullptr;
 
+    uint32_t type_id = 0;
     uint32_t z_index = 0;
 };
 
@@ -336,30 +349,42 @@ namespace UI {
 
     void Start(const RootDesc& desc);
     void BeginElement(uint32_t type_id, const ElementDesc& desc, bool render = true);
+    void EndElement();
+
+    void Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSection* sections, const size_t count, const TextElementDesc desc = {});
+    
+    void OnClick(std::function<void(sge::MouseButton)>&& on_press);
+
+    void SetCustomData(const void* custom_data, size_t custom_data_size, size_t custom_data_alignment = alignof(std::max_align_t));
+
+    template <uint32_t TypeID, size_t Size>
+    inline void Text(const sge::Font& font, const sge::RichText<Size>& text, const TextElementDesc desc = {}) {
+        Text(TypeID, font, text.sections().data(), text.size(), desc);
+    }
 
     inline void BeginContainer(const ElementDesc& desc) {
         BeginElement(0, desc, false);
     }
 
-    void EndElement();
-    
-    void OnClick(std::function<void(sge::MouseButton)>&& on_press);
-
-    void SetCustomData(const void* custom_data, size_t custom_data_size, size_t custom_data_alignment = alignof(std::max_align_t));
+    template <uint32_t TypeID>
+    inline void BeginElement(const ElementDesc& desc, bool render = true) {
+        BeginElement(TypeID, desc, render);
+    }
 
     inline void Spacer(const UiSize size = UiSize::Fill()) {
         BeginContainer(ElementDesc{ .size = size });
         EndElement();
     }
 
-    inline void AddElement(uint32_t type_id, const ElementDesc& desc) {
-        BeginElement(type_id, desc);
+    template <uint32_t TypeID>
+    inline void AddElement(const ElementDesc& desc) {
+        BeginElement(TypeID, desc);
         EndElement();
     }
 
-    template <typename T>
-    inline void AddElement(uint32_t type_id, const ElementDesc& desc, const T& custom_data) {
-        BeginElement(type_id, desc);
+    template <uint32_t TypeID, typename T>
+    inline void AddElement(const ElementDesc& desc, const T& custom_data) {
+        BeginElement(TypeID, desc);
         SetCustomData(&custom_data, sizeof(custom_data), alignof(T));
         EndElement();
     }
@@ -376,9 +401,9 @@ namespace UI {
         EndElement();
     }
 
-    template <typename F>
-    inline void Element(uint32_t type_id, const ElementDesc& desc, F&& children) {
-        BeginElement(type_id, desc);
+    template <uint32_t TypeID, typename F>
+    inline void Element(const ElementDesc& desc, F&& children) {
+        BeginElement(TypeID, desc);
             std::forward<F>(children)();
         EndElement();
     }
