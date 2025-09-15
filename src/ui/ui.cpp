@@ -8,6 +8,7 @@
 #include <SGE/utils/containers/swapbackvector.hpp>
 #include <SGE/types/rich_text.hpp>
 #include <SGE/utils/text.hpp>
+#include <SGE/profile.hpp>
 
 #include "arena.hpp"
 #include "ui.hpp"
@@ -17,11 +18,30 @@ inline constexpr size_t ARENA_CAPACITY = 1024 * 1024;
 
 using NodeID = ElementID;
 
+template <typename T>
+class ArenaAllocator {
+public:
+    using value_type = T;
+
+    ArenaAllocator(Arena& arena) : m_arena{ &arena } {}
+
+    value_type* allocate(std::size_t n) {
+        return static_cast<value_type*>(m_arena->allocate(n*sizeof(value_type), alignof(value_type)));
+    }
+
+    void deallocate(value_type*, std::size_t) {
+        // do nothing
+    }
+
+private:
+    Arena* m_arena = nullptr;
+};
+
 struct Node {
     NodeID unique_id{};
     std::function<void(sge::MouseButton)> on_click_callback = nullptr;
 
-    std::vector<size_t> children{};
+    std::vector<uint32_t, ArenaAllocator<uint32_t>> children;
     
     UiRect padding;
     UiSize sizing;
@@ -46,13 +66,18 @@ struct Node {
     bool render = false;
     bool text_node = false;
     bool hoverable = false;
+
+    Node(Arena& arena) : children{ arena } {}
 };
 
 static struct {
-    size_t node_stack[MAX_NODE_STACK_SIZE];
+    uint32_t node_stack[MAX_NODE_STACK_SIZE];
     
     std::unordered_set<NodeID> hovered_ids{};
     std::unordered_set<NodeID> search_visited{};
+
+    NodeID active_id{};
+
     sge::SwapbackVector<Node*> search_stack{};
     sge::SwapbackVector<Node*> postorder_stack{};
 
@@ -66,8 +91,6 @@ static struct {
     
     size_t node_stack_size = 0;
 
-    NodeID active_id{};
-
     bool any_hovered = false;
 } state;
 
@@ -78,29 +101,32 @@ static inline bool NodeIsClickable(const Node& node) noexcept {
 
 static Node& TopNode() noexcept {
     SGE_ASSERT(state.node_stack_size > 0);
-
-    const size_t index = state.node_stack[state.node_stack_size-1];
+    const uint32_t index = state.node_stack[state.node_stack_size-1];
     return state.nodes[index];
 }
 
 static Node& ParentNode() noexcept {
     SGE_ASSERT(state.node_stack_size > 1);
-    const size_t index = state.node_stack[state.node_stack_size-2];
+    const uint32_t index = state.node_stack[state.node_stack_size-2];
     return state.nodes[index];
 }
 
 static void NodeAddElement(Node& parent, Node&& child) {
     SGE_ASSERT(!parent.text_node);
+    SGE_ASSERT(state.nodes.size() < UINT32_MAX);
+    SGE_ASSERT(state.node_stack_size < MAX_NODE_STACK_SIZE);
 
-    const size_t index = state.nodes.size();
+    const uint32_t index = state.nodes.size();
     parent.children.push_back(index);
     state.nodes.push_back(std::move(child));
 }
 
 static void PushNode(Node& parent, Node&& child) {
     SGE_ASSERT(!parent.text_node);
+    SGE_ASSERT(state.nodes.size() < UINT32_MAX);
+    SGE_ASSERT(state.node_stack_size < MAX_NODE_STACK_SIZE);
 
-    const size_t index = state.nodes.size();
+    const uint32_t index = state.nodes.size();
     parent.children.push_back(index);
     
     state.node_stack[state.node_stack_size] = index;
@@ -109,14 +135,15 @@ static void PushNode(Node& parent, Node&& child) {
     state.nodes.push_back(std::move(child));
 }
 
-static size_t PushNode(Node&& node) {
-    const size_t index = state.nodes.size();
+static void PushNode(Node&& node) {
+    SGE_ASSERT(state.nodes.size() < UINT32_MAX);
+    SGE_ASSERT(state.node_stack_size < MAX_NODE_STACK_SIZE);
+
+    const uint32_t index = state.nodes.size();
     state.nodes.push_back(std::move(node));
 
     state.node_stack[state.node_stack_size] = index;
     state.node_stack_size += 1;
-
-    return index;
 }
 
 static inline ElementID HashNumber(const uint32_t offset, const uint32_t seed) noexcept {
@@ -259,6 +286,8 @@ void UI::Update() {
 }
 
 void UI::Start(const RootDesc& desc) {
+    ZoneScoped;
+
     state.arena.clear();
     state.nodes.clear();
     state.render_elements.clear();
@@ -267,7 +296,7 @@ void UI::Start(const RootDesc& desc) {
     state.node_stack_size = 0;
 
     // Create root node
-    Node node;
+    Node node(state.arena);
     {
         node.unique_id = NodeID();
         node.size = desc.size();
@@ -281,13 +310,15 @@ void UI::Start(const RootDesc& desc) {
     PushNode(std::move(node));
 }
 
-static ElementID GenerateId(Node& parent) {
+static inline ElementID GenerateId(Node& parent) noexcept {
     SGE_ASSERT(!parent.text_node);
     ElementID id = HashNumber(parent.children.size(), parent.unique_id.id);
     return id;
 }
 
 void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, bool render) {
+    ZoneScoped;
+
     glm::vec2 size = glm::vec2(0.0f);
     if (desc.size.width().type() == Sizing::Type::Fixed) {
         size.x = desc.size.width().value();
@@ -303,7 +334,7 @@ void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, bool render) {
         id = GenerateId(parent);
     }
 
-    Node new_node;
+    Node new_node(state.arena);
     {
         new_node.unique_id = id;
         new_node.size = size;
@@ -323,6 +354,8 @@ void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, bool render) {
 }
 
 static void GrowElementsHorizontally(Node& parent) {
+    ZoneScoped;
+
     if (parent.text_node) return;
     if (parent.children.empty()) return;
 
@@ -375,6 +408,8 @@ static void GrowElementsHorizontally(Node& parent) {
 }
 
 static void GrowElementsVertically(Node& parent) {
+    ZoneScoped;
+
     if (parent.text_node) return;
     if (parent.children.empty()) return;
 
@@ -427,6 +462,8 @@ static void GrowElementsVertically(Node& parent) {
 }
 
 void UI::EndElement() {
+    ZoneScoped;
+
     SGE_ASSERT(state.node_stack_size > 0);
 
     Node& node = TopNode();
@@ -485,8 +522,9 @@ void UI::EndElement() {
 }
 
 void UI::Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSection* sections, const size_t count, const TextElementDesc& desc) {
-    glm::vec2 measured_size = glm::vec2(0.0f);
+    ZoneScoped;
 
+    glm::vec2 measured_size = glm::vec2(0.0f);
     for (size_t i = 0; i < count; ++i) {
         const sge::RichTextSection& section = sections[i];
         measured_size = glm::max(measured_size, calculate_text_bounds(font, section.text.size(), section.text.data(), section.size));
@@ -515,7 +553,7 @@ void UI::Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSectio
         id = GenerateId(parent);
     }
 
-    Node new_node;
+    Node new_node(state.arena);
     {
         new_node.unique_id = id;
         new_node.size = measured_size;
@@ -531,6 +569,8 @@ void UI::Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSectio
 }
 
 static void FinalizeLayout() {
+    ZoneScoped;
+
     state.search_stack.clear();
     state.search_stack.push_back(&state.nodes[0]);
 
@@ -681,7 +721,6 @@ const std::vector<UiElement>& UI::Finish() {
     return state.render_elements;
 };
 
-[[nodiscard]]
 ElementID ID::Local(const std::string_view key) noexcept {
     const uint32_t parent_id = TopNode().unique_id.id;
     return HashString(CopyStringToArena(key), parent_id);

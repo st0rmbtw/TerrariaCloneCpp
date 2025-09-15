@@ -43,9 +43,6 @@ private:
     void draw_inventory() noexcept;
     void draw_cursor() noexcept;
 
-    void draw_item(const glm::vec2& item_size, const glm::vec2& position, const Item& item, sge::Order item_order = {});
-    void draw_item_with_stack(const sge::Font& font, const glm::vec2& item_size, float stack_size, const glm::vec2& position, const Item& item, sge::Order item_order = {}, sge::Order stack_order = {});
-
     inline void select_hotbar_slot(Inventory& inventory, uint8_t slot) {
         if (slot == inventory.selected_slot()) return;
 

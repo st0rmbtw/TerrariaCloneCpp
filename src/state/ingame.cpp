@@ -377,6 +377,27 @@ void InGameState::update_ui() noexcept {
     }
 }
 
+static void draw_item(const glm::vec2& item_size, const glm::vec2& position, const Item& item) {
+    sge::Sprite item_sprite(Assets::GetItemTexture(item.id));
+    item_sprite.set_position(position);
+    item_sprite.set_anchor(sge::Anchor::Center);
+    item_sprite.set_custom_size(item_size);
+    item_sprite.set_color(sge::LinearRgba::white());
+    GameRenderer::DrawSpriteUI(item_sprite);
+}
+
+static void draw_item_with_stack(const sge::Font& font, const glm::vec2& item_size, float stack_size, const glm::vec2& position, const Item& item) {
+    draw_item(item_size, position, item);
+
+    if (item.stack > 1) {
+        const std::string stack_string = std::to_string(item.stack);
+        const sge::RichText text = sge::rich_text(stack_string, stack_size, sge::LinearRgba(0.9f));
+        const float a = stack_size / 14.0f;
+        const glm::vec2 stack_position = glm::vec2(position.x - 15.0f * a, position.y + 2.5f * a);
+        GameRenderer::DrawTextUI(text, stack_position, font);
+    }
+}
+
 void InGameState::draw_cursor() noexcept {
     const sge::Font& font = Assets::GetFont(FontAsset::AndyBold);
     Inventory& inventory = m_player.inventory();
@@ -442,7 +463,7 @@ void InGameState::draw_inventory() noexcept {
                     .gap = INVENTORY_GAP,
                     .orientation = LayoutOrientation::Horizontal,
                     .vertical_alignment = Alignment::Center,
-                }, [&] () {
+                }, [&] {
                     const bool item_is_taken = inventory.taken_item().has_item();
 
                     TextureAsset texture = TextureAsset::UiInventoryBackground;
@@ -528,12 +549,11 @@ void InGameState::draw_inventory() noexcept {
                                 }
 
                                 if (item.has_value() && item->stack > 1) {
-                                    sge::LinearRgba color = sge::LinearRgba(0.9f);
                                     UI::Spacer();
 
                                     UI::Text<UiTypeID::Text>(
                                         font,
-                                        sge::rich_text(temp_format("{}", item->stack), text_size, color),
+                                        sge::rich_text(temp_format("{}", item->stack), text_size, sge::LinearRgba(0.9f)),
                                         {
                                             .self_alignment = Alignment::Center
                                         }
@@ -568,27 +588,6 @@ void InGameState::draw_inventory() noexcept {
     });
 }
 
-void InGameState::draw_item(const glm::vec2& item_size, const glm::vec2& position, const Item& item, sge::Order item_order) {
-    sge::Sprite item_sprite(Assets::GetItemTexture(item.id));
-    item_sprite.set_position(position);
-    item_sprite.set_anchor(sge::Anchor::Center);
-    item_sprite.set_custom_size(item_size);
-    item_sprite.set_color(sge::LinearRgba::white());
-    GameRenderer::DrawSpriteUI(item_sprite, item_order);
-}
-
-void InGameState::draw_item_with_stack(const sge::Font& font, const glm::vec2& item_size, float stack_size, const glm::vec2& position, const Item& item, sge::Order item_order, sge::Order stack_order) {
-    draw_item(item_size, position, item, item_order);
-
-    if (item.stack > 1) {
-        const std::string stack_string = std::to_string(item.stack);
-        const sge::RichText text = sge::rich_text(stack_string, stack_size, sge::LinearRgba(0.9f));
-        const float a = stack_size / 14.0f;
-        const glm::vec2 stack_position = glm::vec2(position.x - 15.0f * a, position.y + 2.5f * a);
-        GameRenderer::DrawTextUI(text, stack_position, font, stack_order);
-    }
-}
-
 void InGameState::draw_ui() noexcept {
     ZoneScoped;
 
@@ -597,7 +596,6 @@ void InGameState::draw_ui() noexcept {
     );
 
     UI::Container({
-        .id = ID::Local("LeftSide"),
         .size = UiSize::Height(Sizing::Fill()),
         .orientation = LayoutOrientation::Vertical,
     }, [this] {

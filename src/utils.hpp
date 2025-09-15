@@ -7,6 +7,7 @@
 #include <list>
 #include <vector>
 #include <optional>
+#include <format>
 
 #include <SGE/profile.hpp>
 
