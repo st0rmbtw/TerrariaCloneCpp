@@ -317,6 +317,8 @@ struct ElementDesc {
     std::optional<Alignment> self_alignment{ std::nullopt };
     Alignment horizontal_alignment{ Alignment::Start };
     Alignment vertical_alignment{ Alignment::Start };
+    /// This only affects the value returned by UI::IsMouseOverUi. UI::IsHovered will work as usual.
+    bool hoverable = false;
 };
 
 struct TextElementDesc {

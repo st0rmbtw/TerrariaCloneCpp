@@ -404,7 +404,8 @@ void InGameState::draw_cursor() noexcept {
 void InGameState::draw_inventory() noexcept {
     UI::Container({
         .padding = UiRect(0.0f, 0.0f, 4.0f, 0.0f),
-        .orientation = LayoutOrientation::Vertical
+        .orientation = LayoutOrientation::Vertical,
+        .hoverable = true
     }, [this] {
         Inventory& inventory = m_player.inventory();
         const sge::Font& font = Assets::GetFont(FontAsset::AndyBold);
@@ -589,6 +590,8 @@ void InGameState::draw_item_with_stack(const sge::Font& font, const glm::vec2& i
 }
 
 void InGameState::draw_ui() noexcept {
+    ZoneScoped;
+
     UI::Start(RootDesc(m_camera.viewport())
         .with_padding(UiRect::Horizontal(UI_PADDING))
     );

@@ -1,7 +1,6 @@
 #include <cstddef>
 #include <unordered_set>
 #include <vector>
-#include <new>
 
 #include <SGE/assert.hpp>
 #include <SGE/input.hpp>
@@ -10,37 +9,11 @@
 #include <SGE/types/rich_text.hpp>
 #include <SGE/utils/text.hpp>
 
+#include "arena.hpp"
 #include "ui.hpp"
 
 inline constexpr size_t MAX_NODE_STACK_SIZE = 100;
 inline constexpr size_t ARENA_CAPACITY = 1024 * 1024;
-
-class Arena {
-public:
-    explicit Arena(size_t capacity) : m_capacity(capacity) {
-        m_data = new uint8_t[capacity];
-    }
-
-    // Allocate raw memory from the arena
-    void* allocate(size_t size, size_t alignment = alignof(std::max_align_t)) noexcept {
-        const size_t aligned_offset = (m_current_offset + alignment - 1) & ~(alignment - 1);
-
-        SGE_ASSERT(aligned_offset + size < m_capacity);
-
-        void* ptr = m_data + aligned_offset;
-        m_current_offset = aligned_offset + size;
-        return ptr;
-    }
-
-    void reset() {
-        m_current_offset = 0;
-    }
-
-private:
-    uint8_t* m_data = nullptr;
-    size_t m_current_offset = 0;
-    size_t m_capacity = 0;
-};
 
 using NodeID = ElementID;
 
@@ -72,6 +45,7 @@ struct Node {
 
     bool render = false;
     bool text_node = false;
+    bool hoverable = false;
 };
 
 static struct {
@@ -186,15 +160,12 @@ static inline ElementID HashString(const std::string_view key, const uint32_t se
 }
 
 static inline std::string_view CopyStringToArena(std::string_view string) {
-    char* str = static_cast<char*>(state.arena.allocate(string.size() + 1, alignof(std::string_view::value_type)));
+    using pointer = std::string_view::pointer;
+    using value_type = std::string_view::value_type;
+    pointer str = static_cast<pointer>(state.arena.allocate(string.size() + 1, alignof(value_type)));
     memcpy(str, string.data(), string.size());
     str[string.size()] = '\0'; // Add a null terminator just in case
     return { str, string.size() + 1 };
-}
-
-[[nodiscard]]
-bool UI::IsMouseOverUi() noexcept {
-    return state.any_hovered;
 }
 
 static bool CheckIfPressed(const NodeID id, const sge::Rect element_rect, const sge::MouseButton button) noexcept {
@@ -245,7 +216,7 @@ void UI::Update() {
 
         if (hovered) {
             state.hovered_ids.insert(current_node->unique_id);
-            state.any_hovered = state.any_hovered || clickable;
+            state.any_hovered = state.any_hovered || clickable || current_node->hoverable;
         }
 
         if (clickable) {
@@ -288,7 +259,7 @@ void UI::Update() {
 }
 
 void UI::Start(const RootDesc& desc) {
-    state.arena.reset();
+    state.arena.clear();
     state.nodes.clear();
     state.render_elements.clear();
     state.text_data.clear();
@@ -298,19 +269,14 @@ void UI::Start(const RootDesc& desc) {
     // Create root node
     Node node;
     {
-        node.children = {};
-        node.pos = glm::vec2(0.0f);
+        node.unique_id = NodeID();
         node.size = desc.size();
         node.padding = desc.padding();
         node.sizing = UiSize::Fixed(desc.size().x, desc.size().y);
         node.gap = desc.gap();
-        node.unique_id = NodeID();
-        node.type_id = 0;
-        node.z_index = 0;
         node.orientation = desc.orientation();
-        node.horizontal_alignment = desc.vertical_alignment();
-        node.render = false;
-        node.text_node = false;
+        node.horizontal_alignment = desc.horizontal_alignment();
+        node.vertical_alignment = desc.vertical_alignment();
     }
     PushNode(std::move(node));
 }
@@ -339,21 +305,18 @@ void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, bool render) {
 
     Node new_node;
     {
-        new_node.children = {};
-        new_node.pos = glm::vec2(0.0f);
-        new_node.size = size;
-        new_node.padding = desc.padding;
-        new_node.sizing = desc.size;
-        new_node.custom_data = nullptr;
-        new_node.custom_data_size = 0;
-        new_node.gap = desc.gap;
         new_node.unique_id = id;
-        new_node.type_id = type_id;
-        new_node.z_index = parent.z_index + 1;
+        new_node.size = size;
+        new_node.sizing = desc.size;
+        new_node.padding = desc.padding;
         new_node.orientation = desc.orientation;
         new_node.horizontal_alignment = desc.horizontal_alignment;
         new_node.vertical_alignment = desc.vertical_alignment;
         new_node.self_alignment = desc.self_alignment;
+        new_node.gap = desc.gap;
+        new_node.hoverable = desc.hoverable;
+        new_node.type_id = type_id;
+        new_node.z_index = parent.z_index + 1;
         new_node.render = render;
     }
     PushNode(parent, std::move(new_node));
@@ -554,12 +517,10 @@ void UI::Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSectio
 
     Node new_node;
     {
-        new_node.children = {};
-        new_node.pos = glm::vec2(0.0f);
+        new_node.unique_id = id;
         new_node.size = measured_size;
         new_node.sizing = UiSize::Fixed(measured_size);
         new_node.text_data_index = text_data_index;
-        new_node.unique_id = id;
         new_node.type_id = type_id;
         new_node.z_index = parent.z_index + 1;
         new_node.render = true;
@@ -709,6 +670,10 @@ const ElementID& UI::GetElementID() noexcept {
 bool UI::IsHovered() noexcept {
     const Node& node = TopNode();
     return state.hovered_ids.contains(node.unique_id);
+}
+
+bool UI::IsMouseOverUi() noexcept {
+    return state.any_hovered;
 }
 
 const std::vector<UiElement>& UI::Finish() {
