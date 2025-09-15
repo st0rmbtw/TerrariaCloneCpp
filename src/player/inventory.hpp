@@ -72,12 +72,20 @@ public:
 
     inline void put_item(ItemIndex index) {
         SGE_ASSERT(index < ITEM_COUNT);
-        move_item_stack(TAKEN_ITEM_INDEX, index);
+        if (!item_movable(TAKEN_ITEM_INDEX, index)) {
+            swap(TAKEN_ITEM_INDEX, index);
+        } else {
+            move_item_stack(TAKEN_ITEM_INDEX, index);
+        }
     }
 
     inline void take_item(ItemIndex index, ItemStack count = 0) {
         SGE_ASSERT(index < ITEM_COUNT);
         move_item_stack(index, TAKEN_ITEM_INDEX, count);
+    }
+
+    inline void swap(ItemIndex a, ItemIndex b) {
+        std::swap(m_items[a], m_items[b]);
     }
 
     inline std::optional<Item> return_taken_item() noexcept {
@@ -135,7 +143,7 @@ public:
             remaining -= count;
         }
 
-        update_item_stack(from_index, from->stack - count - remaining);
+        update_item_stack(from_index, from->stack - count + remaining);
 
         return remaining;
     }
@@ -170,6 +178,19 @@ public:
         }
 
         return remaining;
+    }
+    
+    [[nodiscard]]
+    inline bool item_movable(ItemIndex from_index, ItemIndex to_index) noexcept {
+        std::optional<Item>& from = m_items[from_index];
+        if (!from.has_value())
+            return true;
+
+        std::optional<Item>& to = m_items[to_index];
+        if (!to.has_value())
+            return true;
+
+        return from->id == to->id && to->has_space();
     }
 
     [[nodiscard]]

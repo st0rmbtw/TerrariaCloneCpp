@@ -7,10 +7,10 @@
 #include <SGE/input.hpp>
 #include <SGE/math/rect.hpp>
 #include <SGE/utils/containers/swapbackvector.hpp>
+#include <SGE/types/rich_text.hpp>
+#include <SGE/utils/text.hpp>
 
 #include "ui.hpp"
-#include "SGE/types/rich_text.hpp"
-#include "SGE/utils/text.hpp"
 
 inline constexpr size_t MAX_NODE_STACK_SIZE = 100;
 inline constexpr size_t ARENA_CAPACITY = 1024 * 1024;
@@ -22,7 +22,7 @@ public:
     }
 
     // Allocate raw memory from the arena
-    void* allocate(size_t size, size_t alignment = alignof(std::max_align_t)) {
+    void* allocate(size_t size, size_t alignment = alignof(std::max_align_t)) noexcept {
         const size_t aligned_offset = (m_current_offset + alignment - 1) & ~(alignment - 1);
 
         SGE_ASSERT(aligned_offset + size < m_capacity);
@@ -97,14 +97,19 @@ static struct {
     bool any_hovered = false;
 } state;
 
-static Node& TopNode() {
+[[nodiscard]]
+static inline bool NodeIsClickable(const Node& node) noexcept {
+    return node.on_click_callback != nullptr;
+}
+
+static Node& TopNode() noexcept {
     SGE_ASSERT(state.node_stack_size > 0);
 
     const size_t index = state.node_stack[state.node_stack_size-1];
     return state.nodes[index];
 }
 
-static Node& ParentNode() {
+static Node& ParentNode() noexcept {
     SGE_ASSERT(state.node_stack_size > 1);
     const size_t index = state.node_stack[state.node_stack_size-2];
     return state.nodes[index];
@@ -140,7 +145,7 @@ static size_t PushNode(Node&& node) {
     return index;
 }
 
-static inline ElementID HashNumber(const uint32_t offset, const uint32_t seed) {
+static inline ElementID HashNumber(const uint32_t offset, const uint32_t seed) noexcept {
     uint32_t hash = seed;
     hash += (offset + 48);
     hash += (hash << 10);
@@ -158,7 +163,7 @@ static inline ElementID HashNumber(const uint32_t offset, const uint32_t seed) {
     };
 }
 
-static inline ElementID HashString(const std::string_view key, const uint32_t seed) {
+static inline ElementID HashString(const std::string_view key, const uint32_t seed) noexcept {
     uint32_t hash = seed;
 
     for (size_t i = 0; i < key.size(); i++) {
@@ -172,7 +177,7 @@ static inline ElementID HashString(const std::string_view key, const uint32_t se
     hash += (hash << 15);
 
     // +1 because the element with the id of 0 is the root element
-    return ElementID{
+    return ElementID {
         .string_id = key,
         .id = hash + 1,
         .offset = 0,
@@ -188,11 +193,11 @@ static inline std::string_view CopyStringToArena(std::string_view string) {
 }
 
 [[nodiscard]]
-bool UI::IsMouseOverUi() {
+bool UI::IsMouseOverUi() noexcept {
     return state.any_hovered;
 }
 
-static bool CheckIfPressed(const NodeID id, const sge::Rect element_rect, const sge::MouseButton button) {
+static bool CheckIfPressed(const NodeID id, const sge::Rect element_rect, const sge::MouseButton button) noexcept {
     const bool hovered = element_rect.contains(sge::Input::MouseScreenPosition());
 
     if (state.active_id.id == 0) {
@@ -236,12 +241,13 @@ void UI::Update() {
         const sge::Rect element_rect = sge::Rect::from_top_left(current_node->pos, current_node->size);
         const bool hovered = element_rect.contains(sge::Input::MouseScreenPosition());
 
+        const bool clickable = NodeIsClickable(*current_node);
+
         if (hovered) {
             state.hovered_ids.insert(current_node->unique_id);
-            state.any_hovered = true;
+            state.any_hovered = state.any_hovered || clickable;
         }
 
-        const bool clickable = current_node->on_click_callback != nullptr;
         if (clickable) {
             state.postorder_stack.push_back(current_node);
         }
@@ -476,10 +482,17 @@ void UI::EndElement() {
     const float horizontal_padding = node.padding.left() + node.padding.right();
     const float vertical_padding = node.padding.top() + node.padding.bottom();
 
+    if (node.sizing.width().type() == Sizing::Type::Fit) {
+        node.size.x += horizontal_padding;
+    }
+    if (node.sizing.height().type() == Sizing::Type::Fit) {
+        node.size.y += vertical_padding;
+    }
+
     if (node.orientation == LayoutOrientation::Horizontal) {
         if (node.sizing.width().type() == Sizing::Type::Fit) {
             const float gap = (std::max<size_t>(node.children.size(), 1) - 1) * node.gap;
-            node.size.x += horizontal_padding + gap;
+            node.size.x += gap;
         }
 
         for (uint32_t child_index : node.children) {
@@ -494,7 +507,7 @@ void UI::EndElement() {
     } else if (node.orientation == LayoutOrientation::Vertical) {
         if (node.sizing.height().type() == Sizing::Type::Fit) {
             const float gap = (std::max<size_t>(node.children.size(), 1) - 1) * node.gap;
-            node.size.y += vertical_padding + gap;
+            node.size.y += gap;
         }
         for (uint32_t child_index : node.children) {
             const Node& child = state.nodes[child_index];
@@ -508,7 +521,7 @@ void UI::EndElement() {
     }
 }
 
-void UI::Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSection* sections, const size_t count, const TextElementDesc desc) {
+void UI::Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSection* sections, const size_t count, const TextElementDesc& desc) {
     glm::vec2 measured_size = glm::vec2(0.0f);
 
     for (size_t i = 0; i < count; ++i) {
@@ -534,7 +547,10 @@ void UI::Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSectio
 
     Node& parent = TopNode();
 
-    const NodeID id = GenerateId(parent);
+    NodeID id = desc.id;
+    if (id.id == 0) {
+        id = GenerateId(parent);
+    }
 
     Node new_node;
     {
@@ -680,17 +696,17 @@ void UI::OnClick(std::function<void(sge::MouseButton)>&& on_press) {
     node.on_click_callback = std::move(on_press);
 }
 
-uint32_t UI::GetParentID() {
+uint32_t UI::GetParentID() noexcept {
     const Node& node = ParentNode();
     return node.unique_id.id;
 }
 
-const ElementID& UI::GetElementID() {
+const ElementID& UI::GetElementID() noexcept {
     const Node& node = TopNode();
     return node.unique_id;
 }
 
-bool UI::IsHovered() {
+bool UI::IsHovered() noexcept {
     const Node& node = TopNode();
     return state.hovered_ids.contains(node.unique_id);
 }
@@ -701,12 +717,12 @@ const std::vector<UiElement>& UI::Finish() {
 };
 
 [[nodiscard]]
-ElementID ID::Local(const std::string_view key) {
-    const uint32_t parent_id = UI::GetParentID();
+ElementID ID::Local(const std::string_view key) noexcept {
+    const uint32_t parent_id = TopNode().unique_id.id;
     return HashString(CopyStringToArena(key), parent_id);
 }
 
-ElementID ID::Global(const std::string_view key, uint32_t index) {
+ElementID ID::Global(const std::string_view key, uint32_t index) noexcept {
     CopyStringToArena(key);
     return HashString(CopyStringToArena(key), index);
 }

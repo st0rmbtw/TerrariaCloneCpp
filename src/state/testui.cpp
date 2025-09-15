@@ -43,8 +43,8 @@ void TestUI::Render() {
     UI::Start(RootDesc(m_camera.viewport()));
 
     UI::Element<UiTypeID::Rectangle>({
-        .padding = UiRect::All(100.0f),
         .size = UiSize::Fill(),
+        .padding = UiRect::All(100.0f),
     }, [] {
         UI::SetCustomData(UiRectangleData {
             .color = sge::LinearRgba(0.8f, 0.2f, 0.2f)
@@ -62,8 +62,8 @@ void TestUI::Render() {
             for (int i = 0; i < 10; ++i) {
                 UI::Element<UiTypeID::Rectangle>({
                     .id = ID::Local(temp_format("ListItem{}", i)),
-                    .padding = UiRect::All(10.0f),
                     .size = UiSize::Fixed(50.0f, 50.0f),
+                    .padding = UiRect::All(10.0f),
                     .self_alignment = Alignment::Center,
                 }, [] {
                     UI::SetCustomData(UiRectangleData {

@@ -34,9 +34,9 @@ inline TilePos get_lightmap_pos(glm::vec2 pos) noexcept {
 }
 
 template <typename T, class F>
-inline auto map(std::optional<T> a, F&& func) noexcept -> std::optional<decltype(func(a.value()))> {
+inline auto map(const std::optional<T>& a, F&& func) noexcept -> std::optional<decltype(func(a.value()))> {
     if (!a.has_value()) return std::nullopt;
-    return func(a.value());
+    return std::forward<F>(func)(a.value());
 }
 
 template <typename TNode, typename TGetNeighborsFunc, typename TProcessNodeFunc>

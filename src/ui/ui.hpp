@@ -226,12 +226,12 @@ class RootDesc {
 public:
     RootDesc(const glm::vec2 dimensions) : m_size(dimensions) {}
 
-    RootDesc& with_gap(float gap) noexcept {
+    inline RootDesc& with_gap(float gap) noexcept {
         m_gap = gap;
         return *this;
     }
 
-    RootDesc& with_padding(const UiRect padding) noexcept {
+    inline RootDesc& with_padding(const UiRect padding) noexcept {
         m_padding = padding;
         return *this;
     }
@@ -246,7 +246,7 @@ public:
         return *this;
     }
 
-    RootDesc& with_orientation(const LayoutOrientation orientation) noexcept {
+    inline RootDesc& with_orientation(const LayoutOrientation orientation) noexcept {
         m_orientation = orientation;
         return *this;
     }
@@ -310,8 +310,8 @@ inline bool operator==(const ElementID& a, const ElementID& b) noexcept {
 
 struct ElementDesc {
     ElementID id{};
-    UiRect padding{};
     UiSize size{};
+    UiRect padding{};
     float gap{ 0.0f };
     LayoutOrientation orientation{ LayoutOrientation::Stack };
     std::optional<Alignment> self_alignment{ std::nullopt };
@@ -320,6 +320,7 @@ struct ElementDesc {
 };
 
 struct TextElementDesc {
+    ElementID id{};
     std::optional<Alignment> self_alignment{ std::nullopt };
 };
 
@@ -351,14 +352,14 @@ namespace UI {
     void BeginElement(uint32_t type_id, const ElementDesc& desc, bool render = true);
     void EndElement();
 
-    void Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSection* sections, const size_t count, const TextElementDesc desc = {});
+    void Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSection* sections, const size_t count, const TextElementDesc& desc = {});
     
     void OnClick(std::function<void(sge::MouseButton)>&& on_press);
 
     void SetCustomData(const void* custom_data, size_t custom_data_size, size_t custom_data_alignment = alignof(std::max_align_t));
 
     template <uint32_t TypeID, size_t Size>
-    inline void Text(const sge::Font& font, const sge::RichText<Size>& text, const TextElementDesc desc = {}) {
+    inline void Text(const sge::Font& font, const sge::RichText<Size>& text, const TextElementDesc& desc = {}) {
         Text(TypeID, font, text.sections().data(), text.size(), desc);
     }
 
@@ -409,27 +410,27 @@ namespace UI {
     }
 
     [[nodiscard]]
-    bool IsHovered();
+    bool IsHovered() noexcept;
 
     [[nodiscard]]
-    uint32_t GetParentID();
+    uint32_t GetParentID() noexcept;
 
     [[nodiscard]]
-    const ElementID& GetElementID();
+    const ElementID& GetElementID() noexcept;
 
     [[nodiscard]]
     const std::vector<UiElement>& Finish();
 
     [[nodiscard]]
-    bool IsMouseOverUi();
+    bool IsMouseOverUi() noexcept;
 };
 
 namespace ID {
     [[nodiscard]]
-    ElementID Local(const std::string_view key);
+    ElementID Local(const std::string_view key) noexcept;
 
     [[nodiscard]]
-    ElementID Global(const std::string_view key, uint32_t index = 0);
+    ElementID Global(const std::string_view key, uint32_t index = 0) noexcept;
 };
 
 #endif
