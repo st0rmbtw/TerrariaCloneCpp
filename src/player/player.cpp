@@ -608,6 +608,12 @@ void Player::update(World& world) {
         throw_item(world, m_inventory.selected_slot());
     }
 
+    update_sprites();
+
+    if (!m_swing_anim) {
+        update_hold_item();
+    }
+
     const std::optional<Item>& selected_item = m_inventory.get_selected_item().item;
     if (selected_item.has_value() && selected_item->id == ItemId::Torch) {
         const float direction = get_direction_value(m_direction);
@@ -618,12 +624,6 @@ void Player::update(World& world) {
             .pos = get_lightmap_pos(m_using_item.position() + glm::vec2(size.x * direction, -size.y)),
             .size = glm::uvec2(2)
         });
-    }
-
-    update_sprites();
-
-    if (!m_swing_anim) {
-        update_hold_item();
     }
 }
 

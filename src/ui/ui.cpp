@@ -378,30 +378,31 @@ static void GrowElementsHorizontally(Node& parent) {
         }
     }
 
-    if (state.growable_nodes.size() > 0) {
-        while (remaining_width > 0) {
-            float smallest = state.growable_nodes[0]->size.x;
-            float second_smallest = INFINITY;
-            float width_to_add = remaining_width;
-            for (Node* child : state.growable_nodes) {
-                if (child->size.x < smallest) {
-                    second_smallest = smallest;
-                    smallest = child->size.x;
-                }
+    if (state.growable_nodes.empty())
+        return;
 
-                if (child->size.x > smallest) {
-                    second_smallest = std::min(second_smallest, child->size.x);
-                    width_to_add = second_smallest - smallest;
-                }
+    while (remaining_width > 0) {
+        float smallest = state.growable_nodes[0]->size.x;
+        float second_smallest = INFINITY;
+        float width_to_add = remaining_width;
+        for (Node* child : state.growable_nodes) {
+            if (child->size.x < smallest) {
+                second_smallest = smallest;
+                smallest = child->size.x;
             }
 
-            width_to_add = std::min(width_to_add, remaining_width / state.growable_nodes.size());
+            if (child->size.x > smallest) {
+                second_smallest = std::min(second_smallest, child->size.x);
+                width_to_add = second_smallest - smallest;
+            }
+        }
 
-            for (Node* child : state.growable_nodes) {
-                if (sge::approx_equals(child->size.x, smallest)) {
-                    child->size.x += width_to_add;
-                    remaining_width -= width_to_add;
-                }
+        width_to_add = std::min(width_to_add, remaining_width / state.growable_nodes.size());
+
+        for (Node* child : state.growable_nodes) {
+            if (sge::approx_equals(child->size.x, smallest)) {
+                child->size.x += width_to_add;
+                remaining_width -= width_to_add;
             }
         }
     }
@@ -431,31 +432,32 @@ static void GrowElementsVertically(Node& parent) {
             state.growable_nodes.push_back(&child);
         }
     }
-    
-    if (state.growable_nodes.size() > 0) {
-        while (remaining_height > 0) {
-            float smallest = state.growable_nodes[0]->size.y;
-            float second_smallest = INFINITY;
-            float height_to_add = remaining_height;
-            for (Node* child : state.growable_nodes) {
-                if (child->size.y < smallest) {
-                    second_smallest = smallest;
-                    smallest = child->size.y;
-                }
 
-                if (child->size.y > smallest) {
-                    second_smallest = std::min(second_smallest, child->size.y);
-                    height_to_add = second_smallest - smallest;
-                }
+    if (state.growable_nodes.empty())
+        return;
+    
+    while (remaining_height > 0) {
+        float smallest = state.growable_nodes[0]->size.y;
+        float second_smallest = INFINITY;
+        float height_to_add = remaining_height;
+        for (Node* child : state.growable_nodes) {
+            if (child->size.y < smallest) {
+                second_smallest = smallest;
+                smallest = child->size.y;
             }
 
-            height_to_add = std::min(height_to_add, remaining_height / state.growable_nodes.size());
+            if (child->size.y > smallest) {
+                second_smallest = std::min(second_smallest, child->size.y);
+                height_to_add = second_smallest - smallest;
+            }
+        }
 
-            for (Node* child : state.growable_nodes) {
-                if (sge::approx_equals(child->size.y, smallest)) {
-                    child->size.y += height_to_add;
-                    remaining_height -= height_to_add;
-                }
+        height_to_add = std::min(height_to_add, remaining_height / state.growable_nodes.size());
+
+        for (Node* child : state.growable_nodes) {
+            if (sge::approx_equals(child->size.y, smallest)) {
+                child->size.y += height_to_add;
+                remaining_height -= height_to_add;
             }
         }
     }
@@ -605,74 +607,72 @@ static void FinalizeLayout() {
         if (current_node->text_node)
             continue;
 
-        glm::vec2 pos = current_node->pos + glm::vec2(current_node->padding.left(), current_node->padding.top());
+        const LayoutOrientation parent_orientation = current_node->orientation;
+        const glm::vec2 parent_size = current_node->size;
+        const UiRect parent_padding = current_node->padding;
+        const Alignment parent_horizontal_alignment = current_node->horizontal_alignment;
+        const Alignment parent_vertical_alignment = current_node->vertical_alignment;
+        const float parent_gap = current_node->gap;
 
-        float remaining_width = current_node->size.x - current_node->padding.left() - current_node->padding.right();
-        float remaining_height = current_node->size.y - current_node->padding.top() - current_node->padding.bottom();
+        glm::vec2 pos = current_node->pos + glm::vec2(parent_padding.left(), parent_padding.top());
+
+        float remaining_width = parent_size.x - parent_padding.left() - parent_padding.right();
+        float remaining_height = parent_size.y - parent_padding.top() - parent_padding.bottom();
 
         for (uint32_t child_index : current_node->children) {
             Node& child = state.nodes[child_index];
-
+            
             if (state.search_visited.contains(child.unique_id)) {
                 continue;
             }
 
+            child.pos = pos;
+            
             state.search_stack.push_back(&child);
             state.search_visited.insert(child.unique_id);
             
-            if (current_node->orientation == LayoutOrientation::Horizontal) {
-                remaining_height = current_node->size.y - child.size.y - current_node->padding.top() - current_node->padding.bottom();
-            } else if (current_node->orientation == LayoutOrientation::Vertical) {
-                remaining_width = current_node->size.x - child.size.x - current_node->padding.left() - current_node->padding.right();
-            } else if (current_node->orientation == LayoutOrientation::Stack) {
-                remaining_width = current_node->size.x - child.size.x - current_node->padding.left() - current_node->padding.right();
-                remaining_height = current_node->size.y - child.size.y - current_node->padding.top() - current_node->padding.bottom();
+            if (parent_orientation == LayoutOrientation::Horizontal) {
+                pos.x += child.size.x + parent_gap;
+                remaining_height = parent_size.y - child.size.y - parent_padding.top() - parent_padding.bottom();
+            } else if (parent_orientation == LayoutOrientation::Vertical) {
+                pos.y += child.size.y + parent_gap;
+                remaining_width = parent_size.x - child.size.x - parent_padding.left() - parent_padding.right();
+            } else if (parent_orientation == LayoutOrientation::Stack) {
+                remaining_width = parent_size.x - child.size.x - parent_padding.left() - parent_padding.right();
+                remaining_height = parent_size.y - child.size.y - parent_padding.top() - parent_padding.bottom();
             }
-            
-            child.pos = pos;
 
-            bool horizontally_aligned = false;
-            bool vertically_aligned = false;
-
-            if (child.self_alignment && current_node->orientation == LayoutOrientation::Horizontal) {
+            if (child.self_alignment && parent_orientation == LayoutOrientation::Horizontal) {
                 if (child.self_alignment == Alignment::Center) {
                     child.pos.y += remaining_height * 0.5f;
                 } else if (child.self_alignment == Alignment::End) {
                     child.pos.y += remaining_height;
                 }
-                vertically_aligned = true;
+            } else {
+                if (parent_vertical_alignment == Alignment::Center) {
+                    child.pos.y += remaining_height * 0.5f;
+                } else if (parent_vertical_alignment == Alignment::End) {
+                    child.pos.y += remaining_height;
+                }
             }
 
-            if (child.self_alignment && current_node->orientation == LayoutOrientation::Vertical) {
+            if (child.self_alignment && parent_orientation == LayoutOrientation::Vertical) {
                 if (child.self_alignment == Alignment::Center) {
                     child.pos.x += remaining_width * 0.5f;
                 } else if (child.self_alignment == Alignment::End) {
                     child.pos.x += remaining_width;
                 }
-                horizontally_aligned = true;
-            }
-
-            if (!horizontally_aligned) {
-                if (current_node->horizontal_alignment == Alignment::Center) {
+            } else {
+                if (parent_horizontal_alignment == Alignment::Center) {
                     child.pos.x += remaining_width * 0.5f;
-                } else if (current_node->horizontal_alignment == Alignment::End) {
+                } else if (parent_horizontal_alignment == Alignment::End) {
                     child.pos.x += remaining_width;
                 }
             }
 
-            if (!vertically_aligned) {
-                if (current_node->vertical_alignment == Alignment::Center) {
-                    child.pos.y += remaining_height * 0.5f;
-                } else if (current_node->vertical_alignment == Alignment::End) {
-                    child.pos.y += remaining_height;
-                }
-            }
-
-            if (current_node->orientation == LayoutOrientation::Horizontal) {
-                pos.x += child.size.x + current_node->gap;
+            if (parent_orientation == LayoutOrientation::Horizontal) {
                 remaining_width -= child.size.x;
-            } else if (current_node->orientation == LayoutOrientation::Vertical) {
-                pos.y += child.size.y + current_node->gap;
+            } else if (parent_orientation == LayoutOrientation::Vertical) {
                 remaining_height -= child.size.y;
             }
         }
