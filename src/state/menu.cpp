@@ -30,11 +30,14 @@ struct UiPanelData {
 };
 
 MainMenuState::MainMenuState() :
-    m_camera{ sge::CameraOrigin::Center, sge::CoordinateSystem {
+    m_camera(sge::CameraOrigin::Center, sge::CoordinateSystem {
         .up = sge::CoordinateDirectionY::Negative,
         .forward = sge::CoordinateDirectionZ::Negative,
-    }},
-    m_batch{ sge::Engine::Renderer(), Assets::GetShader(ShaderAsset::FontShader).ps }
+    }),
+    m_batch(sge::Engine::Renderer(), {
+        .font_shader = Assets::GetShader(ShaderAsset::FontShader).ps,
+        .enable_scissor = true
+    })
 {
     m_camera.set_viewport(App::GetWindowResolution());
     m_camera.set_zoom(1.0f);
@@ -52,7 +55,7 @@ MainMenuState::MainMenuState() :
 }
 
 MainMenuState::~MainMenuState() {
-    m_batch.Terminate(sge::Engine::Renderer().Context());
+    m_batch.Destroy(sge::Engine::Renderer().Context());
     m_background_renderer.terminate();
 }
 
@@ -320,6 +323,12 @@ void MainMenuState::draw_ui() {
 
         if (element.scissor_start) {
             m_batch.BeginScissorMode(element.scissor_data->area);
+            continue;
+        }
+
+        if (element.scissor_end) {
+            m_batch.EndScissorMode();
+            continue;
         }
 
         switch (element.type_id) {
@@ -346,10 +355,6 @@ void MainMenuState::draw_ui() {
                 border.set_color(border_color);
                 m_batch.DrawNinePatch(border, sge::Order(order.value + 1));
             } break;
-        }
-
-        if (element.scissor_end) {
-            m_batch.EndScissorMode();
         }
     }
 

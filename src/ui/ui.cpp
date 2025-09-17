@@ -80,6 +80,18 @@ struct ScrollData {
     float offset;
 };
 
+enum class SearchState : uint8_t {
+    PreProcess = 0,
+    PostProcess,
+    Done
+};
+
+struct SearchStackFrame {
+    Node* parent;
+    uint32_t child_pos;
+    SearchState state;
+};
+
 static struct {
     uint32_t node_stack[MAX_NODE_STACK_SIZE];
     
@@ -89,8 +101,7 @@ static struct {
     NodeID active_id{};
 
     std::deque<Node*> search_stack{};
-    // In the pair first is the parent, second is the child
-    std::deque<std::pair<Node*, Node*>> search_stack_with_parent{};
+    std::deque<SearchStackFrame> search_stack_frame{};
     sge::SwapbackVector<Node*> postorder_stack{};
 
     sge::SwapbackVector<Node*> growable_nodes{};
@@ -816,44 +827,82 @@ static void FinalizeLayout() {
         }
     }
 
-    state.search_stack_with_parent.clear();
-    state.search_stack_with_parent.emplace_back(&state.nodes[0], nullptr);
+    state.search_stack_frame.clear();
+    state.search_stack_frame.push_back(SearchStackFrame{ &state.nodes[0], 0, SearchState::Done });
 
-    while (!state.search_stack_with_parent.empty()) {
-        auto [current_node, parent] = state.search_stack_with_parent.front();
-        state.search_stack_with_parent.pop_front();
+    while (!state.search_stack_frame.empty()) {
+        SearchStackFrame& frame = state.search_stack_frame.back();
 
-        if (current_node->render || current_node->scissor_start || current_node->scissor_end) {
-            TextData* text_data = nullptr;
-            if (current_node->text_node) {
-                text_data = &state.text_data[current_node->text_data_index];
-            }
-            
-            ScissorData* scissor_data = nullptr;
-            if (current_node->scissor_start) {
-                scissor_data = state.arena.allocate<ScissorData>();
-                scissor_data->area = sge::IRect::from_top_left(parent->pos, glm::round(parent->size));
+        const Node& parent = *frame.parent;
+        const sge::Rect parent_rect = sge::Rect::from_top_left(parent.pos, parent.size);
+
+        switch (frame.state) {
+        case SearchState::Done: {
+            if (frame.child_pos >= parent.children.size()) {
+                state.search_stack_frame.pop_back();
+                continue;
             }
 
-            state.render_elements.push_back(UiElement {
-                .unique_id = current_node->unique_id,
-                .position = current_node->pos,
-                .size = current_node->size,
-                .custom_data = current_node->custom_data,
-                .custom_data_size = current_node->custom_data_size,
-                .text_data = text_data,
-                .scissor_data = scissor_data,
-                .type_id = current_node->type_id,
-                .z_index = current_node->z_index,
-                .scissor_start = current_node->scissor_start,
-                .scissor_end = current_node->scissor_end
-            });
-        }
-    
-        for (uint32_t child_index : current_node->children) {
+            frame.state = SearchState::PreProcess;
+        } break;
+        case SearchState::PreProcess: {
+            const uint32_t child_index = parent.children[frame.child_pos];
             Node& child = state.nodes[child_index];
-            state.search_stack_with_parent.emplace_back(&child, current_node);
+
+            const sge::Rect child_rect = sge::Rect::from_top_left(child.pos, child.size);
+
+            if (child.scrollable) {
+                ScissorData* scissor_data = nullptr;
+                scissor_data = state.arena.allocate<ScissorData>();
+                scissor_data->area = sge::IRect::from_top_left(child.pos, glm::round(child.size));
+
+                state.render_elements.push_back(UiElement {
+                    .scissor_data = scissor_data,
+                    .scissor_start = true,
+                    .scissor_end = false
+                });
+            }
+
+            if (child.render && parent_rect.intersects(child_rect)) {
+                TextData* text_data = nullptr;
+                if (child.text_node) {
+                    text_data = &state.text_data[child.text_data_index];
+                }
+
+                state.render_elements.push_back(UiElement {
+                    .unique_id = child.unique_id,
+                    .position = child.pos,
+                    .size = child.size,
+                    .custom_data = child.custom_data,
+                    .custom_data_size = child.custom_data_size,
+                    .text_data = text_data,
+                    .type_id = child.type_id,
+                    .z_index = child.z_index,
+                    .scissor_start = false,
+                    .scissor_end = false
+                });
+            }
+
+            state.search_stack_frame.push_back(SearchStackFrame{ &child, 0, SearchState::Done });
+
+            frame.state = SearchState::PostProcess;
+        } break;
+        case SearchState::PostProcess: {
+            const uint32_t child_index = parent.children[frame.child_pos];
+            Node& child = state.nodes[child_index];
+
+            if (child.scrollable) {
+                state.render_elements.push_back(UiElement {
+                    .scissor_start = false,
+                    .scissor_end = true
+                });
+            }
+
+            frame.child_pos++;
+            frame.state = SearchState::Done;
+        } break;
         }
+        
     }
 }
 

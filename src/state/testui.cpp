@@ -10,7 +10,6 @@
 #include "../ui/ui.hpp"
 #include "../assets.hpp"
 #include "../app.hpp"
-#include "../utils.hpp"
 
 namespace UiTypeID {
     enum : uint8_t {
@@ -25,7 +24,10 @@ struct UiRectangleData {
 
 TestUI::TestUI() :
     m_camera{ sge::CameraOrigin::TopLeft },
-    m_batch { sge::Engine::Renderer(), Assets::GetShader(ShaderAsset::FontShader).ps }
+    m_batch(sge::Engine::Renderer(), {
+        .font_shader = Assets::GetShader(ShaderAsset::FontShader).ps,
+        .enable_scissor = true
+    })
 {
     m_camera.set_viewport(App::GetWindowResolution());
     m_camera.set_zoom(1.0f);

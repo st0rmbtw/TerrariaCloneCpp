@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.24)
 
 project(TerrariaClone LANGUAGES CXX)
 
@@ -15,6 +15,7 @@ if(APPLE)
 endif()
 
 set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
+set(CMAKE_COLOR_DIAGNOSTICS ON)
 
 option(ENABLE_DEBUG_TOOLS "Enable Debug Tools" OFF)
 

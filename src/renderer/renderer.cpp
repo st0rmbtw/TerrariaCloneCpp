@@ -31,9 +31,9 @@ static constexpr int CAMERA_FRUSTUM = 0;
 static constexpr int NOZOOM_CAMERA_FRUSTUM = 1;
 
 static struct RendererState {
-    sge::Batch main_batch;
-    sge::Batch world_batch;
-    sge::Batch ui_batch;
+    std::unique_ptr<sge::Batch> main_batch;
+    std::unique_ptr<sge::Batch> world_batch;
+    std::unique_ptr<sge::Batch> ui_batch;
 
     sge::Rect camera_frustums[2];
     sge::Rect ui_frustum;
@@ -52,8 +52,8 @@ static struct RendererState {
     bool update_light = false;
 } state;
 
-uint32_t GameRenderer::GetMainOrderIndex() { return state.main_batch.order(); }
-uint32_t GameRenderer::GetWorldOrderIndex() { return state.world_batch.order(); }
+uint32_t GameRenderer::GetMainOrderIndex() { return state.main_batch->Order(); }
+uint32_t GameRenderer::GetWorldOrderIndex() { return state.world_batch->Order(); }
 LLGL::Buffer* GameRenderer::ChunkVertexBuffer() { return state.chunk_vertex_buffer; }
 
 bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
@@ -125,12 +125,19 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
     state.particle_renderer.init();
 
     const sge::ShaderPipeline& font_shader = Assets::GetShader(ShaderAsset::FontShader);
-    state.main_batch = sge::Batch(renderer, font_shader.ps);
-    state.world_batch = sge::Batch(renderer, font_shader.ps);
-    state.ui_batch = sge::Batch(renderer, font_shader.ps);
+    state.main_batch = renderer.CreateBatch({
+        .font_shader = font_shader.ps
+    });
+    state.world_batch = renderer.CreateBatch({
+        .font_shader = font_shader.ps
+    });
+    state.ui_batch = renderer.CreateBatch({
+        .font_shader = font_shader.ps,
+        .enable_scissor = true
+    });
 
-    state.world_batch.SetDepthEnabled(true);
-    state.ui_batch.SetIsUi(true);
+    state.world_batch->SetDepthEnabled(true);
+    state.ui_batch->SetIsUi(true);
 
     return true;
 }
@@ -219,9 +226,9 @@ void GameRenderer::Begin(const sge::Camera& camera, World& world) {
         state.world_renderer.compute_light(camera, world);
     }
 
-    state.main_batch.Reset();
-    state.world_batch.Reset();
-    state.ui_batch.Reset();
+    state.main_batch->Reset();
+    state.world_batch->Reset();
+    state.ui_batch->Reset();
 }
 
 void GameRenderer::Render(const sge::Camera& camera, const World& world) {
@@ -235,9 +242,9 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
 
     LLGL::ClearValue clear_value = LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
-    renderer.PrepareBatch(state.main_batch);
-    renderer.PrepareBatch(state.world_batch);
-    renderer.PrepareBatch(state.ui_batch);
+    renderer.PrepareBatch(*state.main_batch);
+    renderer.PrepareBatch(*state.world_batch);
+    renderer.PrepareBatch(*state.ui_batch);
 
     renderer.UploadBatchData();
 
@@ -264,7 +271,7 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
         state.world_renderer.render(world.chunk_manager());
         state.particle_renderer.render_world();
 
-        renderer.RenderBatch(state.world_batch);
+        renderer.RenderBatch(*state.world_batch);
     renderer.EndPass();
 
     renderer.BeginMainPass();
@@ -277,8 +284,8 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
 
         state.particle_renderer.render();
 
-        renderer.RenderBatch(state.main_batch);
-        renderer.RenderBatch(state.ui_batch);
+        renderer.RenderBatch(*state.main_batch);
+        renderer.RenderBatch(*state.ui_batch);
     renderer.EndPass();
 
     renderer.End();
@@ -288,27 +295,27 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
 }
 
 void GameRenderer::BeginOrderMode(int order, bool advance) noexcept {
-    state.main_batch.BeginOrderMode(order, advance);
-    state.world_batch.BeginOrderMode(order, advance);
-    state.ui_batch.BeginOrderMode(order, advance);
+    state.main_batch->BeginOrderMode(order, advance);
+    state.world_batch->BeginOrderMode(order, advance);
+    state.ui_batch->BeginOrderMode(order, advance);
 }
 
 void GameRenderer::EndOrderMode() noexcept {
-    state.main_batch.EndOrderMode();
-    state.world_batch.EndOrderMode();
-    state.ui_batch.EndOrderMode();
+    state.main_batch->EndOrderMode();
+    state.world_batch->EndOrderMode();
+    state.ui_batch->EndOrderMode();
 }
 
 void GameRenderer::BeginBlendMode(sge::BlendMode blend_mode) noexcept {
-    state.main_batch.BeginBlendMode(blend_mode);
-    state.world_batch.BeginBlendMode(blend_mode);
-    state.ui_batch.BeginBlendMode(blend_mode);
+    state.main_batch->BeginBlendMode(blend_mode);
+    state.world_batch->BeginBlendMode(blend_mode);
+    state.ui_batch->BeginBlendMode(blend_mode);
 }
 
 void GameRenderer::EndBlendMode() noexcept {
-    state.main_batch.EndBlendMode();
-    state.world_batch.EndBlendMode();
-    state.ui_batch.EndBlendMode();
+    state.main_batch->EndBlendMode();
+    state.world_batch->EndBlendMode();
+    state.ui_batch->EndBlendMode();
 }
 
 uint32_t GameRenderer::DrawSprite(const sge::Sprite& sprite, sge::Order order) {
@@ -317,7 +324,7 @@ uint32_t GameRenderer::DrawSprite(const sge::Sprite& sprite, sge::Order order) {
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
 
-    return state.main_batch.DrawSprite(sprite, order);
+    return state.main_batch->DrawSprite(sprite, order);
 }
 
 uint32_t GameRenderer::DrawSpriteWorld(const sge::Sprite& sprite, sge::Order order) {
@@ -326,7 +333,7 @@ uint32_t GameRenderer::DrawSpriteWorld(const sge::Sprite& sprite, sge::Order ord
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
 
-    return state.world_batch.DrawSprite(sprite, order);
+    return state.world_batch->DrawSprite(sprite, order);
 }
 
 uint32_t GameRenderer::DrawSpriteUI(const sge::Sprite& sprite, sge::Order order) {
@@ -335,7 +342,7 @@ uint32_t GameRenderer::DrawSpriteUI(const sge::Sprite& sprite, sge::Order order)
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.ui_frustum.intersects(aabb)) return 0;
 
-    return state.ui_batch.DrawSprite(sprite, order);
+    return state.ui_batch->DrawSprite(sprite, order);
 }
 
 uint32_t GameRenderer::DrawAtlasSprite(const sge::TextureAtlasSprite& sprite, sge::Order order) {
@@ -344,7 +351,7 @@ uint32_t GameRenderer::DrawAtlasSprite(const sge::TextureAtlasSprite& sprite, sg
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
 
-    return state.main_batch.DrawAtlasSprite(sprite, order);
+    return state.main_batch->DrawAtlasSprite(sprite, order);
 }
 
 uint32_t GameRenderer::DrawAtlasSpriteWorld(const sge::TextureAtlasSprite& sprite, sge::Order order) {
@@ -353,7 +360,7 @@ uint32_t GameRenderer::DrawAtlasSpriteWorld(const sge::TextureAtlasSprite& sprit
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
 
-    return state.world_batch.DrawAtlasSprite(sprite, order);
+    return state.world_batch->DrawAtlasSprite(sprite, order);
 }
 
 uint32_t GameRenderer::DrawAtlasSpriteWorldPremultiplied(const sge::TextureAtlasSprite& sprite, sge::Order order) {
@@ -362,9 +369,9 @@ uint32_t GameRenderer::DrawAtlasSpriteWorldPremultiplied(const sge::TextureAtlas
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
 
-    state.world_batch.BeginBlendMode(sge::BlendMode::PremultipliedAlpha);
-    uint32_t ordr = state.world_batch.DrawAtlasSprite(sprite, order);
-    state.world_batch.EndBlendMode();
+    state.world_batch->BeginBlendMode(sge::BlendMode::PremultipliedAlpha);
+    uint32_t ordr = state.world_batch->DrawAtlasSprite(sprite, order);
+    state.world_batch->EndBlendMode();
 
     return ordr;
 }
@@ -375,7 +382,7 @@ uint32_t GameRenderer::DrawAtlasSpriteUI(const sge::TextureAtlasSprite& sprite, 
     const sge::Rect aabb = sprite.calculate_aabb();
     if (!state.ui_frustum.intersects(aabb)) return 0;
 
-    return state.ui_batch.DrawAtlasSprite(sprite, order);
+    return state.ui_batch->DrawAtlasSprite(sprite, order);
 }
 
 uint32_t GameRenderer::DrawNinePatchUI(const sge::NinePatch& ninepatch, sge::Order order) {
@@ -384,19 +391,19 @@ uint32_t GameRenderer::DrawNinePatchUI(const sge::NinePatch& ninepatch, sge::Ord
     const sge::Rect aabb = ninepatch.calculate_aabb();
     if (!state.ui_frustum.intersects(aabb)) return 0;
 
-    return state.ui_batch.DrawNinePatch(ninepatch, order);
+    return state.ui_batch->DrawNinePatch(ninepatch, order);
 }
 
 uint32_t GameRenderer::DrawText(const sge::RichTextSection* sections, size_t size, const glm::vec2& position, const sge::Font& font, sge::Order order) {
     ZoneScoped;
 
-    return state.main_batch.DrawText(sections, size, position, font, order);
+    return state.main_batch->DrawText(sections, size, position, font, order);
 }
 
 uint32_t GameRenderer::DrawTextUI(const sge::RichTextSection* sections, size_t size, const glm::vec2& position, const sge::Font& font, sge::Order order) {
     ZoneScoped;
 
-    return state.ui_batch.DrawText(sections, size, position, font, order);
+    return state.ui_batch->DrawText(sections, size, position, font, order);
 }
 
 void GameRenderer::DrawBackground(const BackgroundLayer& layer) {
@@ -428,9 +435,9 @@ void GameRenderer::Terminate() {
 
     const auto& context = sge::Engine::Renderer().Context();
 
-    state.main_batch.Terminate(context);
-    state.world_batch.Terminate(context);
-    state.ui_batch.Terminate(context);
+    state.main_batch->Destroy(context);
+    state.world_batch->Destroy(context);
+    state.ui_batch->Destroy(context);
 
     SGE_RESOURCE_RELEASE(state.resource_heap);
     SGE_RESOURCE_RELEASE(state.chunk_vertex_buffer);
