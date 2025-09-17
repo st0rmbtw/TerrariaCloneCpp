@@ -226,6 +226,19 @@ void MainMenuState::draw_main_menu() {
     });
 }
 
+static void WorldListItem(const sge::Font& font) {
+    UI::Element<UiTypeID::Panel>({
+        .size = UiSize(Sizing::Fill(), Sizing::Fixed(100.0f)),
+        .orientation = LayoutOrientation::Vertical,
+        .horizontal_alignment = Alignment::Center,
+    }, [&] {
+        UI::SetCustomData(UiPanelData {
+            .background_color = sge::LinearRgba(73, 94, 171),
+            .border_color = sge::LinearRgba(89, 116, 213)
+        });
+    });
+}
+
 void MainMenuState::draw_select_world() {
     const sge::Font& font = Assets::GetFont(FontAsset::AndyBold);
 
@@ -238,9 +251,17 @@ void MainMenuState::draw_select_world() {
         UI::Spacer(UiSize::Height(Sizing::Fixed(8.0f)));
         
         UI::Element<UiTypeID::Panel>({
-            .size = UiSize::Fixed(600.0f, 400.0f)
+            .id = ID::Local("WorldList"),
+            .size = UiSize::Fixed(600.0f, 400.0f),
+            .padding = UiRect::Axes(12.0f, 8.0f),
+            .gap = 8.0f,
+            .orientation = LayoutOrientation::Vertical,
+            .horizontal_alignment = Alignment::Center,
+            .scrollable = true,
         }, [&] {
-
+            for (size_t i = 0; i < 15; ++i) {
+                WorldListItem(font);
+            }
         });
 
         UI::Spacer(UiSize::Height(Sizing::Fixed(6.0f)));
@@ -297,6 +318,10 @@ void MainMenuState::draw_ui() {
     for (const UiElement& element : elements) {
         const sge::Order order = sge::Order(element.z_index);
 
+        if (element.scissor_start) {
+            m_batch.BeginScissorMode(element.scissor_data->area);
+        }
+
         switch (element.type_id) {
             case UiTypeID::Text: {
                 const TextData* data = element.text_data;
@@ -306,12 +331,12 @@ void MainMenuState::draw_ui() {
             case UiTypeID::Panel: {
                 const UiPanelData* data = static_cast<const UiPanelData*>(element.custom_data);
 
-                sge::LinearRgba background_color = data != nullptr ? data->background_color : sge::LinearRgba(63, 82, 151) * 0.7f;
-                sge::LinearRgba border_color = data != nullptr ? data->border_color : sge::LinearRgba::black();
+                const sge::LinearRgba background_color = data != nullptr ? data->background_color : sge::LinearRgba(63, 82, 151) * 0.7f;
+                const sge::LinearRgba border_color = data != nullptr ? data->border_color : sge::LinearRgba::black();
 
                 panel.set_anchor(sge::Anchor::TopLeft);
-                panel.set_position(element.position - glm::vec2(1.0f));
-                panel.set_size(element.size + glm::vec2(2.0f));
+                panel.set_position(element.position - glm::vec2(0.5f));
+                panel.set_size(element.size + glm::vec2(1.0f));
                 panel.set_color(background_color);
                 m_batch.DrawNinePatch(panel, order);
 
@@ -321,6 +346,10 @@ void MainMenuState::draw_ui() {
                 border.set_color(border_color);
                 m_batch.DrawNinePatch(border, sge::Order(order.value + 1));
             } break;
+        }
+
+        if (element.scissor_end) {
+            m_batch.EndScissorMode();
         }
     }
 

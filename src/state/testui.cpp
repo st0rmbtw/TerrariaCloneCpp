@@ -15,7 +15,7 @@
 namespace UiTypeID {
     enum : uint8_t {
         Rectangle = 0,
-        Text
+        Text,
     };
 }
 

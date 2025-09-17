@@ -11,6 +11,7 @@
 #include <SGE/input.hpp>
 #include <SGE/types/rich_text.hpp>
 #include <SGE/types/font.hpp>
+#include <SGE/math/rect.hpp>
 
 class UiRect {
 public:
@@ -354,6 +355,7 @@ struct ElementDesc {
     Alignment vertical_alignment{ Alignment::Start };
     /// This only affects the value returned by UI::IsMouseOverUi. UI::IsHovered will work as usual.
     bool hoverable = false;
+    bool scrollable = false;
 };
 
 struct TextElementDesc {
@@ -367,6 +369,10 @@ struct TextData {
     size_t sections_count;
 };
 
+struct ScissorData {
+    sge::Rect area;
+};
+
 struct UiElement {
     ElementID unique_id{};
 
@@ -377,9 +383,13 @@ struct UiElement {
     size_t custom_data_size = 0;
 
     const TextData* text_data = nullptr;
+    const ScissorData* scissor_data = nullptr;
 
     uint32_t type_id = 0;
     uint32_t z_index = 0;
+
+    bool scissor_start = false;
+    bool scissor_end = false;
 };
 
 namespace UI {
@@ -465,6 +475,9 @@ namespace UI {
 namespace ID {
     [[nodiscard]]
     ElementID Local(const std::string_view key) noexcept;
+
+    [[nodiscard]]
+    ElementID Local(const std::string_view key, uint32_t index) noexcept;
 
     [[nodiscard]]
     ElementID Global(const std::string_view key, uint32_t index = 0) noexcept;

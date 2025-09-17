@@ -25,6 +25,11 @@ public:
         return ptr;
     }
 
+    template <typename T>
+    inline T* allocate(std::size_t count = 1) {
+        return static_cast<T*>(allocate(sizeof(T) * count, alignof(T)));
+    }
+
     inline void clear() {
         m_current_offset = 0;
     }

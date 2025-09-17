@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <deque>
 #include <unordered_set>
 #include <vector>
 
@@ -9,6 +10,7 @@
 #include <SGE/types/rich_text.hpp>
 #include <SGE/utils/text.hpp>
 #include <SGE/profile.hpp>
+#include <SGE/time/time.hpp>
 
 #include "arena.hpp"
 #include "ui.hpp"
@@ -26,7 +28,7 @@ public:
     ArenaAllocator(Arena& arena) : m_arena{ &arena } {}
 
     value_type* allocate(std::size_t n) {
-        return static_cast<value_type*>(m_arena->allocate(n*sizeof(value_type), alignof(value_type)));
+        return m_arena->allocate<value_type>(n);
     }
 
     void deallocate(value_type*, std::size_t) {
@@ -53,6 +55,7 @@ struct Node {
     size_t custom_data_size = 0;
     
     float gap = 0.0f;
+    float scroll_max = 0.0f;
     
     uint32_t type_id = 0;
     uint32_t z_index = 0;
@@ -66,8 +69,15 @@ struct Node {
     bool render = false;
     bool text_node = false;
     bool hoverable = false;
+    bool scrollable = false;
+    bool scissor_start = false;
+    bool scissor_end = false;
 
     Node(Arena& arena) : children{ arena } {}
+};
+
+struct ScrollData {
+    float offset;
 };
 
 static struct {
@@ -78,7 +88,9 @@ static struct {
 
     NodeID active_id{};
 
-    sge::SwapbackVector<Node*> search_stack{};
+    std::deque<Node*> search_stack{};
+    // In the pair first is the parent, second is the child
+    std::deque<std::pair<Node*, Node*>> search_stack_with_parent{};
     sge::SwapbackVector<Node*> postorder_stack{};
 
     sge::SwapbackVector<Node*> growable_nodes{};
@@ -87,6 +99,7 @@ static struct {
 
     std::vector<Node> nodes{};
     std::vector<TextData> text_data{};
+    std::unordered_map<NodeID, ScrollData> scroll_data{};
     std::vector<UiElement> render_elements{};
     
     size_t node_stack_size = 0;
@@ -186,6 +199,36 @@ static inline ElementID HashString(const std::string_view key, const uint32_t se
     };
 }
 
+static inline ElementID HashStringWithOffset(const std::string_view key, const uint32_t offset, const uint32_t seed) {
+    uint32_t hash = 0;
+    uint32_t base = seed;
+
+    for (size_t i = 0; i < key.size(); i++) {
+        base += key.data()[i];
+        base += (base << 10);
+        base ^= (base >> 6);
+    }
+    hash = base;
+    hash += offset;
+    hash += (hash << 10);
+    hash ^= (hash >> 6);
+
+    hash += (hash << 3);
+    base += (base << 3);
+    hash ^= (hash >> 11);
+    base ^= (base >> 11);
+    hash += (hash << 15);
+    base += (base << 15);
+
+    // +1 because the element with the id of 0 is the root element
+    return ElementID {
+        .string_id = key,
+        .id = hash + 1,
+        .offset = offset,
+        .base_id = base + 1,
+    };
+}
+
 static inline std::string_view CopyStringToArena(std::string_view string) {
     using pointer = std::string_view::pointer;
     using value_type = std::string_view::value_type;
@@ -225,13 +268,18 @@ void UI::Update() {
     state.search_stack.push_back(&state.nodes[0]);
 
     state.search_visited.clear();
-    state.search_visited.insert(state.nodes[0].unique_id);
 
     state.postorder_stack.clear();
 
     while (!state.search_stack.empty()) {
         Node* current_node = state.search_stack.back();
         state.search_stack.pop_back();
+
+        if (state.search_visited.contains(current_node->unique_id)) {
+            continue;
+        }
+
+        state.search_visited.insert(current_node->unique_id);
 
         if (current_node->text_node)
             continue;
@@ -244,6 +292,14 @@ void UI::Update() {
         if (hovered) {
             state.hovered_ids.insert(current_node->unique_id);
             state.any_hovered = state.any_hovered || clickable || current_node->hoverable;
+
+            if (current_node->scrollable) {
+                ScrollData& scroll_data = state.scroll_data[current_node->unique_id];
+                for (float delta : sge::Input::ScrollEvents()) {
+                    scroll_data.offset += delta * 1000.0f * sge::Time::DeltaSeconds();
+                    scroll_data.offset = std::clamp(scroll_data.offset, -current_node->scroll_max, 0.0f);
+                }
+            }
         }
 
         if (clickable) {
@@ -252,13 +308,7 @@ void UI::Update() {
 
         for (uint32_t child_index : current_node->children) {
             Node& child = state.nodes[child_index];
-
-            if (state.search_visited.contains(child.unique_id)) {
-                continue;
-            }
-
             state.search_stack.push_back(&child);
-            state.search_visited.insert(child.unique_id);
         }
     }
 
@@ -346,10 +396,16 @@ void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, bool render) {
         new_node.self_alignment = desc.self_alignment;
         new_node.gap = desc.gap;
         new_node.hoverable = desc.hoverable;
+        new_node.scrollable = desc.scrollable;
         new_node.type_id = type_id;
         new_node.z_index = parent.z_index + 1;
         new_node.render = render;
     }
+
+    if (desc.scrollable && !state.scroll_data.contains(id)) {
+        state.scroll_data[id] = ScrollData{};
+    }
+
     PushNode(parent, std::move(new_node));
 }
 
@@ -397,7 +453,9 @@ static void GrowElementsHorizontally(Node& parent) {
             }
         }
 
-        width_to_add = std::min(width_to_add, remaining_width / state.growable_nodes.size());
+        if (parent.orientation == LayoutOrientation::Horizontal) {
+            width_to_add = std::min(width_to_add, remaining_width / state.growable_nodes.size());
+        }
 
         for (Node* child : state.growable_nodes) {
             if (sge::approx_equals(child->size.x, smallest)) {
@@ -452,7 +510,9 @@ static void GrowElementsVertically(Node& parent) {
             }
         }
 
-        height_to_add = std::min(height_to_add, remaining_height / state.growable_nodes.size());
+        if (parent.orientation == LayoutOrientation::Vertical) {
+            height_to_add = std::min(height_to_add, remaining_height / state.growable_nodes.size());
+        }
 
         for (Node* child : state.growable_nodes) {
             if (sge::approx_equals(child->size.y, smallest)) {
@@ -478,6 +538,25 @@ void UI::EndElement() {
         for (uint32_t child_index : node.children) {
             Node& child = state.nodes[child_index];
             child.z_index = ++z_index;
+        }
+    }
+
+    const size_t children_count = node.children.size();
+    if (node.scrollable && children_count > 0) {
+        uint32_t i = 0;
+
+        for (uint32_t child_index : node.children) {
+            Node& child = state.nodes[child_index];
+
+            if (i == 0) {
+                child.scissor_start = true;
+            }
+
+            if (i == children_count - 1) {
+                child.scissor_end = true;
+            }
+
+            ++i;
         }
     }
 
@@ -539,7 +618,7 @@ void UI::Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSectio
     const glm::vec2 measured_size = sge::calculate_text_bounds(font, sections, count);
 
     // Copy section contents
-    sge::RichTextSection* arena_sections = static_cast<sge::RichTextSection*>(state.arena.allocate(sizeof(sge::RichTextSection) * count, alignof(sge::RichTextSection)));
+    sge::RichTextSection* arena_sections = state.arena.allocate<sge::RichTextSection>(count);
     for (size_t i = 0; i < count; ++i) {
         const sge::RichTextSection& section = sections[i];
         arena_sections[i].size = section.size;
@@ -592,24 +671,6 @@ static void FinalizeLayout() {
         GrowElementsHorizontally(*current_node);
         GrowElementsVertically(*current_node);
 
-        if (current_node->render) {
-            TextData* text_data = nullptr;
-            if (current_node->text_node) {
-                text_data = &state.text_data[current_node->text_data_index];
-            }
-
-            state.render_elements.push_back(UiElement {
-                .unique_id = current_node->unique_id,
-                .position = current_node->pos,
-                .size = current_node->size,
-                .custom_data = current_node->custom_data,
-                .custom_data_size = current_node->custom_data_size,
-                .text_data = text_data,
-                .type_id = current_node->type_id,
-                .z_index = current_node->z_index
-            });
-        }
-
         if (current_node->text_node)
             continue;
 
@@ -621,6 +682,19 @@ static void FinalizeLayout() {
         const float parent_gap = current_node->gap;
 
         glm::vec2 pos = current_node->pos + glm::vec2(parent_padding.left(), parent_padding.top());
+
+        if (current_node->scrollable) {
+            current_node->scroll_max = current_node->scroll_max;
+
+            ScrollData& scroll_data = state.scroll_data[current_node->unique_id];
+            if (parent_orientation == LayoutOrientation::Vertical) {
+                pos.y += scroll_data.offset;
+            } else if (parent_orientation == LayoutOrientation::Horizontal) {
+                pos.x += scroll_data.offset;
+            }
+        }
+
+        float max_scroll = 0.0f;
 
         float remaining_width = parent_size.x - parent_padding.left() - parent_padding.right();
         float remaining_height = parent_size.y - parent_padding.top() - parent_padding.bottom();
@@ -664,6 +738,7 @@ static void FinalizeLayout() {
                 }
 
                 remaining_width -= child.size.x;
+                max_scroll += child.size.x + parent_gap;
             } else if (parent_orientation == LayoutOrientation::Vertical) {
                 if (child.self_alignment) {
                     if (child.self_alignment == Alignment::Center) {
@@ -680,9 +755,8 @@ static void FinalizeLayout() {
                 }
 
                 remaining_height -= child.size.y;
+                max_scroll += child.size.y + parent_gap;
             } else if (parent_orientation == LayoutOrientation::Stack) {
-                // TODO: Take self_alignment into account + add more alignments like: TopLeft, TopRight, etc.
-
                 if (child.self_alignment) {
                     switch (child.self_alignment.value()) {
                     case Alignment::Start:
@@ -734,6 +808,52 @@ static void FinalizeLayout() {
                 }
             }
         }
+
+        if (parent_orientation == LayoutOrientation::Horizontal) {
+            current_node->scroll_max = max_scroll - parent_size.x + parent_padding.right();
+        } else if (parent_orientation == LayoutOrientation::Vertical) {
+            current_node->scroll_max = max_scroll - parent_size.y + parent_padding.bottom();
+        }
+    }
+
+    state.search_stack_with_parent.clear();
+    state.search_stack_with_parent.emplace_back(&state.nodes[0], nullptr);
+
+    while (!state.search_stack_with_parent.empty()) {
+        auto [current_node, parent] = state.search_stack_with_parent.front();
+        state.search_stack_with_parent.pop_front();
+
+        if (current_node->render || current_node->scissor_start || current_node->scissor_end) {
+            TextData* text_data = nullptr;
+            if (current_node->text_node) {
+                text_data = &state.text_data[current_node->text_data_index];
+            }
+            
+            ScissorData* scissor_data = nullptr;
+            if (current_node->scissor_start) {
+                scissor_data = state.arena.allocate<ScissorData>();
+                scissor_data->area = sge::IRect::from_top_left(parent->pos, glm::round(parent->size));
+            }
+
+            state.render_elements.push_back(UiElement {
+                .unique_id = current_node->unique_id,
+                .position = current_node->pos,
+                .size = current_node->size,
+                .custom_data = current_node->custom_data,
+                .custom_data_size = current_node->custom_data_size,
+                .text_data = text_data,
+                .scissor_data = scissor_data,
+                .type_id = current_node->type_id,
+                .z_index = current_node->z_index,
+                .scissor_start = current_node->scissor_start,
+                .scissor_end = current_node->scissor_end
+            });
+        }
+    
+        for (uint32_t child_index : current_node->children) {
+            Node& child = state.nodes[child_index];
+            state.search_stack_with_parent.emplace_back(&child, current_node);
+        }
     }
 }
 
@@ -782,6 +902,11 @@ const std::vector<UiElement>& UI::Finish() {
 ElementID ID::Local(const std::string_view key) noexcept {
     const uint32_t parent_id = TopNode().unique_id.id;
     return HashString(CopyStringToArena(key), parent_id);
+}
+
+ElementID ID::Local(const std::string_view key, uint32_t index) noexcept {
+    const uint32_t parent_id = TopNode().unique_id.id;
+    return HashStringWithOffset(CopyStringToArena(key), index, parent_id);
 }
 
 ElementID ID::Global(const std::string_view key, uint32_t index) noexcept {
