@@ -38,6 +38,7 @@ enum class TextureAsset : uint8_t {
     UiInventoryHotbar,
     UiPanelBackground,
     UiPanelBorder,
+    UiLogo,
 
     TileCracks,
     Tiles0,

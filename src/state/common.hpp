@@ -6,14 +6,10 @@
 #include <SGE/types/color.hpp>
 #include <SGE/types/sprite.hpp>
 #include <SGE/renderer/batch.hpp>
+#include <SGE/types/animation.hpp>
 #include <glm/vec2.hpp>
 
 #include "../assets.hpp"
-
-enum class AnimationDirection : uint8_t {
-    Forward = 0,
-    Backward = 1
-};
 
 class Cursor {
 public:
@@ -62,11 +58,10 @@ private:
 
     sge::LinearRgba m_foreground_color;
     sge::LinearRgba m_background_color;
+
+    sge::Animation m_animation{ sge::Duration::SecondsFloat(1.0f), sge::RepeatStrategy::MirroredRepeat };
     
-    float m_anim_progress = 0.0f;
     float m_scale = 1.0f;
-    
-    AnimationDirection m_anim_dir;
 };
 
 #endif

@@ -348,6 +348,7 @@ struct ElementDesc {
     ElementID id{};
     UiSize size{ UiSize::Fit() };
     UiRect padding{};
+    glm::vec2 offset{ 0.0f, 0.0f };
     float gap{ 0.0f };
     LayoutOrientation orientation{ LayoutOrientation::Stack };
     std::optional<Alignment> self_alignment{ std::nullopt };
@@ -360,6 +361,7 @@ struct ElementDesc {
 
 struct TextElementDesc {
     ElementID id{};
+    glm::vec2 offset{ 0.0f, 0.0f };
     std::optional<Alignment> self_alignment{ std::nullopt };
 };
 

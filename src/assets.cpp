@@ -105,6 +105,7 @@ static const std::pair<TextureAsset, AssetTexture> TEXTURE_ASSETS[] = {
     { TextureAsset::UiInventoryHotbar,     AssetTexture("assets/sprites/ui/Inventory_Back9.png", sge::TextureSampler::Linear) },
     { TextureAsset::UiPanelBackground,     AssetTexture("assets/sprites/ui/PanelBackground.png", sge::TextureSampler::Linear) },
     { TextureAsset::UiPanelBorder,         AssetTexture("assets/sprites/ui/PanelBorder.png", sge::TextureSampler::Linear) },
+    { TextureAsset::UiLogo,                AssetTexture("assets/sprites/ui/Logo.png", sge::TextureSampler::Linear) },
 
     { TextureAsset::TileCracks, AssetTexture("assets/sprites/tiles/TileCracks.png", sge::TextureSampler::Nearest) },
 

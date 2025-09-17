@@ -108,7 +108,7 @@ bool App::Init(sge::RenderBackend backend, AppConfig config, int16_t world_width
     engine_config.window_settings.title = "TerrariaClone";
     engine_config.window_settings.width = 1280;
     engine_config.window_settings.height = 720;
-    engine_config.window_settings.cursor_mode = CursorMode::Hidden;
+    engine_config.window_settings.cursor_mode = sge::CursorMode::Hidden;
     engine_config.window_settings.samples = config.samples;
     engine_config.window_settings.fullscreen = config.fullscreen;
     engine_config.window_settings.vsync = config.vsync;

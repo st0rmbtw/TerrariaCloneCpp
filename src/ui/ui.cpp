@@ -50,6 +50,7 @@ struct Node {
     
     glm::vec2 pos = glm::vec2(0.0f);
     glm::vec2 size = glm::vec2(0.0f);
+    glm::vec2 offset = glm::vec2(0.0f);
     
     void* custom_data = nullptr;
     size_t custom_data_size = 0;
@@ -399,6 +400,7 @@ void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, bool render) {
     {
         new_node.unique_id = id;
         new_node.size = size;
+        new_node.offset = desc.offset;
         new_node.sizing = desc.size;
         new_node.padding = desc.padding;
         new_node.orientation = desc.orientation;
@@ -534,6 +536,50 @@ static void GrowElementsVertically(Node& parent) {
     }
 }
 
+static inline Node& GetChild(Node& node, uint32_t index) {
+    const uint32_t idx = node.children[index];
+    return state.nodes[idx];
+}
+
+static uint32_t FindMaxZIndex(Node& node) {
+    uint32_t z_index = node.z_index;
+
+    state.search_stack.clear();
+    state.search_stack.push_back(&node);
+
+    while (!state.search_stack.empty()) {
+        Node* current_node = state.search_stack.back();
+        state.search_stack.pop_back();
+
+        z_index = std::max(z_index, current_node->z_index);
+        
+        for (uint32_t child_index : current_node->children) {
+            Node& child = state.nodes[child_index];
+            state.search_stack.push_back(&child);
+        }
+    }
+
+    return z_index;
+}
+
+static void PropagateZIndex(Node& node, uint32_t z_index) {
+    node.z_index = z_index;
+    
+    if (node.orientation == LayoutOrientation::Stack && node.children.size() > 1) {
+        uint32_t i = 0;
+        do {
+            uint32_t z_index = std::max(node.z_index, FindMaxZIndex(GetChild(node, i)));
+            Node& child = state.nodes[node.children[i + 1]];
+            PropagateZIndex(child, ++z_index);
+        } while (++i < node.children.size() - 1);
+    } else {
+        for (uint32_t child_index : node.children) {
+            Node& child = state.nodes[child_index];
+            PropagateZIndex(child, z_index + 1);
+        }
+    }
+}
+
 void UI::EndElement() {
     ZoneScoped;
 
@@ -544,13 +590,7 @@ void UI::EndElement() {
 
     if (node.text_node) return;
 
-    if (node.orientation == LayoutOrientation::Stack) {
-        uint32_t z_index = node.z_index;
-        for (uint32_t child_index : node.children) {
-            Node& child = state.nodes[child_index];
-            child.z_index = ++z_index;
-        }
-    }
+    PropagateZIndex(node, node.z_index);
 
     const size_t children_count = node.children.size();
     if (node.scrollable && children_count > 0) {
@@ -655,6 +695,7 @@ void UI::Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSectio
     {
         new_node.unique_id = id;
         new_node.size = measured_size;
+        new_node.offset = desc.offset;
         new_node.sizing = UiSize::Fixed(measured_size);
         new_node.text_data_index = text_data_index;
         new_node.type_id = type_id;
@@ -692,7 +733,7 @@ static void FinalizeLayout() {
         const Alignment parent_vertical_alignment = current_node->vertical_alignment;
         const float parent_gap = current_node->gap;
 
-        glm::vec2 pos = current_node->pos + glm::vec2(parent_padding.left(), parent_padding.top());
+        glm::vec2 pos = current_node->pos + current_node->offset + glm::vec2(parent_padding.left(), parent_padding.top());
 
         if (current_node->scrollable) {
             current_node->scroll_max = current_node->scroll_max;
@@ -786,7 +827,7 @@ static void FinalizeLayout() {
                     break;
                     case Alignment::Center:
                         child.pos.x += remaining_width * 0.5f;
-                        child.pos.y += remaining_width * 0.5f;
+                        child.pos.y += remaining_height * 0.5f;
                     break;
                     case Alignment::CenterRight:
                         child.pos.x += remaining_width;
@@ -871,7 +912,7 @@ static void FinalizeLayout() {
 
                 state.render_elements.push_back(UiElement {
                     .unique_id = child.unique_id,
-                    .position = child.pos,
+                    .position = child.pos + child.offset,
                     .size = child.size,
                     .custom_data = child.custom_data,
                     .custom_data_size = child.custom_data_size,

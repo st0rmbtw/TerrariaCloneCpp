@@ -11,16 +11,25 @@
 #include "../app.hpp"
 
 #include "menu.hpp"
+#include "SGE/math/quat.hpp"
+#include "common.hpp"
+#include "glm/trigonometric.hpp"
 #include "ingame.hpp"
 
 static constexpr float MENU_BUTTON_FONT_SIZE = 48.0f;
 static constexpr sge::LinearRgba MENU_BUTTON_COLOR = sge::LinearRgba::white() * 0.9f;
 static constexpr sge::LinearRgba MENU_BUTTON_COLOR_HOVERED = sge::LinearRgba(1.0f, 1.0f, 0.0f) * 0.9f;
 
+static constexpr float LOGO_ANIM_MIN_SCALE = 0.9f;
+static constexpr float LOGO_ANIM_MAX_SCALE = 1.1f;
+static constexpr float LOGO_ANIM_MIN_ROTATION = -5.0f;
+static constexpr float LOGO_ANIM_MAX_ROTATION = 5.0f;
+
 namespace UiTypeID {
     enum : uint8_t {
         Text = 0,
-        Panel
+        Panel,
+        Logo
     };
 }
 
@@ -77,14 +86,14 @@ void MainMenuState::setup_background() {
         BackgroundLayer(BackgroundAsset::Background7, 1.5f)
             .set_anchor(sge::Anchor::BottomLeft)
             .set_y(pos - 150.0f)
-            .set_speed(0.3f, 0.9f)
+            .set_speed(0.2f, 0.9f)
             .set_fill_screen_width(true)
             .set_is_ui(true)
     );
     m_background_layers.push_back(
         BackgroundLayer(BackgroundAsset::Background90, 1.5f)
             .set_anchor(sge::Anchor::BottomLeft)
-            .set_speed(0.5f, 0.8f)
+            .set_speed(0.4f, 0.8f)
             .set_y(pos + 50.0f)
             .set_fill_screen_width(true)
             .set_is_ui(true)
@@ -136,6 +145,15 @@ void MainMenuState::Update() {
     if (sge::Input::JustPressed(sge::Key::Escape)) {
         set_previous_position();
     }
+
+    update_logo();
+}
+
+void MainMenuState::update_logo() {
+    m_logo_animation.tick(sge::Time::DeltaSeconds());
+
+    m_logo_scale = LOGO_ANIM_MIN_SCALE + (LOGO_ANIM_MAX_SCALE - LOGO_ANIM_MIN_SCALE) * m_logo_animation.progress();
+    m_logo_rotation = Quat::from_rotation_z(glm::radians(LOGO_ANIM_MIN_ROTATION + (LOGO_ANIM_MAX_ROTATION - LOGO_ANIM_MIN_ROTATION) * m_logo_animation.progress()));
 }
 
 void MainMenuState::Render() {
@@ -206,6 +224,7 @@ void MainMenuState::draw_main_menu() {
 
     UI::Container({
         .size = UiSize::Fill(),
+        .self_alignment = Alignment::Center,
         .horizontal_alignment = Alignment::Center,
         .vertical_alignment = Alignment::Center,
     }, [&] {
@@ -245,43 +264,55 @@ static void WorldListItem(const sge::Font& font) {
 void MainMenuState::draw_select_world() {
     const sge::Font& font = Assets::GetFont(FontAsset::AndyBold);
 
-    
     UI::Container({
-        .orientation = LayoutOrientation::Vertical,
+        .self_alignment = Alignment::Center,
         .horizontal_alignment = Alignment::Center
     }, [&] {
-        UI::Text<UiTypeID::Text>(font, sge::rich_text("Select World", 42.0f, sge::LinearRgba::white()));
-        UI::Spacer(UiSize::Height(Sizing::Fixed(8.0f)));
-        
-        UI::Element<UiTypeID::Panel>({
-            .id = ID::Local("WorldList"),
-            .size = UiSize::Fixed(600.0f, 400.0f),
-            .padding = UiRect::Axes(12.0f, 8.0f),
-            .gap = 8.0f,
+        UI::Container({
             .orientation = LayoutOrientation::Vertical,
-            .horizontal_alignment = Alignment::Center,
-            .scrollable = true,
+            .horizontal_alignment = Alignment::Center
         }, [&] {
-            for (size_t i = 0; i < 15; ++i) {
-                WorldListItem(font);
-            }
+            UI::Element<UiTypeID::Panel>({
+                .size = UiSize::Fixed(600.0f, 400.0f),
+                .padding = UiRect::Axes(12.0f, 8.0f),
+                .gap = 5.0f,
+                .orientation = LayoutOrientation::Vertical,
+                .horizontal_alignment = Alignment::Center,
+                .scrollable = true,
+            }, [&] {
+                for (size_t i = 0; i < 15; ++i) {
+                    WorldListItem(font);
+                }
+            });
+
+            UI::Spacer(UiSize::Height(Sizing::Fixed(6.0f)));
+
+            UI::Container({
+                .size = UiSize::Width(Sizing::Fill()),
+                .gap = 24.0f,
+                .orientation = LayoutOrientation::Horizontal,
+            }, [&] {
+                Button(font, UiSize::Width(Sizing::Fill()), "Back", [this]() {
+                    set_previous_position();
+                });
+                Button(font, UiSize::Width(Sizing::Fill()), "New", [this]() {
+                    // TODO
+                    m_world_selected = true;
+                });
+            });
         });
 
-        UI::Spacer(UiSize::Height(Sizing::Fixed(6.0f)));
-
-        UI::Container({
-            .id = ID::Local("ButtonsRow"),
-            .size = UiSize::Width(Sizing::Fill()),
-            .gap = 24.0f,
-            .orientation = LayoutOrientation::Horizontal,
+        UI::Element<UiTypeID::Panel>({
+            .id = ID::Local("Header"),
+            .padding = UiRect::Horizontal(12.0f),
+            .offset = glm::vec2(0.0f, -35.0f)
         }, [&] {
-            Button(font, UiSize::Width(Sizing::Fill()), "Back", [this]() {
-                set_previous_position();
+            UI::SetCustomData(UiPanelData {
+                .background_color = sge::LinearRgba(73, 94, 171),
+                .border_color = sge::LinearRgba::black()
             });
-            Button(font, UiSize::Width(Sizing::Fill()), "New", [this]() {
-                // TODO
-                m_world_selected = true;
-            });
+
+            UI::Text<UiTypeID::Text>(font, sge::rich_text("Select World", 42.0f, sge::LinearRgba::white()));
         });
     });
 }
@@ -293,9 +324,12 @@ void MainMenuState::draw_ui() {
 
     UI::Container({
         .size = UiSize::Fill(),
-        .horizontal_alignment = Alignment::Center,
-        .vertical_alignment = Alignment::Center,
     }, [&] {
+        UI::AddElement<UiTypeID::Logo>({
+            .size = UiSize::Fixed(Assets::GetTexture(TextureAsset::UiLogo).size()),
+            .self_alignment = Alignment::TopCenter
+        });
+
         switch (current_state) {
         case MenuPosition::MainMenu:
             draw_main_menu();
@@ -354,6 +388,16 @@ void MainMenuState::draw_ui() {
                 border.set_size(element.size);
                 border.set_color(border_color);
                 m_batch.DrawNinePatch(border, sge::Order(order.value + 1));
+            } break;
+
+            case UiTypeID::Logo: {
+                sprite.set_anchor(sge::Anchor::Center);
+                sprite.set_texture(Assets::GetTexture(TextureAsset::UiLogo));
+                sprite.set_position(element.position + element.size * 0.5f);
+                sprite.set_custom_size(element.size);
+                sprite.set_scale(m_logo_scale);
+                sprite.set_rotation(m_logo_rotation);
+                m_batch.DrawSprite(sprite, order);
             } break;
         }
     }
