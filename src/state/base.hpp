@@ -21,7 +21,7 @@ public:
     virtual void OnWindowSizeChanged(glm::uvec2 /* size */) {
     }
     virtual BaseState* GetNextState() {
-        return nullptr;
+        return this;
     }
     virtual ~BaseState() = default;
 };

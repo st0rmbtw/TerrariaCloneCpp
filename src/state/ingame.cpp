@@ -18,8 +18,6 @@
 static constexpr float UI_PADDING = 10.0f;
 
 static constexpr float INVENTORY_TITLE_SIZE = 22.0f;
-static constexpr float MIN_CURSOR_SCALE = 1.2f;
-static constexpr float MAX_CURSOR_SCALE = MIN_CURSOR_SCALE + 0.1f;
 static constexpr float HOTBAR_SLOT_SIZE = 40.0f;
 static constexpr float INVENTORY_SLOT_SIZE = HOTBAR_SLOT_SIZE * 1.15f;
 static constexpr float HOTBAR_SLOT_SIZE_SELECTED = HOTBAR_SLOT_SIZE * 1.3f;
@@ -87,20 +85,8 @@ InGameState::InGameState() :
     m_fps_update_timer = sge::Timer::from_seconds(0.5f, sge::TimerMode::Repeating);
     m_fps_update_timer.set_finished();
 
-    m_cursor_foreground_color = sge::LinearRgba(1.0, 0.08, 0.58);
-    m_cursor_background_color = sge::LinearRgba(0.9, 0.9, 0.9);
-
-    m_cursor_background
-        .set_texture(Assets::GetTexture(TextureAsset::UiCursorBackground))
-        .set_color(m_cursor_background_color)
-        .set_anchor(sge::Anchor::TopLeft)
-        .set_outline_color(m_cursor_background_color)
-        .set_outline_thickness(0.03);
-
-    m_cursor_foreground
-        .set_texture(Assets::GetTexture(TextureAsset::UiCursorForeground))
-        .set_color(m_cursor_foreground_color)
-        .set_anchor(sge::Anchor::TopLeft);
+    m_cursor.SetForegroundColor(sge::LinearRgba(1.0f, 0.08f, 0.58f));
+    m_cursor.SetBackgroundColor(sge::LinearRgba(0.9f, 0.9f, 0.9f));
 }
 
 InGameState::~InGameState() {
@@ -295,40 +281,10 @@ void InGameState::PostRender() {
 #endif
 }
 
-void InGameState::update_ui_cursor() noexcept {
-    if (m_cursor_anim_progress >= 1.0f) {
-        m_cursor_anim_dir = AnimationDirection::Backward;
-    } else if (m_cursor_anim_progress <= 0.0f) {
-        m_cursor_anim_dir = AnimationDirection::Forward;
-    }
-
-    switch (m_cursor_anim_dir) {
-    case AnimationDirection::Backward:
-        m_cursor_anim_progress -= 2.0f * sge::Time::DeltaSeconds();
-        break;
-    case AnimationDirection::Forward:
-        m_cursor_anim_progress += 2.0f * sge::Time::DeltaSeconds();
-        break;
-    }
-
-    m_cursor_anim_progress = glm::clamp(m_cursor_anim_progress, 0.0f, 1.0f);
-
-    const float scale = MIN_CURSOR_SCALE + m_cursor_anim_progress * (MAX_CURSOR_SCALE - MIN_CURSOR_SCALE);
-    m_cursor_scale = scale;
-
-    m_cursor_background.set_position(sge::Input::MouseScreenPosition());
-    m_cursor_foreground.set_position(sge::Input::MouseScreenPosition() + glm::vec2(3.0f));
-
-    m_cursor_background.set_scale(glm::vec2(scale));
-    m_cursor_foreground.set_scale(glm::vec2(scale));
-
-    m_cursor_foreground.set_color(m_cursor_foreground_color * (0.7f + 0.3f * m_cursor_anim_progress));
-}
-
 void InGameState::update_ui() noexcept {
     UI::Update();
 
-    update_ui_cursor();
+    m_cursor.Update(sge::Input::MouseScreenPosition());
 
     Inventory& inventory = m_player.inventory();
 
@@ -402,21 +358,21 @@ void InGameState::draw_cursor() noexcept {
     const sge::Font& font = Assets::GetFont(FontAsset::AndyBold);
     Inventory& inventory = m_player.inventory();
 
-    GameRenderer::DrawSpriteUI(m_cursor_background);
-    GameRenderer::DrawSpriteUI(m_cursor_foreground);
+    GameRenderer::DrawSpriteUI(m_cursor.Background());
+    GameRenderer::DrawSpriteUI(m_cursor.Foreground());
 
     const ItemSlot& taken_item = inventory.taken_item();
     const ItemSlot& selected_item = inventory.get_selected_item();
-    const glm::vec2 position = m_cursor_background.position() + m_cursor_background.size();
+    const glm::vec2 position = m_cursor.Background().position() + m_cursor.Background().size();
 
     if (m_show_extra_ui && taken_item.has_item()) {
         const sge::Texture& texture = Assets::GetItemTexture(taken_item.item->id);
-        const glm::vec2 size = glm::vec2(texture.size()) * m_cursor_scale;
+        const glm::vec2 size = glm::vec2(texture.size()) * m_cursor.Scale();
 
-        draw_item_with_stack(font, size, 16.0f * m_cursor_scale, position, taken_item.item.value());
+        draw_item_with_stack(font, size, 16.0f * m_cursor.Scale(), position, taken_item.item.value());
     } else if (m_player.can_use_item() && selected_item.has_item() && !UI::IsMouseOverUi()) {
         const sge::Texture& texture = Assets::GetItemTexture(selected_item.item->id);
-        const glm::vec2 size = glm::vec2(texture.size()) * m_cursor_scale;
+        const glm::vec2 size = glm::vec2(texture.size()) * m_cursor.Scale();
 
         draw_item(size, position, *selected_item.item);
     }
@@ -424,7 +380,6 @@ void InGameState::draw_cursor() noexcept {
 
 void InGameState::draw_inventory() noexcept {
     UI::Container({
-        .padding = UiRect(0.0f, 0.0f, 4.0f, 0.0f),
         .orientation = LayoutOrientation::Vertical,
         .hoverable = true
     }, [this] {
@@ -517,12 +472,10 @@ void InGameState::draw_inventory() noexcept {
                                 );
                             }
 
-                            const glm::vec2 padding = glm::vec2(5.0f + (back_size - HOTBAR_SLOT_SIZE) * 0.25f);
-
                             UI::Container({
                                 .size = UiSize::Fill(),
-                                .padding = UiRect::Horizontal(padding.x).top(padding.y).bottom(padding.y * 0.5f),
-                                .orientation = LayoutOrientation::Vertical,
+                                .padding = UiRect::Horizontal(5.0f + (back_size.x - HOTBAR_SLOT_SIZE) * 0.25f),
+                                .orientation = LayoutOrientation::Stack
                             }, [&] {
                                 if (index < CELLS_IN_ROW && (item.has_value() || m_show_extra_ui)) {
                                     float index_size = text_size;
@@ -537,7 +490,7 @@ void InGameState::draw_inventory() noexcept {
                                     UI::AddElement<UiTypeID::InventorySlotIndex>(
                                         {
                                             .size = UiSize::Fixed(size),
-                                            .self_alignment = Alignment::End
+                                            .self_alignment = Alignment::TopRight
                                         },
                                         UiInventorySlotIndexData {
                                             .color = sge::LinearRgba(index_color),
@@ -555,7 +508,7 @@ void InGameState::draw_inventory() noexcept {
                                         font,
                                         sge::rich_text(temp_format("{}", item->stack), text_size, sge::LinearRgba(0.9f)),
                                         {
-                                            .self_alignment = Alignment::Center
+                                            .self_alignment = Alignment::BottomCenter
                                         }
                                     );
                                 }
@@ -659,7 +612,7 @@ void InGameState::draw_ui() noexcept {
             } break;
 
             case UiTypeID::Text: {
-                const TextData* data = static_cast<const TextData*>(element.text_data);
+                const TextData* data = element.text_data;
                 GameRenderer::DrawTextUI(data->sections, data->sections_count, element.position, data->font, order);
             } break;
         }
@@ -671,5 +624,5 @@ void InGameState::draw_ui() noexcept {
 }
 
 BaseState* InGameState::GetNextState() {
-    return nullptr;
+    return this;
 }

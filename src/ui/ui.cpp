@@ -520,25 +520,31 @@ void UI::EndElement() {
             if (node.sizing.height().type() == Sizing::Type::Fit)
                 node.size.y += child.size.y;
         }
+    } else if (node.orientation == LayoutOrientation::Stack) {
+        for (uint32_t child_index : node.children) {
+            const Node& child = state.nodes[child_index];
+
+            if (node.sizing.width().type() == Sizing::Type::Fit)
+                node.size.x = std::max(node.size.x, child.size.x + horizontal_padding);
+
+            if (node.sizing.height().type() == Sizing::Type::Fit)
+                node.size.y = std::max(node.size.y, child.size.y + vertical_padding);
+        }
     }
 }
 
 void UI::Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSection* sections, const size_t count, const TextElementDesc& desc) {
     ZoneScoped;
 
-    glm::vec2 measured_size = glm::vec2(0.0f);
-    for (size_t i = 0; i < count; ++i) {
-        const sge::RichTextSection& section = sections[i];
-        measured_size = glm::max(measured_size, calculate_text_bounds(font, section.text.size(), section.text.data(), section.size));
-    }
+    const glm::vec2 measured_size = sge::calculate_text_bounds(font, sections, count);
 
     // Copy section contents
     sge::RichTextSection* arena_sections = static_cast<sge::RichTextSection*>(state.arena.allocate(sizeof(sge::RichTextSection) * count, alignof(sge::RichTextSection)));
     for (size_t i = 0; i < count; ++i) {
         const sge::RichTextSection& section = sections[i];
-        arena_sections->size = section.size;
-        arena_sections->color = section.color;
-        arena_sections->text = CopyStringToArena(section.text);
+        arena_sections[i].size = section.size;
+        arena_sections[i].color = section.color;
+        arena_sections[i].text = CopyStringToArena(section.text);
     }
 
     const size_t text_data_index = state.text_data.size();
@@ -642,38 +648,90 @@ static void FinalizeLayout() {
                 remaining_height = parent_size.y - child.size.y - parent_padding.top() - parent_padding.bottom();
             }
 
-            if (child.self_alignment && parent_orientation == LayoutOrientation::Horizontal) {
-                if (child.self_alignment == Alignment::Center) {
-                    child.pos.y += remaining_height * 0.5f;
-                } else if (child.self_alignment == Alignment::End) {
-                    child.pos.y += remaining_height;
-                }
-            } else {
-                if (parent_vertical_alignment == Alignment::Center) {
-                    child.pos.y += remaining_height * 0.5f;
-                } else if (parent_vertical_alignment == Alignment::End) {
-                    child.pos.y += remaining_height;
-                }
-            }
-
-            if (child.self_alignment && parent_orientation == LayoutOrientation::Vertical) {
-                if (child.self_alignment == Alignment::Center) {
-                    child.pos.x += remaining_width * 0.5f;
-                } else if (child.self_alignment == Alignment::End) {
-                    child.pos.x += remaining_width;
-                }
-            } else {
-                if (parent_horizontal_alignment == Alignment::Center) {
-                    child.pos.x += remaining_width * 0.5f;
-                } else if (parent_horizontal_alignment == Alignment::End) {
-                    child.pos.x += remaining_width;
-                }
-            }
-
             if (parent_orientation == LayoutOrientation::Horizontal) {
+                if (child.self_alignment) {
+                    if (child.self_alignment == Alignment::Center) {
+                        child.pos.y += remaining_height * 0.5f;
+                    } else if (child.self_alignment == Alignment::End) {
+                        child.pos.y += remaining_height;
+                    }
+                } else {
+                    if (parent_vertical_alignment == Alignment::Center) {
+                        child.pos.y += remaining_height * 0.5f;
+                    } else if (parent_vertical_alignment == Alignment::End) {
+                        child.pos.y += remaining_height;
+                    }
+                }
+
                 remaining_width -= child.size.x;
             } else if (parent_orientation == LayoutOrientation::Vertical) {
+                if (child.self_alignment) {
+                    if (child.self_alignment == Alignment::Center) {
+                        child.pos.x += remaining_width * 0.5f;
+                    } else if (child.self_alignment == Alignment::End) {
+                        child.pos.x += remaining_width;
+                    }
+                } else {
+                    if (parent_horizontal_alignment == Alignment::Center) {
+                        child.pos.x += remaining_width * 0.5f;
+                    } else if (parent_horizontal_alignment == Alignment::End) {
+                        child.pos.x += remaining_width;
+                    }
+                }
+
                 remaining_height -= child.size.y;
+            } else if (parent_orientation == LayoutOrientation::Stack) {
+                // TODO: Take self_alignment into account + add more alignments like: TopLeft, TopRight, etc.
+
+                if (child.self_alignment) {
+                    switch (child.self_alignment.value()) {
+                    case Alignment::Start:
+                    case Alignment::TopLeft:
+                        // At top left by default
+                    break;
+                    case Alignment::TopCenter:
+                        child.pos.x += remaining_width * 0.5f;
+                    break;
+                    case Alignment::End:
+                    case Alignment::TopRight:
+                        child.pos.x += remaining_width;
+                    break;
+                    case Alignment::CenterLeft:
+                        child.pos.y += remaining_height * 0.5f;
+                    break;
+                    case Alignment::Center:
+                        child.pos.x += remaining_width * 0.5f;
+                        child.pos.y += remaining_width * 0.5f;
+                    break;
+                    case Alignment::CenterRight:
+                        child.pos.x += remaining_width;
+                        child.pos.y += remaining_height * 0.5f;
+                    break;
+                    case Alignment::BottomLeft:
+                        child.pos.y += remaining_height;
+                    break;
+                    case Alignment::BottomCenter:
+                        child.pos.x += remaining_width * 0.5f;
+                        child.pos.y += remaining_height;
+                    break;
+                    case Alignment::BottomRight:
+                        child.pos.x += remaining_width;
+                        child.pos.y += remaining_height;
+                    break;
+                    }
+                } else {
+                    if (parent_horizontal_alignment == Alignment::Center) {
+                        child.pos.x += remaining_width * 0.5f;
+                    } else if (parent_horizontal_alignment == Alignment::End) {
+                        child.pos.x += remaining_width;
+                    }
+
+                    if (parent_vertical_alignment == Alignment::Center) {
+                        child.pos.y += remaining_height * 0.5f;
+                    } else if (parent_vertical_alignment == Alignment::End) {
+                        child.pos.y += remaining_height;
+                    }
+                }
             }
         }
     }

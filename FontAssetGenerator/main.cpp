@@ -7,6 +7,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+#include <limits>
 #include <string>
 #include <vector>
 #include <filesystem>
@@ -56,6 +57,9 @@ static bool generate_font_assets(FT_Library ft, const fs::path& input_path, cons
 
     uint32_t max_height = 0;
 
+    FT_Int max_ascent = std::numeric_limits<FT_Int>::min();
+    FT_Int max_descent = std::numeric_limits<FT_Int>::min();
+
     while (true) {
         if (FT_Load_Char(face, character, FT_LOAD_DEFAULT)) {
             printf("[ERROR] Failed to load glyph %lu", character);
@@ -80,6 +84,9 @@ static bool generate_font_assets(FT_Library ft, const fs::path& input_path, cons
             info.row = row;
             info.buffer = new uint8_t[face->glyph->bitmap.pitch * info.bitmap_rows];
             memcpy(info.buffer, face->glyph->bitmap.buffer, face->glyph->bitmap.pitch * info.bitmap_rows);
+
+            max_ascent = std::max(max_ascent, info.bitmap_top);
+            max_descent = std::max(max_descent, static_cast<FT_Int>(info.bitmap_rows) - info.bitmap_top);
 
             glyphs.emplace_back(character, info);
 
@@ -107,15 +114,15 @@ static bool generate_font_assets(FT_Library ft, const fs::path& input_path, cons
 
     write_to_file<FT_Short>(font_metadata, face->ascender);
     write_to_file<uint32_t>(font_metadata, FONT_SIZE);
+    write_to_file<FT_Int>(font_metadata, max_ascent);
+    write_to_file<FT_Int>(font_metadata, max_descent);
     write_to_file<uint32_t>(font_metadata, texture_width);
     write_to_file<uint32_t>(font_metadata, texture_height);
     write_to_file<uint32_t>(font_metadata, glyphs.size());
 
     for (auto [c, info] : glyphs) {
         for (uint32_t y = 0; y < info.bitmap_rows; ++y) {
-            for (uint32_t x = 0; x < info.bitmap_width; ++x) {
-                texture_data[(info.row + y) * texture_width + info.col + x] = info.buffer[y * info.bitmap_width + x];
-            }
+            memcpy(&texture_data[(info.row + y) * texture_width + info.col], &info.buffer[y * info.bitmap_width], info.bitmap_width);
         }
 
         write_to_file<FT_ULong>(font_metadata, c);

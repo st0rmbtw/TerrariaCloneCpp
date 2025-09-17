@@ -14,11 +14,12 @@
 class BackgroundLayer {
     enum class Flags : uint8_t {
         Nonscale         = 1 << 0,
-        FollowCamera     = 1 << 1,
-        FillScreenHeight = 1 << 2,
-        FillScreenWidth  = 1 << 3,
-        World            = 1 << 4,
-        SurfaceLayer     = 1 << 5,
+        IsUI             = 1 << 1,
+        FollowCamera     = 1 << 2,
+        FillScreenHeight = 1 << 3,
+        FillScreenWidth  = 1 << 4,
+        World            = 1 << 5,
+        SurfaceLayer     = 1 << 6,
     };
 
 public:
@@ -100,6 +101,11 @@ public:
         return *this;
     }
 
+    inline BackgroundLayer& set_is_ui(bool is_ui) {
+        m_flags.set(Flags::IsUI, is_ui);
+        return *this;
+    }
+
     [[nodiscard]] inline const glm::vec2& position() const { return m_position; }
     [[nodiscard]] inline const glm::vec2& speed() const { return m_speed; }
     [[nodiscard]] inline const glm::vec2& size() const { return m_size; }
@@ -116,6 +122,7 @@ public:
     [[nodiscard]] inline bool fill_screen_width() const { return m_flags[Flags::FillScreenWidth]; }
     [[nodiscard]] inline bool is_world() const { return m_flags[Flags::World]; }
     [[nodiscard]] inline bool is_surface_layer() const { return m_flags[Flags::SurfaceLayer]; }
+    [[nodiscard]] inline bool is_ui() const { return m_flags[Flags::IsUI]; }
     [[nodiscard]] inline uint16_t id() const { return m_id; }
 
 private:
@@ -124,10 +131,10 @@ private:
     glm::vec2 m_size = glm::vec2(0.0f);
     glm::vec2 m_texture_size = glm::vec2(0.0f);
     float m_scale = 0.0f;
-    float m_x;
-    float m_y;
+    float m_x = 0.0f;
+    float m_y = 0.0f;
     uint16_t m_id = 0;
-    sge::Anchor m_anchor;
+    sge::Anchor m_anchor; 
     sge::BitFlags<Flags> m_flags = sge::BitFlags({Flags::Nonscale, Flags::FollowCamera});
 };
 

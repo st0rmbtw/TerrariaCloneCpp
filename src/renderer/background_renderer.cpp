@@ -16,6 +16,7 @@ constexpr uint32_t MAX_QUADS = 500;
 namespace BackgroundFlags {
     enum : uint8_t {
         IgnoreCameraZoom = 0,
+        IsUI = 1
     };
 };
 
@@ -176,6 +177,7 @@ void BackgroundRenderer::draw_layer_internal(const BackgroundLayer& layer, Backg
 
     int flags = 0;
     flags |= layer.nonscale() << BackgroundFlags::IgnoreCameraZoom;
+    flags |= layer.is_ui() << BackgroundFlags::IsUI;
 
     BackgroundInstance* buffer = *p_buffer;
 

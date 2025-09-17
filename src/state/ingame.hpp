@@ -10,12 +10,9 @@
 #include "../player/player.hpp"
 #include "../background.hpp"
 
-#include "base.hpp"
+#include "common.hpp"
 
-enum class AnimationDirection : uint8_t {
-    Forward = 0,
-    Backward = 1
-};
+#include "base.hpp"
 
 class InGameState : public BaseState {
 public:
@@ -37,7 +34,6 @@ public:
     ~InGameState();
 
 private:
-    void update_ui_cursor() noexcept;
     void update_ui() noexcept;
     void draw_ui() noexcept;
     void draw_inventory() noexcept;
@@ -61,20 +57,12 @@ private:
     Player m_player;
     World m_world;
     sge::Camera m_camera;
-    sge::Sprite m_cursor_foreground;
-    sge::Sprite m_cursor_background;
+    Cursor m_cursor;
 
     std::string m_ui_fps_text;
     sge::Timer m_fps_update_timer;
 
     std::vector<Light> m_lights;
-    sge::LinearRgba m_cursor_foreground_color;
-    sge::LinearRgba m_cursor_background_color;
-
-    AnimationDirection m_cursor_anim_dir;
-
-    float m_cursor_anim_progress = 0.0f;
-    float m_cursor_scale = 1.0f;
 
     float m_hotbar_slot_anim = 1.0f;
 

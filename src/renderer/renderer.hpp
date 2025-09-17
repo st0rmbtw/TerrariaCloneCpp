@@ -51,22 +51,22 @@ namespace GameRenderer {
 
     template <size_t L>
     inline uint32_t DrawText(const sge::RichText<L>& text, const glm::vec2& position, const sge::Font& font, sge::Order order = {}) {
-        return DrawText(text.sections().data(), L, position, font, order);
+        return DrawText(text.data(), L, position, font, order);
     }
 
     template <size_t L>
     inline uint32_t DrawTextUI(const sge::RichText<L>& text, const glm::vec2& position, const sge::Font& font, sge::Order order = {}) {
-        return DrawTextUI(text.sections().data(), L, position, font, order);
+        return DrawTextUI(text.data(), L, position, font, order);
     }
 
     inline uint32_t DrawChar(char ch, const glm::vec2& position, float size, const sge::LinearRgba& color, const sge::Font& font, sge::Order order = {}) {
         char text[] = {ch, '\0'};
-        const sge::RichTextSection section(text, size, color);
+        const sge::RichTextSection section(text, color, size);
         return DrawText(&section, 1, position, font, order);
     }
     inline uint32_t DrawCharUI(char ch, const glm::vec2& position, float size, const sge::LinearRgba& color, const sge::Font& font, sge::Order order = {}) {
         char text[] = {ch, '\0'};
-        const sge::RichTextSection section(text, size, color);
+        const sge::RichTextSection section(text, color, size);
         return DrawTextUI(&section, 1, position, font, order);
     }
 

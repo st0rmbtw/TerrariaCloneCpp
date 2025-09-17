@@ -42,12 +42,12 @@ public:
     }
 
     [[nodiscard]]
-    inline static UiRect axes(float horizontal, float vertical) {
+    inline static UiRect Axes(float horizontal, float vertical) {
         return UiRect(horizontal, horizontal, vertical, vertical);
     }
 
     [[nodiscard]]
-    inline static UiRect axes(glm::vec2 axes) {
+    inline static UiRect Axes(glm::vec2 axes) {
         return UiRect(axes.x, axes.x, axes.y, axes.y);
     }
 
@@ -172,12 +172,12 @@ public:
 
     [[nodiscard]]
     inline static UiSize Width(Sizing sizing) {
-        return UiSize(sizing, Sizing::Fixed(0.0f));
+        return UiSize(sizing, Sizing::Fit());
     }
 
     [[nodiscard]]
     inline static UiSize Height(Sizing sizing) {
-        return UiSize(Sizing::Fixed(0.0f), sizing);
+        return UiSize(Sizing::Fit(), sizing);
     }
 
     [[nodiscard]]
@@ -219,7 +219,42 @@ enum class LayoutOrientation : uint8_t {
 enum class Alignment : uint8_t {
     Start = 0,
     Center,
-    End
+    End,
+
+    /**
+     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
+     * @note Alias for \see Alignment::Start
+     */
+    TopLeft,
+    /**
+     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
+     */
+    TopCenter,
+    /**
+     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
+     * @note Alias for \see Alignment::End
+     */
+    TopRight,
+    /**
+     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
+     */
+    CenterLeft,
+    /**
+     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
+     */
+    CenterRight,
+    /**
+     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
+     */
+    BottomLeft,
+    /**
+     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
+     */
+    BottomCenter,
+    /**
+     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
+     */
+    BottomRight
 };
 
 class RootDesc {
@@ -310,7 +345,7 @@ inline bool operator==(const ElementID& a, const ElementID& b) noexcept {
 
 struct ElementDesc {
     ElementID id{};
-    UiSize size{};
+    UiSize size{ UiSize::Fit() };
     UiRect padding{};
     float gap{ 0.0f };
     LayoutOrientation orientation{ LayoutOrientation::Stack };
@@ -362,7 +397,7 @@ namespace UI {
 
     template <uint32_t TypeID, size_t Size>
     inline void Text(const sge::Font& font, const sge::RichText<Size>& text, const TextElementDesc& desc = {}) {
-        Text(TypeID, font, text.sections().data(), text.size(), desc);
+        Text(TypeID, font, text.data(), text.size(), desc);
     }
 
     inline void BeginContainer(const ElementDesc& desc) {

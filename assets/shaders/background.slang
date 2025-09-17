@@ -80,14 +80,16 @@ static float2 scroll(
 }
 
 static const int IGNORE_CAMERA_ZOOM_FLAG = 1 << 0;
+static const int UI_FLAG = 1 << 1;
 
 [shader("vertex")]
 VSOutput VS(VSInput inp)
 {
     const int flags = inp.i_flags;
     const bool ignore_camera_zoom = (flags & IGNORE_CAMERA_ZOOM_FLAG) == IGNORE_CAMERA_ZOOM_FLAG;
+    const bool ui_flag = (flags & UI_FLAG) == UI_FLAG;
 
-    const float4x4 view_proj = select(ignore_camera_zoom, uniforms.nonscale_view_projection, uniforms.view_projection);
+    const float4x4 view_proj = select(ui_flag, uniforms.screen_projection, select(ignore_camera_zoom, uniforms.nonscale_view_projection, uniforms.view_projection));
 
     const float2 offset = mul(uniforms.nonscale_projection, float4(uniforms.camera_position.x, uniforms.camera_position.y, 0.0, 1.0)).xy;
 

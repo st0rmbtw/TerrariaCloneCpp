@@ -47,7 +47,9 @@ static void PostUpdate() {
     g_current_state->PostUpdate();
 
     BaseState* new_state = g_current_state->GetNextState();
-    if (new_state != nullptr && new_state != g_current_state) {
+    if (new_state == nullptr) {
+        sge::Engine::Stop();
+    } else if (new_state != g_current_state) {
         delete g_current_state;
         g_current_state = new_state;
     }
@@ -89,10 +91,6 @@ static bool OnLoadAssets() {
     return true;
 }
 
-static void OnDestroy() {
-    delete g_current_state;
-}
-
 bool App::Init(sge::RenderBackend backend, AppConfig config, int16_t world_width, int16_t world_height) {
     ZoneScoped;
 
@@ -103,7 +101,6 @@ bool App::Init(sge::RenderBackend backend, AppConfig config, int16_t world_width
     sge::Engine::SetFixedUpdateCallback(FixedUpdate);
     sge::Engine::SetRenderCallback(Render);
     sge::Engine::SetPostRenderCallback(PostRender);
-    sge::Engine::SetDestroyCallback(OnDestroy);
     sge::Engine::SetWindowResizeCallback(OnWindowResized);
 
     sge::EngineConfig engine_config;
@@ -131,7 +128,7 @@ bool App::Init(sge::RenderBackend backend, AppConfig config, int16_t world_width
 
     g_window_size.x = engine_config.window_settings.width;
     g_window_size.y = engine_config.window_settings.height;
-    g_current_state = new InGameState();
+    g_current_state = new MainMenuState();
 
     sge::Engine::ShowWindow();
 
@@ -147,6 +144,8 @@ void App::Run() {
 }
 
 void App::Destroy() {
+    delete g_current_state;
+
     GameRenderer::Terminate();
     ParticleManager::Terminate();
     sge::Engine::Destroy();

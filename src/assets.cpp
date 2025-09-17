@@ -103,6 +103,8 @@ static const std::pair<TextureAsset, AssetTexture> TEXTURE_ASSETS[] = {
     { TextureAsset::UiInventoryBackground, AssetTexture("assets/sprites/ui/Inventory_Back.png", sge::TextureSampler::Linear) },
     { TextureAsset::UiInventorySelected,   AssetTexture("assets/sprites/ui/Inventory_Back14.png", sge::TextureSampler::Linear) },
     { TextureAsset::UiInventoryHotbar,     AssetTexture("assets/sprites/ui/Inventory_Back9.png", sge::TextureSampler::Linear) },
+    { TextureAsset::UiPanelBackground,     AssetTexture("assets/sprites/ui/PanelBackground.png", sge::TextureSampler::Linear) },
+    { TextureAsset::UiPanelBorder,         AssetTexture("assets/sprites/ui/PanelBorder.png", sge::TextureSampler::Linear) },
 
     { TextureAsset::TileCracks, AssetTexture("assets/sprites/tiles/TileCracks.png", sge::TextureSampler::Nearest) },
 
@@ -625,6 +627,8 @@ static bool load_font(sge::Font& font, const char* meta_file_path, const char* a
 
     const FT_UShort ascender = read<FT_UShort>(meta_file);
     const uint32_t font_size = read<uint32_t>(meta_file);
+    const FT_Int max_ascent = read<FT_Int>(meta_file);
+    const FT_Int max_descent = read<FT_Int>(meta_file);
     const uint32_t texture_width = read<uint32_t>(meta_file);
     const uint32_t texture_height = read<uint32_t>(meta_file);
     const glm::vec2 texture_size = glm::vec2(texture_width, texture_height);
@@ -641,17 +645,13 @@ static bool load_font(sge::Font& font, const char* meta_file_path, const char* a
         uint32_t col = read<uint32_t>(meta_file);
         uint32_t row = read<uint32_t>(meta_file);
 
-        const glm::ivec2 size = glm::ivec2(bitmap_width, bitmap_rows);
-
-        const sge::Glyph glyph = {
-            .size = size,
-            .tex_size = glm::vec2(size) / texture_size,
+        font.glyphs[c] = sge::Glyph {
+            .size = glm::ivec2(bitmap_width, bitmap_rows),
+            .tex_size = glm::vec2(bitmap_width, bitmap_rows) / texture_size,
             .bearing = glm::ivec2(bitmap_left, bitmap_top),
             .advance = advance_x,
             .texture_coords = glm::vec2(col, row) / texture_size
         };
-
-        font.glyphs[c] = glyph;
     }
 
     meta_file.close();
@@ -664,6 +664,8 @@ static bool load_font(sge::Font& font, const char* meta_file_path, const char* a
     stbi_image_free(data);
 
     font.font_size = font_size;
+    font.max_ascent = max_ascent;
+    font.max_descent = max_descent;
     font.ascender = ascender >> 6;
 
     return true;
