@@ -435,9 +435,14 @@ void GameRenderer::Terminate() {
 
     const auto& context = sge::Engine::Renderer().Context();
 
-    state.main_batch->Destroy(context);
-    state.world_batch->Destroy(context);
-    state.ui_batch->Destroy(context);
+    if (state.main_batch)
+        state.main_batch->Destroy(context);
+
+    if (state.main_batch)
+        state.world_batch->Destroy(context);
+    
+    if (state.main_batch)
+        state.ui_batch->Destroy(context);
 
     SGE_RESOURCE_RELEASE(state.resource_heap);
     SGE_RESOURCE_RELEASE(state.chunk_vertex_buffer);

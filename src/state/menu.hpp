@@ -42,6 +42,7 @@ private:
 
     void draw_main_menu();
     void draw_select_world();
+    void draw_create_world();
 
     void set_next_position(MenuPosition new_state);
     void set_previous_position();

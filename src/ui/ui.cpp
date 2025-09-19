@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <deque>
+#include <limits>
 #include <unordered_set>
 #include <vector>
 
@@ -12,11 +13,14 @@
 #include <SGE/profile.hpp>
 #include <SGE/time/time.hpp>
 
+#include "SGE/utils/bitflags.hpp"
 #include "arena.hpp"
 #include "ui.hpp"
 
 inline constexpr size_t MAX_NODE_STACK_SIZE = 100;
 inline constexpr size_t ARENA_CAPACITY = 1024 * 1024;
+
+inline constexpr float FLOAT_EPSILON = std::numeric_limits<float>::epsilon();
 
 using NodeID = ElementID;
 
@@ -39,6 +43,13 @@ private:
     Arena* m_arena = nullptr;
 };
 
+enum class NodeFlags : uint8_t {
+    Render = (1 << 0),
+    TextNode = (1 << 1),
+    Hoverable = (1 << 2),
+    Scrollable = (1 << 3),
+};
+
 struct Node {
     NodeID unique_id{};
     std::function<void(sge::MouseButton)> on_click_callback = nullptr;
@@ -50,6 +61,7 @@ struct Node {
     
     glm::vec2 pos = glm::vec2(0.0f);
     glm::vec2 size = glm::vec2(0.0f);
+    glm::vec2 min_size = glm::vec2(0.0f);
     glm::vec2 offset = glm::vec2(0.0f);
     
     void* custom_data = nullptr;
@@ -62,19 +74,34 @@ struct Node {
     uint32_t z_index = 0;
     uint32_t text_data_index = 0;
     
-    LayoutOrientation orientation = LayoutOrientation::Horizontal;
     std::optional<Alignment> self_alignment = Alignment::Start;
+    LayoutOrientation orientation = LayoutOrientation::Horizontal;
     Alignment horizontal_alignment = Alignment::Start;
     Alignment vertical_alignment = Alignment::Start;
 
-    bool render = false;
-    bool text_node = false;
-    bool hoverable = false;
-    bool scrollable = false;
-    bool scissor_start = false;
-    bool scissor_end = false;
+    sge::BitFlags<NodeFlags> flags;
 
     Node(Arena& arena) : children{ arena } {}
+
+    [[nodiscard]]
+    inline bool render() const noexcept {
+        return flags[NodeFlags::Render];
+    }
+
+    [[nodiscard]]
+    inline bool is_text_node() const noexcept {
+        return flags[NodeFlags::TextNode];
+    }
+
+    [[nodiscard]]
+    inline bool hoverable() const noexcept {
+        return flags[NodeFlags::Hoverable];
+    }
+
+    [[nodiscard]]
+    inline bool scrollable() const noexcept {
+        return flags[NodeFlags::Scrollable];
+    }
 };
 
 struct ScrollData {
@@ -137,7 +164,7 @@ static Node& ParentNode() noexcept {
 }
 
 static void NodeAddElement(Node& parent, Node&& child) {
-    SGE_ASSERT(!parent.text_node);
+    SGE_ASSERT(!parent.is_text_node());
     SGE_ASSERT(state.nodes.size() < UINT32_MAX);
     SGE_ASSERT(state.node_stack_size < MAX_NODE_STACK_SIZE);
 
@@ -147,7 +174,7 @@ static void NodeAddElement(Node& parent, Node&& child) {
 }
 
 static void PushNode(Node& parent, Node&& child) {
-    SGE_ASSERT(!parent.text_node);
+    SGE_ASSERT(!parent.is_text_node());
     SGE_ASSERT(state.nodes.size() < UINT32_MAX);
     SGE_ASSERT(state.node_stack_size < MAX_NODE_STACK_SIZE);
 
@@ -293,7 +320,7 @@ void UI::Update() {
 
         state.search_visited.insert(current_node->unique_id);
 
-        if (current_node->text_node)
+        if (current_node->is_text_node())
             continue;
 
         const sge::Rect element_rect = sge::Rect::from_top_left(current_node->pos, current_node->size);
@@ -303,9 +330,9 @@ void UI::Update() {
 
         if (hovered) {
             state.hovered_ids.insert(current_node->unique_id);
-            state.any_hovered = state.any_hovered || clickable || current_node->hoverable;
+            state.any_hovered = state.any_hovered || clickable || current_node->hoverable();
 
-            if (current_node->scrollable) {
+            if (current_node->render()) {
                 ScrollData& scroll_data = state.scroll_data[current_node->unique_id];
                 for (float delta : sge::Input::ScrollEvents()) {
                     scroll_data.offset += delta * 1000.0f * sge::Time::DeltaSeconds();
@@ -373,7 +400,7 @@ void UI::Start(const RootDesc& desc) {
 }
 
 static inline ElementID GenerateId(Node& parent) noexcept {
-    SGE_ASSERT(!parent.text_node);
+    SGE_ASSERT(!parent.is_text_node());
     ElementID id = HashNumber(parent.children.size(), parent.unique_id.id);
     return id;
 }
@@ -389,6 +416,12 @@ void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, bool render) {
         size.y = desc.size.height().value();
     }
 
+    glm::vec2 min_size = glm::vec2(desc.min_width, desc.min_height);
+    if (min_size.x <= 0.0f)
+        min_size.x = size.x;
+    if (min_size.y <= 0.0f)
+        min_size.y = size.y;
+
     Node& parent = TopNode();
 
     NodeID id = desc.id;
@@ -400,6 +433,7 @@ void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, bool render) {
     {
         new_node.unique_id = id;
         new_node.size = size;
+        new_node.min_size = min_size;
         new_node.offset = desc.offset;
         new_node.sizing = desc.size;
         new_node.padding = desc.padding;
@@ -408,11 +442,11 @@ void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, bool render) {
         new_node.vertical_alignment = desc.vertical_alignment;
         new_node.self_alignment = desc.self_alignment;
         new_node.gap = desc.gap;
-        new_node.hoverable = desc.hoverable;
-        new_node.scrollable = desc.scrollable;
+        new_node.flags.set(NodeFlags::Hoverable, desc.hoverable);
+        new_node.flags.set(NodeFlags::Scrollable, desc.scrollable);
+        new_node.flags.set(NodeFlags::Render, render);
         new_node.type_id = type_id;
         new_node.z_index = parent.z_index + 1;
-        new_node.render = render;
     }
 
     if (desc.scrollable && !state.scroll_data.contains(id)) {
@@ -425,17 +459,20 @@ void UI::BeginElement(uint32_t type_id, const ElementDesc& desc, bool render) {
 static void GrowElementsHorizontally(Node& parent) {
     ZoneScoped;
 
-    if (parent.text_node) return;
+    if (parent.is_text_node()) return;
     if (parent.children.empty()) return;
 
     float remaining_width = parent.size.x - parent.padding.left() - parent.padding.right();
 
+    float gap = 0.0f;
+    
     if (parent.orientation == LayoutOrientation::Horizontal) {
+        gap = (parent.children.size() - 1) * parent.gap;
+        remaining_width -= gap;
         for (uint32_t child_index : parent.children) {
             Node& child = state.nodes[child_index];
             remaining_width -= child.size.x;
         }
-        remaining_width -= (parent.children.size() - 1) * parent.gap;
     } 
 
     state.growable_nodes.clear();
@@ -450,31 +487,43 @@ static void GrowElementsHorizontally(Node& parent) {
     if (state.growable_nodes.empty())
         return;
 
-    while (remaining_width > 0) {
-        float smallest = state.growable_nodes[0]->size.x;
-        float second_smallest = INFINITY;
-        float width_to_add = remaining_width;
-        for (Node* child : state.growable_nodes) {
-            if (child->size.x < smallest) {
-                second_smallest = smallest;
-                smallest = child->size.x;
+    const float max_width = parent.size.x - gap - parent.padding.left() - parent.padding.right();
+
+    if (parent.orientation == LayoutOrientation::Horizontal) {
+        while (remaining_width > FLOAT_EPSILON) {
+            float smallest = state.growable_nodes[0]->size.x;
+            float second_smallest = INFINITY;
+            float width_to_add = remaining_width;
+            for (Node* child : state.growable_nodes) {
+                if (child->size.x < smallest) {
+                    second_smallest = smallest;
+                    smallest = child->size.x;
+                }
+
+                if (child->size.x > smallest) {
+                    second_smallest = std::min(second_smallest, child->size.x);
+                    width_to_add = second_smallest - smallest;
+                }
             }
 
-            if (child->size.x > smallest) {
-                second_smallest = std::min(second_smallest, child->size.x);
-                width_to_add = second_smallest - smallest;
-            }
-        }
-
-        if (parent.orientation == LayoutOrientation::Horizontal) {
             width_to_add = std::min(width_to_add, remaining_width / state.growable_nodes.size());
-        }
 
-        for (Node* child : state.growable_nodes) {
-            if (sge::approx_equals(child->size.x, smallest)) {
-                child->size.x += width_to_add;
-                remaining_width -= width_to_add;
+            for (size_t i = 0; i < state.growable_nodes.size(); i++) {
+                Node* node = state.growable_nodes[i];
+
+                if (sge::approx_equals(node->size.x, smallest)) {
+                    node->size.x += width_to_add;
+                    if (node->size.x > max_width) {
+                        node->size.x = max_width;
+                        state.growable_nodes.erase(i--);
+                    }
+                    remaining_width -= width_to_add;
+                }
             }
+        }
+    } else {
+        for (Node* node : state.growable_nodes) {
+            node->size.x = max_width;
         }
     }
 }
@@ -482,17 +531,20 @@ static void GrowElementsHorizontally(Node& parent) {
 static void GrowElementsVertically(Node& parent) {
     ZoneScoped;
 
-    if (parent.text_node) return;
+    if (parent.is_text_node()) return;
     if (parent.children.empty()) return;
 
     float remaining_height = parent.size.y - parent.padding.top() - parent.padding.bottom();
 
+    float gap = 0.0f;
+
     if (parent.orientation == LayoutOrientation::Vertical) {
+        gap = (parent.children.size() - 1) * parent.gap;
+        remaining_height -= gap;
         for (uint32_t child_index : parent.children) {
             Node& child = state.nodes[child_index];
             remaining_height -= child.size.y;
         }
-        remaining_height -= (parent.children.size() - 1) * parent.gap;
     }
 
     state.growable_nodes.clear();
@@ -506,32 +558,48 @@ static void GrowElementsVertically(Node& parent) {
 
     if (state.growable_nodes.empty())
         return;
-    
-    while (remaining_height > 0) {
-        float smallest = state.growable_nodes[0]->size.y;
-        float second_smallest = INFINITY;
-        float height_to_add = remaining_height;
-        for (Node* child : state.growable_nodes) {
-            if (child->size.y < smallest) {
-                second_smallest = smallest;
-                smallest = child->size.y;
+
+    const float max_height = parent.size.y - parent.padding.top() - parent.padding.bottom() - gap;
+
+    if (parent.orientation == LayoutOrientation::Vertical) {
+        while (remaining_height > FLOAT_EPSILON) {
+            if (parent.orientation != LayoutOrientation::Vertical) {
+                remaining_height = max_height;
             }
 
-            if (child->size.y > smallest) {
-                second_smallest = std::min(second_smallest, child->size.y);
-                height_to_add = second_smallest - smallest;
-            }
-        }
+            float smallest = state.growable_nodes[0]->size.y;
+            float second_smallest = INFINITY;
+            float height_to_add = remaining_height;
+            for (Node* child : state.growable_nodes) {
+                if (child->size.y < smallest) {
+                    second_smallest = smallest;
+                    smallest = child->size.y;
+                }
 
-        if (parent.orientation == LayoutOrientation::Vertical) {
+                if (child->size.y > smallest) {
+                    second_smallest = std::min(second_smallest, child->size.y);
+                    height_to_add = second_smallest - smallest;
+                }
+            }
+
             height_to_add = std::min(height_to_add, remaining_height / state.growable_nodes.size());
-        }
 
-        for (Node* child : state.growable_nodes) {
-            if (sge::approx_equals(child->size.y, smallest)) {
-                child->size.y += height_to_add;
-                remaining_height -= height_to_add;
+            for (size_t i = 0; i < state.growable_nodes.size(); i++) {
+                Node* node = state.growable_nodes[i];
+
+                if (sge::approx_equals(node->size.y, smallest)) {
+                    node->size.y += height_to_add;
+                    if (node->size.y > max_height) {
+                        node->size.y = max_height;
+                        state.growable_nodes.erase(i--);
+                    }
+                    remaining_height -= height_to_add;
+                }
             }
+        }
+    } else {
+        for (Node* node : state.growable_nodes) {
+            node->size.y = max_height;
         }
     }
 }
@@ -588,78 +656,74 @@ void UI::EndElement() {
     Node& node = TopNode();
     --state.node_stack_size;
 
-    if (node.text_node) return;
+    if (node.is_text_node()) return;
 
     PropagateZIndex(node, node.z_index);
 
-    const size_t children_count = node.children.size();
-    if (node.scrollable && children_count > 0) {
-        uint32_t i = 0;
-
-        for (uint32_t child_index : node.children) {
-            Node& child = state.nodes[child_index];
-
-            if (i == 0) {
-                child.scissor_start = true;
-            }
-
-            if (i == children_count - 1) {
-                child.scissor_end = true;
-            }
-
-            ++i;
-        }
-    }
+    const bool width_fixed = node.sizing.width().type() == Sizing::Type::Fixed;
+    const bool height_fixed = node.sizing.height().type() == Sizing::Type::Fixed;
 
     const float horizontal_padding = node.padding.left() + node.padding.right();
     const float vertical_padding = node.padding.top() + node.padding.bottom();
 
-    if (node.sizing.width().type() == Sizing::Type::Fit) {
-        node.size.x += horizontal_padding;
-    }
-    if (node.sizing.height().type() == Sizing::Type::Fit) {
-        node.size.y += vertical_padding;
-    }
+    glm::vec2 min_size = glm::vec2(0.0f, 0.0f);
+
+    if (!width_fixed)
+        min_size.x += horizontal_padding;
+
+    if (!height_fixed)
+        min_size.y += horizontal_padding;
 
     if (node.orientation == LayoutOrientation::Horizontal) {
-        if (node.sizing.width().type() == Sizing::Type::Fit) {
+        if (!width_fixed) {
             const float gap = (std::max<size_t>(node.children.size(), 1) - 1) * node.gap;
-            node.size.x += gap;
+            min_size.x += gap;
         }
 
         for (uint32_t child_index : node.children) {
             const Node& child = state.nodes[child_index];
 
-            if (node.sizing.width().type() == Sizing::Type::Fit)
-                node.size.x += child.size.x;
+            if (!width_fixed)
+                min_size.x += child.size.x;
 
-            if (node.sizing.height().type() == Sizing::Type::Fit)
-                node.size.y = std::max(node.size.y, child.size.y + vertical_padding);
+            if (!height_fixed)
+                min_size.y = std::max(min_size.y, child.size.y + vertical_padding);
         }
     } else if (node.orientation == LayoutOrientation::Vertical) {
-        if (node.sizing.height().type() == Sizing::Type::Fit) {
+        if (!height_fixed) {
             const float gap = (std::max<size_t>(node.children.size(), 1) - 1) * node.gap;
-            node.size.y += gap;
+            min_size.y += gap;
         }
+
         for (uint32_t child_index : node.children) {
             const Node& child = state.nodes[child_index];
 
-            if (node.sizing.width().type() == Sizing::Type::Fit)
-                node.size.x = std::max(node.size.x, child.size.x + horizontal_padding);
+            if (!width_fixed)
+                min_size.x = std::max(min_size.x, child.size.x + horizontal_padding);
 
-            if (node.sizing.height().type() == Sizing::Type::Fit)
-                node.size.y += child.size.y;
+            if (!height_fixed)
+                min_size.y += child.size.y;
         }
     } else if (node.orientation == LayoutOrientation::Stack) {
         for (uint32_t child_index : node.children) {
             const Node& child = state.nodes[child_index];
 
-            if (node.sizing.width().type() == Sizing::Type::Fit)
-                node.size.x = std::max(node.size.x, child.size.x + horizontal_padding);
+            if (!width_fixed)
+                min_size.x = std::max(min_size.x, child.size.x + horizontal_padding);
 
-            if (node.sizing.height().type() == Sizing::Type::Fit)
-                node.size.y = std::max(node.size.y, child.size.y + vertical_padding);
+            if (!height_fixed)
+                min_size.y = std::max(min_size.y, child.size.y + vertical_padding);
         }
+    }
+
+    if (!width_fixed) {
+        node.size.x = std::max(node.min_size.x, min_size.x);
+        node.min_size.x = std::max(node.min_size.x, min_size.x);
+    }
+
+    if (!height_fixed) {
+        node.size.y = std::max(node.min_size.y, min_size.y);
+        node.min_size.y = std::max(node.min_size.y, min_size.y);
     }
 }
 
@@ -695,13 +759,14 @@ void UI::Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSectio
     {
         new_node.unique_id = id;
         new_node.size = measured_size;
+        new_node.min_size = measured_size;
         new_node.offset = desc.offset;
         new_node.sizing = UiSize::Fixed(measured_size);
         new_node.text_data_index = text_data_index;
         new_node.type_id = type_id;
         new_node.z_index = parent.z_index + 1;
-        new_node.render = true;
-        new_node.text_node = true;
+        new_node.flags.set(NodeFlags::Render, true);
+        new_node.flags.set(NodeFlags::TextNode, true);
         new_node.self_alignment = desc.self_alignment;
     }
     NodeAddElement(parent, std::move(new_node));
@@ -720,11 +785,11 @@ static void FinalizeLayout() {
         Node* current_node = state.search_stack.front();
         state.search_stack.pop_front();
 
+        if (current_node->is_text_node())
+            continue;
+
         GrowElementsHorizontally(*current_node);
         GrowElementsVertically(*current_node);
-
-        if (current_node->text_node)
-            continue;
 
         const LayoutOrientation parent_orientation = current_node->orientation;
         const glm::vec2 parent_size = current_node->size;
@@ -735,9 +800,7 @@ static void FinalizeLayout() {
 
         glm::vec2 pos = current_node->pos + current_node->offset + glm::vec2(parent_padding.left(), parent_padding.top());
 
-        if (current_node->scrollable) {
-            current_node->scroll_max = current_node->scroll_max;
-
+        if (current_node->scrollable()) {
             ScrollData& scroll_data = state.scroll_data[current_node->unique_id];
             if (parent_orientation == LayoutOrientation::Vertical) {
                 pos.y += scroll_data.offset;
@@ -861,10 +924,12 @@ static void FinalizeLayout() {
             }
         }
 
-        if (parent_orientation == LayoutOrientation::Horizontal) {
-            current_node->scroll_max = max_scroll - parent_size.x + parent_padding.right();
-        } else if (parent_orientation == LayoutOrientation::Vertical) {
-            current_node->scroll_max = max_scroll - parent_size.y + parent_padding.bottom();
+        if (current_node->scrollable()) {
+            if (parent_orientation == LayoutOrientation::Horizontal) {
+                current_node->scroll_max = max_scroll - parent_size.x + parent_padding.right();
+            } else if (parent_orientation == LayoutOrientation::Vertical) {
+                current_node->scroll_max = max_scroll - parent_size.y + parent_padding.bottom();
+            }
         }
     }
 
@@ -892,7 +957,7 @@ static void FinalizeLayout() {
 
             const sge::Rect child_rect = sge::Rect::from_top_left(child.pos, child.size);
 
-            if (child.scrollable) {
+            if (child.scrollable()) {
                 ScissorData* scissor_data = nullptr;
                 scissor_data = state.arena.allocate<ScissorData>();
                 scissor_data->area = sge::IRect::from_top_left(child.pos, glm::round(child.size));
@@ -904,9 +969,9 @@ static void FinalizeLayout() {
                 });
             }
 
-            if (child.render && parent_rect.intersects(child_rect)) {
+            if (child.render() && parent_rect.intersects(child_rect)) {
                 TextData* text_data = nullptr;
-                if (child.text_node) {
+                if (child.is_text_node()) {
                     text_data = &state.text_data[child.text_data_index];
                 }
 
@@ -932,7 +997,7 @@ static void FinalizeLayout() {
             const uint32_t child_index = parent.children[frame.child_pos];
             Node& child = state.nodes[child_index];
 
-            if (child.scrollable) {
+            if (child.scrollable()) {
                 state.render_elements.push_back(UiElement {
                     .scissor_start = false,
                     .scissor_end = true

@@ -153,8 +153,8 @@ endif()
 
 # ========================= Copy Assets =========================
 
-file(GLOB_RECURSE ASSETS ${CMAKE_CURRENT_SOURCE_DIR}/assets/**/*.*)
-file(GLOB_RECURSE SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/*.*)
+file(GLOB_RECURSE ASSETS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/**/*.*)
+file(GLOB_RECURSE SHADERS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/*.*)
 
 list(REMOVE_ITEM ASSETS ${SHADERS})
 
