@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstddef>
 #include <deque>
 #include <limits>
@@ -102,6 +103,11 @@ struct Node {
     inline bool scrollable() const noexcept {
         return flags[NodeFlags::Scrollable];
     }
+
+    [[nodiscard]]
+    inline bool clickable() const noexcept {
+        return on_click_callback != nullptr;
+    }
 };
 
 struct ScrollData {
@@ -123,33 +129,33 @@ struct SearchStackFrame {
 static struct {
     uint32_t node_stack[MAX_NODE_STACK_SIZE];
     
-    std::unordered_set<NodeID> hovered_ids{};
-    std::unordered_set<NodeID> search_visited{};
-
-    NodeID active_id{};
-
     std::deque<Node*> search_stack{};
     std::deque<SearchStackFrame> search_stack_frame{};
-    sge::SwapbackVector<Node*> postorder_stack{};
+    
+    std::unordered_set<NodeID> hovered_ids{};
+    std::unordered_set<NodeID> search_visited{};
+    std::unordered_map<NodeID, ScrollData> scroll_data{};
+
+    NodeID clicked_clickable_id{};
+    NodeID clicked_focusable_id{};
+    NodeID focused_id{};
+
+    std::vector<Node*> clickable_stack{};
+    std::vector<Node*> focusable_stack{};
 
     sge::SwapbackVector<Node*> growable_nodes{};
     
     Arena arena{ ARENA_CAPACITY };
 
+    std::vector<Node> previous_nodes{};
     std::vector<Node> nodes{};
     std::vector<TextData> text_data{};
-    std::unordered_map<NodeID, ScrollData> scroll_data{};
     std::vector<UiElement> render_elements{};
     
     size_t node_stack_size = 0;
 
     bool any_hovered = false;
 } state;
-
-[[nodiscard]]
-static inline bool NodeIsClickable(const Node& node) noexcept {
-    return node.on_click_callback != nullptr;
-}
 
 static Node& TopNode() noexcept {
     SGE_ASSERT(state.node_stack_size > 0);
@@ -280,13 +286,32 @@ static inline std::string_view CopyStringToArena(std::string_view string) {
 static bool CheckIfPressed(const NodeID id, const sge::Rect element_rect, const sge::MouseButton button) noexcept {
     const bool hovered = element_rect.contains(sge::Input::MouseScreenPosition());
 
-    if (state.active_id.id == 0) {
+    if (state.clicked_clickable_id.id == 0) {
         if (hovered && sge::Input::JustPressed(button)) {
-            state.active_id = id;
+            state.clicked_clickable_id = id;
         }
-    } else if (state.active_id == id) {
+    } else if (state.clicked_clickable_id == id) {
         if (sge::Input::JustReleased(button)) {
-            state.active_id = NodeID();
+            state.clicked_clickable_id = NodeID();
+            if (hovered) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+static bool CheckIfFocused(const NodeID id, const sge::Rect element_rect) {
+    const bool hovered = element_rect.contains(sge::Input::MouseScreenPosition());
+
+    if (state.clicked_focusable_id.id == 0) {
+        if (hovered && sge::Input::JustPressed(sge::MouseButton::Left)) {
+            state.clicked_focusable_id = id;
+        }
+    } else if (state.clicked_focusable_id == id) {
+        if (sge::Input::JustReleased(sge::MouseButton::Left)) {
+            state.clicked_focusable_id = NodeID();
             if (hovered) {
                 return true;
             }
@@ -308,7 +333,8 @@ void UI::Update() {
 
     state.search_visited.clear();
 
-    state.postorder_stack.clear();
+    state.clickable_stack.clear();
+    state.focusable_stack.clear();
 
     while (!state.search_stack.empty()) {
         Node* current_node = state.search_stack.back();
@@ -326,7 +352,7 @@ void UI::Update() {
         const sge::Rect element_rect = sge::Rect::from_top_left(current_node->pos, current_node->size);
         const bool hovered = element_rect.contains(sge::Input::MouseScreenPosition());
 
-        const bool clickable = NodeIsClickable(*current_node);
+        const bool clickable = current_node->clickable();
 
         if (hovered) {
             state.hovered_ids.insert(current_node->unique_id);
@@ -342,8 +368,10 @@ void UI::Update() {
         }
 
         if (clickable) {
-            state.postorder_stack.push_back(current_node);
+            state.clickable_stack.push_back(current_node);
         }
+
+        state.focusable_stack.push_back(current_node);
 
         for (uint32_t child_index : current_node->children) {
             Node& child = state.nodes[child_index];
@@ -351,24 +379,36 @@ void UI::Update() {
         }
     }
 
-    while (!state.postorder_stack.empty()) {
-        Node* node = state.postorder_stack.back();
-        state.postorder_stack.pop_back();
+    while (!state.focusable_stack.empty()) {
+        Node& node = *state.focusable_stack.back();
+        state.focusable_stack.pop_back();
 
-        const sge::Rect element_rect = sge::Rect::from_top_left(node->pos, node->size);
+        const sge::Rect element_rect = sge::Rect::from_top_left(node.pos, node.size);
 
-        if (CheckIfPressed(node->unique_id, element_rect, sge::MouseButton::Left)) {
-            node->on_click_callback(sge::MouseButton::Left);
+        if (CheckIfFocused(node.unique_id, element_rect)) {
+            state.focused_id = node.unique_id;
+            break;
+        }
+    }
+
+    while (!state.clickable_stack.empty()) {
+        Node& node = *state.clickable_stack.back();
+        state.clickable_stack.pop_back();
+
+        const sge::Rect element_rect = sge::Rect::from_top_left(node.pos, node.size);
+
+        if (node.clickable() && CheckIfPressed(node.unique_id, element_rect, sge::MouseButton::Left)) {
+            node.on_click_callback(sge::MouseButton::Left);
             break;
         }
 
-        if (CheckIfPressed(node->unique_id, element_rect, sge::MouseButton::Right)) {
-            node->on_click_callback(sge::MouseButton::Right);
+        if (node.clickable() && CheckIfPressed(node.unique_id, element_rect, sge::MouseButton::Right)) {
+            node.on_click_callback(sge::MouseButton::Right);
             break;
         }
 
-        if (CheckIfPressed(node->unique_id, element_rect, sge::MouseButton::Middle)) {
-            node->on_click_callback(sge::MouseButton::Middle);
+        if (node.clickable() && CheckIfPressed(node.unique_id, element_rect, sge::MouseButton::Middle)) {
+            node.on_click_callback(sge::MouseButton::Middle);
             break;
         }
     }
@@ -378,6 +418,7 @@ void UI::Start(const RootDesc& desc) {
     ZoneScoped;
 
     state.arena.clear();
+    state.nodes.swap(state.previous_nodes);
     state.nodes.clear();
     state.render_elements.clear();
     state.text_data.clear();
@@ -462,7 +503,7 @@ static void GrowElementsHorizontally(Node& parent) {
     if (parent.is_text_node()) return;
     if (parent.children.empty()) return;
 
-    float remaining_width = parent.size.x - parent.padding.left() - parent.padding.right();
+    float remaining_width = parent.size.x - parent.padding.width();
 
     float gap = 0.0f;
     
@@ -487,7 +528,7 @@ static void GrowElementsHorizontally(Node& parent) {
     if (state.growable_nodes.empty())
         return;
 
-    const float max_width = parent.size.x - gap - parent.padding.left() - parent.padding.right();
+    const float max_width = parent.size.x - gap - parent.padding.width();
 
     if (parent.orientation == LayoutOrientation::Horizontal) {
         while (remaining_width > FLOAT_EPSILON) {
@@ -534,7 +575,7 @@ static void GrowElementsVertically(Node& parent) {
     if (parent.is_text_node()) return;
     if (parent.children.empty()) return;
 
-    float remaining_height = parent.size.y - parent.padding.top() - parent.padding.bottom();
+    float remaining_height = parent.size.y - parent.padding.height();
 
     float gap = 0.0f;
 
@@ -559,7 +600,7 @@ static void GrowElementsVertically(Node& parent) {
     if (state.growable_nodes.empty())
         return;
 
-    const float max_height = parent.size.y - parent.padding.top() - parent.padding.bottom() - gap;
+    const float max_height = parent.size.y - parent.padding.height() - gap;
 
     if (parent.orientation == LayoutOrientation::Vertical) {
         while (remaining_height > FLOAT_EPSILON) {
@@ -663,8 +704,8 @@ void UI::EndElement() {
     const bool width_fixed = node.sizing.width().type() == Sizing::Type::Fixed;
     const bool height_fixed = node.sizing.height().type() == Sizing::Type::Fixed;
 
-    const float horizontal_padding = node.padding.left() + node.padding.right();
-    const float vertical_padding = node.padding.top() + node.padding.bottom();
+    const float horizontal_padding = node.padding.width();
+    const float vertical_padding = node.padding.height();
 
     glm::vec2 min_size = glm::vec2(0.0f, 0.0f);
 
@@ -811,8 +852,8 @@ static void FinalizeLayout() {
 
         float max_scroll = 0.0f;
 
-        float remaining_width = parent_size.x - parent_padding.left() - parent_padding.right();
-        float remaining_height = parent_size.y - parent_padding.top() - parent_padding.bottom();
+        float remaining_width = parent_size.x - parent_padding.width();
+        float remaining_height = parent_size.y - parent_padding.height();
 
         for (uint32_t child_index : current_node->children) {
             Node& child = state.nodes[child_index];
@@ -828,13 +869,13 @@ static void FinalizeLayout() {
             
             if (parent_orientation == LayoutOrientation::Horizontal) {
                 pos.x += child.size.x + parent_gap;
-                remaining_height = parent_size.y - child.size.y - parent_padding.top() - parent_padding.bottom();
+                remaining_height = parent_size.y - child.size.y - parent_padding.height();
             } else if (parent_orientation == LayoutOrientation::Vertical) {
                 pos.y += child.size.y + parent_gap;
-                remaining_width = parent_size.x - child.size.x - parent_padding.left() - parent_padding.right();
+                remaining_width = parent_size.x - child.size.x - parent_padding.width();
             } else if (parent_orientation == LayoutOrientation::Stack) {
-                remaining_width = parent_size.x - child.size.x - parent_padding.left() - parent_padding.right();
-                remaining_height = parent_size.y - child.size.y - parent_padding.top() - parent_padding.bottom();
+                remaining_width = parent_size.x - child.size.x - parent_padding.width();
+                remaining_height = parent_size.y - child.size.y - parent_padding.height();
             }
 
             if (parent_orientation == LayoutOrientation::Horizontal) {
@@ -929,6 +970,9 @@ static void FinalizeLayout() {
                 current_node->scroll_max = max_scroll - parent_size.x + parent_padding.right();
             } else if (parent_orientation == LayoutOrientation::Vertical) {
                 current_node->scroll_max = max_scroll - parent_size.y + parent_padding.bottom();
+            }
+            if (current_node->scroll_max < 0.0f) {
+                current_node->scroll_max = 0.0f;
             }
         }
     }
@@ -1043,6 +1087,33 @@ const ElementID& UI::GetElementID() noexcept {
 bool UI::IsHovered() noexcept {
     const Node& node = TopNode();
     return state.hovered_ids.contains(node.unique_id);
+}
+
+bool UI::IsFocused() noexcept {
+    const Node& node = TopNode();
+    return state.focused_id == node.unique_id;
+}
+
+[[nodiscard]]
+const glm::vec2 UI::GetContentSize() noexcept {
+    SGE_ASSERT(state.node_stack_size > 0);
+    const NodeID id = GetElementID();
+    
+    // TODO: Get rid of linear search somehow
+    const auto it = std::ranges::find_if(state.previous_nodes, [&id](const Node& node) {
+        return node.unique_id.id == id.id;
+    });
+
+    if (it == state.previous_nodes.end())
+        return glm::vec2(0.0f);
+
+    return glm::max(it->size - glm::vec2(it->padding.width(), it->padding.height()), glm::vec2(0.0f));
+}
+
+[[nodiscard]]
+const glm::vec2 UI::GetMaxSize() noexcept {
+    // TODO
+    return UI::GetContentSize();
 }
 
 bool UI::IsMouseOverUi() noexcept {

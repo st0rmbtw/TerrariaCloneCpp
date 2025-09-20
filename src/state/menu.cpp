@@ -6,6 +6,8 @@
 #include <SGE/time/time.hpp>
 #include <SGE/types/anchor.hpp>
 #include <SGE/math/quat.hpp>
+#include <SGE/utils/text.hpp>
+#include <SGE/utils/utf8.hpp>
 
 #include <glm/trigonometric.hpp>
 
@@ -34,7 +36,8 @@ namespace UiTypeID {
         Logo,
         Icon,
         Separator,
-        WorldPreview
+        WorldPreview,
+        SliderHandle
     };
 }
 
@@ -55,6 +58,29 @@ struct UiSeparatorData {
 struct UiIconData {
     TextureAsset icon;
 };
+
+void TextInputData::update() noexcept {
+    if (!m_active) return;
+
+    for (uint32_t codepoint : sge::Input::CodePoints()) {
+        uint8_t buffer[4];
+        const uint8_t cplen = sge::utf32_codepoint_to_ut8(codepoint, buffer);
+
+        m_data.insert(m_data.end(), buffer, buffer + cplen);
+    }
+
+    if (sge::Input::JustPressed(sge::Key::Backspace, sge::Modifier::Control)) {
+        m_data.clear();
+    } else if (sge::Input::JustPressed(sge::Key::Backspace)) {
+        remove_last();
+    } else if (sge::Input::Pressed(sge::Key::Backspace)) {
+        if (m_backspace_timer.tick(sge::Time::Delta()).finished()) {
+            remove_last();
+        }
+    } else {
+        m_backspace_timer.reset();
+    }
+}
 
 MainMenuState::MainMenuState() :
     m_camera(sge::CameraOrigin::Center, sge::CoordinateSystem {
@@ -165,6 +191,24 @@ void MainMenuState::Update() {
     }
 
     update_logo();
+
+    switch (position()) {
+    case MenuPosition::CreateWorld:
+        update_create_world();
+    break;
+    default: break;
+    }
+}
+
+void MainMenuState::update_create_world() {
+    m_name_input_data.update();
+    m_seed_input_data.update();
+
+    if (m_name_input_data.active() || m_seed_input_data.active()) {
+        if (m_bar_timer.tick(sge::Time::Delta()).finished()) {
+            m_text_input_bar_visible = !m_text_input_bar_visible;
+        }
+    }
 }
 
 void MainMenuState::update_logo() {
@@ -279,9 +323,38 @@ static void IconButton(TextureAsset icon, F&& on_click) {
     });
 }
 
-template <typename F>
-static void TextInput(const ElementDesc& desc, F&& children) {
-    CategoryPanel(desc, sge::LinearRgba(63, 82, 151), std::forward<F>(children));
+static void TextInput(TextInputData& data, bool bar_visible, const sge::Font& font, UiSize size) {
+    CategoryPanel({
+        .size = size,
+        .padding = UiRect::Horizontal(8.0f),
+        .orientation = LayoutOrientation::Horizontal,
+        .vertical_alignment = Alignment::Center
+    }, sge::LinearRgba(63, 82, 151), [&] {
+        data.set_active(UI::IsFocused());
+
+        const glm::vec2 slider_handle = Assets::GetTexture(TextureAsset::UiSliderHandle).size();
+
+        auto from = data.text().begin();
+        const auto to = data.text().end();
+        
+        const float text_width = sge::calculate_text_bounds(font, 24.0f, data.text()).x;
+        
+        const float width = UI::GetMaxSize().x - slider_handle.x;
+        if (width > 0.0f && text_width > width) {
+            const float avg_char_width = text_width / data.text().size();
+            const uint32_t max_text_len = static_cast<uint32_t>(std::floor(width / avg_char_width));
+            from += std::max<int>(data.text().size() - max_text_len, 0);
+        }
+        
+        const std::string_view text = std::string_view{ from, to };
+        UI::Text<UiTypeID::Text>(font, sge::rich_text(text, 24.0f, sge::LinearRgba::white()));
+
+        if (data.active() && bar_visible) {
+            UI::AddElement<UiTypeID::SliderHandle>({
+                .size = UiSize::Fixed(slider_handle)
+            });
+        }
+    });
 }
 
 void MainMenuState::draw_main_menu() {
@@ -395,89 +468,77 @@ void MainMenuState::draw_create_world() {
     const sge::Font& font = Assets::GetFont(FontAsset::AndyBold);
 
     UI::Container({
+        .gap = 6.0f,
+        .orientation = LayoutOrientation::Vertical,
         .self_alignment = Alignment::Center,
         .horizontal_alignment = Alignment::Center
     }, [&] {
-        UI::Container({
+        UI::Element<UiTypeID::Panel>({
+            .id = ID::Local("Container"),
+            .size = UiSize::Width(Sizing::Fill()),
+            .padding = UiRect::Axes(12.0f, 8.0f),
+            .min_width = 500.0f,
             .gap = 6.0f,
             .orientation = LayoutOrientation::Vertical,
-            .horizontal_alignment = Alignment::Center
+            .horizontal_alignment = Alignment::Center,
         }, [&] {
-            UI::Element<UiTypeID::Panel>({
-                .id = ID::Local("Container"),
+            UI::Container({
                 .size = UiSize::Width(Sizing::Fill()),
-                .padding = UiRect::Axes(12.0f, 8.0f),
-                .min_width = 500.0f,
                 .gap = 6.0f,
-                .orientation = LayoutOrientation::Vertical,
-                .horizontal_alignment = Alignment::Center,
+                .orientation = LayoutOrientation::Horizontal
             }, [&] {
                 UI::Container({
                     .size = UiSize::Width(Sizing::Fill()),
                     .gap = 6.0f,
-                    .orientation = LayoutOrientation::Horizontal
-                }, [] {
+                    .orientation = LayoutOrientation::Vertical
+                }, [&] {
                     UI::Container({
                         .size = UiSize::Width(Sizing::Fill()),
                         .gap = 6.0f,
-                        .orientation = LayoutOrientation::Vertical
-                    }, [] {
-                        UI::Container({
-                            .size = UiSize::Width(Sizing::Fill()),
-                            .gap = 6.0f,
-                            .orientation = LayoutOrientation::Horizontal,
-                            .vertical_alignment = Alignment::Center
-                        }, [] {
-                            IconButton(TextureAsset::UiIconRandomName, [] {
+                        .orientation = LayoutOrientation::Horizontal,
+                        .vertical_alignment = Alignment::Center
+                    }, [&] {
+                        IconButton(TextureAsset::UiIconRandomName, [] {
 
-                            }); 
+                        }); 
 
-                            TextInput({
-                                .size = UiSize::Fill()
-                            }, [] {
-
-                            });
-                        });
-
-                        UI::Container({
-                            .size = UiSize::Width(Sizing::Fill()),
-                            .gap = 6.0f,
-                            .orientation = LayoutOrientation::Horizontal,
-                            .vertical_alignment = Alignment::Center
-                        }, [] {
-                            IconButton(TextureAsset::UiIconRandomSeed, [] {
-
-                            });
-
-                            TextInput({
-                                .size = UiSize::Fill()
-                            }, [] {
-
-                            });
-                        });
+                        TextInput(m_name_input_data, m_text_input_bar_visible, font, UiSize::Fill());
                     });
 
-                    UI::AddElement<UiTypeID::WorldPreview>({
-                        .size = UiSize::Fixed(94.0f, 94.0f),
+                    UI::Container({
+                        .size = UiSize::Width(Sizing::Fill()),
+                        .gap = 6.0f,
+                        .orientation = LayoutOrientation::Horizontal,
+                        .vertical_alignment = Alignment::Center
+                    }, [&] {
+                        IconButton(TextureAsset::UiIconRandomSeed, [] {
+
+                        });
+
+                        TextInput(m_seed_input_data, m_text_input_bar_visible, font, UiSize::Fill());
                     });
                 });
 
-                HorizontalSeparator(Sizing::Fill(), sge::LinearRgba::white().lerp(sge::LinearRgba(63, 65, 151), 0.85f) * 0.9f);
+                UI::AddElement<UiTypeID::WorldPreview>({
+                    .size = UiSize::Fixed(94.0f, 94.0f),
+                });
             });
 
-            UI::Spacer(UiSize::Height(Sizing::Fixed(12.0f)));
+            HorizontalSeparator(Sizing::Fill(), sge::LinearRgba::white().lerp(sge::LinearRgba(63, 65, 151), 0.85f) * 0.9f);
+        });
 
-            UI::Container({
-                .size = UiSize::Width(Sizing::Fill()),
-                .gap = 24.0f,
-                .orientation = LayoutOrientation::Horizontal,
-            }, [&] {
-                Button(font, UiSize::Width(Sizing::Fill()), "Back", [this]() {
-                    set_previous_position();
-                });
-                Button(font, UiSize::Width(Sizing::Fill()), "Create", [this]() {
-                    m_world_selected = true;
-                });
+        UI::Spacer(UiSize::Height(Sizing::Fixed(12.0f)));
+
+        UI::Container({
+            .size = UiSize::Width(Sizing::Fill()),
+            .gap = 24.0f,
+            .orientation = LayoutOrientation::Horizontal,
+        }, [&] {
+            Button(font, UiSize::Width(Sizing::Fill()), "Back", [this]() {
+                set_previous_position();
+            });
+            Button(font, UiSize::Width(Sizing::Fill()), "Create", [this]() {
+                m_world_selected = true;
             });
         });
     });
@@ -485,8 +546,6 @@ void MainMenuState::draw_create_world() {
 
 void MainMenuState::draw_ui() {
     UI::Start(RootDesc(m_camera.viewport()));
-
-    MenuPosition current_state = m_position_stack.back();
 
     UI::Container({
         .size = UiSize::Fill(),
@@ -496,7 +555,7 @@ void MainMenuState::draw_ui() {
             .self_alignment = Alignment::TopCenter
         });
 
-        switch (current_state) {
+        switch (position()) {
         case MenuPosition::MainMenu:
             draw_main_menu();
         break;
@@ -640,6 +699,16 @@ void MainMenuState::draw_ui() {
                 sprite.set_custom_size(element.size);
                 sprite.set_texture(Assets::GetTexture(TextureAsset::UiWorldPreviewBorder));
                 m_batch.DrawSprite(sprite, sge::Order(order.value + 5));
+            } break;
+
+            case UiTypeID::SliderHandle: {
+                sprite.set_anchor(sge::Anchor::TopLeft);
+                sprite.set_position(element.position);
+                sprite.set_custom_size(element.size);
+                sprite.set_color(sge::LinearRgba::white());
+                sprite.set_rotation(glm::identity<glm::quat>());
+                sprite.set_texture(Assets::GetTexture(TextureAsset::UiSliderHandle));
+                m_batch.DrawSprite(sprite, order);
             } break;
         }
     }

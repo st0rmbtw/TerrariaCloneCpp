@@ -51,6 +51,7 @@ enum class TextureAsset : uint8_t {
     UiWorldPreviewSizeLarge,
     UiWorldPreviewEvilRandom,
     UiWorldPreviewBorder,
+    UiSliderHandle,
 
     TileCracks,
     Tiles0,

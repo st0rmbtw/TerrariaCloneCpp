@@ -92,6 +92,16 @@ public:
         return m_bottom;
     }
 
+    [[nodiscard]]
+    inline constexpr float width() const noexcept {
+        return m_left + m_right;
+    }
+
+    [[nodiscard]]
+    inline constexpr float height() const noexcept {
+        return m_top + m_bottom;
+    }
+
 private:
     float m_left = 0.0f;
     float m_right = 0.0f;
@@ -429,7 +439,7 @@ namespace UI {
     }
 
     template <uint32_t TypeID>
-    inline void AddElement(const ElementDesc& desc) {
+    inline void AddElement(const ElementDesc& desc = {}) {
         BeginElement(TypeID, desc);
         EndElement();
     }
@@ -464,10 +474,19 @@ namespace UI {
     bool IsHovered() noexcept;
 
     [[nodiscard]]
+    bool IsFocused() noexcept;
+
+    [[nodiscard]]
     uint32_t GetParentID() noexcept;
 
     [[nodiscard]]
     const ElementID& GetElementID() noexcept;
+
+    [[nodiscard]]
+    const glm::vec2 GetContentSize() noexcept;
+
+    [[nodiscard]]
+    const glm::vec2 GetMaxSize() noexcept;
 
     [[nodiscard]]
     const std::vector<UiElement>& Finish();

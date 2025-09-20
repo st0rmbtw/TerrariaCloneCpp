@@ -112,6 +112,7 @@ static const std::pair<TextureAsset, AssetTexture> TEXTURE_ASSETS[] = {
     { TextureAsset::UiIconRandomSeed,          AssetTexture("assets/sprites/ui/IconRandomSeed.png", sge::TextureSampler::Linear) },
     { TextureAsset::UiSeparator1,              AssetTexture("assets/sprites/ui/Separator1.png", sge::TextureSampler::Linear) },
     { TextureAsset::UiSeparator2,              AssetTexture("assets/sprites/ui/Separator2.png", sge::TextureSampler::Linear) },
+    { TextureAsset::UiSliderHandle,            AssetTexture("assets/sprites/ui/SliderHandle.png", sge::TextureSampler::Linear) },
 
     { TextureAsset::UiWorldPreviewDifficultyNormal1, AssetTexture("assets/sprites/ui/PreviewDifficultyNormal1.png", sge::TextureSampler::Nearest) },
     { TextureAsset::UiWorldPreviewDifficultyNormal2, AssetTexture("assets/sprites/ui/PreviewDifficultyNormal2.png", sge::TextureSampler::Nearest) },
