@@ -8,6 +8,7 @@
 #include <vector>
 #include <optional>
 #include <format>
+#include <ranges>
 
 #include <SGE/profile.hpp>
 
@@ -76,6 +77,18 @@ std::string_view temp_format(std::format_string<_Args...> __fmt, _Args&&... __ar
     );
 
     return buffer;
+}
+
+template<std::ranges::random_access_range Range>
+requires std::ranges::sized_range<Range>
+constexpr std::ranges::range_reference_t<Range>
+get_random(Range&& range) {
+    using Index = std::iter_difference_t<std::ranges::iterator_t<Range>>;
+    const size_t size = std::ranges::size(std::forward<Range>(range));
+
+    const Index index = rand() % size;
+
+    return std::ranges::begin(std::forward<Range>(range))[index];
 }
 
 #endif

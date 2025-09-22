@@ -16,7 +16,7 @@
 
 #include "diagnostic/frametime.hpp"
 #include "renderer/renderer.hpp"
-#include "state/menu.hpp"
+#include "state/menu/menu.hpp"
 #include "world/autotile.hpp"
 #include "state/base.hpp"
 #include "state/ingame.hpp"

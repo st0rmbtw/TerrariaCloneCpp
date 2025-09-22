@@ -7,6 +7,8 @@
 #include <SGE/types/sprite.hpp>
 #include <SGE/renderer/batch.hpp>
 #include <SGE/types/animation.hpp>
+#include <SGE/time/timer.hpp>
+
 #include <glm/vec2.hpp>
 
 #include "../assets.hpp"
@@ -62,6 +64,67 @@ private:
     sge::Animation m_animation{ sge::Duration::SecondsFloat(1.0f), sge::RepeatStrategy::MirroredRepeat };
     
     float m_scale = 1.0f;
+};
+
+class TextInputData {
+public:
+    TextInputData() = default;
+    TextInputData(std::function<bool(uint32_t)> filter) noexcept :
+        m_filter_function(std::move(filter)) {};
+
+    void update() noexcept;
+
+    void clear() noexcept {
+        m_data.clear();
+        m_size = 0;
+    }
+
+    inline void set_active(bool active) noexcept {
+        m_active = active;
+    }
+
+    inline void set_text(std::string_view text) noexcept {
+        m_data = text;
+    }
+
+    [[nodiscard]]
+    const std::string& text() const noexcept {
+        return m_data;
+    }
+
+    [[nodiscard]]
+    std::string& text() noexcept {
+        return m_data;
+    }
+
+    [[nodiscard]]
+    uint32_t size() const noexcept {
+        return m_size;
+    }
+
+    [[nodiscard]]
+    inline bool active() const noexcept {
+        return m_active;
+    }
+
+private:
+    void remove_last() noexcept {
+        if (m_data.empty()) return;
+
+        uint32_t new_size = m_data.size();
+        while((static_cast<uint8_t>(m_data[--new_size]) & 0xC0u) == 0x80u);
+
+        m_data.resize(new_size);
+        m_size -= 1;
+    }
+
+private:
+    std::function<bool(uint32_t)> m_filter_function = nullptr;
+    sge::Timer m_backspace_timer = sge::Timer::from_seconds(0.5f, sge::TimerMode::Once);
+    std::string m_data;
+    uint32_t m_size = 0;
+    uint32_t m_max_characters = UINT32_MAX;
+    bool m_active = false;
 };
 
 #endif

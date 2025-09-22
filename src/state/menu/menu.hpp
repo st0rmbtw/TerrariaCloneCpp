@@ -10,52 +10,16 @@
 #include <SGE/time/stopwatch.hpp>
 #include <SGE/time/timer.hpp>
 
-#include "../renderer/background_renderer.hpp"
+#include "../../renderer/background_renderer.hpp"
 
-#include "common.hpp"
-#include "base.hpp"
+#include "../common.hpp"
+#include "../base.hpp"
 
 enum class MenuPosition : uint8_t {
     MainMenu = 0,
     SelectWorld,
     CreateWorld,
     Settings,
-};
-
-class TextInputData {
-public:
-    TextInputData() noexcept = default;
-
-    void update() noexcept;
-
-    inline void set_active(bool active) noexcept {
-        m_active = active;
-    }
-
-    [[nodiscard]]
-    const std::string& text() const noexcept {
-        return m_data;
-    }
-
-    [[nodiscard]]
-    inline bool active() const noexcept {
-        return m_active;
-    }
-
-private:
-    void remove_last() noexcept {
-        if (m_data.empty()) return;
-
-        uint32_t new_size = m_data.size();
-        while((static_cast<uint8_t>(m_data[--new_size]) & 0xC0u) == 0x80u);
-
-        m_data.resize(new_size);
-    }
-
-private:
-    sge::Timer m_backspace_timer = sge::Timer::from_seconds(0.5f, sge::TimerMode::Once);
-    std::string m_data;
-    bool m_active = false;
 };
 
 class MainMenuState : public BaseState {
@@ -89,6 +53,10 @@ private:
     void set_previous_position();
 
     void update_logo();
+
+    void set_random_world_name();
+
+    void set_random_seed();
 
     [[nodiscard]]
     inline MenuPosition position() const noexcept {
