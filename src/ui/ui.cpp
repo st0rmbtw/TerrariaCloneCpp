@@ -15,6 +15,7 @@
 #include <SGE/time/time.hpp>
 #include <SGE/utils/bitflags.hpp>
 
+#include "small_vector.hpp"
 #include "arena.hpp"
 #include "ui.hpp"
 
@@ -26,22 +27,31 @@ inline constexpr float FLOAT_EPSILON = std::numeric_limits<float>::epsilon();
 using NodeID = ElementID;
 
 template <typename T>
-class ArenaAllocator {
+struct ArenaAllocator {
 public:
     using value_type = T;
 
-    ArenaAllocator(Arena& arena) : m_arena{ &arena } {}
+    Arena* arena = nullptr;
+
+    ArenaAllocator(Arena& arena) : arena{ &arena } {}
+    
+    template <typename U>
+    ArenaAllocator(const ArenaAllocator<U>& other) : arena(other.arena) {}
 
     value_type* allocate(std::size_t n) {
-        return m_arena->allocate<value_type>(n);
+        return arena->allocate<value_type>(n);
     }
 
     void deallocate(value_type*, std::size_t) {
         // do nothing
     }
 
-private:
-    Arena* m_arena = nullptr;
+    ~ArenaAllocator() {
+        arena = nullptr;
+    }
+    
+    bool operator==(const ArenaAllocator&) const noexcept { return true; }
+    bool operator!=(const ArenaAllocator&) const noexcept { return false; }
 };
 
 enum class NodeFlags : uint8_t {
@@ -55,7 +65,8 @@ struct Node {
     NodeID unique_id{};
     std::function<void(sge::MouseButton)> on_click_callback = nullptr;
 
-    std::vector<uint32_t, ArenaAllocator<uint32_t>> children;
+    // Not using std::vector here because it doesn't play nice with ArenaAllocator
+    gch::small_vector<uint32_t, 16, ArenaAllocator<uint32_t>> children;
     
     UiRect padding;
     UiSize sizing;
@@ -130,12 +141,14 @@ struct SearchStackFrame {
 static struct {
     uint32_t id_stack[MAX_NODE_STACK_SIZE];
     
-    std::deque<Node*> search_stack{};
-    std::deque<SearchStackFrame> search_stack_frame{};
-    
+    std::unordered_map<uint32_t, Node> previous_nodes{};
+    std::unordered_map<uint32_t, Node> nodes{};
     std::unordered_set<NodeID> hovered_ids{};
     std::unordered_set<NodeID> search_visited{};
     std::unordered_map<NodeID, ScrollData> scroll_data{};
+
+    std::deque<Node*> search_stack{};
+    std::deque<SearchStackFrame> search_stack_frame{};
 
     NodeID clicked_clickable_id{};
     NodeID clicked_focusable_id{};
@@ -146,12 +159,10 @@ static struct {
 
     sge::SwapbackVector<Node*> growable_nodes{};
     
-    Arena arena{ ARENA_CAPACITY };
-
-    std::unordered_map<uint32_t, Node> previous_nodes{};
-    std::unordered_map<uint32_t, Node> nodes{};
     std::vector<TextData> text_data{};
     std::vector<UiElement> render_elements{};
+
+    Arena arena{ ARENA_CAPACITY };
     
     size_t node_stack_size = 0;
 
@@ -285,7 +296,7 @@ static inline std::string_view CopyStringToArena(std::string_view string) {
     pointer str = static_cast<pointer>(state.arena.allocate(string.size() + 1, alignof(value_type)));
     memcpy(str, string.data(), string.size());
     str[string.size()] = '\0'; // Add a null terminator just in case
-    return { str, string.size() + 1 };
+    return { str, string.size() };
 }
 
 static bool CheckIfPressed(const NodeID id, const sge::Rect element_rect, const sge::MouseButton button) noexcept {

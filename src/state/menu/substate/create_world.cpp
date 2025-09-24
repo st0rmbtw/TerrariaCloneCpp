@@ -1,6 +1,7 @@
 #include "create_world.hpp"
 
 #include <SGE/time/time.hpp>
+#include <array>
 
 #include "../../../ui/ui.hpp"
 #include "../../../utils.hpp"
