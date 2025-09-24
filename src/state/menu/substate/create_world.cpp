@@ -79,7 +79,7 @@ void MenuSubstateCreateWorld::draw(NavManager& nav_manager) {
                 });
             });
 
-            HorizontalSeparator(Sizing::Fill(), sge::LinearRgba::white().lerp(sge::LinearRgba(63, 65, 151), 0.85f) * 0.9f);
+            // HorizontalSeparator(Sizing::Fill(), sge::LinearRgba::white().lerp(sge::LinearRgba(63, 65, 151), 0.85f) * 0.9f);
         });
 
         UI::Spacer(UiSize::Height(Sizing::Fixed(12.0f)));
@@ -120,7 +120,7 @@ void MenuSubstateCreateWorld::set_random_seed() {
     m_seed_input_data.text().reserve(LENGTH);
 
     for (uint32_t i = 0; i < LENGTH; ++i) {
-        m_seed_input_data.text().push_back('0' + rand() % 10);
+        m_seed_input_data.add_char('0' + rand() % 10);
     }
 }
 

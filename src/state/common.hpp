@@ -86,10 +86,16 @@ public:
 
     inline void set_text(std::string_view text) noexcept {
         m_data = text;
+        m_cursor_position = text.size();
     }
 
     inline void set_window_begin(uint32_t begin) noexcept {
         m_display_begin = begin;
+    }
+
+    void add_char(char c) {
+        m_data.push_back(c);
+        m_cursor_position += 1;
     }
 
     [[nodiscard]]

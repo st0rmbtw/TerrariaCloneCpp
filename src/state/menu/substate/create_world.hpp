@@ -8,7 +8,10 @@
 
 class MenuSubstateCreateWorld {
 public:
-    MenuSubstateCreateWorld() = default;
+    MenuSubstateCreateWorld() {
+        set_random_name();
+        set_random_seed();
+    };
 
     void draw(NavManager& nav_manager);
     void update();
