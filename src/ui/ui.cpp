@@ -512,16 +512,6 @@ static void GrowElementsHorizontally(Node& parent) {
     if (parent.is_text_node()) return;
     if (parent.children.empty()) return;
 
-    float remaining_width = parent.size.x - parent.padding.width();
-    
-    if (parent.orientation == LayoutOrientation::Horizontal) {
-        remaining_width -= (parent.children.size() - 1) * parent.gap;
-        for (uint32_t child_index : parent.children) {
-            Node& child = GetNode(child_index);
-            remaining_width -= child.size.x;
-        }
-    } 
-
     state.growable_nodes.clear();
 
     for (uint32_t child_index : parent.children) {
@@ -535,6 +525,13 @@ static void GrowElementsHorizontally(Node& parent) {
         return;
 
     if (parent.orientation == LayoutOrientation::Horizontal) {
+        float remaining_width = parent.size.x - parent.padding.width();
+        remaining_width -= (parent.children.size() - 1) * parent.gap;
+        for (uint32_t child_index : parent.children) {
+            Node& child = GetNode(child_index);
+            remaining_width -= child.size.x;
+        }
+
         while (remaining_width > FLOAT_EPSILON) {
             float smallest = state.growable_nodes[0]->size.x;
             float second_smallest = INFINITY;
@@ -581,16 +578,6 @@ static void GrowElementsVertically(Node& parent) {
     if (parent.is_text_node()) return;
     if (parent.children.empty()) return;
 
-    float remaining_height = parent.size.y - parent.padding.height();
-
-    if (parent.orientation == LayoutOrientation::Vertical) {
-        remaining_height -= (parent.children.size() - 1) * parent.gap;
-        for (uint32_t child_index : parent.children) {
-            Node& child = GetNode(child_index);
-            remaining_height -= child.size.y;
-        }
-    }
-
     state.growable_nodes.clear();
 
     for (uint32_t child_index : parent.children) {
@@ -604,6 +591,14 @@ static void GrowElementsVertically(Node& parent) {
         return;
 
     if (parent.orientation == LayoutOrientation::Vertical) {
+        float remaining_height = parent.size.y - parent.padding.height();
+
+        remaining_height -= (parent.children.size() - 1) * parent.gap;
+        for (uint32_t child_index : parent.children) {
+            Node& child = GetNode(child_index);
+            remaining_height -= child.size.y;
+        }
+
         while (remaining_height > FLOAT_EPSILON) {
             float smallest = state.growable_nodes[0]->size.y;
             float second_smallest = INFINITY;

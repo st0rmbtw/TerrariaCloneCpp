@@ -1,5 +1,6 @@
 #pragma once
 
+#include "SGE/utils/utf8.hpp"
 #ifndef STATE_COMMON_HPP_
 #define STATE_COMMON_HPP_
 
@@ -76,7 +77,7 @@ public:
 
     void clear() noexcept {
         m_data.clear();
-        m_size = 0;
+        m_cursor_position = 0;
     }
 
     inline void set_active(bool active) noexcept {
@@ -85,6 +86,10 @@ public:
 
     inline void set_text(std::string_view text) noexcept {
         m_data = text;
+    }
+
+    inline void set_window_begin(uint32_t begin) noexcept {
+        m_display_begin = begin;
     }
 
     [[nodiscard]]
@@ -99,7 +104,7 @@ public:
 
     [[nodiscard]]
     uint32_t size() const noexcept {
-        return m_size;
+        return m_data.size();
     }
 
     [[nodiscard]]
@@ -107,15 +112,53 @@ public:
         return m_active;
     }
 
+    [[nodiscard]]
+    inline bool empty() const noexcept {
+        return m_data.empty();
+    }
+
+    [[nodiscard]]
+    inline uint32_t display_begin() const noexcept {
+        return m_display_begin;
+    }
+
+    [[nodiscard]]
+    inline uint32_t cursor_position() const noexcept {
+        return m_cursor_position;
+    }
+
 private:
-    void remove_last() noexcept {
+    void remove_before_cursor() noexcept {
         if (m_data.empty()) return;
+        if (m_cursor_position == 0) return;
 
-        uint32_t new_size = m_data.size();
-        while((static_cast<uint8_t>(m_data[--new_size]) & 0xC0u) == 0x80u);
+        const uint8_t count = sge::count_utf8_char_bytes_from_end(m_data.data(), m_cursor_position);
 
-        m_data.resize(new_size);
+        m_data.erase(m_cursor_position - count, count);
         m_size -= 1;
+        m_cursor_position -= count;
+    }
+
+    void move_cursor_left() noexcept {
+        if (m_cursor_position == 0) return;
+
+        const uint8_t count = sge::count_utf8_char_bytes_from_end(m_data.data(), m_cursor_position);
+        m_cursor_position -= count;
+    }
+
+    void move_cursor_right() noexcept {
+        if (m_cursor_position >= m_data.size()) return;
+        
+        const uint8_t count = sge::count_utf8_char_bytes(m_data.data()[m_cursor_position]);
+        m_cursor_position += count;
+    }
+
+    void move_cursor_start() noexcept {
+        m_cursor_position = 0;
+    }
+
+    void move_cursor_end() noexcept {
+        m_cursor_position = m_data.size();
     }
 
 private:
@@ -124,6 +167,8 @@ private:
     std::string m_data;
     uint32_t m_size = 0;
     uint32_t m_max_characters = UINT32_MAX;
+    uint32_t m_cursor_position = 0;
+    uint32_t m_display_begin = 0;
     bool m_active = false;
 };
 

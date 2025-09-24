@@ -3,6 +3,7 @@
 #ifndef STATE_MENU_HPP_
 #define STATE_MENU_HPP_
 
+#include <variant>
 #include <SGE/renderer/camera.hpp>
 #include <SGE/renderer/batch.hpp>
 #include <SGE/math/quat.hpp>
@@ -15,12 +16,9 @@
 #include "../common.hpp"
 #include "../base.hpp"
 
-enum class MenuPosition : uint8_t {
-    MainMenu = 0,
-    SelectWorld,
-    CreateWorld,
-    Settings,
-};
+#include "nav_manager.hpp"
+#include "substate/create_world.hpp"
+#include "substate/select_world.hpp"
 
 class MainMenuState : public BaseState {
 public:
@@ -44,48 +42,27 @@ private:
 
     void draw_main_menu();
 
-    void draw_select_world();
-
-    void draw_create_world();
-    void update_create_world();
-
-    void set_next_position(MenuPosition new_state);
-    void set_previous_position();
-
     void update_logo();
-
-    void set_random_world_name();
-
-    void set_random_seed();
-
-    [[nodiscard]]
-    inline MenuPosition position() const noexcept {
-        return m_position_stack.back();
-    }
 
 private:
     sge::Camera m_camera;
     Cursor m_cursor;
-    BackgroundRenderer m_background_renderer;
     sge::Batch m_batch;
+
+    std::variant<MenuSubstateCreateWorld, MenuSubstateSelectWorld> m_substate;
+
+    BackgroundRenderer m_background_renderer;
     std::vector<BackgroundLayer> m_background_layers;
 
-    std::list<MenuPosition> m_position_stack;
-
-    TextInputData m_name_input_data;
-    TextInputData m_seed_input_data;
-
-    sge::Timer m_backspace_timer = sge::Timer::from_seconds(0.5f, sge::TimerMode::Once);
-    sge::Timer m_bar_timer = sge::Timer::from_seconds(0.5f, sge::TimerMode::Repeating);
+    NavManager m_nav_manager;
 
     glm::quat m_logo_rotation = Quat::from_rotation_z(glm::radians(-5.0f));
     sge::Animation m_logo_animation{ sge::Duration::SecondsFloat(10.0f), sge::RepeatStrategy::MirroredRepeat };
 
     float m_logo_scale = 0.9f;
 
+    size_t m_prev_position = 0;
     bool m_exit = false;
-    bool m_world_selected = false;
-    bool m_text_input_bar_visible = true;
 };
 
 #endif

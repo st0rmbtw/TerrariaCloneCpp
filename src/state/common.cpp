@@ -35,19 +35,32 @@ void TextInputData::update() noexcept {
         if (m_filter_function != nullptr && !m_filter_function(codepoint))
             continue;
 
-        m_data.insert(m_data.end(), buffer, buffer + cplen);
+        m_data.insert(m_data.begin() + m_cursor_position, buffer, buffer + cplen);
         m_size += 1;
+        m_cursor_position += cplen;
     }
 
     if (sge::Input::JustPressed(sge::Key::Backspace, sge::Modifier::Control)) {
         clear();
     } else if (sge::Input::JustPressed(sge::Key::Backspace)) {
-        remove_last();
+        remove_before_cursor();
     } else if (sge::Input::Pressed(sge::Key::Backspace)) {
         if (m_backspace_timer.tick(sge::Time::Delta()).finished()) {
-            remove_last();
+            remove_before_cursor();
         }
     } else {
         m_backspace_timer.reset();
+    }
+
+    if (sge::Input::JustPressed(sge::Key::Home) || sge::Input::JustPressed(sge::Key::ArrowLeft, sge::Modifier::Control)) {
+        move_cursor_start();
+    } else if (sge::Input::JustPressed(sge::Key::ArrowLeft)) {
+        move_cursor_left();
+    }
+
+    if (sge::Input::JustPressed(sge::Key::End) || sge::Input::JustPressed(sge::Key::ArrowRight, sge::Modifier::Control)) {
+        move_cursor_end();
+    } else if (sge::Input::JustPressed(sge::Key::ArrowRight)) {
+        move_cursor_right();
     }
 }

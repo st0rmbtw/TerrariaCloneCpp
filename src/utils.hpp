@@ -9,6 +9,8 @@
 #include <optional>
 #include <format>
 #include <ranges>
+#include <variant>
+#include <type_traits>
 
 #include <SGE/profile.hpp>
 
@@ -90,5 +92,28 @@ get_random(Range&& range) {
 
     return std::ranges::begin(std::forward<Range>(range))[index];
 }
+
+template<typename _Tp, typename... _Types>
+constexpr _Tp&
+unsafe_get(std::variant<_Types...>& v) noexcept
+{
+    static_assert(std::__detail::__variant::__exactly_once<_Tp, _Types...>,
+        "T must occur exactly once in alternatives");
+    static_assert(!std::is_void_v<_Tp>, "_Tp must not be void");
+    constexpr size_t __n = std::__find_uniq_type_in_pack<_Tp, _Types...>();
+    return *std::get_if<__n>(&v);
+}
+
+template <typename> struct tag {};
+
+template <typename T, typename V>
+struct variant_index_;
+
+template <typename T, typename... Ts> 
+struct variant_index_<T, std::variant<Ts...>>
+    : std::integral_constant<size_t, std::variant<tag<Ts>...>(tag<T>()).index()> {};
+
+template <typename Variant, typename T>
+inline constexpr size_t variant_index = variant_index_<T, Variant>::value;
 
 #endif
