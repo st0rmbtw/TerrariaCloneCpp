@@ -233,25 +233,33 @@ void MainMenuState::draw_ui() {
 
     UI::Container({
         .size = UiSize::Fill(),
+        .padding = UiRect::Vertical(50.0f),
+        .orientation = LayoutOrientation::Vertical,
+        .horizontal_alignment = Alignment::Center
     }, [&] {
         UI::AddElement<widgets::UiTypeID::Logo>({
             .size = UiSize::Fixed(Assets::GetTexture(TextureAsset::UiLogo).size()),
-            .self_alignment = Alignment::TopCenter
         });
 
-        switch (m_nav_manager.top().index()) {
-            case variant_index<NavItem, MainMenu>:
-                draw_main_menu();
-                break;
-            case variant_index<NavItem, SelectWorld>:
-                unsafe_get<MenuSubstateSelectWorld>(m_substate).draw(m_nav_manager);
-                break;
-            case variant_index<NavItem, CreateWorld>:
-                unsafe_get<MenuSubstateCreateWorld>(m_substate).draw(m_nav_manager);
-                break;
-            default:
-                break;
-        }
+        UI::Container({
+            .size = UiSize::Fill(),
+            .horizontal_alignment = Alignment::Center,
+            .vertical_alignment = Alignment::Center
+        }, [&] {
+            switch (m_nav_manager.top().index()) {
+                case variant_index<NavItem, MainMenu>:
+                    draw_main_menu();
+                    break;
+                case variant_index<NavItem, SelectWorld>:
+                    unsafe_get<MenuSubstateSelectWorld>(m_substate).draw(m_nav_manager);
+                    break;
+                case variant_index<NavItem, CreateWorld>:
+                    unsafe_get<MenuSubstateCreateWorld>(m_substate).draw(m_nav_manager);
+                    break;
+                default:
+                    break;
+            }
+        });
     });
 
     const std::vector<UiElement>& elements = UI::Finish();

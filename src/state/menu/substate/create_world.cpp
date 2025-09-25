@@ -1,7 +1,8 @@
 #include "create_world.hpp"
 
-#include <SGE/time/time.hpp>
 #include <array>
+#include <SGE/time/time.hpp>
+#include <SGE/types/color.hpp>
 
 #include "../../../ui/ui.hpp"
 #include "../../../utils.hpp"
@@ -58,7 +59,10 @@ void MenuSubstateCreateWorld::draw(NavManager& nav_manager) {
                             set_random_name();
                         });
 
-                        TextInput(m_name_input_data, m_text_input_bar_visible, font, UiSize::Fill());
+                        TextInput(m_name_input_data, m_text_input_bar_visible, font, {
+                            .prefix = sge::rich_text("Name: ", 24.0f, sge::LinearRgba::white()),
+                            .size = UiSize::Fill(),
+                        });
                     });
 
                     UI::Container({
@@ -71,7 +75,10 @@ void MenuSubstateCreateWorld::draw(NavManager& nav_manager) {
                             set_random_seed();
                         });
 
-                        TextInput(m_seed_input_data, m_text_input_bar_visible, font, UiSize::Fill());
+                        TextInput(m_seed_input_data, m_text_input_bar_visible, font, {
+                            .prefix = sge::rich_text("Seed: ", 24.0f, sge::LinearRgba::white()),
+                            .size = UiSize::Fill()
+                        });
                     });
                 });
 

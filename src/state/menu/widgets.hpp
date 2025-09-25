@@ -3,6 +3,7 @@
 #ifndef STATE_MENU_WIDGETS_HPP_
 #define STATE_MENU_WIDGETS_HPP_
 
+#include <optional>
 #include <SGE/types/font.hpp>
 #include <SGE/time/timer.hpp>
 #include <SGE/utils/text.hpp>
@@ -158,26 +159,34 @@ inline void WorldListItem(const sge::Font& font) {
     });
 }
 
-inline void TextInput(TextInputData& data, bool bar_visible, const sge::Font& font, UiSize size) {
+template <size_t PrefixSize = 1>
+struct TextInputDesc { 
+    std::optional<sge::RichText<PrefixSize>> prefix = std::nullopt;
+    UiSize size;
+};
+
+template <size_t PrefixSize = 1>
+inline void TextInput(TextInputData& data, bool bar_visible, const sge::Font& font, const TextInputDesc<PrefixSize>& desc) {
     UI::Element<UiTypeID::CategoryPanel>({
-        .size = size,
+        .size = desc.size,
         .padding = UiRect::Horizontal(8.0f),
         .orientation = LayoutOrientation::Horizontal,
         .vertical_alignment = Alignment::Center
     }, [&] {
-        UI::SetCustomData(UiCategoryPanelData {
-            .background_color = sge::LinearRgba(63, 82, 151),
-            .hovered = data.active() || UI::IsHovered()
-        });
+        data.set_active(UI::IsFocused());
 
         const float cursor_height = Assets::GetTexture(TextureAsset::UiSliderHandle).size().y;
         const float text_height = sge::calculate_text_height(font, 24.0f, data.text());
+
+        if (desc.prefix) {
+            UI::Text<UiTypeID::Text>(font, desc.prefix.value());
+        }
 
         UI::Element<UiTypeID::TextInput>({
             .size = UiSize::Fill(),
             .min_height = glm::max(text_height, cursor_height)
         }, [&] {
-            data.set_active(UI::IsFocused());
+            data.set_active(data.active() || UI::IsFocused());
 
             UI::SetCustomData(UiTextInputData {
                 .color = sge::LinearRgba::white(),
@@ -186,6 +195,11 @@ inline void TextInput(TextInputData& data, bool bar_visible, const sge::Font& fo
                 .size = 24.0f,
                 .bar_visible = bar_visible
             });
+        });
+
+        UI::SetCustomData(UiCategoryPanelData {
+            .background_color = sge::LinearRgba(63, 82, 151),
+            .hovered = data.active() || UI::IsHovered()
         });
     });
 }
