@@ -1,8 +1,57 @@
-#include "select_world.hpp"
+#include <filesystem>
+#include <iostream>
+
+#include <SGE/input.hpp>
 
 #include "../../../ui/ui.hpp"
-
+#include "../../../world/io/load.hpp"
 #include "../widgets.hpp"
+
+#include "select_world.hpp"
+
+namespace fs = std::filesystem;
+
+MenuSubstateSelectWorld::MenuSubstateSelectWorld() {
+    get_worlds();
+}
+
+void MenuSubstateSelectWorld::get_worlds() {
+    const fs::path worlds_dir = fs::current_path() / "worlds";
+    for (const auto& entry : fs::directory_iterator(worlds_dir, fs::directory_options::skip_permission_denied)) {
+        if (!entry.is_regular_file()) continue;
+        const fs::path& path = entry.path();
+        if (path.extension() != ".wld") continue;
+
+        read_world(path);
+    }
+}
+
+void MenuSubstateSelectWorld::read_world(const fs::path& path) {
+    BufferedReader reader(std::ifstream(path, std::ios::binary));
+
+    WorldHeader header;
+    read_world_header(header, reader);
+
+    TextureAsset icon;
+
+    switch (header.evil) {
+    case WorldEvil::Corruption:
+        icon = TextureAsset::UiWorldIconCorruption;
+        break;
+    case WorldEvil::Crimson:
+        icon = TextureAsset::UiWorldIconCrimson;
+        break;
+    case WorldEvil::Both:
+        icon = TextureAsset::UiWorldIconCorruptionCrimson;
+        break;
+    }
+
+    m_worlds.push_back(WorldInfo {
+        .path = path,
+        .name = std::move(header.name),
+        .icon = icon
+    });
+}
 
 void MenuSubstateSelectWorld::draw(NavManager& nav_manager) {
     using namespace widgets;
@@ -25,8 +74,14 @@ void MenuSubstateSelectWorld::draw(NavManager& nav_manager) {
                 .horizontal_alignment = Alignment::Center,
                 .scrollable = true,
             }, [&] {
-                for (size_t i = 0; i < 15; ++i) {
-                    WorldListItem(font);
+                for (const WorldInfo& info : m_worlds) {
+                    WorldListItem(font, info.name, info.icon, [&](sge::MouseButton button) {
+                        if (button == sge::MouseButton::Left) {
+                            nav_manager.push(WorldSelected {
+                                .path = info.path
+                            });
+                        }
+                    });
                 }
             });
 
@@ -56,7 +111,7 @@ void MenuSubstateSelectWorld::draw(NavManager& nav_manager) {
                 .border_color = sge::LinearRgba::black()
             });
 
-            UI::Text<UiTypeID::Text>(font, sge::rich_text("Select World", 42.0f, sge::LinearRgba::white()));
+            UI::Text<UiTypeID::Text>(font, sge::rich_text("Select World", 38.0f, sge::LinearRgba::white()));
         });
     });
 }

@@ -16,6 +16,9 @@
 #include "../../assets.hpp"
 #include "../../app.hpp"
 
+#include "../../world/world_gen.h"
+#include "../../world/io/load.hpp"
+
 #include "../common.hpp"
 #include "../ingame.hpp"
 
@@ -218,7 +221,7 @@ void MainMenuState::draw_main_menu() {
             });
 
             MenuButton(font, "Settings", [this] {
-                m_nav_manager.push<CreateWorld>();
+                m_nav_manager.push<Settings>();
             });
 
             MenuButton(font, "Exit", [this] {
@@ -379,8 +382,18 @@ BaseState* MainMenuState::GetNextState() {
     if (m_exit)
         return nullptr;
 
-    if (m_nav_manager.is<WorldSelected>())
-        return new InGameState();
+    if (m_nav_manager.is<WorldSelected>()) {
+        const WorldSelected& opts = m_nav_manager.get<WorldSelected>();
+        WorldData world_data;
+        load_world(world_data, opts.path);
+        return new InGameState(std::move(world_data));
+    }
+
+    if (m_nav_manager.is<WorldCreated>()) {
+        WorldData world_data;
+        world_generate(world_data, 200, 500, 0);
+        return new InGameState(std::move(world_data));
+    }
 
     return this;
 }

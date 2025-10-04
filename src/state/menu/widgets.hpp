@@ -5,6 +5,7 @@
 
 #include <optional>
 #include <SGE/types/font.hpp>
+#include <SGE/types/color.hpp>
 #include <SGE/time/timer.hpp>
 #include <SGE/utils/text.hpp>
 
@@ -146,15 +147,47 @@ inline void HorizontalSeparator(Sizing width, sge::LinearRgba color = sge::Linea
     });
 }
 
-inline void WorldListItem(const sge::Font& font) {
+template <typename F>
+inline void WorldListItem(const sge::Font& font, const std::string_view name, TextureAsset icon, F&& on_click) {
     UI::Element<UiTypeID::Panel>({
         .size = UiSize(Sizing::Fill(), Sizing::Fixed(100.0f)),
+        .padding = UiRect::Axes(8.0f, 0.0f),
         .orientation = LayoutOrientation::Vertical,
-        .horizontal_alignment = Alignment::Center,
     }, [&] {
         UI::SetCustomData(UiPanelData {
             .background_color = sge::LinearRgba(73, 94, 171),
             .border_color = sge::LinearRgba(89, 116, 213)
+        });
+        UI::OnClick(std::forward<F>(on_click));
+
+        UI::Container({
+            .size = UiSize::Fill(),
+            .orientation = LayoutOrientation::Vertical,
+        }, [&] {
+            UI::Container({
+                .size = UiSize::Width(Sizing::Fill()),
+                .gap = 6.0f,
+                .orientation = LayoutOrientation::Horizontal,
+            }, [&] {
+                UI::AddElement<UiTypeID::Icon>({
+                    .size = UiSize::Fixed(Assets::GetTexture(icon).size()),
+                    .self_alignment = Alignment::Center
+                }, UiIconData {
+                    .icon = icon
+                });
+
+                UI::Container({
+                    .orientation = LayoutOrientation::Vertical,
+                }, [&] {
+                    UI::Text<UiTypeID::Text>(font, sge::rich_text(name, 20.0f, sge::LinearRgba::white()));     
+                });
+            });
+
+            UI::Container({
+                .orientation = LayoutOrientation::Horizontal
+            }, [&] {
+                // TODO: Buttons
+            });
         });
     });
 }

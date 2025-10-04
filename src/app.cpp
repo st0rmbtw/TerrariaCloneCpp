@@ -1,6 +1,7 @@
 #include "app.hpp"
 
 #include <string>
+#include <filesystem>
 
 #include <GLFW/glfw3.h>
 #include <LLGL/Types.h>
@@ -119,6 +120,9 @@ bool App::Init(sge::RenderBackend backend, AppConfig config, int16_t world_width
     if (!sge::Engine::Init(backend, engine_config, resolution)) return false;
 
     if (!GameRenderer::Init(resolution)) return false;
+
+    namespace fs = std::filesystem;
+    fs::create_directory(fs::current_path() / "worlds");
 
     sge::Time::SetFixedTimestepSeconds(Constants::FIXED_UPDATE_INTERVAL);
 

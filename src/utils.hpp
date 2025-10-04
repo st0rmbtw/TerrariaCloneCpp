@@ -110,4 +110,9 @@ inline constexpr _Tp& unsafe_get(std::variant<_Types...>& v) noexcept {
     return *std::get_if<variant_index_<_Tp, std::variant<_Types...>>::value>(&v);
 }
 
+template<typename _Tp, typename... _Types>
+inline constexpr const _Tp& unsafe_get(const std::variant<_Types...>& v) noexcept {
+    return *std::get_if<variant_index_<_Tp, std::variant<_Types...>>::value>(&v);
+}
+
 #endif

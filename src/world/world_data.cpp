@@ -7,6 +7,7 @@
 #include <SGE/defines.hpp>
 #include <SGE/profile.hpp>
 
+#include "autotile.hpp"
 #include "lightmap.hpp"
 
 using Constants::SUBDIVISION;
@@ -277,4 +278,26 @@ void WorldData::lightmap_update_area_async(sge::IRect area) {
 
 void WorldData::lightmap_init_area(const sge::IRect& area) {
     internal_lightmap_init_area(*this, this->lightmap, area);
+}
+
+void WorldData::update_tiles_sprites() {
+    for (int y = 0; y < area.height(); ++y) {
+        for (int x = 0; x < area.width(); ++x) {
+            const TilePos pos = TilePos(x, y);
+            if (!is_tilepos_valid(pos)) return;
+
+            std::optional<Block>& block = blocks[get_tile_index(pos)];
+            std::optional<Wall>& wall = walls[get_tile_index(pos)];
+
+            if (block.has_value()) {
+                const Neighbors<Block> neighbors = get_block_neighbors(pos);
+                update_block_sprite_index(block.value(), neighbors);
+            }
+
+            if (wall.has_value()) {
+                const Neighbors<Wall> neighbors = get_wall_neighbors(pos);
+                update_wall_sprite_index(wall.value(), neighbors);
+            }
+        }
+    }
 }

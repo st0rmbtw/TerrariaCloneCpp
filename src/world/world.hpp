@@ -34,6 +34,9 @@ class World {
 public:
     void init();
 
+    void load(WorldData world) {
+        m_data = std::move(world);
+    }
     void generate(uint32_t width, uint32_t height, uint32_t seed);
 
     void set_block(TilePos pos, const Block& block);

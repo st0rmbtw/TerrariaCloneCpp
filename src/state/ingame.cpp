@@ -48,7 +48,7 @@ struct UiInventorySlotIndexData {
     FontAsset font;
 };
 
-InGameState::InGameState() :
+InGameState::InGameState(WorldData world) :
     m_camera{ sge::CameraOrigin::Center, sge::CoordinateSystem {
         .up = sge::CoordinateDirectionY::Negative,
         .forward = sge::CoordinateDirectionZ::Negative,
@@ -61,7 +61,7 @@ InGameState::InGameState() :
     m_camera.set_zoom(1.0f);
 
     m_world.init();
-    m_world.generate(200, 500, 0);
+    m_world.load(std::move(world));
 
     GameRenderer::InitWorldRenderer(m_world.data());
     Background::SetupWorldBackground(m_world);

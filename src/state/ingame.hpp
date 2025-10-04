@@ -16,7 +16,7 @@
 
 class InGameState : public BaseState {
 public:
-    InGameState();
+    InGameState(WorldData world);
     void Render() override;
     void PostRender() override;
     void PreUpdate() override;

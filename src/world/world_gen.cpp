@@ -37,23 +37,6 @@ static inline void remove_wall(WorldData& world, TilePos pos) {
     world.walls[index] = std::nullopt;
 }
 
-static void update_tile_sprite_index(WorldData& world, const TilePos& pos) {
-    if (!world.is_tilepos_valid(pos)) return;
-
-    std::optional<Block>& block = world.blocks[world.get_tile_index(pos)];
-    std::optional<Wall>& wall = world.walls[world.get_tile_index(pos)];
-
-    if (block.has_value()) {
-        const Neighbors<Block> neighbors = world.get_block_neighbors(pos);
-        update_block_sprite_index(block.value(), neighbors);
-    }
-
-    if (wall.has_value()) {
-        const Neighbors<Wall> neighbors = world.get_wall_neighbors(pos);
-        update_wall_sprite_index(wall.value(), neighbors);
-    }
-}
-
 static void fill_line_vertical(WorldData& world, BlockType block, int from_y, int to_y, int x) {
     if (from_y < to_y) {
         for (int y = from_y; y < to_y; ++y) {
@@ -587,14 +570,6 @@ static glm::ivec2 world_get_spawn_point(const WorldData &world) {
     return {x, y};
 }
 
-static void world_update_tile_sprite_index(WorldData& world) {
-    for (int y = 0; y < world.area.height(); ++y) {
-        for (int x = 0; x < world.area.width(); ++x) {
-            update_tile_sprite_index(world, {x, y});
-        }
-    }
-}
-
 static bool grassify_is_valid(const WorldData& world, const TilePos& pos) {
     if (pos.x >= world.area.width()) return false;
     if (pos.y >= world.area.height()) return false;
@@ -700,7 +675,7 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
 
     world_grow_trees(world);
 
-    world_update_tile_sprite_index(world);
+    world.update_tiles_sprites();
 
     world_generate_lightmap(world);
 

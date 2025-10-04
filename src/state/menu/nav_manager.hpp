@@ -4,20 +4,21 @@
 #define STATE_MENU_NAV_MANAGER_HPP_
 
 #include <list>
-#include <string>
 #include <variant>
+#include <filesystem>
+
+#include "../../utils.hpp"
 
 struct MainMenu {};
 struct Settings {};
 struct SelectWorld {};
 struct CreateWorld {};
-
 struct WorldSelected {
-    std::string seed;
-    std::string name;
+    std::filesystem::path path;
 };
+struct WorldCreated {};
 
-using NavItem = std::variant<MainMenu, Settings, SelectWorld, CreateWorld, WorldSelected>;
+using NavItem = std::variant<MainMenu, Settings, SelectWorld, CreateWorld, WorldSelected, WorldCreated>;
 
 class NavManager {
 public:
@@ -45,6 +46,13 @@ public:
     [[nodiscard]]
     constexpr bool is() const noexcept {
         return std::holds_alternative<T>(top());
+    }
+
+    template <typename T>
+    [[nodiscard]]
+    constexpr const T& get() const noexcept {
+        SGE_ASSERT(is<T>());
+        return unsafe_get<T>(top());
     }
 
 private:

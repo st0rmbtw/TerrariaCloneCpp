@@ -74,7 +74,8 @@ float4 PS(VSOutput inp) : SV_Target
     const float3 light = Light.Sample(LightSampler, inp.light_uv).rgb;
     const float3 lightmap = LightMap.Sample(LightMapSampler, inp.uv).rgb;
 
-    const float4 final_light = float4(max(lightmap, light), 1.0f);
+    // const float4 final_light = float4(max(lightmap, light), 1.0f);
+    const float4 final_light = float4(1.0f);
 
     const float4 background = BackgroundTexture.Sample(BackgroundTextureSampler, float2(inp.uv));
     const float4 world = WorldTexture.Sample(WorldTextureSampler, float2(inp.uv)) * final_light;

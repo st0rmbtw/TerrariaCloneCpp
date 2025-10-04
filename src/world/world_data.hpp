@@ -26,6 +26,7 @@ struct Layers {
 struct WorldData {
     std::deque<std::pair<TilePos, int>> changed_tiles;
     std::unordered_set<TilePos> torches;
+    std::string name;
     sge::SwapbackVector<LightMapTask> lightmap_tasks;
     LightMap lightmap;
     sge::IRect area;
@@ -34,6 +35,31 @@ struct WorldData {
     glm::uvec2 spawn_point;
     std::optional<Block>* blocks = nullptr;
     std::optional<Wall>* walls = nullptr;
+
+    WorldData() = default;
+    WorldData(WorldData&& other) noexcept {
+        operator=(std::move(other));
+    };
+
+    WorldData& operator =(WorldData&& other) noexcept {
+        changed_tiles = std::move(other.changed_tiles);
+        torches = std::move(other.torches);
+        name = std::move(other.name);
+        lightmap_tasks = std::move(other.lightmap_tasks);
+        lightmap = std::move(other.lightmap);
+        area = other.area;
+        playable_area = other.playable_area;
+        layers = other.layers;
+        spawn_point = other.spawn_point;
+
+        blocks = other.blocks;
+        walls = other.walls;
+
+        other.blocks = nullptr;
+        other.walls = nullptr;
+
+        return *this;
+    }
 
     [[nodiscard]]
     inline uint32_t get_tile_index(TilePos pos) const noexcept {
@@ -142,6 +168,8 @@ struct WorldData {
     void lightmap_blur_area_sync(const sge::IRect& area);
     void lightmap_init_area(const sge::IRect& area);
 
+    void update_tiles_sprites();
+
     inline void lightmap_tasks_wait() {
         for (LightMapTask& task : lightmap_tasks) {
             if (task.t.joinable()) task.t.join();
@@ -151,10 +179,12 @@ struct WorldData {
     inline void destroy() {
         if (blocks) {
             delete[] blocks;
+            blocks = nullptr;
         }
         
         if (walls) {
             delete[] walls;
+            walls = nullptr;
         }
     }
 

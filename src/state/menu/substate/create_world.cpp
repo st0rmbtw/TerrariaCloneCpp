@@ -101,10 +101,7 @@ void MenuSubstateCreateWorld::draw(NavManager& nav_manager) {
                 nav_manager.pop();
             });
             Button(font, UiSize::Width(Sizing::Fill()), "Create", [&] {
-                nav_manager.push(WorldSelected {
-                    .seed = m_seed_input_data.text(),
-                    .name = m_name_input_data.text()
-                });
+                nav_manager.push<WorldCreated>();
             });
         });
     });

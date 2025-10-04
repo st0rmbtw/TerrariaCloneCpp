@@ -121,6 +121,10 @@ static const std::pair<TextureAsset, AssetTexture> TEXTURE_ASSETS[] = {
     { TextureAsset::UiWorldPreviewEvilRandom,        AssetTexture("assets/sprites/ui/PreviewEvilRandom.png", sge::TextureSampler::Nearest) },
     { TextureAsset::UiWorldPreviewBorder,            AssetTexture("assets/sprites/ui/PreviewBorder.png", sge::TextureSampler::Nearest) },
 
+    { TextureAsset::UiWorldIconCorruption,           AssetTexture("assets/sprites/ui/IconCorruption.png", sge::TextureSampler::Linear) },
+    { TextureAsset::UiWorldIconCrimson,              AssetTexture("assets/sprites/ui/IconCrimson.png", sge::TextureSampler::Linear) },
+    { TextureAsset::UiWorldIconCorruptionCrimson,    AssetTexture("assets/sprites/ui/IconCorruptionCrimson.png", sge::TextureSampler::Linear) },
+
     { TextureAsset::TileCracks, AssetTexture("assets/sprites/tiles/TileCracks.png", sge::TextureSampler::Nearest) },
 
     { TextureAsset::Particles, AssetTexture("assets/sprites/Particles.png") },
