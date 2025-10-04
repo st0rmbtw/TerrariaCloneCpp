@@ -48,9 +48,15 @@ static struct RendererState {
 
     LLGL::PipelineState* postprocess_pipeline = nullptr;
     LLGL::Buffer* postprocess_vertex_buffer = nullptr;
+    LLGL::Buffer* postprocess_uniform_buffer = nullptr;
 
     bool update_light = false;
 } state;
+
+struct SGE_ALIGN(16) PostProcessUniforms {
+    glm::vec2 uv_scale;
+    glm::vec2 uv_offset;
+};
 
 uint32_t GameRenderer::GetMainOrderIndex() { return state.main_batch->Order(); }
 uint32_t GameRenderer::GetWorldOrderIndex() { return state.world_batch->Order(); }
@@ -77,33 +83,45 @@ bool GameRenderer::Init(const LLGL::Extent2D& resolution) {
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.staticSamplers = {
-        LLGL::StaticSamplerDescriptor("BackgroundTextureSampler", LLGL::StageFlags::FragmentStage, 4, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
-        LLGL::StaticSamplerDescriptor("WorldTextureSampler", LLGL::StageFlags::FragmentStage, 6, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
-        LLGL::StaticSamplerDescriptor("LightMapSampler", LLGL::StageFlags::FragmentStage, 8, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
-        LLGL::StaticSamplerDescriptor("LightSampler", LLGL::StageFlags::FragmentStage, 10, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("BackgroundTextureSampler", LLGL::StageFlags::FragmentStage, 5, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("WorldTextureSampler", LLGL::StageFlags::FragmentStage, 7, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("LightMapSampler", LLGL::StageFlags::FragmentStage, 9, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("LightSampler", LLGL::StageFlags::FragmentStage, 11, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
     };
     pipelineLayoutDesc.combinedTextureSamplers = {
-        LLGL::CombinedTextureSamplerDescriptor{ "BackgroundTexture", "BackgroundTexture", "BackgroundTextureSampler", 3 },
-        LLGL::CombinedTextureSamplerDescriptor{ "WorldTexture", "WorldTexture", "WorldTextureSampler", 5 },
-        LLGL::CombinedTextureSamplerDescriptor{ "LightMap", "LightMap", "LightMapSampler", 7 },
-        LLGL::CombinedTextureSamplerDescriptor{ "Light", "Light", "LightSampler", 9 },
+        LLGL::CombinedTextureSamplerDescriptor{ "BackgroundTexture", "BackgroundTexture", "BackgroundTextureSampler", 4 },
+        LLGL::CombinedTextureSamplerDescriptor{ "WorldTexture", "WorldTexture", "WorldTextureSampler", 6 },
+        LLGL::CombinedTextureSamplerDescriptor{ "LightMap", "LightMap", "LightMapSampler", 8 },
+        LLGL::CombinedTextureSamplerDescriptor{ "Light", "Light", "LightSampler", 10 },
     };
     pipelineLayoutDesc.heapBindings = sge::BindingLayout({
         sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer", LLGL::StageFlags::VertexStage),
-        sge::BindingLayoutItem::Texture(3, "BackgroundTexture", LLGL::StageFlags::FragmentStage),
-        sge::BindingLayoutItem::Texture(5, "WorldTexture", LLGL::StageFlags::FragmentStage),
-        sge::BindingLayoutItem::Texture(7, "LightMap", LLGL::StageFlags::FragmentStage),
-        sge::BindingLayoutItem::Texture(9, "Light", LLGL::StageFlags::FragmentStage),
+        sge::BindingLayoutItem::ConstantBuffer(3, "UniformBuffer", LLGL::StageFlags::VertexStage),
+        sge::BindingLayoutItem::Texture(4, "BackgroundTexture", LLGL::StageFlags::FragmentStage),
+        sge::BindingLayoutItem::Texture(6, "WorldTexture", LLGL::StageFlags::FragmentStage),
+        sge::BindingLayoutItem::Texture(8, "LightMap", LLGL::StageFlags::FragmentStage),
+        sge::BindingLayoutItem::Texture(10, "Light", LLGL::StageFlags::FragmentStage),
     });
 
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
+    {
+        state.postprocess_uniform_buffer = renderer.CreateConstantBuffer(sizeof(PostProcessUniforms));
+        const glm::vec2 vertices[] = {
+            glm::vec2(-1.0f, 1.0f),  glm::vec2(0.0f, 0.0f),
+            glm::vec2(3.0f,  1.0f),  glm::vec2(2.0f, 0.0f),
+            glm::vec2(-1.0f, -3.0f), glm::vec2(0.0f, 2.0f),
+        };
+        state.postprocess_vertex_buffer = renderer.CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::PostProcessVertex));
+    }
+
     const LLGL::ResourceViewDescriptor resource_views[] = {
         renderer.GlobalUniformBuffer(),
+        state.postprocess_uniform_buffer,
         state.background_renderer.target_texture(),
         state.world_renderer.target_texture(),
         state.world_renderer.static_lightmap_texture(),
-        Assets::GetTexture(TextureAsset::Stub)
+        state.world_renderer.light_texture()
     };
     state.resource_heap = context->CreateResourceHeap(LLGL::ResourceHeapDescriptor(pipelineLayout, ARRAY_LEN(resource_views)), resource_views);
 
@@ -151,35 +169,19 @@ void GameRenderer::ResizeTextures(LLGL::Extent2D size) {
 
     state.world_renderer.init_targets(resolution);
     state.background_renderer.init_targets(resolution);
+    state.world_renderer.init_textures(resolution);
 
     if (state.resource_heap != nullptr) {
-        context->WriteResourceHeap(*state.resource_heap, 1, {state.background_renderer.target_texture()});
-        context->WriteResourceHeap(*state.resource_heap, 2, {state.world_renderer.target_texture()});
-        context->WriteResourceHeap(*state.resource_heap, 3, {state.world_renderer.static_lightmap_texture()});
+        context->WriteResourceHeap(*state.resource_heap, 2, {
+            state.background_renderer.target_texture(),
+            state.world_renderer.target_texture(),
+            state.world_renderer.static_lightmap_texture(),
+            state.world_renderer.light_texture()
+        });
     }
 }
 
 void GameRenderer::InitWorldRenderer(const WorldData &world) {
-    using Constants::SUBDIVISION;
-    using Constants::TILE_SIZE;
-
-    sge::Renderer& renderer = sge::Engine::Renderer();
-    const auto& context = renderer.Context();
-
-    SGE_RESOURCE_RELEASE(state.postprocess_vertex_buffer);
-
-    const glm::vec2 world_size = glm::vec2(world.area.size()) * TILE_SIZE;
-
-    const glm::vec2 vertices[] = {
-        glm::vec2(-1.0f, 1.0f),  glm::vec2(0.0f, 0.0f), world_size,
-        glm::vec2(3.0f,  1.0f),  glm::vec2(2.0f, 0.0f), world_size,
-        glm::vec2(-1.0f, -3.0f), glm::vec2(0.0f, 2.0f), world_size,
-    };
-    state.postprocess_vertex_buffer = renderer.CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::PostProcessVertex));
-
-    state.world_renderer.init_textures(world);
-    context->WriteResourceHeap(*state.resource_heap, 4, {state.world_renderer.light_texture()});
-
     state.world_renderer.init_lightmap_chunks(world);
     state.world_renderer.init_lighting(world);
 }
@@ -221,6 +223,17 @@ void GameRenderer::Begin(const sge::Camera& camera, World& world) {
     }
 
     renderer.Begin(camera);
+
+    {
+        const glm::vec2 a = (camera.get_projection_area().size() / Constants::TILE_SIZE);
+        const glm::vec2 b = (glm::vec2(camera.viewport()) / Constants::TILE_SIZE + float(Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE * 2));
+
+        PostProcessUniforms uniforms = {
+            .uv_scale = a / b,
+            .uv_offset = glm::vec2(Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE) / b,
+        };
+        commands->UpdateBuffer(*state.postprocess_uniform_buffer, 0, &uniforms, sizeof(uniforms));
+    }
 
     if (state.update_light) {
         state.world_renderer.compute_light(camera, world);

@@ -475,7 +475,6 @@ void Assets::InitVertexFormats() {
     LLGL::VertexFormat postprocess_vertex_format = sge::Attributes(backend, {
         sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_position", "Position"),
         sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_uv", "UV"),
-        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_world_size", "WorldSize"),
     });
 
     LLGL::VertexFormat static_lightmap_vertex_format = sge::Attributes(backend, {

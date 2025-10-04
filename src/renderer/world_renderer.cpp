@@ -192,9 +192,9 @@ void WorldRenderer::init() {
 
 void WorldRenderer::init_lighting(const WorldData& world) {
     if (SupportsAcceleratedDynamicLighting(*m_renderer)) {
-        m_dynamic_lighting = std::make_unique<AcceleratedDynamicLighting>(world, m_light_texture);
+        m_dynamic_lighting = std::make_unique<AcceleratedDynamicLighting>(world, m_dynamic_light_texture);
     } else {
-        m_dynamic_lighting = std::make_unique<DynamicLighting>(world, m_light_texture);
+        m_dynamic_lighting = std::make_unique<DynamicLighting>(world, m_dynamic_light_texture);
     }
 }
 
@@ -285,42 +285,38 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
     }
 }
 
-void WorldRenderer::init_textures(const WorldData& world) {
+void WorldRenderer::init_textures(LLGL::Extent2D viewport) {
     ZoneScoped;
 
     using Constants::SUBDIVISION;
+    constexpr int OFFSCREEN_RANGE = Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE;
 
     auto& context = m_renderer->Context();
 
-    SGE_RESOURCE_RELEASE(m_light_texture);
-    SGE_RESOURCE_RELEASE(m_light_texture_target);
+    SGE_RESOURCE_RELEASE(m_dynamic_light_texture);
+    SGE_RESOURCE_RELEASE(m_dynamic_light_texture_target);
+
+    const uint32_t width = (viewport.width / 16 + OFFSCREEN_RANGE * 2) * Constants::SUBDIVISION;
+    const uint32_t height = (viewport.height / 16 + OFFSCREEN_RANGE * 2) * Constants::SUBDIVISION;
 
     {
         LLGL::TextureDescriptor light_texture_desc;
         light_texture_desc.type      = LLGL::TextureType::Texture2D;
         light_texture_desc.format    = LLGL::Format::RGBA8UNorm;
-        light_texture_desc.extent    = LLGL::Extent3D(world.lightmap.width, world.lightmap.height, 1);
+        light_texture_desc.extent    = LLGL::Extent3D(width, height, 1);
         light_texture_desc.miscFlags = 0;
         light_texture_desc.bindFlags = LLGL::BindFlags::Storage | LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
         light_texture_desc.mipLevels = 1;
 
-        LLGL::DynamicArray<uint8_t> pixels(world.lightmap.width * world.lightmap.height * 3);
-
-        LLGL::ImageView image_view;
-        image_view.format   = LLGL::ImageFormat::RGB;
-        image_view.dataType = LLGL::DataType::UInt8;
-        image_view.data     = pixels.data();
-        image_view.dataSize = pixels.size();
-
-        m_light_texture = context->CreateTexture(light_texture_desc, &image_view);
+        m_dynamic_light_texture = context->CreateTexture(light_texture_desc);
     }
 
     LLGL::RenderTargetDescriptor lightTextureRenderTarget;
-    lightTextureRenderTarget.resolution.width = world.lightmap.width;
-    lightTextureRenderTarget.resolution.height = world.lightmap.height;
-    lightTextureRenderTarget.colorAttachments[0].texture = m_light_texture;
+    lightTextureRenderTarget.resolution.width = width;
+    lightTextureRenderTarget.resolution.height = height;
+    lightTextureRenderTarget.colorAttachments[0].texture = m_dynamic_light_texture;
 
-    m_light_texture_target = context->CreateRenderTarget(lightTextureRenderTarget);
+    m_dynamic_light_texture_target = context->CreateRenderTarget(lightTextureRenderTarget);
 }
 
 void WorldRenderer::init_lightmap_chunks(const WorldData& world) {
@@ -573,6 +569,6 @@ void WorldRenderer::terminate() {
     SGE_RESOURCE_RELEASE(m_pipeline);
     SGE_RESOURCE_RELEASE(m_resource_heap);
     SGE_RESOURCE_RELEASE(m_tile_texture_data_buffer);
-    SGE_RESOURCE_RELEASE(m_light_texture);
-    SGE_RESOURCE_RELEASE(m_light_texture_target);
+    SGE_RESOURCE_RELEASE(m_dynamic_light_texture);
+    SGE_RESOURCE_RELEASE(m_dynamic_light_texture_target);
 }

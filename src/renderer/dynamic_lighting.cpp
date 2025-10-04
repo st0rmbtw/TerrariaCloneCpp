@@ -455,6 +455,7 @@ void AcceleratedDynamicLighting::init_pipeline() {
         lightInitPipelineLayoutDesc.heapBindings = sge::BindingLayout(
             LLGL::StageFlags::ComputeStage,
             {
+                sge::BindingLayoutItem::ConstantBuffer(2, "UniformBuffer"),
                 sge::BindingLayoutItem::Buffer(4, "LightBuffer"),
                 sge::BindingLayoutItem::TextureStorage(6, "LightTexture")
             }
@@ -462,7 +463,7 @@ void AcceleratedDynamicLighting::init_pipeline() {
 
         LLGL::PipelineLayout* lightInitPipelineLayout = context->CreatePipelineLayout(lightInitPipelineLayoutDesc);
 
-        const LLGL::ResourceViewDescriptor lightInitResourceViews[] = { m_light_buffer, nullptr };
+        const LLGL::ResourceViewDescriptor lightInitResourceViews[] = { m_uniform_buffer, m_light_buffer, nullptr };
 
         LLGL::ResourceHeapDescriptor lightResourceHeapDesc;
         lightResourceHeapDesc.pipelineLayout = lightInitPipelineLayout;
@@ -547,12 +548,16 @@ void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
         m_tile_texture = context->CreateTexture(tile_texture_desc, &image_view);
     }
 
-    context->WriteResourceHeap(*m_light_init_resource_heap, 1, {m_light_texture});
+    context->WriteResourceHeap(*m_light_init_resource_heap, 2, {m_light_texture});
     context->WriteResourceHeap(*m_light_blur_resource_heap, 1, {m_tile_texture, m_light_texture});
 }
 
 void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const World& world) {
     ZoneScoped;
+
+    using Constants::TILE_SIZE;
+    using Constants::SUBDIVISION;
+    constexpr int OFFSCREEN_RANGE = Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE;
 
     if (world.light_count() == 0) return;
 
@@ -561,23 +566,21 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
     const size_t size = world.light_count() * sizeof(Light);
     commands->UpdateBuffer(*m_light_buffer, 0, world.lights(), size);
 
-    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / Constants::TILE_SIZE) - 16;
-    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / Constants::TILE_SIZE) + 16;
+    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / (TILE_SIZE / SUBDIVISION)) - OFFSCREEN_RANGE * SUBDIVISION;
+    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / (TILE_SIZE / SUBDIVISION)) + OFFSCREEN_RANGE * SUBDIVISION;
 
-    const sge::URect blur_area = sge::URect(
-        glm::uvec2(glm::max(proj_area_min * Constants::SUBDIVISION, glm::ivec2(0))),
-        glm::uvec2(glm::max(proj_area_max * Constants::SUBDIVISION, glm::ivec2(0)))
-    );
+    const int width = proj_area_max.x - proj_area_min.x;
+    const int height = proj_area_max.y - proj_area_min.y;
 
-    const uint32_t grid_w = blur_area.width() / m_workgroup_size;
-    const uint32_t grid_h = blur_area.height() / m_workgroup_size;
+    const uint32_t grid_w = width / m_workgroup_size;
+    const uint32_t grid_h = height / m_workgroup_size;
 
     if (grid_w * grid_h == 0) return;
 
     {
         UniformBuffer uniform_buffer {
-            .blur_min = blur_area.min,
-            .blur_max = blur_area.max  
+            .blur_min = proj_area_min,
+            .blur_max = proj_area_max
         };
         commands->UpdateBuffer(*m_uniform_buffer, 0, &uniform_buffer, sizeof(uniform_buffer));
     }

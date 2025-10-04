@@ -34,6 +34,8 @@ namespace Constants {
     constexpr float ITEM_GRAB_RANGE = 5.25f * Constants::TILE_SIZE;
     constexpr float ITEM_STACK_RANGE = 1.5f * Constants::TILE_SIZE;
 
+    constexpr int DYNAMIC_LIGHT_OFFSCREEN_RANGE = 16;
+
     constexpr float LightDecay(bool solid) {
         if constexpr (SUBDIVISION == 8) {
             return solid ? 0.92 : 0.975;

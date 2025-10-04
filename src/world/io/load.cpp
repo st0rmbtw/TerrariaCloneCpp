@@ -312,7 +312,7 @@ void load_world(WorldData& world, const std::filesystem::path& path) {
 
     world.blocks = new std::optional<Block>[static_cast<size_t>(area.width() * area.height())];
     world.walls = new std::optional<Wall>[static_cast<size_t>(area.width() * area.height())];
-    world.lightmap = LightMap(10, 10);
+    world.lightmap = LightMap(area.width(), area.height());
     world.playable_area = playable_area;
     world.area = area;
     world.layers = layers;

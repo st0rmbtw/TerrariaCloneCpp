@@ -19,7 +19,7 @@ public:
 
     void init();
     void init_lighting(const WorldData& world);
-    void init_textures(const WorldData& world);
+    void init_textures(LLGL::Extent2D viewport);
     void init_lightmap_chunks(const WorldData& world);
     
     void update(World& world);
@@ -41,8 +41,8 @@ public:
     [[nodiscard]]
     inline const LLGL::RenderPass* render_pass() const { return m_render_pass; }
 
-    inline LLGL::Texture* light_texture() { return m_light_texture; }
-    inline LLGL::RenderTarget* light_texture_target() { return m_light_texture_target; }
+    inline LLGL::Texture* light_texture() { return m_dynamic_light_texture; }
+    inline LLGL::RenderTarget* light_texture_target() { return m_dynamic_light_texture_target; }
 private:
     void update_lightmap_texture(WorldData& world);
 private:
@@ -56,8 +56,8 @@ private:
 
     LLGL::ResourceHeap* m_lightmap_resource_heap = nullptr;
 
-    LLGL::Texture* m_light_texture = nullptr;
-    LLGL::RenderTarget* m_light_texture_target = nullptr;
+    LLGL::Texture* m_dynamic_light_texture = nullptr;
+    LLGL::RenderTarget* m_dynamic_light_texture_target = nullptr;
 
     LLGL::Texture* m_static_lightmap_texture = nullptr;
     LLGL::RenderTarget* m_static_lightmap_target = nullptr;
