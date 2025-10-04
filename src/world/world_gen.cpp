@@ -616,7 +616,7 @@ static void world_grassify(WorldData& world) {
 
 static void world_generate_lightmap(WorldData& world) {
     world.lightmap_init_area(world.area);
-    world.lightmap_blur_area_sync(world.area);
+    world.lightmap_blur_area(world.area);
 }
 
 void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t seed) {

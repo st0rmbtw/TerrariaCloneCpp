@@ -197,10 +197,12 @@ static void blur(LightMap& lightmap, int index, glm::vec3& prev_light, float& pr
 SGE_FORCE_INLINE static void blur_line(LightMap& lightmap, int start, int end, int stride, glm::vec3& prev_light, float& prev_decay, glm::vec3& prev_light2, float& prev_decay2) {
     using Constants::LIGHT_EPSILON;
 
-    int length = end - start;
-    for (int index = 0; index < length; index += stride) {
-        blur(lightmap, start + index, prev_light, prev_decay);
-        blur(lightmap, end - index, prev_light2, prev_decay2);
+    for (int index = start; index < end; index += stride) {
+        blur(lightmap, index, prev_light, prev_decay);
+    }
+    
+    for (int index = end; index >= start; index -= stride) {
+        blur(lightmap, index, prev_light2, prev_decay2);
     }
 }
 
@@ -267,7 +269,7 @@ static void internal_lightmap_update_area_async(const std::shared_ptr<std::atomi
     lightmap.masks = nullptr;
 }
 
-void WorldData::lightmap_blur_area_sync(const sge::IRect& area) {
+void WorldData::lightmap_blur_area(const sge::IRect& area) {
     internal_lightmap_blur_area(*this, this->lightmap, area);
 }
 
@@ -284,10 +286,10 @@ void WorldData::update_tiles_sprites() {
     for (int y = 0; y < area.height(); ++y) {
         for (int x = 0; x < area.width(); ++x) {
             const TilePos pos = TilePos(x, y);
-            if (!is_tilepos_valid(pos)) return;
+            const uint32_t index = get_tile_index(pos);
 
-            std::optional<Block>& block = blocks[get_tile_index(pos)];
-            std::optional<Wall>& wall = walls[get_tile_index(pos)];
+            std::optional<Block>& block = blocks[index];
+            std::optional<Wall>& wall = walls[index];
 
             if (block.has_value()) {
                 const Neighbors<Block> neighbors = get_block_neighbors(pos);

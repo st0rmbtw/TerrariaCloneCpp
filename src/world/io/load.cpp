@@ -371,6 +371,8 @@ void load_world(WorldData& world, const std::filesystem::path& path) {
     }
 
     world.update_tiles_sprites();
+    world.lightmap_init_area(area);
+    world.lightmap_blur_area(area);
 }
 
 static inline std::string read_string(BufferedReader& stream) {

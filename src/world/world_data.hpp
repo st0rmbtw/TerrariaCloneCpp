@@ -165,7 +165,7 @@ struct WorldData {
     }
 
     void lightmap_update_area_async(sge::IRect area);
-    void lightmap_blur_area_sync(const sge::IRect& area);
+    void lightmap_blur_area(const sge::IRect& area);
     void lightmap_init_area(const sge::IRect& area);
 
     void update_tiles_sprites();

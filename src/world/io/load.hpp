@@ -2,6 +2,7 @@
 #define WORLD_IO_LOAD_HPP_
 
 #include <filesystem>
+#include <fstream>
 
 #include "../world_data.hpp"
 #include "types.hpp"
