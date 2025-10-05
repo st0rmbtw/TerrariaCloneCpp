@@ -2,7 +2,10 @@
 #include "chunk_manager.hpp"
 
 #include <SGE/profile.hpp>
+#include <chrono>
+#include <future>
 
+#include "lightmap.hpp"
 #include "utils.hpp"
 
 using Constants::TILE_SIZE;
@@ -67,7 +70,7 @@ void ChunkManager::manage_render_chunks(const WorldData& world, const sge::Camer
     }
 }
 
-void ChunkManager::manage_light_chunks(const WorldData& world, const sge::Camera& camera) {
+void ChunkManager::preload_chunks(const WorldData& world, const sge::Camera& camera) {
     ZoneScoped;
 
     const sge::Rect camera_fov = utils::get_camera_fov(camera);
@@ -96,8 +99,63 @@ void ChunkManager::manage_light_chunks(const WorldData& world, const sge::Camera
                     .right = right ? &right->lightmap : nullptr,
                 };
 
-                m_light_chunks.insert(chunk_pos, StaticLightMapChunk(chunk_pos, world, neighbors));
+                LightMap lightmap = build_lightmap_chunk(chunk_pos, world, neighbors);
+                m_light_chunks.insert(chunk_pos, StaticLightMapChunk(chunk_pos, std::move(lightmap)));
             }
+        }
+    }
+}
+
+void ChunkManager::manage_light_chunks(const WorldData& world, const sge::Camera& camera) {
+    ZoneScoped;
+
+    const sge::Rect camera_fov = utils::get_camera_fov(camera);
+    const sge::URect chunk_range = get_chunk_range(camera_fov, world.area.size(), glm::uvec2(LIGHTMAP_CHUNK_TILE_SIZE), 1);
+
+    m_light_chunks.set_capacity((chunk_range.width() + 2) * (chunk_range.height() + 2));
+
+    m_visible_light_chunks.clear();
+
+    for (uint32_t y = chunk_range.min.y; y < chunk_range.max.y; ++y) {
+        for (uint32_t x = chunk_range.min.x; x < chunk_range.max.x; ++x) {
+            const glm::uvec2 chunk_pos = glm::uvec2(x, y);
+
+            m_visible_light_chunks.insert(chunk_pos);
+
+            if (!m_light_chunks.contains(chunk_pos) && !m_queued_light_chunks.contains(chunk_pos)) {
+                auto task = m_thread_pool.enqueue([this, &world](glm::uvec2 chunk_pos) {
+                    const StaticLightMapChunk* top = m_light_chunks.get_unchecked(glm::uvec2(chunk_pos.x, chunk_pos.y - 1));
+                    const StaticLightMapChunk* bottom = m_light_chunks.get_unchecked(glm::uvec2(chunk_pos.x, chunk_pos.y + 1));
+                    const StaticLightMapChunk* left = m_light_chunks.get_unchecked(glm::uvec2(chunk_pos.x - 1, chunk_pos.y));
+                    const StaticLightMapChunk* right = m_light_chunks.get_unchecked(glm::uvec2(chunk_pos.x + 1, chunk_pos.y));
+
+                    LightMapChunkNeighbors neighbors = {
+                        .top = top ? &top->lightmap : nullptr,
+                        .bottom = bottom ? &bottom->lightmap : nullptr,
+                        .left = left ? &left->lightmap : nullptr,
+                        .right = right ? &right->lightmap : nullptr,
+                    };
+
+                    LightChunkTaskResult result;
+                    result.lightmap = build_lightmap_chunk(chunk_pos, world, neighbors);
+                    result.index = chunk_pos;
+                    return result;
+                }, chunk_pos);
+
+                m_light_chunk_tasks.push_back(std::move(task));
+                m_queued_light_chunks.insert(chunk_pos);
+            }
+        }
+    }
+
+    for (uint32_t i = 0; i < m_light_chunk_tasks.size(); ++i) {
+        auto& task = m_light_chunk_tasks[i];
+        const bool ready = task.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+        if (ready) {
+            LightChunkTaskResult result = task.get();
+            m_light_chunks.insert(result.index, StaticLightMapChunk(result.index, std::move(result.lightmap)));
+            m_light_chunk_tasks.erase(i);
+            m_queued_light_chunks.erase(result.index);
         }
     }
 }

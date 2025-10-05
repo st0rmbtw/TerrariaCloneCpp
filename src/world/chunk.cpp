@@ -292,15 +292,9 @@ static void internal_lightmap_blur_area(LightMap& lightmap, const sge::IRect& ar
     blur_horizontal(lightmap, area);
 }
 
-StaticLightMapChunk::StaticLightMapChunk(glm::uvec2 index, const WorldData& world, LightMapChunkNeighbors neighbors) : index(index) {
-    ZoneScoped;
+constexpr int INSET = 1;
 
-    sge::Renderer& renderer = sge::Engine::Renderer();
-    const auto& context = renderer.Context();
-
-    SGE_RESOURCE_RELEASE(texture);
-    SGE_RESOURCE_RELEASE(vertex_buffer);
-    
+LightMap build_lightmap_chunk(glm::uvec2 index, const WorldData& world, LightMapChunkNeighbors neighbors) {
     const glm::uvec2 world_lightmap_size = world.area.size() * Constants::SUBDIVISION;
     
     glm::uvec2 chunk_size = glm::uvec2(LIGHTMAP_CHUNK_SIZE, LIGHTMAP_CHUNK_SIZE);
@@ -313,9 +307,7 @@ StaticLightMapChunk::StaticLightMapChunk(glm::uvec2 index, const WorldData& worl
     
     const glm::ivec2 offset = glm::ivec2(index * LIGHTMAP_CHUNK_TILE_SIZE);
 
-    constexpr int INSET = 1;
-
-    lightmap = LightMap(chunk_size + INSET * 2u);
+    LightMap lightmap(chunk_size + INSET * 2u);
     if (neighbors.top != nullptr) {
         SGE_ASSERT(neighbors.top->width == lightmap.width);
         memcpy(&lightmap.colors[0 * lightmap.width], &neighbors.top->colors[(neighbors.top->height - INSET - 1) * lightmap.width], (lightmap.width) * sizeof(Color));
@@ -345,6 +337,23 @@ StaticLightMapChunk::StaticLightMapChunk(glm::uvec2 index, const WorldData& worl
     internal_lightmap_init_area(world, lightmap, lightmap_area.inset(-1), offset - INSET / Constants::SUBDIVISION);
     internal_lightmap_blur_area(lightmap, lightmap_area);
 
+    return lightmap;
+}
+
+StaticLightMapChunk::StaticLightMapChunk(glm::uvec2 index, LightMap t_lightmap) :
+    lightmap{ std::move(t_lightmap) },
+    index{ index }
+{
+    ZoneScoped;
+
+    sge::Renderer& renderer = sge::Engine::Renderer();
+    const auto& context = renderer.Context();
+
+    SGE_RESOURCE_RELEASE(texture);
+    SGE_RESOURCE_RELEASE(vertex_buffer);
+
+    const glm::uvec2 chunk_size = glm::uvec2(lightmap.width, lightmap.height) - INSET * 2u;
+    
     {
         LLGL::DynamicArray<Color> buffer(chunk_size.x * chunk_size.y);
         for (int y = 0; y < lightmap.height - INSET * 2; ++y) {

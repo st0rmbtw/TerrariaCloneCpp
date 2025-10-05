@@ -25,6 +25,8 @@ struct LightMapChunkNeighbors {
     const LightMap* right = nullptr;
 };
 
+LightMap build_lightmap_chunk(glm::uvec2 index, const WorldData& world, LightMapChunkNeighbors neighbors);
+
 struct StaticLightMapChunk {
     LightMap lightmap;
     glm::uvec2 index;
@@ -32,7 +34,8 @@ struct StaticLightMapChunk {
     LLGL::Texture* texture = nullptr;
     LLGL::Buffer* vertex_buffer = nullptr;
 
-    StaticLightMapChunk(glm::uvec2 index, const WorldData& world, LightMapChunkNeighbors neighbors);
+    StaticLightMapChunk() = default;
+    StaticLightMapChunk(glm::uvec2 index, LightMap lightmap);
 
     StaticLightMapChunk(StaticLightMapChunk&& other) noexcept {
         operator=(std::move(other));

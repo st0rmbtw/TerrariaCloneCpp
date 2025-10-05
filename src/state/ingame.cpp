@@ -87,6 +87,8 @@ InGameState::InGameState(WorldData world) :
 
     m_cursor.SetForegroundColor(sge::LinearRgba(1.0f, 0.08f, 0.58f));
     m_cursor.SetBackgroundColor(sge::LinearRgba(0.9f, 0.9f, 0.9f));
+
+    m_world.chunk_manager().preload_chunks(m_world.data(), m_camera);
 }
 
 InGameState::~InGameState() {

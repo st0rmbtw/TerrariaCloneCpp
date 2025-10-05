@@ -67,9 +67,6 @@ private:
 
     LLGL::PipelineState* m_lightmap_pipeline = nullptr;
 
-    uint32_t m_lightmap_width = 0;
-    uint32_t m_lightmap_height = 0;
-
     std::unique_ptr<IDynamicLighting> m_dynamic_lighting = nullptr;
 };
 

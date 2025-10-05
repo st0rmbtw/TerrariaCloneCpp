@@ -15,7 +15,7 @@
 #include <SGE/time/time.hpp>
 #include <SGE/utils/bitflags.hpp>
 
-#include "../data_structure/small_vector.hpp"
+#include "../utils/data/small_vector.hpp"
 #include "arena.hpp"
 #include "ui.hpp"
 
