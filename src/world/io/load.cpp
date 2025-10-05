@@ -357,10 +357,10 @@ void load_world(WorldData& world, const std::filesystem::path& path) {
             if (tile.wall > 0) {
                 switch (tile.wall) {
                     case 1:
-                        world.walls[index] = Wall(WallType::DirtWall);
+                        world.walls[index] = Wall(WallType::StoneWall);
                         break;
                     case 2:
-                        world.walls[index] = Wall(WallType::StoneWall);
+                        world.walls[index] = Wall(WallType::DirtWall);
                         break;
                     case 4:
                         world.walls[index] = Wall(WallType::WoodWall);
@@ -371,8 +371,9 @@ void load_world(WorldData& world, const std::filesystem::path& path) {
     }
 
     world.update_tiles_sprites();
-    world.lightmap_init_area(area);
-    world.lightmap_blur_area(area);
+    memset(world.lightmap.colors, 0xFF, world.lightmap.width * world.lightmap.height * sizeof(Color));
+    // world.lightmap_init_area(area);
+    // world.lightmap_blur_area(area);
 }
 
 static inline std::string read_string(BufferedReader& stream) {

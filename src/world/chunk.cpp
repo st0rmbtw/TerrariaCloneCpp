@@ -22,6 +22,8 @@ void RenderChunk::destroy() {
 
     SGE_RESOURCE_RELEASE(m_block_instance_buffer);
     SGE_RESOURCE_RELEASE(m_wall_instance_buffer);
+    SGE_RESOURCE_RELEASE(m_block_buffer_array);
+    SGE_RESOURCE_RELEASE(m_wall_buffer_array);
 }
 
 static inline LLGL::BufferDescriptor GetBufferDescriptor() {
