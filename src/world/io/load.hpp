@@ -27,7 +27,6 @@ public:
     }
 
     inline void read(char* dest, size_t n) {
-
         size_t offset = 0;
         if (m_buffer_position + n >= m_buffer_size) {
             offset = m_buffer_size - m_buffer_position;
@@ -35,7 +34,8 @@ public:
                 memcpy(dest, m_buffer + m_buffer_position, offset);
             }
 
-            m_buffer_size = m_stream.readsome(m_buffer, m_desired_buffer_size);
+            m_stream.read(m_buffer, m_desired_buffer_size);
+            m_buffer_size = m_stream.gcount();
             m_buffer_position = 0;
         }
 
@@ -51,6 +51,23 @@ public:
 
     inline void skip(size_t n) noexcept {
         m_buffer_position += n;
+    }
+
+    [[nodiscard]]
+    bool good() const noexcept {
+        return m_stream.good();
+    }
+
+    [[nodiscard]]
+    bool eof() const noexcept {
+        return m_stream.eof();
+    }
+
+    [[nodiscard]]
+    std::streamoff position() {
+        const std::streamoff stream_position = static_cast<std::streamoff>(m_stream.tellg());
+
+        return std::max<std::streamoff>(stream_position - m_desired_buffer_size, 0LL) + static_cast<std::streamoff>(m_buffer_position);
     }
     
     ~BufferedReader() {

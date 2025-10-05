@@ -84,7 +84,19 @@ void ChunkManager::manage_light_chunks(const WorldData& world, const sge::Camera
             m_visible_light_chunks.insert(chunk_pos);
 
             if (!m_light_chunks.contains(chunk_pos)) {
-                m_light_chunks.insert(chunk_pos, StaticLightMapChunk(chunk_pos, world));
+                const StaticLightMapChunk* top = m_light_chunks.get_unchecked(glm::uvec2(chunk_pos.x, chunk_pos.y - 1));
+                const StaticLightMapChunk* bottom = m_light_chunks.get_unchecked(glm::uvec2(chunk_pos.x, chunk_pos.y + 1));
+                const StaticLightMapChunk* left = m_light_chunks.get_unchecked(glm::uvec2(chunk_pos.x - 1, chunk_pos.y));
+                const StaticLightMapChunk* right = m_light_chunks.get_unchecked(glm::uvec2(chunk_pos.x + 1, chunk_pos.y));
+
+                LightMapChunkNeighbors neighbors = {
+                    .top = top ? &top->lightmap : nullptr,
+                    .bottom = bottom ? &bottom->lightmap : nullptr,
+                    .left = left ? &left->lightmap : nullptr,
+                    .right = right ? &right->lightmap : nullptr,
+                };
+
+                m_light_chunks.insert(chunk_pos, StaticLightMapChunk(chunk_pos, world, neighbors));
             }
         }
     }

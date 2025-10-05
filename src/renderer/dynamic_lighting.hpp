@@ -18,6 +18,8 @@ public:
 
     virtual void destroy() = 0;
 
+    virtual void set_light_texture(LLGL::Texture*) noexcept {}
+
     virtual ~IDynamicLighting() = default;
 };
 
@@ -55,6 +57,14 @@ private:
 
 public:
     AcceleratedDynamicLighting(const WorldData& world, LLGL::Texture* light_texture);
+
+    void set_light_texture(LLGL::Texture* light_texture) noexcept override {
+        SGE_ASSERT(light_texture != nullptr);
+        const auto& context = m_renderer->Context();
+        context->WriteResourceHeap(*m_light_blur_resource_heap, 2, { light_texture });
+        context->WriteResourceHeap(*m_light_init_resource_heap, 2, { light_texture });
+        m_light_texture = light_texture;
+    }
 
     void update(World& world) override {
         update_tile_texture(world.data());

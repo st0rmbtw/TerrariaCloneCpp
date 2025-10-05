@@ -286,8 +286,8 @@ void WorldRenderer::init_textures(LLGL::Extent2D viewport) {
 
     auto& context = m_renderer->Context();
 
-    SGE_RESOURCE_RELEASE(m_dynamic_light_texture);
     SGE_RESOURCE_RELEASE(m_dynamic_light_texture_target);
+    SGE_RESOURCE_RELEASE(m_dynamic_light_texture);
 
     const uint32_t width = (viewport.width / 16 + OFFSCREEN_RANGE * 2) * Constants::SUBDIVISION;
     const uint32_t height = (viewport.height / 16 + OFFSCREEN_RANGE * 2) * Constants::SUBDIVISION;
@@ -310,6 +310,10 @@ void WorldRenderer::init_textures(LLGL::Extent2D viewport) {
     lightTextureRenderTarget.colorAttachments[0].texture = m_dynamic_light_texture;
 
     m_dynamic_light_texture_target = context->CreateRenderTarget(lightTextureRenderTarget);
+
+    if (m_dynamic_lighting) {
+        m_dynamic_lighting->set_light_texture(m_dynamic_light_texture);
+    }
 }
 
 // SGE_FORCE_INLINE static void internal_update_world_lightmap(const WorldData& world, const LightMapTaskResult& result) {
@@ -452,6 +456,6 @@ void WorldRenderer::terminate() {
     SGE_RESOURCE_RELEASE(m_pipeline);
     SGE_RESOURCE_RELEASE(m_resource_heap);
     SGE_RESOURCE_RELEASE(m_tile_texture_data_buffer);
-    SGE_RESOURCE_RELEASE(m_dynamic_light_texture);
     SGE_RESOURCE_RELEASE(m_dynamic_light_texture_target);
+    SGE_RESOURCE_RELEASE(m_dynamic_light_texture);
 }

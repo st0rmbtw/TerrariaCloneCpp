@@ -9,18 +9,16 @@
 #include <memory>
 
 #include "../types/tile_pos.hpp"
-#include "../constants.hpp"
 
 struct Color {
     uint8_t r;
     uint8_t g;
     uint8_t b;
-    uint8_t a;
 
     Color() noexcept = default;
 
-    explicit Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) noexcept :
-        r(r), g(g), b(b), a(a) {}
+    explicit Color(uint8_t r, uint8_t g, uint8_t b) noexcept :
+        r(r), g(g), b(b) {}
 
     explicit Color(const glm::vec3& c) noexcept :
         r(c.r * 255.0f), g(c.g * 255.0f), b(c.b * 255.0f) {}
@@ -40,11 +38,10 @@ struct LightMap {
     int height = 0;
 
     LightMap() noexcept = default;
-
-    LightMap(int tiles_width, int tiles_height) {
-        using Constants::SUBDIVISION;
-        width = tiles_width * SUBDIVISION;
-        height = tiles_height * SUBDIVISION;
+    
+    LightMap(glm::ivec2 size) : LightMap(size.x, size.y) {}
+    
+    LightMap(int width, int height) : width(width), height(height) {
         colors = new Color[width * height]();
         masks = new LightMask[width * height]();
     }

@@ -49,7 +49,8 @@ static bool blur(LightMap& lightmap, int index, glm::vec3& prev_light, float& pr
 }
 
 DynamicLighting::DynamicLighting(const WorldData& world, LLGL::Texture* light_texture) : m_light_texture(light_texture) {
-    m_dynamic_lightmap = LightMap(world.area.width(), world.area.height());
+    using Constants::SUBDIVISION;
+    m_dynamic_lightmap = LightMap(world.area.width() * SUBDIVISION, world.area.height() * SUBDIVISION);
     m_renderer = &sge::Engine::Renderer();
 
     m_line = LLGL::DynamicArray<Color>(Constants::LIGHT_AIR_DECAY_STEPS);
@@ -381,7 +382,7 @@ void DynamicLighting::compute_light(const sge::Camera& camera, const World& worl
             continue;
 
         LLGL::ImageView image_view;
-        image_view.format   = LLGL::ImageFormat::RGBA;
+        image_view.format   = LLGL::ImageFormat::RGB;
         image_view.dataType = LLGL::DataType::UInt8;
         image_view.data     = &lightmap.colors[area.min.y * lightmap.width + area.min.x];
         image_view.dataSize = area.width() * area.height() * sizeof(Color);
@@ -416,8 +417,8 @@ AcceleratedDynamicLighting::AcceleratedDynamicLighting(const WorldData& world, L
     if (backend.IsMetal())
         m_workgroup_size = 1;
 
-    init_pipeline();
     init_textures(world);
+    init_pipeline();
 }
 
 void AcceleratedDynamicLighting::destroy() {
@@ -463,7 +464,9 @@ void AcceleratedDynamicLighting::init_pipeline() {
 
         LLGL::PipelineLayout* lightInitPipelineLayout = context->CreatePipelineLayout(lightInitPipelineLayoutDesc);
 
-        const LLGL::ResourceViewDescriptor lightInitResourceViews[] = { m_uniform_buffer, m_light_buffer, nullptr };
+        const LLGL::ResourceViewDescriptor lightInitResourceViews[] = {
+            m_uniform_buffer, m_light_buffer, m_light_texture
+        };
 
         LLGL::ResourceHeapDescriptor lightResourceHeapDesc;
         lightResourceHeapDesc.pipelineLayout = lightInitPipelineLayout;
@@ -491,7 +494,9 @@ void AcceleratedDynamicLighting::init_pipeline() {
 
         LLGL::PipelineLayout* lightBlurPipelineLayout = context->CreatePipelineLayout(lightBlurPipelineLayoutDesc);
 
-        const LLGL::ResourceViewDescriptor lightBlurResourceViews[] = { m_uniform_buffer, nullptr, nullptr };
+        const LLGL::ResourceViewDescriptor lightBlurResourceViews[] = {
+            m_uniform_buffer, m_tile_texture, m_light_texture
+        };
 
         LLGL::ResourceHeapDescriptor lightBlurResourceHeapDesc;
         lightBlurResourceHeapDesc.pipelineLayout = lightBlurPipelineLayout;
@@ -547,9 +552,6 @@ void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
 
         m_tile_texture = context->CreateTexture(tile_texture_desc, &image_view);
     }
-
-    context->WriteResourceHeap(*m_light_init_resource_heap, 2, {m_light_texture});
-    context->WriteResourceHeap(*m_light_blur_resource_heap, 1, {m_tile_texture, m_light_texture});
 }
 
 void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const World& world) {

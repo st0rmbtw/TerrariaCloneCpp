@@ -23,7 +23,7 @@ struct TileData {
 static TileData deserialize_tile_data_v2(BufferedReader& reader, const std::vector<bool>& frame_important, int32_t version, int& rle) {
     TileData tile;
 
-    int tileType = -1;
+    int tile_type = -1;
     uint8_t header4 = 0;
     uint8_t header3 = 0;
     uint8_t header2 = 0;
@@ -68,19 +68,19 @@ static TileData deserialize_tile_data_v2(BufferedReader& reader, const std::vect
         if ((header1 & 0b0010'0000) != 0b0010'0000) // check bit[5] to see if tile is byte or little endian int16
         {
             // tile is byte
-            tileType = reader.read<uint8_t>();
+            tile_type = reader.read<uint8_t>();
         }
         else
         {
             // tile is little endian int16
             uint8_t lowerByte = reader.read<uint8_t>();
-            tileType = reader.read<uint8_t>();
-            tileType = tileType << 8 | lowerByte;
+            tile_type = reader.read<uint8_t>();
+            tile_type = tile_type << 8 | lowerByte;
         }
-        tile.type = (ushort)tileType; // convert type to ushort after bit operations
+        tile.type = tile_type; // convert type to ushort after bit operations
 
         // read frame UV coords
-        if (!frame_important[tileType])
+        if (!frame_important[tile_type])
         {
             tile.u = 0;//-1;
             tile.v = 0;//-1;
@@ -110,7 +110,6 @@ static TileData deserialize_tile_data_v2(BufferedReader& reader, const std::vect
     if ((header1 & 0b0000'0100) == 0b0000'0100) // check bit[3] bit for active wall
     {
         tile.wall = reader.read<uint8_t>();
-
 
         // check bit[4] of header3 to see if there is a wall color
         if ((header3 & 0b0001'0000) == 0b0001'0000)
@@ -185,7 +184,7 @@ static TileData deserialize_tile_data_v2(BufferedReader& reader, const std::vect
         {
             if ((header3 & 0b0100'0000) == 0b0100'0000)
             {
-                tile.wall = (ushort)(reader.read<uint8_t>() << 8 | tile.wall);
+                tile.wall = (reader.read<uint8_t>() << 8 | tile.wall);
             }
         }
     }
@@ -372,8 +371,20 @@ void load_world(WorldData& world, const std::filesystem::path& path) {
     world.update_tiles_sprites();
 }
 
+static inline size_t read_length(BufferedReader& stream) {
+    size_t length = stream.read<uint8_t>();
+    size_t shift = 7;
+    while ((length & (1 << shift)) != 0) {
+        length &= !((1 << shift) != 0);
+        length |= (size_t(stream.read<uint8_t>())) << shift;
+        shift += 7;
+    }
+
+    return length;
+}
+
 static inline std::string read_string(BufferedReader& stream) {
-    const uint8_t length = stream.read<uint8_t>();
+    const size_t length = read_length(stream);
     std::string str(length, '\0');
     stream.read(str.data(), length);
     return str;
@@ -397,14 +408,19 @@ void read_world_header(WorldHeader& header, BufferedReader& stream) {
 
         stream.skip(12);
     }
+
+    std::vector<int32_t> sections;
     
     if (version >= 88) {
-        auto sections = stream.read<int16_t>();
-        for (int16_t i = 0; i < sections; ++i) {
-            stream.read<int32_t>();
+        const auto section_count = stream.read<int16_t>();
+        
+        sections.reserve(section_count);
+        for (int16_t i = 0; i < section_count; ++i) {
+            sections.push_back(stream.read<int32_t>());
         }
 
         header.tile_frame_important = read_bit_array(stream);
+        SGE_ASSERT(sections[0] == stream.position());
     }
 
     header.name = read_string(stream);
@@ -415,7 +431,7 @@ void read_world_header(WorldHeader& header, BufferedReader& stream) {
     }
 
     if (version >= 181) {
-        char guid[16];
+        uint8_t guid[16];
         stream.read(guid);
     }
 
@@ -430,23 +446,22 @@ void read_world_header(WorldHeader& header, BufferedReader& stream) {
     header.width = stream.read<int32_t>();
 
     if (version >= 209) {
-        auto game_mode = stream.read<int32_t>();
-    }
+        const auto game_mode = stream.read<int32_t>();
 
-    if (version >= 222) {
-        auto drunk_world = stream.read<bool>();
-    }
-
-    if (version >= 227) {
-        auto get_good_world = stream.read<bool>();
-    }
-
-    if (version >= 112 && version < 209) {
-        auto expert_world = stream.read<bool>();
-    }
-
-    if (version >= 208 && version < 209) {
-        auto master_world = stream.read<bool>();
+        const bool drunk_world             = (version >= 222) ? stream.read<bool>() : false;
+        const bool good_world              = (version >= 227) ? stream.read<bool>() : false;
+        const bool tenth_anniversary_world = (version >= 238) ? stream.read<bool>() : false;
+        const bool dont_starve_world       = (version >= 239) ? stream.read<bool>() : false;
+        const bool not_the_bees_world      = (version >= 241) ? stream.read<bool>() : false;
+        const bool remix_world             = (version >= 249) ? stream.read<bool>() : false;
+        const bool no_traps_world          = (version >= 266) ? stream.read<bool>() : false;
+        const auto zenith_world            = (version >= 267) ? stream.read<bool>() : remix_world && drunk_world;
+    } else if (version == 208) {
+        const auto game_mode = stream.read<bool>() ? 2 : 0;
+    } else if (version >= 112) {
+        const auto game_mode = stream.read<bool>() ? 1 : 0;
+    } else {
+        const auto game_mode = 0;
     }
 
     if (version >= 141) {
@@ -563,6 +578,10 @@ void read_world_header(WorldHeader& header, BufferedReader& stream) {
         auto hardmode = stream.read<bool>();
     }
 
+    if (version >= 257) {
+        auto party_of_doom = stream.read<bool>();
+    }
+
     auto invasion_delay = stream.read<int32_t>();
     auto invasion_size = stream.read<int32_t>();
     auto invasion_type = stream.read<int32_t>();
@@ -664,8 +683,15 @@ void read_world_header(WorldHeader& header, BufferedReader& stream) {
 
     if (version >= 131) {
         auto fishron_downed = stream.read<bool>();
+    }
+
+    if (version >= 140) {
+        auto martians_downed = stream.read<bool>();
         auto ancient_cultist_downed = stream.read<bool>();
         auto moonlord_downed = stream.read<bool>();
+    }
+
+    if (version >= 131) {
         auto pumpking_downed = stream.read<bool>();
         auto spooky_wood_downed = stream.read<bool>();
         auto ice_queen_downed = stream.read<bool>();
@@ -717,17 +743,17 @@ void read_world_header(WorldHeader& header, BufferedReader& stream) {
     }
 
     if (version >= 195) {
-        auto style8 = stream.read<uint8_t>();
+        auto mushroom_bg = stream.read<uint8_t>();
     }
 
     if (version >= 215) {
-        auto style9 = stream.read<uint8_t>();
+        auto underworld_bg = stream.read<uint8_t>();
     }
 
     if (version >= 196) {
-        auto style10 = stream.read<uint8_t>();
-        auto style11 = stream.read<uint8_t>();
-        auto style12 = stream.read<uint8_t>();
+        auto bg_tree2 = stream.read<uint8_t>();
+        auto bg_tree3 = stream.read<uint8_t>();
+        auto bg_tree4 = stream.read<uint8_t>();
     }
 
     if (version >= 204) {
@@ -773,6 +799,52 @@ void read_world_header(WorldHeader& header, BufferedReader& stream) {
     if (version >= 223) {
         auto empress_of_light_downed = stream.read<bool>();
         auto queen_slime_downed = stream.read<bool>();
+    }
+
+    if (version >= 240) {
+        auto downed_deerclops = stream.read<bool>();
+    }
+
+    if (version >= 250) {
+        auto unlocked_slime_blue_spawn = stream.read<bool>();
+    }
+
+    if (version >= 251) {
+        auto unlocked_merchant_spawn = stream.read<bool>();
+        auto unlocked_demolitionist_spawn = stream.read<bool>();
+        auto unlocked_party_girl_spawn = stream.read<bool>();
+        auto unlocked_dye_trader_spawn = stream.read<bool>();
+        auto unlocked_truffle_spawn = stream.read<bool>();
+        auto unlocked_arms_dealer_spawn = stream.read<bool>();
+        auto unlocked_nurse_spawn = stream.read<bool>();
+        auto unlocked_princess_spawn = stream.read<bool>();
+    }
+
+    if (version >= 259) {
+        auto combat_book_volume_two_was_used = stream.read<bool>();
+    }
+
+    if (version >= 260) {
+        auto peddlers_satchel_was_used = stream.read<bool>();
+    }
+
+    if (version >= 261) {
+        auto unlocked_slime_green_spawn = stream.read<bool>();
+        auto unlocked_slime_old_spawn = stream.read<bool>();
+        auto unlocked_slime_purple_spawn = stream.read<bool>();
+        auto unlocked_slime_rainbow_spawn = stream.read<bool>();
+        auto unlocked_slime_red_spawn = stream.read<bool>();
+        auto unlocked_slime_yellow_spawn = stream.read<bool>();
+        auto unlocked_slime_copper_spawn = stream.read<bool>();
+    }
+
+    if (version >= 264) {
+        auto fast_forward_time_to_dusk = stream.read<bool>();
+        auto moondial_cooldown = stream.read<bool>();
+    }
+
+    if (version >= 88) {
+        SGE_ASSERT(sections[1] == stream.position());
     }
 
     #pragma clang diagnostic pop

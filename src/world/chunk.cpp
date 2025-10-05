@@ -12,6 +12,7 @@
 #include "../renderer/types.hpp"
 
 #include "../renderer/renderer.hpp"
+#include "lightmap.hpp"
 
 static constexpr float LIGHTMAP_CHUNK_WORLD_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::TILE_SIZE;
 static constexpr float LIGHTMAP_TO_WORLD = Constants::TILE_SIZE / Constants::SUBDIVISION;
@@ -171,10 +172,6 @@ void RenderChunk::rebuild_mesh(
     m_walls_dirty = false;
 }
 
-static LLGL::Texture* create_lightmap_chunk_texture(glm::uvec2 index, glm::uvec2 chunk_size, const WorldData& world, const LLGL::RenderSystemPtr& context) {
-    
-}
-
 static void internal_lightmap_init_area(const WorldData& world, LightMap& lightmap, const sge::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
     ZoneScoped;
 
@@ -295,7 +292,7 @@ static void internal_lightmap_blur_area(LightMap& lightmap, const sge::IRect& ar
     blur_horizontal(lightmap, area);
 }
 
-StaticLightMapChunk::StaticLightMapChunk(glm::uvec2 index, const WorldData& world) : index(index) {
+StaticLightMapChunk::StaticLightMapChunk(glm::uvec2 index, const WorldData& world, LightMapChunkNeighbors neighbors) : index(index) {
     ZoneScoped;
 
     sge::Renderer& renderer = sge::Engine::Renderer();
@@ -316,13 +313,37 @@ StaticLightMapChunk::StaticLightMapChunk(glm::uvec2 index, const WorldData& worl
     
     const glm::ivec2 offset = glm::ivec2(index * LIGHTMAP_CHUNK_TILE_SIZE);
 
-    constexpr int INSET = 2 * Constants::SUBDIVISION;
+    constexpr int INSET = 1;
 
-    lightmap = LightMap((chunk_size.x + INSET * 2) / Constants::SUBDIVISION, (chunk_size.y + INSET * 2) / Constants::SUBDIVISION);
+    lightmap = LightMap(chunk_size + INSET * 2u);
+    if (neighbors.top != nullptr) {
+        SGE_ASSERT(neighbors.top->width == lightmap.width);
+        memcpy(&lightmap.colors[0 * lightmap.width], &neighbors.top->colors[(neighbors.top->height - INSET - 1) * lightmap.width], (lightmap.width) * sizeof(Color));
+        memcpy(&lightmap.masks[0 * lightmap.width], &neighbors.top->masks[(neighbors.top->height - INSET - 1) * lightmap.width], (lightmap.width) * sizeof(LightMask));
+    }
+    if (neighbors.bottom != nullptr) {
+        SGE_ASSERT(neighbors.bottom->width == lightmap.width);
+        memcpy(&lightmap.colors[(lightmap.height - 1) * lightmap.width], &neighbors.bottom->colors[INSET * lightmap.width], lightmap.width * sizeof(Color));
+        memcpy(&lightmap.masks[(lightmap.height - 1) * lightmap.width], &neighbors.bottom->masks[INSET * lightmap.width], lightmap.width * sizeof(LightMask));
+    }
+    if (neighbors.left != nullptr) {
+        SGE_ASSERT(neighbors.left->height == lightmap.height);
+        for (int y = 0; y < lightmap.height; ++y) {
+            lightmap.colors[y * lightmap.width] = neighbors.left->colors[y * neighbors.left->width + neighbors.left->width - INSET - 1];
+            lightmap.masks[y * lightmap.width] = neighbors.left->masks[y * neighbors.left->width + neighbors.left->width - INSET - 1];
+        }
+    }
+    if (neighbors.right != nullptr) {
+        SGE_ASSERT(neighbors.right->height == lightmap.height);
+        for (int y = 0; y < lightmap.height; ++y) {
+            lightmap.colors[y * lightmap.width + lightmap.width - 1] = neighbors.right->colors[y * neighbors.right->width + INSET];
+            lightmap.masks[y * lightmap.width + lightmap.width - 1] = neighbors.right->masks[y * neighbors.right->width + INSET];
+        }
+    }
     
     const sge::IRect lightmap_area = sge::IRect::from_top_left(glm::ivec2(0), glm::ivec2(lightmap.width, lightmap.height));
-    internal_lightmap_init_area(world, lightmap, lightmap_area, offset - INSET / Constants::SUBDIVISION);
-    internal_lightmap_blur_area(lightmap, lightmap_area.inset(-1));
+    internal_lightmap_init_area(world, lightmap, lightmap_area.inset(-1), offset - INSET / Constants::SUBDIVISION);
+    internal_lightmap_blur_area(lightmap, lightmap_area);
 
     {
         LLGL::DynamicArray<Color> buffer(chunk_size.x * chunk_size.y);
@@ -336,7 +357,7 @@ StaticLightMapChunk::StaticLightMapChunk(glm::uvec2 index, const WorldData& worl
         texture_desc.mipLevels = 1;
 
         LLGL::ImageView image_view;
-        image_view.format = LLGL::ImageFormat::RGBA;
+        image_view.format = LLGL::ImageFormat::RGB;
         image_view.dataType = LLGL::DataType::UInt8;
         image_view.data = buffer.data();
         image_view.dataSize = chunk_size.x * chunk_size.y * sizeof(Color);

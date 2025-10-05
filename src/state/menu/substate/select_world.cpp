@@ -27,7 +27,11 @@ void MenuSubstateSelectWorld::get_worlds() {
 }
 
 void MenuSubstateSelectWorld::read_world(const fs::path& path) {
-    BufferedReader reader(std::ifstream(path, std::ios::binary));
+    std::ifstream a(path, std::ios::binary);
+
+    BufferedReader reader(std::move(a));
+    SGE_ASSERT(reader.good());
+    SGE_ASSERT(!reader.eof());
 
     WorldHeader header;
     read_world_header(header, reader);

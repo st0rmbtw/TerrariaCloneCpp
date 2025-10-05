@@ -16,9 +16,6 @@ struct VSInput
 {
     float2 position : Position;
     float2 uv : UV;
-    float2 world_size : WorldSize;
-
-    uint id : SV_VertexID;
 };
 
 struct VSOutput {

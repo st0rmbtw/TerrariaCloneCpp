@@ -18,14 +18,21 @@
 static constexpr uint32_t LIGHTMAP_CHUNK_TILE_SIZE = 50;
 static constexpr uint32_t LIGHTMAP_CHUNK_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::SUBDIVISION;
 
+struct LightMapChunkNeighbors {
+    const LightMap* top = nullptr;
+    const LightMap* bottom = nullptr;
+    const LightMap* left = nullptr;
+    const LightMap* right = nullptr;
+};
+
 struct StaticLightMapChunk {
     LightMap lightmap;
     glm::uvec2 index;
 
-    LLGL::Texture* texture;
-    LLGL::Buffer* vertex_buffer;
+    LLGL::Texture* texture = nullptr;
+    LLGL::Buffer* vertex_buffer = nullptr;
 
-    StaticLightMapChunk(glm::uvec2 index, const WorldData& world);
+    StaticLightMapChunk(glm::uvec2 index, const WorldData& world, LightMapChunkNeighbors neighbors);
 
     StaticLightMapChunk(StaticLightMapChunk&& other) noexcept {
         operator=(std::move(other));
