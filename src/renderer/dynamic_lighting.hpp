@@ -46,11 +46,6 @@ private:
     sge::Renderer* m_renderer = nullptr;
 };
 
-struct LightMapChunk {
-    LLGL::Texture* texture;
-    LLGL::Buffer* vertex_buffer;
-};
-
 class AcceleratedDynamicLighting : public IDynamicLighting {
 private:
     struct UniformBuffer {
@@ -75,8 +70,6 @@ private:
 
     void update_tile_texture(WorldData& world);
 private:
-    std::unordered_map<glm::uvec2, LightMapChunk> m_lightmap_chunks;
-
     sge::Renderer* m_renderer = nullptr;
 
     LLGL::Buffer* m_light_buffer = nullptr;

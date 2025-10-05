@@ -90,8 +90,7 @@ InGameState::InGameState(WorldData world) :
 }
 
 InGameState::~InGameState() {
-    m_world.data().lightmap_tasks_wait();
-    m_world.chunk_manager().destroy();
+    // m_world.data().lightmap_tasks_wait();
 }
 
 glm::vec2 InGameState::camera_follow_player() noexcept {
@@ -268,11 +267,6 @@ void InGameState::Render() {
 
 void InGameState::PostRender() {
     ZoneScoped;
-    
-    if (m_world.chunk_manager().any_chunks_to_destroy()) {
-        sge::Engine::Renderer().CommandQueue()->WaitIdle();
-        m_world.chunk_manager().destroy_hidden_chunks();
-    }
 
 #if DEBUG
     if (sge::Input::Pressed(sge::Key::C)) {

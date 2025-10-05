@@ -13,6 +13,38 @@
 #include "../renderer/types.hpp"
 
 #include "world_data.hpp"
+#include "lightmap.hpp"
+
+static constexpr uint32_t LIGHTMAP_CHUNK_TILE_SIZE = 50;
+static constexpr uint32_t LIGHTMAP_CHUNK_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::SUBDIVISION;
+
+struct StaticLightMapChunk {
+    LightMap lightmap;
+    glm::uvec2 index;
+
+    LLGL::Texture* texture;
+    LLGL::Buffer* vertex_buffer;
+
+    StaticLightMapChunk(glm::uvec2 index, const WorldData& world);
+
+    StaticLightMapChunk(StaticLightMapChunk&& other) noexcept {
+        operator=(std::move(other));
+    }
+
+    StaticLightMapChunk& operator =(StaticLightMapChunk&& other) noexcept {
+        index = other.index;
+        lightmap = std::move(other.lightmap);
+        texture = other.texture;
+        vertex_buffer = other.vertex_buffer;
+
+        other.texture = nullptr;
+        other.vertex_buffer = nullptr;
+
+        return *this;
+    }
+
+    ~StaticLightMapChunk();
+};
 
 class RenderChunk {
 public:
@@ -26,6 +58,31 @@ public:
         m_index(index)
     {
         build_mesh(world, block_data_arena, wall_data_arena);
+    }
+
+    RenderChunk(RenderChunk&& other) noexcept {
+        operator=(std::move(other));
+    }
+
+    RenderChunk& operator=(RenderChunk&& other) noexcept {
+        m_block_instance_buffer = other.m_block_instance_buffer;
+        m_wall_instance_buffer = other.m_wall_instance_buffer;
+        m_block_buffer_array = other.m_block_buffer_array;
+        m_wall_buffer_array = other.m_wall_buffer_array;
+
+        other.m_block_instance_buffer = nullptr;
+        other.m_wall_instance_buffer = nullptr;
+        other.m_block_buffer_array = nullptr;
+        other.m_wall_buffer_array = nullptr;
+        
+        m_world_pos = other.m_world_pos;
+        m_index = other.m_index;
+        m_block_count = other.m_block_count;
+        m_wall_count = other.m_wall_count;
+        m_blocks_dirty = other.m_blocks_dirty;
+        m_walls_dirty = other.m_walls_dirty;
+
+        return *this;
     }
 
     void build_mesh(
@@ -83,6 +140,10 @@ public:
     [[nodiscard]]
     inline LLGL::Buffer* wall_instance_buffer() const noexcept {
         return m_wall_instance_buffer;
+    }
+
+    ~RenderChunk() {
+        destroy();
     }
 
 private:

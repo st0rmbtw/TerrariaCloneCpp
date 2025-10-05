@@ -614,11 +614,6 @@ static void world_grassify(WorldData& world) {
     }
 }
 
-static void world_generate_lightmap(WorldData& world) {
-    world.lightmap_init_area(world.area);
-    world.lightmap_blur_area(world.area);
-}
-
 void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t seed) {
     world.destroy();
 
@@ -649,7 +644,6 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
 
     world.blocks = new std::optional<Block>[static_cast<size_t>(area.width() * area.height())];
     world.walls = new std::optional<Wall>[static_cast<size_t>(area.width() * area.height())];
-    world.lightmap = LightMap(area.width(), area.height());
     world.playable_area = playable_area;
     world.area = area;
     world.layers = layers;
@@ -676,8 +670,6 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
     world_grow_trees(world);
 
     world.update_tiles_sprites();
-
-    world_generate_lightmap(world);
 
     world.spawn_point = world_get_spawn_point(world);
 

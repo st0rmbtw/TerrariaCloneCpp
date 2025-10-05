@@ -20,14 +20,13 @@ public:
     void init();
     void init_lighting(const WorldData& world);
     void init_textures(LLGL::Extent2D viewport);
-    void init_lightmap_chunks(const WorldData& world);
     
     void update(World& world);
 
     void compute_light(const sge::Camera& camera, const World& world);
 
     void render(const ChunkManager& chunk_manager);
-    void render_lightmap(const sge::Camera& camera);
+    void render_lightmap(const ChunkManager& chunk_manager);
     void terminate();
 
     void init_targets(LLGL::Extent2D resolution);
@@ -44,10 +43,8 @@ public:
     inline LLGL::Texture* light_texture() { return m_dynamic_light_texture; }
     inline LLGL::RenderTarget* light_texture_target() { return m_dynamic_light_texture_target; }
 private:
-    void update_lightmap_texture(WorldData& world);
+    void update_lightmap_texture(WorldData& world, const ChunkManager& chunk_manager);
 private:
-    std::unordered_map<glm::uvec2, LightMapChunk> m_lightmap_chunks;
-
     sge::Renderer* m_renderer = nullptr;
 
     LLGL::Buffer* m_tile_texture_data_buffer = nullptr;

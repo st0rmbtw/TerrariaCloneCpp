@@ -312,7 +312,6 @@ void load_world(WorldData& world, const std::filesystem::path& path) {
 
     world.blocks = new std::optional<Block>[static_cast<size_t>(area.width() * area.height())];
     world.walls = new std::optional<Wall>[static_cast<size_t>(area.width() * area.height())];
-    world.lightmap = LightMap(area.width(), area.height());
     world.playable_area = playable_area;
     world.area = area;
     world.layers = layers;
@@ -371,9 +370,6 @@ void load_world(WorldData& world, const std::filesystem::path& path) {
     }
 
     world.update_tiles_sprites();
-    memset(world.lightmap.colors, 0xFF, world.lightmap.width * world.lightmap.height * sizeof(Color));
-    // world.lightmap_init_area(area);
-    // world.lightmap_blur_area(area);
 }
 
 static inline std::string read_string(BufferedReader& stream) {

@@ -14,8 +14,6 @@
 #include "../types/tile_pos.hpp"
 #include "../types/neighbors.hpp"
 
-#include "lightmap.hpp"
-
 struct Layers {
     int surface;
     int underground;
@@ -27,8 +25,6 @@ struct WorldData {
     std::deque<std::pair<TilePos, int>> changed_tiles;
     std::unordered_set<TilePos> torches;
     std::string name;
-    sge::SwapbackVector<LightMapTask> lightmap_tasks;
-    LightMap lightmap;
     sge::IRect area;
     sge::IRect playable_area;
     Layers layers;
@@ -45,8 +41,6 @@ struct WorldData {
         changed_tiles = std::move(other.changed_tiles);
         torches = std::move(other.torches);
         name = std::move(other.name);
-        lightmap_tasks = std::move(other.lightmap_tasks);
-        lightmap = std::move(other.lightmap);
         area = other.area;
         playable_area = other.playable_area;
         layers = other.layers;
@@ -164,17 +158,13 @@ struct WorldData {
         return position;
     }
 
-    void lightmap_update_area_async(sge::IRect area);
-    void lightmap_blur_area(const sge::IRect& area);
-    void lightmap_init_area(const sge::IRect& area);
-
     void update_tiles_sprites();
 
-    inline void lightmap_tasks_wait() {
-        for (LightMapTask& task : lightmap_tasks) {
-            if (task.t.joinable()) task.t.join();
-        }
-    }
+    // inline void lightmap_tasks_wait() {
+    //     for (LightMapTask& task : lightmap_tasks) {
+    //         if (task.t.joinable()) task.t.join();
+    //     }
+    // }
 
     inline void destroy() {
         if (blocks) {

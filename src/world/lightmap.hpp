@@ -64,6 +64,9 @@ struct LightMap {
     ~LightMap() {
         if (colors != nullptr) delete[] colors;
         if (masks != nullptr) delete[] masks;
+        
+        colors = nullptr;
+        masks = nullptr;
     }
 
     [[nodiscard]]

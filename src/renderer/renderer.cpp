@@ -182,7 +182,7 @@ void GameRenderer::ResizeTextures(LLGL::Extent2D size) {
 }
 
 void GameRenderer::InitWorldRenderer(const WorldData &world) {
-    state.world_renderer.init_lightmap_chunks(world);
+    // state.world_renderer.init_lightmap_chunks(world);
     state.world_renderer.init_lighting(world);
 }
 
@@ -264,7 +264,7 @@ void GameRenderer::Render(const sge::Camera& camera, const World& world) {
     if (state.update_light) {
         renderer.BeginPass(*state.world_renderer.static_lightmap_target());
             renderer.Clear(clear_value, LLGL::ClearFlags::Color);
-            state.world_renderer.render_lightmap(camera);
+            state.world_renderer.render_lightmap(world.chunk_manager());
         renderer.EndPass();
 
         state.update_light = false;

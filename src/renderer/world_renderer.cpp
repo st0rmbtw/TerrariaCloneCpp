@@ -20,16 +20,9 @@
 
 #include "../assets.hpp"
 #include "../world/chunk.hpp"
-#include "../world/utils.hpp"
 
 #include "dynamic_lighting.hpp"
-#include "types.hpp"
 #include "utils.hpp"
-
-static constexpr uint32_t LIGHTMAP_CHUNK_TILE_SIZE = 500;
-static constexpr uint32_t LIGHTMAP_CHUNK_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::SUBDIVISION;
-static constexpr float LIGHTMAP_CHUNK_WORLD_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::TILE_SIZE;
-static constexpr float LIGHTMAP_TO_WORLD = Constants::TILE_SIZE / Constants::SUBDIVISION;
 
 static constexpr float TILE_DEPTH = 0.3f;
 static constexpr float WALL_DEPTH = 0.1f;
@@ -319,95 +312,19 @@ void WorldRenderer::init_textures(LLGL::Extent2D viewport) {
     m_dynamic_light_texture_target = context->CreateRenderTarget(lightTextureRenderTarget);
 }
 
-void WorldRenderer::init_lightmap_chunks(const WorldData& world) {
-    using Constants::TILE_SIZE;
-
-    const auto& context = m_renderer->Context();
-
-    const LightMap& lightmap = world.lightmap;
-
-    m_lightmap_width = lightmap.width;
-    m_lightmap_height = lightmap.height;
-
-    const uint32_t cols = (lightmap.width + LIGHTMAP_CHUNK_SIZE - 1u) / LIGHTMAP_CHUNK_SIZE;
-    const uint32_t rows = (lightmap.height + LIGHTMAP_CHUNK_SIZE - 1u) / LIGHTMAP_CHUNK_SIZE;
-
-    for (uint32_t j = 0; j < rows; ++j) {
-        for (uint32_t i = 0; i < cols; ++i) {
-            LLGL::TextureDescriptor texture_desc;
-
-            glm::uvec2 chunk_size = glm::uvec2(LIGHTMAP_CHUNK_SIZE, LIGHTMAP_CHUNK_SIZE);
-
-            if (chunk_size.x > m_lightmap_width - i * LIGHTMAP_CHUNK_SIZE) {
-                chunk_size.x = m_lightmap_width - i * LIGHTMAP_CHUNK_SIZE;
-            }
-
-            if (chunk_size.y > m_lightmap_height - j * LIGHTMAP_CHUNK_SIZE) {
-                chunk_size.y = m_lightmap_height - j * LIGHTMAP_CHUNK_SIZE;
-            }
-
-            texture_desc.extent = LLGL::Extent3D(chunk_size.x, chunk_size.y, 1);
-            texture_desc.bindFlags = LLGL::BindFlags::Sampled;
-            texture_desc.mipLevels = 1;
-            texture_desc.miscFlags = LLGL::MiscFlags::DynamicUsage;
-
-            Color* buffer = sge::checked_alloc<Color>(chunk_size.x * chunk_size.y);
-            for (uint32_t y = 0; y < chunk_size.y; ++y) {
-                memcpy(&buffer[y * chunk_size.x], &lightmap.colors[(j * LIGHTMAP_CHUNK_SIZE + y) * m_lightmap_width + i * LIGHTMAP_CHUNK_SIZE], chunk_size.x * sizeof(Color));
-            }
-
-            LLGL::ImageView image_view;
-            image_view.format = LLGL::ImageFormat::RGBA;
-            image_view.dataType = LLGL::DataType::UInt8;
-            image_view.data = buffer;
-            image_view.dataSize = chunk_size.x * chunk_size.y * sizeof(Color);
-
-            LLGL::Texture* texture = context->CreateTexture(texture_desc, &image_view);
-            free(buffer);
-
-            const StaticLightMapChunkVertex vertices[] = {
-                StaticLightMapChunkVertex(
-                    glm::vec2(i, j) * LIGHTMAP_CHUNK_WORLD_SIZE,
-                    glm::vec2(0.0f, 0.0f)
-                ),
-
-                StaticLightMapChunkVertex(
-                    glm::vec2(i, j) * LIGHTMAP_CHUNK_WORLD_SIZE + glm::vec2(0.0f, chunk_size.y * LIGHTMAP_TO_WORLD),
-                    glm::vec2(0.0f, 1.0f)
-                ),
-
-                StaticLightMapChunkVertex(
-                    glm::vec2(i, j) * LIGHTMAP_CHUNK_WORLD_SIZE + glm::vec2(chunk_size.x * LIGHTMAP_TO_WORLD, 0.0f),
-                    glm::vec2(1.0f, 0.0f)
-                ),
-
-                StaticLightMapChunkVertex(
-                    glm::vec2(i, j) * LIGHTMAP_CHUNK_WORLD_SIZE + glm::vec2(chunk_size) * LIGHTMAP_TO_WORLD,
-                    glm::vec2(1.0f, 1.0f)
-                )
-            };
-
-            m_lightmap_chunks[glm::uvec2(i, j)] = LightMapChunk {
-                .texture = texture,
-                .vertex_buffer = m_renderer->CreateVertexBuffer(vertices, Assets::GetVertexFormat(VertexFormatAsset::StaticLightMapVertex), "StaticLightMap VertexBuffer")
-            };
-        }
-    }
-}
-
-SGE_FORCE_INLINE static void internal_update_world_lightmap(const WorldData& world, const LightMapTaskResult& result) {
-    for (int y = 0; y < result.height; ++y) {
-        memcpy(&world.lightmap.colors[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.data[y * result.width], result.width * sizeof(Color));
-        memcpy(&world.lightmap.masks[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.mask[y * result.width], result.width * sizeof(LightMask));
-    }
-}
+// SGE_FORCE_INLINE static void internal_update_world_lightmap(const WorldData& world, const LightMapTaskResult& result) {
+//     for (int y = 0; y < result.height; ++y) {
+//         memcpy(&world.lightmap.colors[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.data[y * result.width], result.width * sizeof(Color));
+//         memcpy(&world.lightmap.masks[(result.offset_y + y) * world.lightmap.width + result.offset_x], &result.mask[y * result.width], result.width * sizeof(LightMask));
+//     }
+// }
 
 void WorldRenderer::update(World& world) {
-    update_lightmap_texture(world.data());
+    update_lightmap_texture(world.data(), world.chunk_manager());
     m_dynamic_lighting->update(world);
 }
 
-void WorldRenderer::update_lightmap_texture(WorldData& world) {
+void WorldRenderer::update_lightmap_texture(WorldData& world, const ChunkManager& chunk_manager) {
     ZoneScoped;
 
     const auto& context = m_renderer->Context();
@@ -416,60 +333,61 @@ void WorldRenderer::update_lightmap_texture(WorldData& world) {
     image_view.format   = LLGL::ImageFormat::RGBA;
     image_view.dataType = LLGL::DataType::UInt8;
 
-    for (size_t i = 0; i < world.lightmap_tasks.size(); ++i) {
-        const LightMapTask& task = world.lightmap_tasks[i];
-        const LightMapTaskResult result = task.result->load();
+    // for (size_t i = 0; i < world.lightmap_tasks.size(); ++i) {
+    //     const LightMapTask& task = world.lightmap_tasks[i];
+    //     const LightMapTaskResult result = task.result->load();
 
-        if (result.is_complete) {
-            ZoneScopedN("WorldRenderer::HandleLightTaskCompletion");
+    //     if (result.is_complete) {
+    //         ZoneScopedN("WorldRenderer::HandleLightTaskCompletion");
 
-            internal_update_world_lightmap(world, result);
+    //         internal_update_world_lightmap(world, result);
 
-            glm::uvec2 offset = glm::uvec2(result.offset_x, result.offset_y);
-            const glm::uvec2 size = glm::uvec2(result.width, result.height);
+    //         glm::uvec2 offset = glm::uvec2(result.offset_x, result.offset_y);
+    //         const glm::uvec2 size = glm::uvec2(result.width, result.height);
 
-            const glm::uvec2 start_chunk_pos = offset / LIGHTMAP_CHUNK_SIZE;
+    //         const glm::uvec2 start_chunk_pos = offset / LIGHTMAP_CHUNK_SIZE;
 
-            glm::uvec2 remaining_size = size;
-            glm::uvec2 chunk_pos = start_chunk_pos;
-            glm::uvec2 write_offset = glm::uvec2(0);
+    //         glm::uvec2 remaining_size = size;
+    //         glm::uvec2 chunk_pos = start_chunk_pos;
+    //         glm::uvec2 write_offset = glm::uvec2(0);
 
-            while (remaining_size.y > 0) {
-                const uint32_t write_height = glm::min(offset.y + remaining_size.y, chunk_pos.y * LIGHTMAP_CHUNK_SIZE + LIGHTMAP_CHUNK_SIZE) - offset.y;
+    //         while (remaining_size.y > 0) {
+    //             const uint32_t write_height = glm::min(offset.y + remaining_size.y, chunk_pos.y * LIGHTMAP_CHUNK_SIZE + LIGHTMAP_CHUNK_SIZE) - offset.y;
 
-                while (remaining_size.x > 0) {
-                    const uint32_t write_width = glm::min(offset.x + remaining_size.x, chunk_pos.x * LIGHTMAP_CHUNK_SIZE + LIGHTMAP_CHUNK_SIZE) - offset.x;
+    //             while (remaining_size.x > 0) {
+    //                 const uint32_t write_width = glm::min(offset.x + remaining_size.x, chunk_pos.x * LIGHTMAP_CHUNK_SIZE + LIGHTMAP_CHUNK_SIZE) - offset.x;
 
-                    const LightMapChunk& lightmap_chunk = m_lightmap_chunks.find(chunk_pos)->second;
+    //                 StaticLightMapChunk* lightmap_chunk = chunk_manager.light_chunks().get_unchecked(chunk_pos);
+    //                 if (lightmap_chunk != nullptr) {
+    //                     const glm::uvec2 texture_offset = offset % LIGHTMAP_CHUNK_SIZE;
 
-                    const glm::uvec2 texture_offset = offset % LIGHTMAP_CHUNK_SIZE;
+    //                     image_view.data     = &result.data[write_offset.y * result.width + write_offset.x];
+    //                     image_view.dataSize = write_width * write_height * sizeof(Color);
+    //                     image_view.rowStride = result.width * sizeof(Color);
+    //                     context->WriteTexture(*lightmap_chunk->texture, LLGL::TextureRegion(LLGL::Offset3D(texture_offset.x, texture_offset.y, 0), LLGL::Extent3D(write_width, write_height, 1)), image_view);
+    //                 }
 
-                    image_view.data     = &result.data[write_offset.y * result.width + write_offset.x];
-                    image_view.dataSize = write_width * write_height * sizeof(Color);
-                    image_view.rowStride = result.width * sizeof(Color);
-                    context->WriteTexture(*lightmap_chunk.texture, LLGL::TextureRegion(LLGL::Offset3D(texture_offset.x, texture_offset.y, 0), LLGL::Extent3D(write_width, write_height, 1)), image_view);
+    //                 offset.x = 0;
+    //                 remaining_size.x -= write_width;
+    //                 write_offset.x += write_width;
+    //                 chunk_pos.x += 1;
+    //             }
 
-                    offset.x = 0;
-                    remaining_size.x -= write_width;
-                    write_offset.x += write_width;
-                    chunk_pos.x += 1;
-                }
+    //             remaining_size.y -= write_height;
+    //             write_offset.y += write_height;
+    //             remaining_size.x = size.x;
+    //             write_offset.x = 0;
+    //             offset.x = result.offset_x;
+    //             offset.y = 0;
+    //             chunk_pos.x = start_chunk_pos.x;
+    //             chunk_pos.y += 1;
+    //         }
 
-                remaining_size.y -= write_height;
-                write_offset.y += write_height;
-                remaining_size.x = size.x;
-                write_offset.x = 0;
-                offset.x = result.offset_x;
-                offset.y = 0;
-                chunk_pos.x = start_chunk_pos.x;
-                chunk_pos.y += 1;
-            }
-
-            delete[] result.data;
-            delete[] result.mask;
-            world.lightmap_tasks.erase(i);
-        }
-    }
+    //         delete[] result.data;
+    //         delete[] result.mask;
+    //         world.lightmap_tasks.erase(i);
+    //     }
+    // }
 
 }
 
@@ -484,75 +402,40 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
     const sge::Texture& tiles_texture = Assets::GetTexture(TextureAsset::Tiles);
 
     for (const glm::uvec2& pos : chunk_manager.visible_chunks()) {
-        const RenderChunk& chunk = chunk_manager.render_chunks().find(pos)->second;
+        const RenderChunk* chunk = chunk_manager.render_chunks().get(pos);
+        if (chunk == nullptr) continue;
 
-        if (chunk.wall_count() > 0) {
-            commands->SetVertexBufferArray(*chunk.wall_buffer_array());
+        if (chunk->wall_count() > 0) {
+            commands->SetVertexBufferArray(*chunk->wall_buffer_array());
             commands->SetResource(0, walls_texture);
             commands->SetResourceHeap(*m_resource_heap);
 
-            commands->DrawInstanced(4, 0, chunk.wall_count());
+            commands->DrawInstanced(4, 0, chunk->wall_count());
         }
 
-        if (chunk.block_count() > 0) {
-            commands->SetVertexBufferArray(*chunk.block_buffer_array());
+        if (chunk->block_count() > 0) {
+            commands->SetVertexBufferArray(*chunk->block_buffer_array());
             commands->SetResource(0, tiles_texture);
             commands->SetResourceHeap(*m_resource_heap);
 
-            commands->DrawInstanced(4, 0, chunk.block_count());
+            commands->DrawInstanced(4, 0, chunk->block_count());
         }
     }
 }
 
-static sge::URect get_chunk_range(const sge::Rect& camera_fov, glm::uvec2 lightmap_size) {
-    using Constants::SUBDIVISION;
-    using Constants::TILE_SIZE;
-
-    uint32_t left = 0;
-    uint32_t right = 0;
-    uint32_t bottom = 0;
-    uint32_t top = 0;
-
-    if (camera_fov.min.x > 0.0f) {
-        left = (camera_fov.min.x * (SUBDIVISION / TILE_SIZE)) / LIGHTMAP_CHUNK_SIZE;
-    }
-    if (camera_fov.max.x > 0.0f) {
-        right = (camera_fov.max.x * (SUBDIVISION / TILE_SIZE) + LIGHTMAP_CHUNK_SIZE - 1) / LIGHTMAP_CHUNK_SIZE;
-    }
-    if (camera_fov.min.y > 0.0f) {
-        top = (camera_fov.min.y * (SUBDIVISION / TILE_SIZE)) / LIGHTMAP_CHUNK_SIZE;
-    }
-    if (camera_fov.max.y > 0.0f) {
-        bottom = (camera_fov.max.y * (SUBDIVISION / TILE_SIZE) + LIGHTMAP_CHUNK_SIZE - 1) / LIGHTMAP_CHUNK_SIZE;
-    }
-
-    const glm::uvec2 chunk_max_pos = (lightmap_size + LIGHTMAP_CHUNK_SIZE - 1u) / LIGHTMAP_CHUNK_SIZE;
-
-    if (right > chunk_max_pos.x) right = chunk_max_pos.x;
-    if (bottom > chunk_max_pos.y) bottom = chunk_max_pos.y;
-
-    return {glm::uvec2(left, top), glm::uvec2(right, bottom)};
-}
-
-void WorldRenderer::render_lightmap(const sge::Camera& camera) {
-    const sge::Rect camera_fov = utils::get_camera_fov(camera);
-    const sge::URect chunk_range = get_chunk_range(camera_fov, glm::uvec2(m_lightmap_width, m_lightmap_height));
-
+void WorldRenderer::render_lightmap(const ChunkManager& chunk_manager) {
     auto* const commands = m_renderer->CommandBuffer();
 
     commands->SetPipelineState(*m_lightmap_pipeline);
     commands->SetResourceHeap(*m_lightmap_resource_heap);
 
-    for (uint32_t y = chunk_range.min.y; y < chunk_range.max.y; ++y) {
-        for (uint32_t x = chunk_range.min.x; x < chunk_range.max.x; ++x) {
-            const glm::uvec2 chunk_pos = glm::uvec2(x, y);
+    for (glm::uvec2 chunk_pos : chunk_manager.visible_light_chunks()) {
+        const StaticLightMapChunk* lightmap_chunk = chunk_manager.light_chunks().get(chunk_pos);
+        if (lightmap_chunk == nullptr) continue;
 
-            const LightMapChunk& lightmap_chunk = m_lightmap_chunks.find(chunk_pos)->second;
-
-            commands->SetVertexBuffer(*lightmap_chunk.vertex_buffer);
-            commands->SetResource(0, *lightmap_chunk.texture);
-            commands->Draw(4, 0);
-        }
+        commands->SetVertexBuffer(*lightmap_chunk->vertex_buffer);
+        commands->SetResource(0, *lightmap_chunk->texture);
+        commands->Draw(4, 0);
     }
 }
 

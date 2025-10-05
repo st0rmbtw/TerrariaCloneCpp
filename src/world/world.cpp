@@ -22,7 +22,7 @@ static void update_lightmap(WorldData& world_data, TilePos pos) {
     const glm::ivec2 size = glm::ivec2(LIGHT_SOLID_DECAY_STEPS, LIGHT_SOLID_DECAY_STEPS);
 
     const sge::IRect light_area = sge::IRect::from_center_half_size(pos, size).clamp(world_data.area);
-    world_data.lightmap_update_area_async(light_area);
+    // world_data.lightmap_update_area_async(light_area);
 }
 
 void World::init() {
