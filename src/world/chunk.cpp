@@ -13,7 +13,6 @@
 
 #include "../renderer/renderer.hpp"
 #include "LLGL/Types.h"
-#include "SGE/math/math.hpp"
 #include "lightmap.hpp"
 
 static constexpr float LIGHTMAP_CHUNK_WORLD_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::TILE_SIZE;
@@ -260,15 +259,17 @@ static uint32_t blur_until_black(LightMap& lightmap, int start, int stride, glm:
     int index = start;
     uint32_t i = 0;
     while (i < Constants::LIGHT_AIR_DECAY_STEPS) {
-        blur(lightmap, index, prev_light, prev_decay);
+        const glm::vec3 this_light = lightmap.get_color(index);
 
-        const bool x_is_zero = sge::approx_equals(prev_light.x, 0.0f);
-        const bool y_is_zero = sge::approx_equals(prev_light.y, 0.0f);
-        const bool z_is_zero = sge::approx_equals(prev_light.z, 0.0f);
+        const bool x_end = prev_light.x <= this_light.x;
+        const bool y_end = prev_light.y <= this_light.y;
+        const bool z_end = prev_light.z <= this_light.z;
 
-        if (x_is_zero && y_is_zero && z_is_zero) {
+        if (x_end && y_end && z_end) {
             break;
         }
+
+        blur(lightmap, index, prev_light, prev_decay);
 
         index += stride;
         ++i;
@@ -429,13 +430,12 @@ void StaticLightMapChunk::blur_from_top(const LightMap& top) {
     memcpy(&lightmap.colors[0 * lightmap.width], &top.colors[(top.height - INSET - 1) * lightmap.width], (lightmap.width) * sizeof(Color));
     memcpy(&lightmap.masks[0 * lightmap.width], &top.masks[(top.height - INSET - 1) * lightmap.width], (lightmap.width) * sizeof(LightMask));
 
-    // TODO
     uint32_t height = 0;
     for (int x = 0; x < lightmap.width; ++x) {
-        glm::vec3 prev_light = glm::vec3(0.0f);
-        float prev_decay = 1.0f;
+        glm::vec3 prev_light = lightmap.get_color({x, 0});
+        float prev_decay = Constants::LightDecay(lightmap.get_mask({x, 0}));
         
-        const int start = x;
+        const int start = INSET * lightmap.width + x;
         height = std::max(height, blur_until_black(lightmap, start, lightmap.width, prev_light, prev_decay));
     }
 
@@ -459,13 +459,12 @@ void StaticLightMapChunk::blur_from_bottom(const LightMap& bottom) {
     memcpy(&lightmap.colors[(lightmap.height - 1) * lightmap.width], &bottom.colors[INSET * lightmap.width], lightmap.width * sizeof(Color));
     memcpy(&lightmap.masks[(lightmap.height - 1) * lightmap.width], &bottom.masks[INSET * lightmap.width], lightmap.width * sizeof(LightMask));
     
-    // TODO
     uint32_t height = 0;
     for (int x = lightmap.width - 1; x >= 0; --x) {
         glm::vec3 prev_light = lightmap.get_color({x, lightmap.height - 1});
-        float prev_decay = Constants::LightDecay(lightmap.get_mask({x, lightmap.height}));
+        float prev_decay = Constants::LightDecay(lightmap.get_mask({x, lightmap.height - 1}));
         
-        const int start = (lightmap.height - 1) * lightmap.width + x;
+        const int start = (lightmap.height - INSET - 1) * lightmap.width + x;
         height = std::max(height, blur_until_black(lightmap, start, -lightmap.width, prev_light, prev_decay));
     }
 
@@ -496,7 +495,7 @@ void StaticLightMapChunk::blur_from_left(const LightMap& left) {
         glm::vec3 prev_light = lightmap.get_color({0, y});
         float prev_decay = Constants::LightDecay(lightmap.get_mask({0, y}));
         
-        const int start = y * lightmap.width;
+        const int start = y * lightmap.width + INSET;
         width = std::max(width, blur_until_black(lightmap, start, 1, prev_light, prev_decay));
     }
 
@@ -525,9 +524,9 @@ void StaticLightMapChunk::blur_from_right(const LightMap& right) {
     uint32_t width = 0;
     for (int y = 0; y < lightmap.height; ++y) {
         glm::vec3 prev_light = lightmap.get_color({lightmap.width - 1, y});
-        float prev_decay = Constants::LightDecay(lightmap.get_mask({lightmap.width, y}));
+        float prev_decay = Constants::LightDecay(lightmap.get_mask({lightmap.width - 1, y}));
         
-        const int start = y * lightmap.width + lightmap.width - 1;
+        const int start = y * lightmap.width + lightmap.width - INSET - 1;
         width = std::max(width, blur_until_black(lightmap, start, -1, prev_light, prev_decay));
     }
 
