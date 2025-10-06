@@ -34,8 +34,6 @@ namespace Constants {
     constexpr float ITEM_GRAB_RANGE = 5.25f * Constants::TILE_SIZE;
     constexpr float ITEM_STACK_RANGE = 1.5f * Constants::TILE_SIZE;
 
-    constexpr int DYNAMIC_LIGHT_OFFSCREEN_RANGE = 16;
-
     constexpr float LightDecay(bool solid) {
         if constexpr (SUBDIVISION == 8) {
             return solid ? 0.92 : 0.975;
@@ -54,6 +52,9 @@ namespace Constants {
 
     constexpr int LIGHT_SOLID_DECAY_STEPS = internal::LightDecaySteps(true);
     constexpr int LIGHT_AIR_DECAY_STEPS = internal::LightDecaySteps(false);
+
+    constexpr uint32_t LIGHTMAP_CHUNK_TILE_SIZE = 50;
+    constexpr uint32_t LIGHTMAP_CHUNK_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * SUBDIVISION;
 
     static constexpr std::size_t WORLD_MAX_LIGHT_COUNT = 2000;
 };

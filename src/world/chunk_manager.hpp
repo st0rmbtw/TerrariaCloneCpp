@@ -33,6 +33,7 @@ class ChunkManager {
 public:
     ChunkManager() {
         using Constants::RENDER_CHUNK_SIZE_U;
+        using Constants::LIGHTMAP_CHUNK_SIZE;
         m_block_data_arena = sge::checked_alloc<ChunkInstance>(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U);
         m_wall_data_arena = sge::checked_alloc<ChunkInstance>(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U);
         m_color_arena = sge::checked_alloc<Color>(LIGHTMAP_CHUNK_SIZE * LIGHTMAP_CHUNK_SIZE);

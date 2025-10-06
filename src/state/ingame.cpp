@@ -264,7 +264,7 @@ void InGameState::Render() {
 
     draw_ui();
 
-    GameRenderer::Render(m_camera, m_world);
+    GameRenderer::Render(m_world);
 }
 
 void InGameState::PostRender() {

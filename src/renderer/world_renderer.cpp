@@ -282,15 +282,15 @@ void WorldRenderer::init_textures(LLGL::Extent2D viewport) {
     ZoneScoped;
 
     using Constants::SUBDIVISION;
-    constexpr int OFFSCREEN_RANGE = Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE;
+    // constexpr int OFFSCREEN_RANGE = Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE;
 
     auto& context = m_renderer->Context();
 
     SGE_RESOURCE_RELEASE(m_dynamic_light_texture_target);
     SGE_RESOURCE_RELEASE(m_dynamic_light_texture);
 
-    const uint32_t width = (viewport.width / 16 + OFFSCREEN_RANGE * 2) * Constants::SUBDIVISION;
-    const uint32_t height = (viewport.height / 16 + OFFSCREEN_RANGE * 2) * Constants::SUBDIVISION;
+    const uint32_t width = (viewport.width / 16 * Constants::CAMERA_MIN_ZOOM) * Constants::SUBDIVISION;
+    const uint32_t height = (viewport.height / 16 * Constants::CAMERA_MIN_ZOOM) * Constants::SUBDIVISION;
 
     {
         LLGL::TextureDescriptor light_texture_desc;
@@ -324,11 +324,11 @@ void WorldRenderer::init_textures(LLGL::Extent2D viewport) {
 // }
 
 void WorldRenderer::update(World& world) {
-    update_lightmap_texture(world.data(), world.chunk_manager());
+    update_lightmap_texture(world, world.chunk_manager());
     m_dynamic_lighting->update(world);
 }
 
-void WorldRenderer::update_lightmap_texture(WorldData& world, const ChunkManager& chunk_manager) {
+void WorldRenderer::update_lightmap_texture(World& world, const ChunkManager& chunk_manager) {
     ZoneScoped;
 
     const auto& context = m_renderer->Context();

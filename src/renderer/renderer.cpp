@@ -225,12 +225,14 @@ void GameRenderer::Begin(const sge::Camera& camera, World& world) {
     renderer.Begin(camera);
 
     {
-        const glm::vec2 a = (camera.get_projection_area().size() / Constants::TILE_SIZE);
-        const glm::vec2 b = (glm::vec2(camera.viewport()) / Constants::TILE_SIZE + float(Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE * 2));
+        const glm::vec2 current_size = camera.get_projection_area().size();
+        const glm::vec2 max_size = glm::vec2(camera.viewport()) * Constants::CAMERA_MIN_ZOOM;
+        const glm::vec2 a = (current_size / Constants::TILE_SIZE);
+        const glm::vec2 b = (max_size / Constants::TILE_SIZE);
 
         PostProcessUniforms uniforms = {
             .uv_scale = a / b,
-            .uv_offset = glm::vec2(Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE) / b,
+            .uv_offset = (max_size - current_size) * 0.5f / max_size,
         };
         commands->UpdateBuffer(*state.postprocess_uniform_buffer, 0, &uniforms, sizeof(uniforms));
     }
@@ -244,7 +246,7 @@ void GameRenderer::Begin(const sge::Camera& camera, World& world) {
     state.ui_batch->Reset();
 }
 
-void GameRenderer::Render(const sge::Camera& camera, const World& world) {
+void GameRenderer::Render(const World& world) {
     ZoneScoped;
 
     sge::Renderer& renderer = sge::Engine::Renderer();

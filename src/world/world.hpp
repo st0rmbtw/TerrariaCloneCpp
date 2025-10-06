@@ -238,6 +238,7 @@ private:
 
 private:
     WorldData m_data;
+    dp::thread_pool<> m_lightmap_thread_pool{ 4 };
     sge::TextureAtlasSprite m_flames_sprite;
     sge::TextureAtlasSprite m_cracks_sprite;
     ChunkManager m_chunk_manager;

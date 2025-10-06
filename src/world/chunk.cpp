@@ -15,12 +15,14 @@
 #include "LLGL/Types.h"
 #include "lightmap.hpp"
 
-static constexpr float LIGHTMAP_CHUNK_WORLD_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::TILE_SIZE;
-static constexpr float LIGHTMAP_TO_WORLD = Constants::TILE_SIZE / Constants::SUBDIVISION;
-
 using Constants::SUBDIVISION;
 using Constants::RENDER_CHUNK_SIZE;
 using Constants::RENDER_CHUNK_SIZE_U;
+using Constants::LIGHTMAP_CHUNK_SIZE;
+using Constants::LIGHTMAP_CHUNK_TILE_SIZE;
+
+static constexpr float LIGHTMAP_CHUNK_WORLD_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::TILE_SIZE;
+static constexpr float LIGHTMAP_TO_WORLD = Constants::TILE_SIZE / Constants::SUBDIVISION;
 
 void RenderChunk::destroy() {
     ZoneScoped;
@@ -380,7 +382,7 @@ StaticLightMapChunk::StaticLightMapChunk(glm::uvec2 index, LightMap t_lightmap) 
     
     {
         LLGL::DynamicArray<Color> buffer(chunk_size.x * chunk_size.y);
-        for (int y = 0; y < lightmap.height - INSET * 2; ++y) {
+        for (uint32_t y = 0; y < chunk_size.y; ++y) {
             memcpy(&buffer[y * chunk_size.x], &lightmap.colors[(y + INSET) * lightmap.width + INSET], chunk_size.x * sizeof(Color));
         }
 
@@ -543,6 +545,51 @@ void StaticLightMapChunk::blur_from_right(const LightMap& right) {
 
         context->WriteTexture(*texture, LLGL::TextureRegion(LLGL::Offset3D(lightmap.width - INSET * 2 - width, 0, 0), LLGL::Extent3D(width, lightmap.height - INSET * 2, 1)), image_view);
     }
+}
+
+void StaticLightMapChunk::update_area(const WorldData& world, sge::IRect area, LightMapChunkNeighbors neighbors) {
+    if (area.width() <= 0 || area.height() <= 0) return;
+
+    if (neighbors.top != nullptr) {
+        SGE_ASSERT(neighbors.top->width == lightmap.width);
+        memcpy(&lightmap.colors[0], &neighbors.top->colors[(neighbors.top->height - INSET - 1) * lightmap.width], lightmap.width * sizeof(Color));
+        memcpy(&lightmap.masks[0], &neighbors.top->masks[(neighbors.top->height - INSET - 1) * lightmap.width], lightmap.width * sizeof(LightMask));
+    }
+    if (neighbors.bottom != nullptr) {
+        SGE_ASSERT(neighbors.bottom->width == lightmap.width);
+        memcpy(&lightmap.colors[(lightmap.height - 1) * lightmap.width], &neighbors.bottom->colors[INSET * lightmap.width], lightmap.width * sizeof(Color));
+        memcpy(&lightmap.masks[(lightmap.height - 1) * lightmap.width], &neighbors.bottom->masks[INSET * lightmap.width], lightmap.width * sizeof(LightMask));
+    }
+    if (neighbors.left != nullptr) {
+        SGE_ASSERT(neighbors.left->height == lightmap.height);
+        for (int y = 0; y < lightmap.height; ++y) {
+            lightmap.colors[y * lightmap.width] = neighbors.left->colors[y * neighbors.left->width + neighbors.left->width - INSET - 1];
+            lightmap.masks[y * lightmap.width] = neighbors.left->masks[y * neighbors.left->width + neighbors.left->width - INSET - 1];
+        }
+    }
+    if (neighbors.right != nullptr) {
+        SGE_ASSERT(neighbors.right->height == lightmap.height);
+        for (int y = 0; y < lightmap.height; ++y) {
+            lightmap.colors[y * lightmap.width + lightmap.width - 1] = neighbors.right->colors[y * neighbors.right->width + INSET];
+            lightmap.masks[y * lightmap.width + lightmap.width - 1] = neighbors.right->masks[y * neighbors.right->width + INSET];
+        }
+    }
+
+    const glm::ivec2 offset = glm::ivec2(index * LIGHTMAP_CHUNK_TILE_SIZE);
+
+    internal_lightmap_init_area(world, lightmap, area + INSET, offset - INSET / Constants::SUBDIVISION);
+    internal_lightmap_blur_area(lightmap, sge::IRect::from_top_left(area.min, area.size() + INSET * 2));
+
+    sge::Renderer& renderer = sge::Engine::Renderer();
+    const auto& context = renderer.Context();
+
+    LLGL::ImageView image_view;
+    image_view.format = LLGL::ImageFormat::RGB;
+    image_view.dataType = LLGL::DataType::UInt8;
+    image_view.data = &lightmap.colors[(area.min.y + INSET) * lightmap.width + area.min.x + INSET];
+    image_view.dataSize = area.height() * area.width() * sizeof(Color);
+    image_view.rowStride = lightmap.width * sizeof(Color);
+    context->WriteTexture(*texture, LLGL::TextureRegion(LLGL::Offset3D(area.min.x, area.min.y, 0), LLGL::Extent3D(area.width(), area.height(), 1)), image_view);
 }
 
 StaticLightMapChunk::~StaticLightMapChunk() {

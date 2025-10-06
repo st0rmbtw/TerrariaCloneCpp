@@ -15,14 +15,43 @@
 #include "../world/world_gen.h"
 #include "../world/autotile.hpp"
 #include "../renderer/renderer.hpp"
+#include "chunk.hpp"
 
-static void update_lightmap(WorldData& world_data, TilePos pos) {
+static void update_lightmap(World& world, TilePos pos) {
     using Constants::LIGHT_SOLID_DECAY_STEPS;
+    using Constants::LIGHTMAP_CHUNK_TILE_SIZE;
+    using Constants::LIGHTMAP_CHUNK_SIZE;
 
-    const glm::ivec2 size = glm::ivec2(LIGHT_SOLID_DECAY_STEPS, LIGHT_SOLID_DECAY_STEPS);
+    const sge::IRect light_area = sge::IRect::from_center_half_size(pos, glm::ivec2(LIGHT_SOLID_DECAY_STEPS, LIGHT_SOLID_DECAY_STEPS)).clamp(world.area());
+    const sge::IRect chunk_range = light_area / LIGHTMAP_CHUNK_TILE_SIZE;
 
-    const sge::IRect light_area = sge::IRect::from_center_half_size(pos, size).clamp(world_data.area);
-    // world_data.lightmap_update_area_async(light_area);
+    auto& light_chunks = world.chunk_manager().light_chunks();
+
+    for (int y = chunk_range.min.y; y <= chunk_range.max.y; ++y) {
+        for (int x = chunk_range.min.x; x <= chunk_range.max.x; ++x) {
+            const glm::ivec2 index = glm::ivec2(x, y);
+            StaticLightMapChunk* chunk = light_chunks.get_unchecked(index);
+            if (chunk == nullptr) continue;
+
+            const glm::ivec2 start = index * int(LIGHTMAP_CHUNK_TILE_SIZE);
+
+            const sge::IRect area = light_area.clamp(start, start + int(LIGHTMAP_CHUNK_TILE_SIZE)) - start;
+
+            const StaticLightMapChunk* top = light_chunks.get_unchecked(glm::ivec2(index.x, index.y - 1));
+            const StaticLightMapChunk* bottom = light_chunks.get_unchecked(glm::ivec2(index.x, index.y + 1));
+            const StaticLightMapChunk* left = light_chunks.get_unchecked(glm::ivec2(index.x - 1, index.y));
+            const StaticLightMapChunk* right = light_chunks.get_unchecked(glm::ivec2(index.x + 1, index.y));
+
+            const LightMapChunkNeighbors neighbors = {
+                .top = top ? &top->lightmap : nullptr,
+                .bottom = bottom ? &bottom->lightmap : nullptr,
+                .left = left ? &left->lightmap : nullptr,
+                .right = right ? &right->lightmap : nullptr,
+            };
+
+            chunk->update_area(world.data(), area * Constants::SUBDIVISION, neighbors);
+        }
+    }
 }
 
 void World::init() {
@@ -50,7 +79,7 @@ void World::set_block(TilePos pos, const Block& tile) {
     m_changed = true;
     m_lightmap_changed = true;
 
-    update_lightmap(m_data, pos);
+    update_lightmap(*this, pos);
 
     m_chunk_manager.set_blocks_changed(pos);
 
@@ -77,7 +106,7 @@ void World::set_block(TilePos pos, BlockType tile_type) {
     m_changed = true;
     m_lightmap_changed = true;
 
-    update_lightmap(m_data, pos);
+    update_lightmap(*this, pos);
 
     m_data.changed_tiles.emplace_back(pos, 1);
 
@@ -105,7 +134,7 @@ void World::remove_block(TilePos pos) {
 
     m_block_cracks.erase(pos);
 
-    update_lightmap(m_data, pos);
+    update_lightmap(*this, pos);
 
     m_data.changed_tiles.emplace_back(pos, 0);
 
@@ -191,7 +220,7 @@ void World::set_wall(TilePos pos, WallType wall_type) {
     m_changed = true;
     m_lightmap_changed = true;
 
-    update_lightmap(m_data, pos);
+    update_lightmap(*this, pos);
 
     update_neighbors(pos);
 
@@ -215,7 +244,7 @@ void World::remove_wall(TilePos pos) {
 
     m_wall_cracks.erase(pos);
 
-    update_lightmap(m_data, pos);
+    update_lightmap(*this, pos);
 
     m_data.changed_tiles.emplace_back(pos, 0);
 

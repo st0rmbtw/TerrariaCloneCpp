@@ -29,7 +29,7 @@ namespace GameRenderer {
     void ResizeTextures(LLGL::Extent2D resolution);
 
     void Begin(const sge::Camera& camera, World& world);
-    void Render(const sge::Camera& camera, const World& world);
+    void Render(const World& world);
 
     void UpdateLight();
 

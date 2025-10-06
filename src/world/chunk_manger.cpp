@@ -10,6 +10,7 @@
 
 using Constants::TILE_SIZE;
 using Constants::RENDER_CHUNK_SIZE;
+using Constants::LIGHTMAP_CHUNK_TILE_SIZE;
 
 static sge::URect get_chunk_range(const sge::Rect& camera_fov, const glm::uvec2& world_size, glm::uvec2 chunk_size, uint32_t expand = 0) {
     uint32_t left = 0;

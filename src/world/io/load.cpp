@@ -3,21 +3,21 @@
 #include <vector>
 
 struct TileData {
-    uint16_t type;
-    uint16_t u;
-    uint16_t v;
-    bool is_active;
-    bool inactive;
-    bool actuator;
-    uint8_t tile_color;
-    uint8_t wall;
-    uint8_t wall_color;
-    uint8_t liquid_type;
-    uint8_t liquid_amount;
-    bool wire_red;
-    bool wire_blue;
-    bool wire_yellow;
-    bool wire_green;
+    uint16_t type = 0;
+    uint16_t u = 0;
+    uint16_t v = 0;
+    bool is_active = false;
+    bool inactive = false;
+    bool actuator = false;
+    uint8_t tile_color = 0;
+    uint8_t wall = 0;
+    uint8_t wall_color = 0;
+    uint8_t liquid_type = 0;
+    uint8_t liquid_amount = 0;
+    bool wire_red = false;
+    bool wire_blue = false;
+    bool wire_yellow = false;
+    bool wire_green = false;
 };
 
 static TileData deserialize_tile_data_v2(BufferedReader& reader, const std::vector<bool>& frame_important, int32_t version, int& rle) {

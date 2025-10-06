@@ -559,7 +559,6 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
 
     using Constants::TILE_SIZE;
     using Constants::SUBDIVISION;
-    constexpr int OFFSCREEN_RANGE = Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE;
 
     if (world.light_count() == 0) return;
 
@@ -568,8 +567,8 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
     const size_t size = world.light_count() * sizeof(Light);
     commands->UpdateBuffer(*m_light_buffer, 0, world.lights(), size);
 
-    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / (TILE_SIZE / SUBDIVISION)) - OFFSCREEN_RANGE * SUBDIVISION;
-    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / (TILE_SIZE / SUBDIVISION)) + OFFSCREEN_RANGE * SUBDIVISION;
+    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() - glm::vec2(camera.viewport()) * 0.5f * Constants::CAMERA_MIN_ZOOM) / (TILE_SIZE / SUBDIVISION));
+    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + glm::vec2(camera.viewport()) * 0.5f * Constants::CAMERA_MIN_ZOOM) / (TILE_SIZE / SUBDIVISION));
 
     const int width = proj_area_max.x - proj_area_min.x;
     const int height = proj_area_max.y - proj_area_min.y;

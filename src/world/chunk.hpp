@@ -15,9 +15,6 @@
 #include "world_data.hpp"
 #include "lightmap.hpp"
 
-static constexpr uint32_t LIGHTMAP_CHUNK_TILE_SIZE = 50;
-static constexpr uint32_t LIGHTMAP_CHUNK_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::SUBDIVISION;
-
 struct LightMapChunkNeighbors {
     const LightMap* top = nullptr;
     const LightMap* bottom = nullptr;
@@ -40,6 +37,8 @@ struct StaticLightMapChunk {
     StaticLightMapChunk(StaticLightMapChunk&& other) noexcept {
         operator=(std::move(other));
     }
+
+    void update_area(const WorldData& world, sge::IRect area, LightMapChunkNeighbors neighbors);
 
     void blur_from_top(const LightMap& top);
     void blur_from_bottom(const LightMap& bottom);
