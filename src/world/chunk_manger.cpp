@@ -123,19 +123,8 @@ void ChunkManager::manage_light_chunks(const WorldData& world, const sge::Camera
             m_visible_light_chunks.insert(chunk_pos);
 
             if (!m_light_chunks.contains(chunk_pos) && !m_queued_light_chunks.contains(chunk_pos)) {
-                auto task = m_thread_pool.enqueue([this, &world](glm::uvec2 chunk_pos) {
-                    const StaticLightMapChunk* top = m_light_chunks.get_unchecked(glm::uvec2(chunk_pos.x, chunk_pos.y - 1));
-                    const StaticLightMapChunk* bottom = m_light_chunks.get_unchecked(glm::uvec2(chunk_pos.x, chunk_pos.y + 1));
-                    const StaticLightMapChunk* left = m_light_chunks.get_unchecked(glm::uvec2(chunk_pos.x - 1, chunk_pos.y));
-                    const StaticLightMapChunk* right = m_light_chunks.get_unchecked(glm::uvec2(chunk_pos.x + 1, chunk_pos.y));
-
-                    LightMapChunkNeighbors neighbors = {
-                        .top = top ? &top->lightmap : nullptr,
-                        .bottom = bottom ? &bottom->lightmap : nullptr,
-                        .left = left ? &left->lightmap : nullptr,
-                        .right = right ? &right->lightmap : nullptr,
-                    };
-
+                auto task = m_thread_pool.enqueue([&world](glm::uvec2 chunk_pos) {
+                    LightMapChunkNeighbors neighbors;
                     LightChunkTaskResult result;
                     result.lightmap = build_lightmap_chunk(chunk_pos, world, neighbors);
                     result.index = chunk_pos;
@@ -153,7 +142,34 @@ void ChunkManager::manage_light_chunks(const WorldData& world, const sge::Camera
         const bool ready = task.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
         if (ready) {
             LightChunkTaskResult result = task.get();
-            m_light_chunks.insert(result.index, StaticLightMapChunk(result.index, std::move(result.lightmap)));
+
+            StaticLightMapChunk chunk(result.index, std::move(result.lightmap));
+
+            StaticLightMapChunk* top = m_light_chunks.get_unchecked(glm::uvec2(result.index.x, result.index.y - 1));
+            StaticLightMapChunk* bottom = m_light_chunks.get_unchecked(glm::uvec2(result.index.x, result.index.y + 1));
+            StaticLightMapChunk* left = m_light_chunks.get_unchecked(glm::uvec2(result.index.x - 1, result.index.y));
+            StaticLightMapChunk* right = m_light_chunks.get_unchecked(glm::uvec2(result.index.x + 1, result.index.y));
+
+            // TODO: Speed up this code
+            if (top) {
+                chunk.blur_from_top(top->lightmap);
+                top->blur_from_bottom(chunk.lightmap);
+            }
+            if (bottom) {
+                chunk.blur_from_bottom(bottom->lightmap);
+                bottom->blur_from_top(chunk.lightmap);
+            }
+            if (left) {
+                chunk.blur_from_left(left->lightmap);
+                left->blur_from_right(chunk.lightmap);
+            }
+            if (right) {
+                chunk.blur_from_right(right->lightmap);
+                right->blur_from_left(chunk.lightmap);
+            }
+
+            m_light_chunks.insert(result.index, std::move(chunk));
+
             m_light_chunk_tasks.erase(i);
             m_queued_light_chunks.erase(result.index);
         }

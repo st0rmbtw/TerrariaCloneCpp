@@ -12,6 +12,8 @@
 #include "../renderer/types.hpp"
 
 #include "../renderer/renderer.hpp"
+#include "LLGL/Types.h"
+#include "SGE/math/math.hpp"
 #include "lightmap.hpp"
 
 static constexpr float LIGHTMAP_CHUNK_WORLD_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::TILE_SIZE;
@@ -254,6 +256,27 @@ SGE_FORCE_INLINE static void blur_line(LightMap& lightmap, int start, int end, i
     }
 }
 
+static uint32_t blur_until_black(LightMap& lightmap, int start, int stride, glm::vec3& prev_light, float& prev_decay) {
+    int index = start;
+    uint32_t i = 0;
+    while (i < Constants::LIGHT_AIR_DECAY_STEPS) {
+        blur(lightmap, index, prev_light, prev_decay);
+
+        const bool x_is_zero = sge::approx_equals(prev_light.x, 0.0f);
+        const bool y_is_zero = sge::approx_equals(prev_light.y, 0.0f);
+        const bool z_is_zero = sge::approx_equals(prev_light.z, 0.0f);
+
+        if (x_is_zero && y_is_zero && z_is_zero) {
+            break;
+        }
+
+        index += stride;
+        ++i;
+    }
+
+    return i;
+}
+
 inline static void blur_horizontal(LightMap& lightmap, const sge::IRect& area) {
     #pragma omp parallel for
     for (int y = area.min.y; y < area.max.y; ++y) {
@@ -399,6 +422,128 @@ StaticLightMapChunk::StaticLightMapChunk(glm::uvec2 index, LightMap t_lightmap) 
     };
 
     vertex_buffer = renderer.CreateVertexBuffer(vertices, Assets::GetVertexFormat(VertexFormatAsset::StaticLightMapVertex), "StaticLightMap VertexBuffer");
+}
+
+void StaticLightMapChunk::blur_from_top(const LightMap& top) {
+    SGE_ASSERT(top.width == lightmap.width);
+    memcpy(&lightmap.colors[0 * lightmap.width], &top.colors[(top.height - INSET - 1) * lightmap.width], (lightmap.width) * sizeof(Color));
+    memcpy(&lightmap.masks[0 * lightmap.width], &top.masks[(top.height - INSET - 1) * lightmap.width], (lightmap.width) * sizeof(LightMask));
+
+    // TODO
+    uint32_t height = 0;
+    for (int x = 0; x < lightmap.width; ++x) {
+        glm::vec3 prev_light = glm::vec3(0.0f);
+        float prev_decay = 1.0f;
+        
+        const int start = x;
+        height = std::max(height, blur_until_black(lightmap, start, lightmap.width, prev_light, prev_decay));
+    }
+
+    if (height > 0) {
+        sge::Renderer& renderer = sge::Engine::Renderer();
+        const auto& context = renderer.Context();
+
+        LLGL::ImageView image_view;
+        image_view.format = LLGL::ImageFormat::RGB;
+        image_view.dataType = LLGL::DataType::UInt8;
+        image_view.data = &lightmap.colors[INSET * lightmap.width + INSET];
+        image_view.dataSize = (lightmap.width - INSET * 2) * height * sizeof(Color);
+        image_view.rowStride = lightmap.width * sizeof(Color);
+
+        context->WriteTexture(*texture, LLGL::TextureRegion(LLGL::Offset3D(0, 0, 0), LLGL::Extent3D(lightmap.width - INSET * 2, height, 1)), image_view);
+    }
+}
+
+void StaticLightMapChunk::blur_from_bottom(const LightMap& bottom) {
+    SGE_ASSERT(bottom.width == lightmap.width);
+    memcpy(&lightmap.colors[(lightmap.height - 1) * lightmap.width], &bottom.colors[INSET * lightmap.width], lightmap.width * sizeof(Color));
+    memcpy(&lightmap.masks[(lightmap.height - 1) * lightmap.width], &bottom.masks[INSET * lightmap.width], lightmap.width * sizeof(LightMask));
+    
+    // TODO
+    uint32_t height = 0;
+    for (int x = lightmap.width - 1; x >= 0; --x) {
+        glm::vec3 prev_light = lightmap.get_color({x, lightmap.height - 1});
+        float prev_decay = Constants::LightDecay(lightmap.get_mask({x, lightmap.height}));
+        
+        const int start = (lightmap.height - 1) * lightmap.width + x;
+        height = std::max(height, blur_until_black(lightmap, start, -lightmap.width, prev_light, prev_decay));
+    }
+
+    if (height > 0) {
+        sge::Renderer& renderer = sge::Engine::Renderer();
+        const auto& context = renderer.Context();
+
+        LLGL::ImageView image_view;
+        image_view.format = LLGL::ImageFormat::RGB;
+        image_view.dataType = LLGL::DataType::UInt8;
+        image_view.data = &lightmap.colors[(lightmap.height - height - INSET - 1) * lightmap.width + INSET];
+        image_view.dataSize = (lightmap.width - INSET * 2) * height * sizeof(Color);
+        image_view.rowStride = lightmap.width * sizeof(Color);
+
+        context->WriteTexture(*texture, LLGL::TextureRegion(LLGL::Offset3D(0, lightmap.height - INSET * 2 - height, 0), LLGL::Extent3D(lightmap.width - INSET * 2, height, 1)), image_view);
+    }
+}
+
+void StaticLightMapChunk::blur_from_left(const LightMap& left) {
+    SGE_ASSERT(left.height == lightmap.height);
+    for (int y = 0; y < lightmap.height; ++y) {
+        lightmap.colors[y * lightmap.width] = left.colors[y * left.width + left.width - INSET - 1];
+        lightmap.masks[y * lightmap.width] = left.masks[y * left.width + left.width - INSET - 1];
+    }
+    
+    uint32_t width = 0;
+    for (int y = 0; y < lightmap.height; ++y) {
+        glm::vec3 prev_light = lightmap.get_color({0, y});
+        float prev_decay = Constants::LightDecay(lightmap.get_mask({0, y}));
+        
+        const int start = y * lightmap.width;
+        width = std::max(width, blur_until_black(lightmap, start, 1, prev_light, prev_decay));
+    }
+
+    if (width > 0) {
+        sge::Renderer& renderer = sge::Engine::Renderer();
+        const auto& context = renderer.Context();
+
+        LLGL::ImageView image_view;
+        image_view.format = LLGL::ImageFormat::RGB;
+        image_view.dataType = LLGL::DataType::UInt8;
+        image_view.data = &lightmap.colors[INSET * lightmap.width + INSET];
+        image_view.dataSize = (lightmap.height - INSET * 2) * width * sizeof(Color);
+        image_view.rowStride = lightmap.width * sizeof(Color);
+
+        context->WriteTexture(*texture, LLGL::TextureRegion(LLGL::Offset3D(0, 0, 0), LLGL::Extent3D(width, lightmap.height - INSET * 2, 1)), image_view);
+    }
+}
+
+void StaticLightMapChunk::blur_from_right(const LightMap& right) {
+    SGE_ASSERT(right.height == lightmap.height);
+    for (int y = 0; y < lightmap.height; ++y) {
+        lightmap.colors[y * lightmap.width + lightmap.width - 1] = right.colors[y * right.width + INSET];
+        lightmap.masks[y * lightmap.width + lightmap.width - 1] = right.masks[y * right.width + INSET];
+    }
+    
+    uint32_t width = 0;
+    for (int y = 0; y < lightmap.height; ++y) {
+        glm::vec3 prev_light = lightmap.get_color({lightmap.width - 1, y});
+        float prev_decay = Constants::LightDecay(lightmap.get_mask({lightmap.width, y}));
+        
+        const int start = y * lightmap.width + lightmap.width - 1;
+        width = std::max(width, blur_until_black(lightmap, start, -1, prev_light, prev_decay));
+    }
+
+    if (width > 0) {
+        sge::Renderer& renderer = sge::Engine::Renderer();
+        const auto& context = renderer.Context();
+
+        LLGL::ImageView image_view;
+        image_view.format = LLGL::ImageFormat::RGB;
+        image_view.dataType = LLGL::DataType::UInt8;
+        image_view.data = &lightmap.colors[INSET * lightmap.width + lightmap.width - width - INSET - 1];
+        image_view.dataSize = (lightmap.height - INSET * 2) * width * sizeof(Color);
+        image_view.rowStride = lightmap.width * sizeof(Color);
+
+        context->WriteTexture(*texture, LLGL::TextureRegion(LLGL::Offset3D(lightmap.width - INSET * 2 - width, 0, 0), LLGL::Extent3D(width, lightmap.height - INSET * 2, 1)), image_view);
+    }
 }
 
 StaticLightMapChunk::~StaticLightMapChunk() {

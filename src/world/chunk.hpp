@@ -41,6 +41,11 @@ struct StaticLightMapChunk {
         operator=(std::move(other));
     }
 
+    void blur_from_top(const LightMap& top);
+    void blur_from_bottom(const LightMap& bottom);
+    void blur_from_left(const LightMap& left);
+    void blur_from_right(const LightMap& right);
+
     StaticLightMapChunk& operator =(StaticLightMapChunk&& other) noexcept {
         index = other.index;
         lightmap = std::move(other.lightmap);
