@@ -50,9 +50,10 @@ private:
 
 class AcceleratedDynamicLighting : public IDynamicLighting {
 private:
-    struct UniformBuffer {
-        glm::uvec2 blur_min;
-        glm::uvec2 blur_max;
+    struct alignas(16) UniformBuffer {
+        glm::uvec2 texture_offset;
+        glm::uvec2 blur_offset;
+        glm::uvec2 blur_size;
     };
 
 public:

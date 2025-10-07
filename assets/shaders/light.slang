@@ -69,8 +69,9 @@ static void blur(uint2 pos, uint2 texture_pos, inout float3 prev_light, inout fl
 
 [vk::binding(2)]
 cbuffer UniformBuffer : register(b2) {
-    uint2 blur_min;
-    uint2 blur_max;
+    uint2 texture_offset;
+    uint2 blur_offset;
+    uint2 blur_size;
 }
 
 [shader("compute")]
@@ -81,7 +82,7 @@ void CSComputeLightSetLightSources(uint3 thread_id : SV_DispatchThreadID)
     const uint width = light.size.x;
     const uint height = light.size.y;
 
-    const uint2 pos = light.pos - blur_min;
+    const uint2 pos = light.pos - blur_offset + texture_offset;
 
     for (uint x = 0; x < width; ++x) {
         for (uint y = 0; y < height; ++y) {
@@ -95,7 +96,7 @@ void CSComputeLightSetLightSources(uint3 thread_id : SV_DispatchThreadID)
 void CSComputeLightVertical(
     uint3 thread_id: SV_DispatchThreadID
 ) {
-    const uint x = blur_min.x + thread_id.x;
+    const uint x = blur_offset.x + thread_id.x;
 
     float3 prev_light = float3(0.0, 0.0, 0.0);
     float prev_decay = 0.0;
@@ -103,11 +104,12 @@ void CSComputeLightVertical(
     float3 prev_light2 = float3(0.0, 0.0, 0.0);
     float prev_decay2 = 0.0;
 
-    const uint height = blur_max.y - blur_min.y;
+    const uint height = blur_size.y;
+    const uint max_y = blur_offset.y + blur_size.y;
 
-    for (uint y = 0; y < height; ++y) {
-        blur(uint2(x, blur_min.y + y), uint2(thread_id.x, y), prev_light, prev_decay);
-        blur(uint2(x, blur_max.y - 1 - y), uint2(thread_id.x, height - 1 - y), prev_light2, prev_decay2);
+    for (uint y = 0; y < blur_size.y; ++y) {
+        blur(uint2(x, blur_offset.y + y), texture_offset + uint2(thread_id.x, y), prev_light, prev_decay);
+        blur(uint2(x, max_y - 1 - y), texture_offset + uint2(thread_id.x, height - 1 - y), prev_light2, prev_decay2);
     }
 }
 
@@ -116,7 +118,7 @@ void CSComputeLightVertical(
 void CSComputeLightHorizontal(
     uint3 thread_id: SV_DispatchThreadID,
 ) {
-    const uint y = blur_min.y + thread_id.x;
+    const uint y = blur_offset.y + thread_id.x;
 
     float3 prev_light = float3(0.0, 0.0, 0.0);
     float prev_decay = 0.0;
@@ -124,10 +126,11 @@ void CSComputeLightHorizontal(
     float3 prev_light2 = float3(0.0, 0.0, 0.0);
     float prev_decay2 = 0.0;
 
-    const uint width = blur_max.x - blur_min.x;
+    const uint width = blur_size.x;
+    const uint max_x = blur_offset.x + blur_size.x;
 
     for (uint x = 0; x < width; ++x) {
-        blur(uint2(blur_min.x + x, y), uint2(x, thread_id.x), prev_light, prev_decay);
-        blur(uint2(blur_max.x - 1 - x, y), uint2(width - 1 - x, thread_id.x), prev_light2, prev_decay2);
+        blur(uint2(blur_offset.x + x, y), texture_offset + uint2(x, thread_id.x), prev_light, prev_decay);
+        blur(uint2(max_x - 1 - x, y), texture_offset + uint2(width - 1 - x, thread_id.x), prev_light2, prev_decay2);
     }
 }

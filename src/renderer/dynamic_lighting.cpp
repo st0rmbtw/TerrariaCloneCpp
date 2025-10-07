@@ -559,6 +559,8 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
 
     using Constants::TILE_SIZE;
     using Constants::SUBDIVISION;
+    using Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE;
+    using Constants::CAMERA_MIN_ZOOM;
 
     if (world.light_count() == 0) return;
 
@@ -567,21 +569,25 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
     const size_t size = world.light_count() * sizeof(Light);
     commands->UpdateBuffer(*m_light_buffer, 0, world.lights(), size);
 
-    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() - glm::vec2(camera.viewport()) * 0.5f * Constants::CAMERA_MIN_ZOOM) / (TILE_SIZE / SUBDIVISION));
-    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + glm::vec2(camera.viewport()) * 0.5f * Constants::CAMERA_MIN_ZOOM) / (TILE_SIZE / SUBDIVISION));
+    const sge::Rect& proj_area = camera.get_projection_area();
 
-    const int width = proj_area_max.x - proj_area_min.x;
-    const int height = proj_area_max.y - proj_area_min.y;
+    const glm::ivec2 blur_min = glm::ivec2((camera.position() + proj_area.min) / (TILE_SIZE / SUBDIVISION)) - DYNAMIC_LIGHT_OFFSCREEN_RANGE * SUBDIVISION;
+    const glm::ivec2 blur_max = glm::ivec2((camera.position() + proj_area.max) / (TILE_SIZE / SUBDIVISION)) + DYNAMIC_LIGHT_OFFSCREEN_RANGE * SUBDIVISION;
+    const glm::ivec2 blur_size = blur_max - blur_min;
 
-    const uint32_t grid_w = width / m_workgroup_size;
-    const uint32_t grid_h = height / m_workgroup_size;
+    const uint32_t grid_w = blur_size.x / m_workgroup_size;
+    const uint32_t grid_h = blur_size.y / m_workgroup_size;
 
     if (grid_w * grid_h == 0) return;
 
     {
+        const glm::vec2 texture_size = glm::vec2(camera.viewport()) * CAMERA_MIN_ZOOM;
+        const glm::uvec2 texture_offset = glm::uvec2(((texture_size - proj_area.size()) * 0.5f - DYNAMIC_LIGHT_OFFSCREEN_RANGE * TILE_SIZE) / (TILE_SIZE / SUBDIVISION));
+
         UniformBuffer uniform_buffer {
-            .blur_min = proj_area_min,
-            .blur_max = proj_area_max
+            .texture_offset = texture_offset,
+            .blur_offset = blur_min,
+            .blur_size = blur_size,
         };
         commands->UpdateBuffer(*m_uniform_buffer, 0, &uniform_buffer, sizeof(uniform_buffer));
     }

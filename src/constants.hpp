@@ -50,6 +50,8 @@ namespace Constants {
         }
     }
 
+    constexpr int DYNAMIC_LIGHT_OFFSCREEN_RANGE = 16;
+
     constexpr int LIGHT_SOLID_DECAY_STEPS = internal::LightDecaySteps(true);
     constexpr int LIGHT_AIR_DECAY_STEPS = internal::LightDecaySteps(false);
 
