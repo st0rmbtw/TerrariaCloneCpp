@@ -43,15 +43,21 @@ namespace dp {
             std::size_t current_id = 0;
             for (std::size_t i = 0; i < number_of_threads; ++i) {
                 priority_queue_.push_back(size_t(current_id));
+                #if __cpp_exceptions
                 try {
+                #endif
                     threads_.emplace_back([&, id = current_id,
                                            init](const std::stop_token &stop_tok) {
                         // invoke the init function on the thread
+                        #if __cpp_exceptions
                         try {
+                        #endif
                             std::invoke(init, id);
+                        #if __cpp_exceptions
                         } catch (...) {
                             // suppress exceptions
                         }
+                        #endif
 
                         do {
                             // wait until signaled
@@ -100,6 +106,7 @@ namespace dp {
                     // increment the thread id
                     ++current_id;
 
+                #if __cpp_exceptions
                 } catch (...) {
                     // catch all
 
@@ -109,6 +116,7 @@ namespace dp {
                     // remove our thread from the priority queue
                     std::ignore = priority_queue_.pop_back();
                 }
+                #endif
             }
         }
 
@@ -174,17 +182,20 @@ namespace dp {
             auto shared_promise = std::make_shared<std::promise<ReturnType>>();
             auto task = [func = std::move(f), ... largs = std::move(args),
                          promise = shared_promise]() {
+                #if __cpp_exceptions
                 try {
+                #endif
                     if constexpr (std::is_same_v<ReturnType, void>) {
                         func(largs...);
                         promise->set_value();
                     } else {
                         promise->set_value(func(largs...));
                     }
-
+                #if __cpp_exceptions
                 } catch (...) {
                     promise->set_exception(std::current_exception());
                 }
+                #endif
             };
 
             // get the future before enqueuing the task
