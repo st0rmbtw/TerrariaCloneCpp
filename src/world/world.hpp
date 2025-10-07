@@ -20,7 +20,6 @@
 #include "../utils/data/lookup_list.hpp"
 #include "../utils/thread_pool/thread_pool.hpp"
 
-#include "chunk.hpp"
 #include "chunk_manager.hpp"
 #include "dropped_item.hpp"
 
@@ -32,21 +31,16 @@ struct TileDigAnimation {
     BlockTypeWithData block;
 };
 
+struct UpdateLightMapTaskResult {
+    sge::IRect area;
+    Color* colors = nullptr;
+    LightMask* masks = nullptr;
+    int width = 0;
+    int height = 0;
+    bool finished = false;
+};
+
 class World {
-    struct UpdateLightMapTaskData {
-        sge::IRect area;
-        Color* colors = nullptr;
-        LightMask* masks = nullptr;
-        int width = 0;
-        int height = 0;
-        bool finished = false;
-    };
-
-    struct UpdateLightMapTask {
-        std::shared_ptr<std::atomic<UpdateLightMapTaskData>> data;
-        std::thread thread;
-    };
-
 public:
     void init();
 
@@ -255,8 +249,8 @@ private:
 
 private:
     ChunkManager m_chunk_manager;
-    dp::thread_pool<> m_lightmap_thread_pool;
-    sge::SwapbackVector<UpdateLightMapTask> m_lightmap_tasks;
+    dp::thread_pool<> m_lightmap_thread_pool{ 8 };
+    sge::SwapbackVector<std::future<UpdateLightMapTaskResult>> m_lightmap_tasks;
     sge::TextureAtlasSprite m_flames_sprite;
     sge::TextureAtlasSprite m_cracks_sprite;
     WorldData m_data;

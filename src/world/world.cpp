@@ -16,6 +16,7 @@
 #include "../world/autotile.hpp"
 #include "../renderer/renderer.hpp"
 #include "chunk.hpp"
+#include "chunk_manager.hpp"
 
 static constexpr int LIGHTMAP_INSET = 1;
 
@@ -26,10 +27,8 @@ void World::update_lightmap(TilePos pos) {
 
     const sge::IRect light_area = sge::IRect::from_center_half_size(pos, glm::ivec2(LIGHT_SOLID_DECAY_STEPS, LIGHT_SOLID_DECAY_STEPS)).clamp(m_data.area) * Constants::SUBDIVISION;
 
-    std::shared_ptr<std::atomic<UpdateLightMapTaskData>> result = std::make_shared<std::atomic<UpdateLightMapTaskData>>();
-
-    auto task = std::thread([this](sge::IRect light_area, const std::shared_ptr<std::atomic<UpdateLightMapTaskData>>& result) {
-        UpdateLightMapTaskData task;
+    auto task = m_lightmap_thread_pool.enqueue([this](sge::IRect light_area) {
+        UpdateLightMapTaskResult task;
 
         const sge::IRect area = sge::IRect::from_top_left(glm::ivec2(0), light_area.size() + LIGHTMAP_INSET * 2);
 
@@ -135,16 +134,14 @@ void World::update_lightmap(TilePos pos) {
         task.width = lightmap.width;
         task.height = lightmap.height;
         task.finished = true;
-        *result = task;
 
         lightmap.colors = nullptr;
         lightmap.masks = nullptr;
-    }, light_area, result);
 
-    m_lightmap_tasks.push_back(UpdateLightMapTask {
-        .data = std::move(result),
-        .thread = std::move(task)
-    });
+        return task;
+    }, light_area);
+
+    m_lightmap_tasks.push_back(std::move(task));
 }
 
 void World::init() {
@@ -368,6 +365,50 @@ void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
     m_light_count = 0;
 }
 
+static void handle_lightmap_task_finish(UpdateLightMapTaskResult& result, const ChunkManager::LightChunks& light_chunks) {
+    using Constants::LIGHTMAP_CHUNK_SIZE;
+
+    const glm::uvec2 size = result.area.size();
+    
+    glm::uvec2 offset = glm::uvec2(result.area.min);
+    const glm::uvec2 start_chunk_pos = offset / LIGHTMAP_CHUNK_SIZE;
+    
+    glm::uvec2 remaining_size = result.area.size();
+    glm::uvec2 chunk_pos = start_chunk_pos;
+    glm::uvec2 write_offset = glm::uvec2(LIGHTMAP_INSET);
+
+    while (remaining_size.y > 0) {
+        const uint32_t write_height = glm::min(offset.y + remaining_size.y, chunk_pos.y * LIGHTMAP_CHUNK_SIZE + LIGHTMAP_CHUNK_SIZE) - offset.y;
+
+        while (remaining_size.x > 0) {
+            const uint32_t write_width = glm::min(offset.x + remaining_size.x, chunk_pos.x * LIGHTMAP_CHUNK_SIZE + LIGHTMAP_CHUNK_SIZE) - offset.x;
+
+            StaticLightMapChunk* lightmap_chunk = light_chunks.get_unchecked(chunk_pos);
+            if (lightmap_chunk != nullptr) {
+                const glm::uvec2 texture_offset = offset % LIGHTMAP_CHUNK_SIZE;
+                lightmap_chunk->copy_lightmap_area(result.colors, result.masks, write_offset, result.width, texture_offset, glm::uvec2(write_width, write_height));
+            }
+
+            offset.x += write_width;
+            remaining_size.x -= write_width;
+            write_offset.x += write_width;
+            chunk_pos.x += 1;
+        }
+
+        remaining_size.y -= write_height;
+        write_offset.y += write_height;
+        remaining_size.x = size.x;
+        write_offset.x = uint32_t(LIGHTMAP_INSET);
+        offset.x = result.area.min.x;
+        offset.y += write_height;
+        chunk_pos.x = start_chunk_pos.x;
+        chunk_pos.y += 1;
+    }
+
+    delete[] result.colors;
+    delete[] result.masks;
+}
+
 void World::update(const sge::Camera& camera) {
     ZoneScoped;
 
@@ -400,52 +441,11 @@ void World::update(const sge::Camera& camera) {
     }
 
     for (uint32_t i = 0; i < m_lightmap_tasks.size(); ++i) {
-        auto& task = m_lightmap_tasks[i];
-        auto result = task.data->load();
-        if (result.finished) {
-            using Constants::LIGHTMAP_CHUNK_SIZE;
-
-            glm::uvec2 offset = glm::uvec2(result.area.min);
-            const glm::uvec2 size = result.area.size();
-
-            const glm::uvec2 start_chunk_pos = offset / LIGHTMAP_CHUNK_SIZE;
-
-            glm::uvec2 remaining_size = result.area.size();
-            glm::uvec2 chunk_pos = start_chunk_pos;
-            glm::uvec2 write_offset = glm::uvec2(LIGHTMAP_INSET);
-
-            while (remaining_size.y > 0) {
-                const uint32_t write_height = glm::min(offset.y + remaining_size.y, chunk_pos.y * LIGHTMAP_CHUNK_SIZE + LIGHTMAP_CHUNK_SIZE) - offset.y;
-
-                while (remaining_size.x > 0) {
-                    const uint32_t write_width = glm::min(offset.x + remaining_size.x, chunk_pos.x * LIGHTMAP_CHUNK_SIZE + LIGHTMAP_CHUNK_SIZE) - offset.x;
-
-                    StaticLightMapChunk* lightmap_chunk = chunk_manager().light_chunks().get_unchecked(chunk_pos);
-                    if (lightmap_chunk != nullptr) {
-                        const glm::uvec2 texture_offset = offset % LIGHTMAP_CHUNK_SIZE;
-                        lightmap_chunk->copy_lightmap_area(result.colors, result.masks, write_offset, result.width, texture_offset, glm::uvec2(write_width, write_height));
-                    }
-
-                    offset.x += write_width;
-                    remaining_size.x -= write_width;
-                    write_offset.x += write_width;
-                    chunk_pos.x += 1;
-                }
-
-                remaining_size.y -= write_height;
-                write_offset.y += write_height;
-                remaining_size.x = size.x;
-                write_offset.x = uint32_t(LIGHTMAP_INSET);
-                offset.x = result.area.min.x;
-                offset.y += write_height;
-                chunk_pos.x = start_chunk_pos.x;
-                chunk_pos.y += 1;
-            }
-
-            delete[] result.colors;
-            delete[] result.masks;
-            
-            task.thread.join();
+        auto& future = m_lightmap_tasks[i];
+        const bool finished = future.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+        if (finished) {
+            UpdateLightMapTaskResult result = future.get();
+            handle_lightmap_task_finish(result, m_chunk_manager.light_chunks());
             m_lightmap_tasks.erase(i);
         }
     }

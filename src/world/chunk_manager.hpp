@@ -31,6 +31,9 @@ class ChunkManager {
     };
 
 public:
+    using RenderChunks = LRUCache<glm::uvec2, RenderChunk>;
+    using LightChunks = LRUCache<glm::uvec2, StaticLightMapChunk>;
+
     ChunkManager() {
         using Constants::RENDER_CHUNK_SIZE_U;
         using Constants::LIGHTMAP_CHUNK_SIZE;
@@ -50,12 +53,12 @@ public:
     void set_walls_changed(TilePos tile_pos);
 
     [[nodiscard]]
-    inline const LRUCache<glm::uvec2, RenderChunk>& render_chunks() const noexcept {
+    inline const RenderChunks& render_chunks() const noexcept {
         return m_render_chunks;
     }
 
     [[nodiscard]]
-    inline const LRUCache<glm::uvec2, StaticLightMapChunk>& light_chunks() const noexcept {
+    inline const LightChunks& light_chunks() const noexcept {
         return m_light_chunks;
     }
 
@@ -86,8 +89,8 @@ private:
 private:
     dp::thread_pool<> m_thread_pool{ 4 };
     
-    LRUCache<glm::uvec2, RenderChunk> m_render_chunks{ 5 };
-    LRUCache<glm::uvec2, StaticLightMapChunk> m_light_chunks{ 10 };
+    RenderChunks m_render_chunks{ 5 };
+    LightChunks m_light_chunks{ 10 };
 
     std::unordered_set<glm::uvec2> m_queued_light_chunks;
 
