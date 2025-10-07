@@ -38,7 +38,7 @@ struct StaticLightMapChunk {
         operator=(std::move(other));
     }
 
-    void update_area(const WorldData& world, sge::IRect area, LightMapChunkNeighbors neighbors);
+    void copy_lightmap_area(const Color* from_colors, const LightMask* from_mask, glm::uvec2 from_offset, uint32_t from_stride, glm::uvec2 to_offset, glm::uvec2 size);
 
     void blur_from_top(const LightMap& top);
     void blur_from_bottom(const LightMap& bottom);

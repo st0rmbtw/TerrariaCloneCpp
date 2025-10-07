@@ -17,41 +17,134 @@
 #include "../renderer/renderer.hpp"
 #include "chunk.hpp"
 
-static void update_lightmap(World& world, TilePos pos) {
+static constexpr int LIGHTMAP_INSET = 1;
+
+void World::update_lightmap(TilePos pos) {
     using Constants::LIGHT_SOLID_DECAY_STEPS;
     using Constants::LIGHTMAP_CHUNK_TILE_SIZE;
     using Constants::LIGHTMAP_CHUNK_SIZE;
 
-    const sge::IRect light_area = sge::IRect::from_center_half_size(pos, glm::ivec2(LIGHT_SOLID_DECAY_STEPS, LIGHT_SOLID_DECAY_STEPS)).clamp(world.area());
-    const sge::IRect chunk_range = light_area / LIGHTMAP_CHUNK_TILE_SIZE;
+    const sge::IRect light_area = sge::IRect::from_center_half_size(pos, glm::ivec2(LIGHT_SOLID_DECAY_STEPS, LIGHT_SOLID_DECAY_STEPS)).clamp(m_data.area) * Constants::SUBDIVISION;
 
-    auto& light_chunks = world.chunk_manager().light_chunks();
+    std::shared_ptr<std::atomic<UpdateLightMapTaskData>> result = std::make_shared<std::atomic<UpdateLightMapTaskData>>();
 
-    for (int y = chunk_range.min.y; y <= chunk_range.max.y; ++y) {
-        for (int x = chunk_range.min.x; x <= chunk_range.max.x; ++x) {
-            const glm::ivec2 index = glm::ivec2(x, y);
-            StaticLightMapChunk* chunk = light_chunks.get_unchecked(index);
-            if (chunk == nullptr) continue;
+    auto task = std::thread([this](sge::IRect light_area, const std::shared_ptr<std::atomic<UpdateLightMapTaskData>>& result) {
+        UpdateLightMapTaskData task;
 
-            const glm::ivec2 start = index * int(LIGHTMAP_CHUNK_TILE_SIZE);
+        const sge::IRect area = sge::IRect::from_top_left(glm::ivec2(0), light_area.size() + LIGHTMAP_INSET * 2);
 
-            const sge::IRect area = light_area.clamp(start, start + int(LIGHTMAP_CHUNK_TILE_SIZE)) - start;
+        LightMap lightmap(area.size());
+        lightmap.init_area(m_data, area.inset(-1), light_area.min / Constants::SUBDIVISION);
 
-            const StaticLightMapChunk* top = light_chunks.get_unchecked(glm::ivec2(index.x, index.y - 1));
-            const StaticLightMapChunk* bottom = light_chunks.get_unchecked(glm::ivec2(index.x, index.y + 1));
-            const StaticLightMapChunk* left = light_chunks.get_unchecked(glm::ivec2(index.x - 1, index.y));
-            const StaticLightMapChunk* right = light_chunks.get_unchecked(glm::ivec2(index.x + 1, index.y));
+        const sge::IRect chunk_range = light_area / Constants::LIGHTMAP_CHUNK_SIZE;
 
-            const LightMapChunkNeighbors neighbors = {
-                .top = top ? &top->lightmap : nullptr,
-                .bottom = bottom ? &bottom->lightmap : nullptr,
-                .left = left ? &left->lightmap : nullptr,
-                .right = right ? &right->lightmap : nullptr,
-            };
+        {
+            int remaining_width = light_area.width();
+            int offset = light_area.min.x % int(LIGHTMAP_CHUNK_SIZE);
+            int write_offset = 0;
+            int x_pos = chunk_range.min.x;
+            while (remaining_width > 0) {
+                const glm::ivec2 top_pos = glm::ivec2(x_pos, chunk_range.min.y);
+                const glm::ivec2 bottom_pos = glm::ivec2(x_pos, chunk_range.max.y);
 
-            chunk->update_area(world.data(), area * Constants::SUBDIVISION, neighbors);
+                const StaticLightMapChunk* top = m_chunk_manager.light_chunks().get_unchecked(top_pos);
+                const StaticLightMapChunk* bottom = m_chunk_manager.light_chunks().get_unchecked(bottom_pos);
+
+                const int from_x = std::max(offset % int(LIGHTMAP_CHUNK_SIZE), LIGHTMAP_INSET);
+                const int width = std::min(from_x + remaining_width, top->lightmap.width) - from_x;
+
+                if (top != nullptr) {
+                    int from_y = std::clamp(
+                        light_area.min.y % int(LIGHTMAP_CHUNK_SIZE),
+                        LIGHTMAP_INSET, top->lightmap.height - 1 - LIGHTMAP_INSET
+                    );
+
+                    memcpy(&lightmap.colors[write_offset], &top->lightmap.colors[from_y * top->lightmap.width + from_x], width * sizeof(Color));
+                    memcpy(&lightmap.masks[write_offset], &top->lightmap.masks[from_y * top->lightmap.width + from_x], width * sizeof(LightMask));
+                }
+                if (bottom != nullptr) {
+                    int from_y = std::clamp(
+                        light_area.max.y % int(LIGHTMAP_CHUNK_SIZE),
+                        LIGHTMAP_INSET, bottom->lightmap.height - 1 - LIGHTMAP_INSET
+                    );
+
+                    memcpy(&lightmap.colors[(lightmap.height - 1) * lightmap.width + write_offset], &bottom->lightmap.colors[from_y * bottom->lightmap.width + from_x], width * sizeof(Color));
+                    memcpy(&lightmap.masks[(lightmap.height - 1) * lightmap.width + write_offset], &bottom->lightmap.masks[from_y * bottom->lightmap.width + from_x], width * sizeof(LightMask));
+                }
+
+                remaining_width -= width;
+                offset += width;
+                write_offset += width;
+                x_pos += 1;
+            }
         }
-    }
+        {
+            int remaining_height = light_area.height();
+            int offset = light_area.min.y;
+            int write_offset = 0;
+            int y_pos = chunk_range.min.y;
+
+            while (remaining_height > 0) {
+                const glm::ivec2 left_pos = glm::ivec2(chunk_range.min.x, y_pos);
+                const glm::ivec2 right_pos = glm::ivec2(chunk_range.max.x, y_pos);
+
+                const StaticLightMapChunk* left = m_chunk_manager.light_chunks().get_unchecked(left_pos);
+                const StaticLightMapChunk* right = m_chunk_manager.light_chunks().get_unchecked(right_pos);
+
+                const int from_y = std::max(offset % int(LIGHTMAP_CHUNK_SIZE), LIGHTMAP_INSET);
+                const int height = std::min(from_y + remaining_height, left->lightmap.height - 1 - LIGHTMAP_INSET) - from_y;
+
+                if (left != nullptr) {
+                    int from_x = std::clamp(
+                        light_area.min.x % int(LIGHTMAP_CHUNK_SIZE),
+                        LIGHTMAP_INSET, left->lightmap.width - 1 - LIGHTMAP_INSET
+                    );
+                    for (int y = 0; y < height; ++y) {
+                        lightmap.colors[(write_offset + y) * lightmap.width] = left->lightmap.colors[(from_y + y) * left->lightmap.width + from_x];
+                        lightmap.masks[(write_offset + y) * lightmap.width] = left->lightmap.masks[(from_y + y) * left->lightmap.width + from_x];
+                    }
+                }
+                if (right != nullptr) {
+                    int from_x = std::clamp(
+                        light_area.max.x % int(LIGHTMAP_CHUNK_SIZE),
+                        LIGHTMAP_INSET, right->lightmap.width - 1 - LIGHTMAP_INSET
+                    );
+                    for (int y = 0; y < height; ++y) {
+                        lightmap.colors[(write_offset + y) * lightmap.width + lightmap.width - 1] = right->lightmap.colors[(from_y + y) * right->lightmap.width + from_x];
+                        lightmap.masks[(write_offset + y) * lightmap.width + lightmap.width - 1] = right->lightmap.masks[(from_y + y) * right->lightmap.width + from_x];
+                    }
+                }
+                remaining_height -= height;
+                offset += height;
+                write_offset += height;
+                y_pos += 1;
+            }
+        }
+
+        lightmap.blur_horizontal(area);
+        lightmap.blur_vertical(area);
+
+        lightmap.blur_horizontal(area);
+        lightmap.blur_vertical(area);
+
+        lightmap.blur_horizontal(area);
+
+        task.area = light_area;
+        task.colors = lightmap.colors;
+        task.masks = lightmap.masks;
+        task.width = lightmap.width;
+        task.height = lightmap.height;
+        task.finished = true;
+        *result = task;
+
+        lightmap.colors = nullptr;
+        lightmap.masks = nullptr;
+    }, light_area, result);
+
+    m_lightmap_tasks.push_back(UpdateLightMapTask {
+        .data = std::move(result),
+        .thread = std::move(task)
+    });
 }
 
 void World::init() {
@@ -79,7 +172,7 @@ void World::set_block(TilePos pos, const Block& tile) {
     m_changed = true;
     m_lightmap_changed = true;
 
-    update_lightmap(*this, pos);
+    update_lightmap(pos);
 
     m_chunk_manager.set_blocks_changed(pos);
 
@@ -106,7 +199,7 @@ void World::set_block(TilePos pos, BlockType tile_type) {
     m_changed = true;
     m_lightmap_changed = true;
 
-    update_lightmap(*this, pos);
+    update_lightmap(pos);
 
     m_data.changed_tiles.emplace_back(pos, 1);
 
@@ -134,7 +227,7 @@ void World::remove_block(TilePos pos) {
 
     m_block_cracks.erase(pos);
 
-    update_lightmap(*this, pos);
+    update_lightmap(pos);
 
     m_data.changed_tiles.emplace_back(pos, 0);
 
@@ -220,7 +313,7 @@ void World::set_wall(TilePos pos, WallType wall_type) {
     m_changed = true;
     m_lightmap_changed = true;
 
-    update_lightmap(*this, pos);
+    update_lightmap(pos);
 
     update_neighbors(pos);
 
@@ -244,7 +337,7 @@ void World::remove_wall(TilePos pos) {
 
     m_wall_cracks.erase(pos);
 
-    update_lightmap(*this, pos);
+    update_lightmap(pos);
 
     m_data.changed_tiles.emplace_back(pos, 0);
 
@@ -303,6 +396,57 @@ void World::update(const sge::Camera& camera) {
             anim.scale = 1.0f - anim.progress;
         } else {
             anim.scale = anim.progress;
+        }
+    }
+
+    for (uint32_t i = 0; i < m_lightmap_tasks.size(); ++i) {
+        auto& task = m_lightmap_tasks[i];
+        auto result = task.data->load();
+        if (result.finished) {
+            using Constants::LIGHTMAP_CHUNK_SIZE;
+
+            glm::uvec2 offset = glm::uvec2(result.area.min);
+            const glm::uvec2 size = result.area.size();
+
+            const glm::uvec2 start_chunk_pos = offset / LIGHTMAP_CHUNK_SIZE;
+
+            glm::uvec2 remaining_size = result.area.size();
+            glm::uvec2 chunk_pos = start_chunk_pos;
+            glm::uvec2 write_offset = glm::uvec2(LIGHTMAP_INSET);
+
+            while (remaining_size.y > 0) {
+                const uint32_t write_height = glm::min(offset.y + remaining_size.y, chunk_pos.y * LIGHTMAP_CHUNK_SIZE + LIGHTMAP_CHUNK_SIZE) - offset.y;
+
+                while (remaining_size.x > 0) {
+                    const uint32_t write_width = glm::min(offset.x + remaining_size.x, chunk_pos.x * LIGHTMAP_CHUNK_SIZE + LIGHTMAP_CHUNK_SIZE) - offset.x;
+
+                    StaticLightMapChunk* lightmap_chunk = chunk_manager().light_chunks().get_unchecked(chunk_pos);
+                    if (lightmap_chunk != nullptr) {
+                        const glm::uvec2 texture_offset = offset % LIGHTMAP_CHUNK_SIZE;
+                        lightmap_chunk->copy_lightmap_area(result.colors, result.masks, write_offset, result.width, texture_offset, glm::uvec2(write_width, write_height));
+                    }
+
+                    offset.x += write_width;
+                    remaining_size.x -= write_width;
+                    write_offset.x += write_width;
+                    chunk_pos.x += 1;
+                }
+
+                remaining_size.y -= write_height;
+                write_offset.y += write_height;
+                remaining_size.x = size.x;
+                write_offset.x = uint32_t(LIGHTMAP_INSET);
+                offset.x = result.area.min.x;
+                offset.y += write_height;
+                chunk_pos.x = start_chunk_pos.x;
+                chunk_pos.y += 1;
+            }
+
+            delete[] result.colors;
+            delete[] result.masks;
+            
+            task.thread.join();
+            m_lightmap_tasks.erase(i);
         }
     }
 }

@@ -42,8 +42,7 @@ public:
 
     inline LLGL::Texture* light_texture() { return m_dynamic_light_texture; }
     inline LLGL::RenderTarget* light_texture_target() { return m_dynamic_light_texture_target; }
-private:
-    void update_lightmap_texture(World& world, const ChunkManager& chunk_manager);
+    
 private:
     sge::Renderer* m_renderer = nullptr;
 

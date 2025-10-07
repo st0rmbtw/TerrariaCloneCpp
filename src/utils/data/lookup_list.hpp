@@ -13,7 +13,7 @@
 #include <SGE/profile.hpp>
 #include <SGE/utils/containers/swapbackvector.hpp>
 
-#include "../utils.hpp"
+#include "../../utils.hpp"
 
 template <typename T>
 class LookupList {

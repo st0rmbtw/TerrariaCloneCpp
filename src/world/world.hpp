@@ -17,8 +17,10 @@
 #include "../types/tile_pos.hpp"
 #include "../types/light.hpp"
 #include "../types/item.hpp"
-#include "../types/lookup_list.hpp"
+#include "../utils/data/lookup_list.hpp"
+#include "../utils/thread_pool/thread_pool.hpp"
 
+#include "chunk.hpp"
 #include "chunk_manager.hpp"
 #include "dropped_item.hpp"
 
@@ -31,6 +33,20 @@ struct TileDigAnimation {
 };
 
 class World {
+    struct UpdateLightMapTaskData {
+        sge::IRect area;
+        Color* colors = nullptr;
+        LightMask* masks = nullptr;
+        int width = 0;
+        int height = 0;
+        bool finished = false;
+    };
+
+    struct UpdateLightMapTask {
+        std::shared_ptr<std::atomic<UpdateLightMapTaskData>> data;
+        std::thread thread;
+    };
+
 public:
     void init();
 
@@ -234,14 +250,16 @@ public:
 
 private:
     void update_neighbors(TilePos pos);
+    void update_lightmap(TilePos pos);
     void stack_dropped_items();
 
 private:
-    WorldData m_data;
-    dp::thread_pool<> m_lightmap_thread_pool{ 4 };
+    ChunkManager m_chunk_manager;
+    dp::thread_pool<> m_lightmap_thread_pool;
+    sge::SwapbackVector<UpdateLightMapTask> m_lightmap_tasks;
     sge::TextureAtlasSprite m_flames_sprite;
     sge::TextureAtlasSprite m_cracks_sprite;
-    ChunkManager m_chunk_manager;
+    WorldData m_data;
     LookupList<DroppedItem> m_dropped_items = LookupList<DroppedItem>(glm::vec2{ Constants::ITEM_GRAB_RANGE * 0.5f });
     std::unordered_map<TilePos, uint8_t> m_block_cracks;
     std::unordered_map<TilePos, uint8_t> m_wall_cracks;
