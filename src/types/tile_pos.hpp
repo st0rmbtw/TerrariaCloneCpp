@@ -9,6 +9,9 @@
 #include <SGE/defines.hpp>
 #include <SGE/assert.hpp>
 
+#include <glm/vec2.hpp>
+#include <glm/gtx/hash.hpp>
+
 #include "../constants.hpp"
 
 enum class TileOffset : uint8_t {
@@ -103,13 +106,11 @@ constexpr SGE_FORCE_INLINE bool operator==(const TilePos a, const TilePos b) noe
     return a.x == b.x && a.y == b.y;
 }
 
-namespace std {
-    template<>
-    struct hash<TilePos> {
-        inline size_t operator()(const TilePos& pos) const noexcept {
-            return pos.x + pos.y;
-        }
-    };
-}
+template<>
+struct std::hash<TilePos> {
+    inline size_t operator()(const TilePos& pos) const noexcept {
+        return std::hash<glm::ivec2>{}(pos);
+    }
+};
 
 #endif
