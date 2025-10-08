@@ -15,39 +15,23 @@
 #include "world_data.hpp"
 #include "lightmap.hpp"
 
-struct LightMapChunkNeighbors {
-    const LightMap* top = nullptr;
-    const LightMap* bottom = nullptr;
-    const LightMap* left = nullptr;
-    const LightMap* right = nullptr;
-};
-
-LightMap build_lightmap_chunk(glm::uvec2 index, const WorldData& world, LightMapChunkNeighbors neighbors);
-
 struct StaticLightMapChunk {
-    LightMap lightmap;
     glm::uvec2 index;
 
     LLGL::Texture* texture = nullptr;
     LLGL::Buffer* vertex_buffer = nullptr;
 
     StaticLightMapChunk() = default;
-    StaticLightMapChunk(glm::uvec2 index, LightMap lightmap);
+    StaticLightMapChunk(glm::uvec2 index, const LightMap& lightmap);
 
     StaticLightMapChunk(StaticLightMapChunk&& other) noexcept {
         operator=(std::move(other));
     }
 
-    void copy_lightmap_area(const Color* from_colors, const LightMask* from_mask, glm::uvec2 from_offset, uint32_t from_stride, glm::uvec2 to_offset, glm::uvec2 size);
-
-    void blur_from_top(const LightMap& top);
-    void blur_from_bottom(const LightMap& bottom);
-    void blur_from_left(const LightMap& left);
-    void blur_from_right(const LightMap& right);
+    void update_texture(glm::uvec2 source_offset, uint32_t source_stride, glm::uvec2 texture_offset, glm::uvec2 size, Color* colors);
 
     StaticLightMapChunk& operator =(StaticLightMapChunk&& other) noexcept {
         index = other.index;
-        lightmap = std::move(other.lightmap);
         texture = other.texture;
         vertex_buffer = other.vertex_buffer;
 

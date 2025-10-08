@@ -1,16 +1,14 @@
 #pragma once
 
-#include "world_data.hpp"
 #ifndef WORLD_LIGHTMAP_HPP_
 #define WORLD_LIGHTMAP_HPP_
 
 #include <cstdint>
-#include <thread>
-#include <atomic>
-#include <memory>
 #include <SGE/math/rect.hpp>
 
 #include "../types/tile_pos.hpp"
+
+struct WorldData;
 
 struct Color {
     uint8_t r;
@@ -112,40 +110,7 @@ struct LightMap {
         set_mask(pos.y * width + pos.x, mask);
     }
 
-    void init_area(const WorldData& world, const sge::IRect& area, glm::ivec2 tile_offset = {0, 0}) {
-        ZoneScoped;
-
-        using Constants::SUBDIVISION;
-
-    #ifndef SGE_DEBUG
-        #pragma omp parallel for collapse(2)
-    #endif
-        for (int y = area.min.y; y < area.max.y; ++y) {
-            for (int x = area.min.x; x < area.max.x; ++x) {
-                const TilePos color_pos = TilePos(x, y);
-                const TilePos tile_pos = tile_offset + color_pos / SUBDIVISION;
-
-                set_mask(color_pos, world.solid_block_exists(tile_pos));
-
-                std::optional<glm::vec3> light = block_light(world.get_block_type(tile_pos));
-                if (light.has_value()) {
-                    set_color(color_pos, light.value());
-                    continue;
-                }
-
-                if (tile_offset.y * SUBDIVISION + y >= world.layers.underground * SUBDIVISION) {
-                    set_color(color_pos, glm::vec3(0.0f));
-                    continue;
-                }
-
-                if (tile_pos.x < world.playable_area.min.x || tile_pos.x > world.playable_area.max.x - 1 || world.solid_block_exists(tile_pos) || world.wall_exists(tile_pos)) {
-                    set_color(color_pos, glm::vec3(0.0f));
-                } else {
-                    set_color(color_pos, glm::vec3(1.0f));
-                }
-            }
-        }
-    }
+    void init_area(const WorldData& world, const sge::IRect& area, glm::ivec2 tile_offset = {0, 0});
 
     void blur(int index, glm::vec3& prev_light, float& prev_decay) {
         using Constants::LIGHT_EPSILON;
@@ -190,51 +155,18 @@ struct LightMap {
         }
     }
 
-    uint32_t blur_until_black(int start, int stride, glm::vec3& prev_light, float& prev_decay) {
-        int index = start;
-        uint32_t i = 0;
-        while (i < Constants::LIGHT_AIR_DECAY_STEPS) {
-            const glm::vec3 this_light = get_color(index);
+    uint32_t blur_until_black(int start, int stride, glm::vec3& prev_light, float& prev_decay);
 
-            const bool x_end = prev_light.x <= this_light.x;
-            const bool y_end = prev_light.y <= this_light.y;
-            const bool z_end = prev_light.z <= this_light.z;
-
-            if (x_end && y_end && z_end) {
-                break;
-            }
-
-            blur(index, prev_light, prev_decay);
-
-            index += stride;
-            ++i;
-        }
-
-        return i;
-    }
+    void blur_horizontal(const sge::IRect& area, const LightMap& reference, glm::ivec2 reference_offset);
 
     void blur_horizontal(const sge::IRect& area) {
-        for (int y = area.min.y; y < area.max.y; ++y) {
-            glm::vec3 prev_light = get_color({area.min.x, y});
-            float prev_decay = Constants::LightDecay(get_mask({area.min.x - 1, y}));
-
-            glm::vec3 prev_light2 = get_color({area.max.x - 1, y});
-            float prev_decay2 = Constants::LightDecay(get_mask({area.max.x, y}));
-
-            blur_line(y * width + area.min.x, y * width + (area.max.x - 1), 1, prev_light, prev_decay, prev_light2, prev_decay2);
-        }
+        blur_horizontal(area, *this, glm::ivec2(0));
     }
 
+    void blur_vertical(const sge::IRect& area, const LightMap& reference, glm::ivec2 reference_offset);
+
     void blur_vertical(const sge::IRect& area) {
-        for (int x = area.min.x; x < area.max.x; ++x) {
-            glm::vec3 prev_light = get_color({x, area.min.y});
-            float prev_decay = Constants::LightDecay(get_mask({x, area.min.y - 1}));
-
-            glm::vec3 prev_light2 = get_color({x, area.max.y - 1});
-            float prev_decay2 = Constants::LightDecay(get_mask({x, area.max.y}));
-
-            blur_line(area.min.y * width + x, (area.max.y - 1) * width + x, width, prev_light, prev_decay, prev_light2, prev_decay2);
-        }
+        blur_vertical(area, *this, glm::ivec2(0));
     }
 
 private:
@@ -246,43 +178,6 @@ private:
 
         from.colors = nullptr;
         from.masks = nullptr;
-    }
-};
-
-struct LightMapTaskResult {
-    Color* data;
-    LightMask* mask;
-    int width;
-    int height;
-    int offset_x = 0;
-    int offset_y = 0;
-    bool is_complete = false;
-};
-
-struct LightMapTask {
-    std::thread t;
-    std::shared_ptr<std::atomic<LightMapTaskResult>> result;
-
-    LightMapTask(std::thread t, std::shared_ptr<std::atomic<LightMapTaskResult>> is_complete) :
-        t(std::move(t)),
-        result(std::move(is_complete)) {}
-
-    LightMapTask(const LightMapTask&) = delete;
-    LightMapTask& operator=(const LightMapTask&) = delete;
-
-    LightMapTask(LightMapTask&& other) noexcept {
-        result = std::move(other.result);
-        t.swap(other.t);
-    }
-
-    LightMapTask& operator=(LightMapTask&& other) noexcept {
-        result = std::move(other.result);
-        t.swap(other.t);
-        return *this;
-    }
-
-    ~LightMapTask() {
-        if (t.joinable()) t.join();
     }
 };
 

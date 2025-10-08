@@ -13,6 +13,7 @@
 #include "../types/wall.hpp"
 #include "../types/tile_pos.hpp"
 #include "../types/neighbors.hpp"
+#include "lightmap.hpp"
 
 struct Layers {
     int surface;
@@ -22,6 +23,7 @@ struct Layers {
 };
 
 struct WorldData {
+    LightMap lightmap;
     std::deque<std::pair<TilePos, int>> changed_tiles;
     std::unordered_set<TilePos> torches;
     std::string name;
@@ -41,6 +43,7 @@ struct WorldData {
         changed_tiles = std::move(other.changed_tiles);
         torches = std::move(other.torches);
         name = std::move(other.name);
+        lightmap = std::move(other.lightmap);
         area = other.area;
         playable_area = other.playable_area;
         layers = other.layers;

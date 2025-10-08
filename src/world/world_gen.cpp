@@ -11,8 +11,6 @@
 #include "../types/wall.hpp"
 #include "../math/math.hpp"
 
-#include "autotile.hpp"
-
 using Constants::SUBDIVISION;
 
 static constexpr int DIRT_HILL_HEIGHT = 100;
@@ -672,6 +670,16 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
     world.update_tiles_sprites();
 
     world.spawn_point = world_get_spawn_point(world);
+
+    const sge::IRect light_area = world.area * Constants::SUBDIVISION;
+    world.lightmap = LightMap(light_area.size());
+    world.lightmap.init_area(world, light_area);
+
+    world.lightmap.blur_horizontal(light_area);
+    world.lightmap.blur_vertical(light_area);
+    world.lightmap.blur_horizontal(light_area);
+    world.lightmap.blur_vertical(light_area);
+    world.lightmap.blur_horizontal(light_area);
 
     srand(time(nullptr));
 };

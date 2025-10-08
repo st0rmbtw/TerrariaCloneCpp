@@ -368,6 +368,16 @@ void load_world(WorldData& world, const std::filesystem::path& path) {
         }
     }
 
+    const sge::IRect light_area = world.area * Constants::SUBDIVISION;
+    world.lightmap = LightMap(light_area.size());
+    world.lightmap.init_area(world, light_area);
+
+    world.lightmap.blur_horizontal(light_area);
+    world.lightmap.blur_vertical(light_area);
+    world.lightmap.blur_horizontal(light_area);
+    world.lightmap.blur_vertical(light_area);
+    world.lightmap.blur_horizontal(light_area);
+
     world.update_tiles_sprites();
 }
 
