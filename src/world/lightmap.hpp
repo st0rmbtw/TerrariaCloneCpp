@@ -7,6 +7,7 @@
 #include <SGE/math/rect.hpp>
 
 #include "../types/tile_pos.hpp"
+#include "../utils/data/heap_array.hpp"
 
 struct WorldData;
 
@@ -32,8 +33,8 @@ struct Color {
 using LightMask = bool;
 
 struct LightMap {
-    Color* colors = nullptr;
-    LightMask* masks = nullptr;
+    HeapArray<Color> colors;
+    HeapArray<LightMask> masks;
     int width = 0;
     int height = 0;
 
@@ -42,28 +43,23 @@ struct LightMap {
     LightMap(glm::ivec2 size) : LightMap(size.x, size.y) {}
     
     LightMap(int width, int height) : width(width), height(height) {
-        colors = new Color[width * height]();
-        masks = new LightMask[width * height]();
+        colors = HeapArray<Color>(width * height);
+        masks = HeapArray<LightMask>(width * height);
     }
 
     LightMap(const LightMap& other) = delete;
     LightMap& operator=(const LightMap &other) noexcept = delete;
 
     LightMap(LightMap&& other) noexcept {
-        move(other);
+        operator=(std::move(other));
     }
 
     LightMap& operator=(LightMap&& other) noexcept {
-        move(other);
+        colors = std::move(other.colors);
+        masks = std::move(other.masks);
+        width = other.width;
+        height = other.height;
         return *this;
-    }
-
-    ~LightMap() {
-        if (colors != nullptr) delete[] colors;
-        if (masks != nullptr) delete[] masks;
-        
-        colors = nullptr;
-        masks = nullptr;
     }
 
     [[nodiscard]]
@@ -167,17 +163,6 @@ struct LightMap {
 
     void blur_vertical(const sge::IRect& area) {
         blur_vertical(area, *this, glm::ivec2(0));
-    }
-
-private:
-    inline void move(LightMap& from) {
-        this->colors = from.colors;
-        this->masks = from.masks;
-        this->width = from.width;
-        this->height = from.height;
-
-        from.colors = nullptr;
-        from.masks = nullptr;
     }
 };
 

@@ -40,7 +40,7 @@ private:
 
     std::vector<std::pair<size_t, size_t>> m_indices;
 
-    LLGL::DynamicArray<Color> m_line;
+    HeapArray<Color> m_line;
 
     LightMap m_dynamic_lightmap;
 

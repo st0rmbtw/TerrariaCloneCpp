@@ -41,14 +41,10 @@ void World::update_lightmap(TilePos pos) {
         lightmap.blur_horizontal(area, *reference, light_area.min);
 
         task.area = light_area;
-        task.colors = lightmap.colors;
-        task.masks = lightmap.masks;
+        task.colors = std::move(lightmap.colors);
+        task.masks = std::move(lightmap.masks);
         task.width = lightmap.width;
         task.height = lightmap.height;
-        task.finished = true;
-
-        lightmap.colors = nullptr;
-        lightmap.masks = nullptr;
 
         return task;
     }, light_area, &m_data.lightmap);
@@ -305,7 +301,7 @@ static void handle_lightmap_task_finish(UpdateLightMapTaskResult& result, const 
             StaticLightMapChunk* lightmap_chunk = light_chunks.get_unchecked(chunk_pos);
             if (lightmap_chunk != nullptr) {
                 const glm::uvec2 texture_offset = offset % LIGHTMAP_CHUNK_SIZE;
-                lightmap_chunk->update_texture(write_offset, result.width, texture_offset, glm::uvec2(write_width, write_height), result.colors);
+                lightmap_chunk->update_texture(write_offset, result.width, texture_offset, glm::uvec2(write_width, write_height), result.colors.data());
             }
 
             offset.x += write_width;
@@ -323,9 +319,6 @@ static void handle_lightmap_task_finish(UpdateLightMapTaskResult& result, const 
         chunk_pos.x = start_chunk_pos.x;
         chunk_pos.y += 1;
     }
-
-    delete[] result.colors;
-    delete[] result.masks;
 }
 
 void World::update(const sge::Camera& camera) {

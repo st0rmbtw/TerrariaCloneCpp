@@ -32,12 +32,11 @@ struct TileDigAnimation {
 };
 
 struct UpdateLightMapTaskResult {
+    HeapArray<Color> colors;
+    HeapArray<LightMask> masks;
     sge::IRect area;
-    Color* colors = nullptr;
-    LightMask* masks = nullptr;
     int width = 0;
     int height = 0;
-    bool finished = false;
 };
 
 class World {

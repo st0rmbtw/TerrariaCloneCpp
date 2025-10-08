@@ -1,6 +1,5 @@
 #include <algorithm>
 
-#include <LLGL/Container/DynamicArray.h>
 #include <LLGL/Tags.h>
 #include <LLGL/BufferFlags.h>
 #include <LLGL/ResourceFlags.h>
@@ -50,10 +49,10 @@ static bool blur(LightMap& lightmap, int index, glm::vec3& prev_light, float& pr
 
 DynamicLighting::DynamicLighting(const WorldData& world, LLGL::Texture* light_texture) : m_light_texture(light_texture) {
     using Constants::SUBDIVISION;
-    m_dynamic_lightmap = LightMap(world.area.width() * SUBDIVISION, world.area.height() * SUBDIVISION);
+    m_dynamic_lightmap = LightMap(world.area.size() * SUBDIVISION);
     m_renderer = &sge::Engine::Renderer();
 
-    m_line = LLGL::DynamicArray<Color>(Constants::LIGHT_AIR_DECAY_STEPS);
+    m_line = HeapArray<Color>(Constants::LIGHT_AIR_DECAY_STEPS);
 
     for (int y = 0; y < m_dynamic_lightmap.height; ++y) {
         for (int x = 0; x < m_dynamic_lightmap.width; ++x) {
@@ -206,7 +205,7 @@ SGE_FORCE_INLINE static void blur_vertical(LightMap& lightmap, const sge::IRect&
     }
 }
 
-static uint32_t count_steps(const LightMap& lightmap, LLGL::DynamicArray<Color>& line, glm::vec3& prev_light, float& prev_decay, int start_index, int stride) {
+static uint32_t count_steps(const LightMap& lightmap, HeapArray<Color>& line, glm::vec3& prev_light, float& prev_decay, int start_index, int stride) {
     using Constants::LIGHT_EPSILON;
 
     int index = start_index;
@@ -248,7 +247,7 @@ static uint32_t count_steps(const LightMap& lightmap, LLGL::DynamicArray<Color>&
     return i;
 }
 
-static sge::IRect calculate_light_area(const LightMap& lightmap, LLGL::DynamicArray<Color>& line, glm::ivec2 pos, const glm::vec3& color) {
+static sge::IRect calculate_light_area(const LightMap& lightmap, HeapArray<Color>& line, glm::ivec2 pos, const glm::vec3& color) {
     glm::vec3 prev_light = glm::vec3(0.0f);
     float prev_decay = 0.0f;
     int length = 0;
@@ -333,8 +332,8 @@ void DynamicLighting::compute_light(const sge::Camera& camera, const World& worl
 
     LightMap& lightmap = m_dynamic_lightmap;
 
-    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / Constants::TILE_SIZE) - 8;
-    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / Constants::TILE_SIZE) + 8;
+    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / Constants::TILE_SIZE) - Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE;
+    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / Constants::TILE_SIZE) + Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE;
 
     const sge::URect screen_blur_area = sge::URect(
         glm::uvec2(glm::max(proj_area_min * Constants::SUBDIVISION, glm::ivec2(0))),
@@ -535,7 +534,7 @@ void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
     tile_texture_desc.mipLevels = 1;
 
     {
-        LLGL::DynamicArray<uint8_t> pixels(world.area.width() * world.area.height(), LLGL::UninitializeTag{});
+        HeapArray<uint8_t> pixels(world.area.width() * world.area.height());
 
         for (int y = 0; y < world.area.height(); ++y) {
             for (int x = 0; x < world.area.width(); ++x) {

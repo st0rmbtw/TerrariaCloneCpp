@@ -630,13 +630,15 @@ void Player::update(World& world) {
 void Player::keep_in_world_bounds(const World& world) noexcept {
     const glm::vec2 new_pos = world.keep_in_world_bounds(m_position, glm::vec2{ PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF });
 
-    if (m_position.x != new_pos.x) {
+    if (!sge::approx_equals(m_position.x, new_pos.x)) {
         m_velocity.x = 0.0f;
     }
 
-    if (m_position.y != new_pos.y) {
+    if (!sge::approx_equals(m_position.y, new_pos.y)) {
         m_velocity.y = 0.0f;
     }
+
+    m_position = new_pos;
 }
 
 float Player::get_fall_distance() const {
