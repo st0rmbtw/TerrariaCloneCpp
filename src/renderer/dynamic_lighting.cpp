@@ -9,6 +9,8 @@
 #include <SGE/types/binding_layout.hpp>
 #include <SGE/profile.hpp>
 
+#include "../utils/concurrent_loop.hpp"
+
 #include "dynamic_lighting.hpp"
 
 static bool blur(LightMap& lightmap, int index, glm::vec3& prev_light, float& prev_decay) {
@@ -72,111 +74,6 @@ SGE_FORCE_INLINE static void blur_line(LightMap& lightmap, int start, int end, i
         blur(lightmap, start + index, prev_light, prev_decay);
         blur(lightmap, end - index, prev_light2, prev_decay2);
     }
-}
-
-static constexpr unsigned g_maxThreadCountStaticArray = 64;
-
-static void DoConcurrentRangeInWorkerContainer(
-    const std::function<void(std::size_t begin, std::size_t end)>&  task,
-    std::size_t                                                     count,
-    std::size_t                                                     workerCount,
-    std::thread*                                                    workers)
-{
-    /* Distribute work to threads */
-    const std::size_t workSize          = count / workerCount;
-    const std::size_t workSizeRemain    = count % workerCount;
-
-    std::size_t offset = 0;
-
-    for (size_t i = 0; i < workerCount; ++i)
-    {
-        workers[i] = std::thread(task, offset, offset + workSize);
-        offset += workSize;
-    }
-
-    /* Execute task of remaining work on main thread */
-    if (workSizeRemain > 0)
-        task(offset, offset + workSizeRemain);
-
-    /* Join worker threads */
-    for (size_t i = 0; i < workerCount; ++i) workers[i].join();
-}
-
-static unsigned Log2Uint(unsigned n)
-{
-    unsigned nLog2 = 0;
-    while (n >>= 1)
-        ++nLog2;
-    return nLog2;
-}
-
-static unsigned ClampThreadCount(unsigned threadCount, std::size_t workSize, unsigned threadMinWorkSize)
-{
-    if (workSize > threadMinWorkSize)
-    {
-        if (threadCount == LLGL_MAX_THREAD_COUNT)
-        {
-            /* Compute number of threads automatically logarithmically to the workload */
-            threadCount = Log2Uint(static_cast<unsigned>(workSize / threadMinWorkSize));
-
-            /*
-            Clamp to maximum number of threads support by the CPU.
-            If this value is undefined or not comutable, the return value of the STL function is 0.
-            */
-            const unsigned maxThreadCount = std::thread::hardware_concurrency();
-            if (maxThreadCount > 0)
-                threadCount = std::min(threadCount, maxThreadCount);
-        }
-
-        /* Clamp final number of threads by the minimum workload per thread */
-        return std::min(threadCount, static_cast<unsigned>(workSize / threadMinWorkSize));
-    }
-    return 0;
-}
-
-static void DoConcurrentRange(
-    const std::function<void(std::size_t begin, std::size_t end)>&  task,
-    std::size_t                                                     count,
-    unsigned                                                        threadCount,
-    unsigned                                                        threadMinWorkSize)
-{
-    threadCount = ClampThreadCount(threadCount, count, threadMinWorkSize);
-
-    if (threadCount <= 1)
-    {
-        /* Run single-threaded */
-        task(0, count);
-    }
-    else if (threadCount <= g_maxThreadCountStaticArray)
-    {
-        /* Launch worker threads in static array */
-        std::thread workers[g_maxThreadCountStaticArray];
-        DoConcurrentRangeInWorkerContainer(task, count, threadCount, workers);
-    }
-    else if (threadCount > 1)
-    {
-        /* Launch worker threads in dynamic array */
-        std::vector<std::thread> workers(threadCount);
-        DoConcurrentRangeInWorkerContainer(task, count, threadCount, workers.data());
-    }
-}
-
-static void DoConcurrent(
-    const std::function<void(std::size_t index)>&   task,
-    std::size_t                                     count,
-    unsigned                                        threadCount = LLGL_MAX_THREAD_COUNT,
-    unsigned                                        threadMinWorkSize = 64)
-{
-    DoConcurrentRange(
-        [&task](std::size_t begin, std::size_t end)
-        {
-            for (size_t i = begin; i < end; ++i)
-                task(i);
-        },
-        count,
-        threadCount,
-        threadMinWorkSize
-    );
 }
 
 SGE_FORCE_INLINE static void blur_horizontal(LightMap& lightmap, const sge::IRect& area) {
@@ -362,7 +259,7 @@ void DynamicLighting::compute_light(const sge::Camera& camera, const World& worl
     }
 
     // Blur
-    DoConcurrent([&lightmap, this](size_t i) {
+    DoConcurrent(m_areas.size(), [&lightmap, this](size_t i) {
         const sge::IRect& area = m_areas[i];
 
         for (size_t i = 0; i < 2; ++i) {
@@ -372,7 +269,7 @@ void DynamicLighting::compute_light(const sge::Camera& camera, const World& worl
         }
 
         blur_horizontal(lightmap, area);
-    }, m_areas.size(), m_areas.size(), 1);
+    });
 
     const auto& context = m_renderer->Context();
 

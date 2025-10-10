@@ -2,6 +2,8 @@
 
 #include "world_data.hpp"
 
+#include "../utils/concurrent_loop.hpp"
+
 void LightMap::init_area(const WorldData& world, const sge::IRect& area, glm::ivec2 tile_offset) {
     ZoneScoped;
 
@@ -10,7 +12,9 @@ void LightMap::init_area(const WorldData& world, const sge::IRect& area, glm::iv
 
     using Constants::SUBDIVISION;
 
-    for (int y = area.min.y; y < area.max.y; ++y) {
+    DoConcurrent(area.height(), [this, area, tile_offset, &world](const std::size_t i) {
+        const int y = area.min.y + i;
+
         for (int x = area.min.x; x < area.max.x; ++x) {
             const TilePos color_pos = TilePos(x, y);
             const TilePos tile_pos = tile_offset + color_pos / SUBDIVISION;
@@ -34,7 +38,7 @@ void LightMap::init_area(const WorldData& world, const sge::IRect& area, glm::iv
                 set_color(color_pos, glm::vec3(1.0f));
             }
         }
-    }
+    });
 }
 
 
@@ -71,7 +75,9 @@ void LightMap::blur_horizontal(const sge::IRect& area, const LightMap& reference
     const int min_x = std::max(reference_offset.x - 1, 1);
     const int max_x = std::min(reference_offset.x + area.width(), reference.width - 1);
 
-    for (int y = area.min.y; y < area.max.y; ++y) {
+    DoConcurrent(area.height(), [this, &reference, min_x, max_x, area, reference_offset](const std::size_t i) {
+        const int y = area.min.y + i;
+
         glm::vec3 prev_light = reference.get_color({min_x, reference_offset.y + y});
         float prev_decay = Constants::LightDecay(reference.get_mask({min_x - 1, reference_offset.y + y}));
 
@@ -79,7 +85,7 @@ void LightMap::blur_horizontal(const sge::IRect& area, const LightMap& reference
         float prev_decay2 = Constants::LightDecay(reference.get_mask({max_x, reference_offset.y + y}));
 
         blur_line(y * width + area.min.x, y * width + (area.max.x - 1), 1, prev_light, prev_decay, prev_light2, prev_decay2);
-    }
+    });
 }
 
 void LightMap::blur_vertical(const sge::IRect& area, const LightMap& reference, glm::ivec2 reference_offset) {
@@ -92,7 +98,8 @@ void LightMap::blur_vertical(const sge::IRect& area, const LightMap& reference, 
     const int min_y = std::max(reference_offset.y - 1, 1);
     const int max_y = std::min(reference_offset.y + area.height(), reference.height - 1);
 
-    for (int x = area.min.x; x < area.max.x; ++x) {
+    DoConcurrent(area.width(), [this, &reference, min_y, max_y, area, reference_offset](const std::size_t i) {
+        const int x = area.min.x + i;
         glm::vec3 prev_light = reference.get_color({reference_offset.x + x, min_y});
         float prev_decay = Constants::LightDecay(reference.get_mask({reference_offset.x + x, min_y - 1}));
 
@@ -100,5 +107,5 @@ void LightMap::blur_vertical(const sge::IRect& area, const LightMap& reference, 
         float prev_decay2 = Constants::LightDecay(reference.get_mask({reference_offset.x + x, max_y}));
 
         blur_line(area.min.y * width + x, (area.max.y - 1) * width + x, width, prev_light, prev_decay, prev_light2, prev_decay2);
-    }
+    });
 }
