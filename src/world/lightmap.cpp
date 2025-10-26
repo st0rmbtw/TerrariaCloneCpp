@@ -72,21 +72,19 @@ void LightMap::blur_horizontal(const sge::IRect& area, const LightMap& reference
     SGE_ASSERT((reference_offset.x + area.width()) <= reference.width);
     SGE_ASSERT((reference_offset.y + area.height()) <= reference.height);
 
-    const int min_x = std::max(reference_offset.x - 1, 1);
-    const int max_x = std::min(reference_offset.x + area.width(), reference.width - 1);
+    const int ref_min_x = std::max(reference_offset.x - 1, 1);
+    const int ref_max_x = std::min(reference_offset.x + area.width(), reference.width - 1);
 
-    const int min_y = area.min.y;
+    DoConcurrent(area.height(), [this, &reference, ref_min_x, ref_max_x, area, reference_offset](const std::size_t i) {
+        const int y = area.min.y + i;
 
-    DoConcurrent(area.height(), [this, &reference, min_x, max_x, min_y, reference_offset](const std::size_t i) {
-        const int y = min_y + i;
+        glm::vec3 prev_light = reference.get_color({ref_min_x, reference_offset.y + y});
+        float prev_decay = Constants::LightDecay(reference.get_mask({ref_min_x, reference_offset.y + y}));
 
-        glm::vec3 prev_light = reference.get_color({min_x, reference_offset.y + y});
-        float prev_decay = Constants::LightDecay(reference.get_mask({min_x, reference_offset.y + y}));
+        glm::vec3 prev_light2 = reference.get_color({ref_max_x, reference_offset.y + y});
+        float prev_decay2 = Constants::LightDecay(reference.get_mask({ref_max_x, reference_offset.y + y}));
 
-        glm::vec3 prev_light2 = reference.get_color({max_x, reference_offset.y + y});
-        float prev_decay2 = Constants::LightDecay(reference.get_mask({max_x, reference_offset.y + y}));
-
-        blur_line(y * width + min_x, y * width + max_x, 1, prev_light, prev_decay, prev_light2, prev_decay2);
+        blur_line(y * width + area.min.x, y * width + (area.max.x - 1), 1, prev_light, prev_decay, prev_light2, prev_decay2);
     });
 }
 
@@ -97,19 +95,17 @@ void LightMap::blur_vertical(const sge::IRect& area, const LightMap& reference, 
     SGE_ASSERT((reference_offset.x + area.width()) <= reference.width);
     SGE_ASSERT((reference_offset.y + area.height()) <= reference.height);
 
-    const int min_y = std::max(reference_offset.y - 1, 1);
-    const int max_y = std::min(reference_offset.y + area.height(), reference.height - 1);
+    const int ref_min_y = std::max(reference_offset.y - 1, 1);
+    const int ref_max_y = std::min(reference_offset.y + area.height(), reference.height - 1);
 
-    const int min_x = area.min.x;
+    DoConcurrent(area.width(), [this, &reference, ref_min_y, ref_max_y, area, reference_offset](const std::size_t i) {
+        const int x = area.min.x + i;
+        glm::vec3 prev_light = reference.get_color({reference_offset.x + x, ref_min_y});
+        float prev_decay = Constants::LightDecay(reference.get_mask({reference_offset.x + x, ref_min_y}));
 
-    DoConcurrent(area.width(), [this, &reference, min_y, max_y, min_x, reference_offset](const std::size_t i) {
-        const int x = min_x + i;
-        glm::vec3 prev_light = reference.get_color({reference_offset.x + x, min_y});
-        float prev_decay = Constants::LightDecay(reference.get_mask({reference_offset.x + x, min_y}));
+        glm::vec3 prev_light2 = reference.get_color({reference_offset.x + x, ref_max_y});
+        float prev_decay2 = Constants::LightDecay(reference.get_mask({reference_offset.x + x, ref_max_y}));
 
-        glm::vec3 prev_light2 = reference.get_color({reference_offset.x + x, max_y});
-        float prev_decay2 = Constants::LightDecay(reference.get_mask({reference_offset.x + x, max_y}));
-
-        blur_line(min_y * width + x, (max_y - 1) * width + x, width, prev_light, prev_decay, prev_light2, prev_decay2);
+        blur_line(area.min.y * width + x, (area.max.y - 1) * width + x, width, prev_light, prev_decay, prev_light2, prev_decay2);
     });
 }
