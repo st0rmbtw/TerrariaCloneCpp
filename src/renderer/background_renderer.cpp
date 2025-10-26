@@ -51,11 +51,11 @@ void BackgroundRenderer::init() {
     m_world_instance_buffer = m_renderer->CreateVertexBuffer(MAX_QUADS * sizeof(BackgroundInstance), Assets::GetVertexFormat(VertexFormatAsset::BackgroundInstance), "BackgroundRenderer InstanceBuffer");
 
     {
-        LLGL::Buffer* buffers[] = { m_vertex_buffer, m_instance_buffer };
+        LLGL::Buffer* buffers[] = { m_vertex_buffer.get(), m_instance_buffer.get() };
         m_buffer_array = context->CreateBufferArray(2, buffers);
     }
     {
-        LLGL::Buffer* buffers[] = { m_vertex_buffer, m_world_instance_buffer };
+        LLGL::Buffer* buffers[] = { m_vertex_buffer.get(), m_world_instance_buffer.get() };
         m_world_buffer_array = context->CreateBufferArray(2, buffers);
     }
 
@@ -76,7 +76,7 @@ void BackgroundRenderer::init() {
     const LLGL::ResourceViewDescriptor resource_views[] = {
         m_renderer->GlobalUniformBuffer(), backgrounds_texture
     };
-    m_resource_heap = context->CreateResourceHeap(m_pipeline_layout, resource_views);
+    m_resource_heap = context->CreateResourceHeap(m_pipeline_layout.get(), resource_views);
 
     const sge::ShaderPipeline& background_shader = Assets::GetShader(ShaderAsset::BackgroundShader);
 
@@ -90,7 +90,7 @@ void BackgroundRenderer::init() {
     pipelineDesc.debugName = "BackgroundRenderer Pipeline";
     pipelineDesc.vertexShader = background_shader.vs;
     pipelineDesc.fragmentShader = background_shader.ps;
-    pipelineDesc.pipelineLayout = m_pipeline_layout;
+    pipelineDesc.pipelineLayout = m_pipeline_layout.get();
     pipelineDesc.indexFormat = LLGL::Format::R16UInt;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = context->CreateRenderPass(render_pass);
@@ -129,9 +129,9 @@ void BackgroundRenderer::init_targets(LLGL::Extent2D resolution) {
     background_target_desc.samples = samples;
     if (samples > 1) {
         background_target_desc.colorAttachments[0] = m_background_render_texture->GetFormat();
-        background_target_desc.resolveAttachments[0] = m_background_render_texture;
+        background_target_desc.resolveAttachments[0] = m_background_render_texture.get();
     } else {
-        background_target_desc.colorAttachments[0] = m_background_render_texture;
+        background_target_desc.colorAttachments[0] = m_background_render_texture.get();
     }
     m_background_render_target = context->CreateRenderTarget(background_target_desc);
 }
@@ -148,7 +148,7 @@ void BackgroundRenderer::init_world(WorldRenderer& world_renderer) {
     pipelineDesc.debugName = "BackgroundRenderer Pipeline World";
     pipelineDesc.vertexShader = background_shader.vs;
     pipelineDesc.fragmentShader = background_shader.ps;
-    pipelineDesc.pipelineLayout = m_pipeline_layout;
+    pipelineDesc.pipelineLayout = m_pipeline_layout.get();
     pipelineDesc.indexFormat = LLGL::Format::R16UInt;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = world_renderer.render_pass();

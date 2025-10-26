@@ -615,6 +615,9 @@ static void world_grassify(WorldData& world) {
 void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t seed) {
     world.destroy();
 
+    width = 8000;
+    height = 500;
+
     srand(seed);
 
     SGE_ASSERT(height >= 500);
@@ -646,26 +649,30 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
     world.area = area;
     world.layers = layers;
 
-    world_generate_terrain(world);
+    for (int x = world.playable_area.min.x; x < world.playable_area.max.x; ++x) {
+        set_block(world, TilePos(x, 250), Block(BlockType::Dirt));
+    }
 
-    world_make_hills(world);
+    // world_generate_terrain(world);
 
-    world_generate_walls(world);
+    // world_make_hills(world);
 
-    world_rough_cavern_layer_border(world);
+    // world_generate_walls(world);
 
-    world_big_caves(world, seed);
-    world_small_caves(world, seed);
+    // world_rough_cavern_layer_border(world);
 
-    world_generate_dirt_in_rocks(world, seed);
+    // world_big_caves(world, seed);
+    // world_small_caves(world, seed);
 
-    world_grassify(world);
+    // world_generate_dirt_in_rocks(world, seed);
 
-    world_generate_rocks_in_dirt(world, seed);
+    // world_grassify(world);
 
-    world_remove_walls_from_surface(world);
+    // world_generate_rocks_in_dirt(world, seed);
 
-    world_grow_trees(world);
+    // world_remove_walls_from_surface(world);
+
+    // world_grow_trees(world);
 
     world.update_tiles_sprites();
 
@@ -673,13 +680,15 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
 
     const sge::IRect light_area = world.area * Constants::SUBDIVISION;
     world.lightmap = LightMap(light_area.size());
-    world.lightmap.init_area(world, light_area);
+    memset(world.lightmap.colors.data(), 0xFF, light_area.width() * light_area.height() * sizeof(Color));
 
-    world.lightmap.blur_horizontal(light_area);
-    world.lightmap.blur_vertical(light_area);
-    world.lightmap.blur_horizontal(light_area);
-    world.lightmap.blur_vertical(light_area);
-    world.lightmap.blur_horizontal(light_area);
+    // world.lightmap.init_area(world, light_area);
+
+    // world.lightmap.blur_horizontal(light_area);
+    // world.lightmap.blur_vertical(light_area);
+    // world.lightmap.blur_horizontal(light_area);
+    // world.lightmap.blur_vertical(light_area);
+    // world.lightmap.blur_horizontal(light_area);
 
     srand(time(nullptr));
 };

@@ -1,7 +1,6 @@
 #ifndef DATA_STRUCTURE_LRU_CACHE_HPP
 #define DATA_STRUCTURE_LRU_CACHE_HPP
 
-#include <map>
 #include <unordered_map>
 #include <utility>
 #include <list>
@@ -52,7 +51,7 @@ public:
 
             // insert the new item
             m_list.push_front(key);
-            m_map.emplace(key, std::make_pair(std::move(value), m_list.begin()));
+            m_map.try_emplace(key, std::move(value), m_list.begin());
             // m_map[key] = std::make_pair(std::move(value), m_list.begin());
         }
     }

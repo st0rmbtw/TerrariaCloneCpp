@@ -9,6 +9,8 @@
 #include <LLGL/BufferArray.h>
 #include <LLGL/Texture.h>
 
+#include <SGE/utils/llgl.hpp>
+
 #include "../constants.hpp"
 #include "../renderer/types.hpp"
 
@@ -18,28 +20,16 @@
 struct StaticLightMapChunk {
     glm::uvec2 index;
 
-    LLGL::Texture* texture = nullptr;
-    LLGL::Buffer* vertex_buffer = nullptr;
+    sge::LLGLResource<LLGL::Texture> texture = nullptr;
+    sge::LLGLResource<LLGL::Buffer> vertex_buffer = nullptr;
 
     StaticLightMapChunk() = default;
     StaticLightMapChunk(glm::uvec2 index, const LightMap& lightmap);
 
-    StaticLightMapChunk(StaticLightMapChunk&& other) noexcept {
-        operator=(std::move(other));
-    }
+    StaticLightMapChunk(StaticLightMapChunk&&) = default;
+    StaticLightMapChunk& operator=(StaticLightMapChunk&&) = default;
 
     void update_texture(glm::uvec2 source_offset, uint32_t source_stride, glm::uvec2 texture_offset, glm::uvec2 size, Color* colors);
-
-    StaticLightMapChunk& operator =(StaticLightMapChunk&& other) noexcept {
-        index = other.index;
-        texture = other.texture;
-        vertex_buffer = other.vertex_buffer;
-
-        other.texture = nullptr;
-        other.vertex_buffer = nullptr;
-
-        return *this;
-    }
 
     ~StaticLightMapChunk();
 };
@@ -58,30 +48,8 @@ public:
         build_mesh(world, block_data_arena, wall_data_arena);
     }
 
-    RenderChunk(RenderChunk&& other) noexcept {
-        operator=(std::move(other));
-    }
-
-    RenderChunk& operator=(RenderChunk&& other) noexcept {
-        m_block_instance_buffer = other.m_block_instance_buffer;
-        m_wall_instance_buffer = other.m_wall_instance_buffer;
-        m_block_buffer_array = other.m_block_buffer_array;
-        m_wall_buffer_array = other.m_wall_buffer_array;
-
-        other.m_block_instance_buffer = nullptr;
-        other.m_wall_instance_buffer = nullptr;
-        other.m_block_buffer_array = nullptr;
-        other.m_wall_buffer_array = nullptr;
-        
-        m_world_pos = other.m_world_pos;
-        m_index = other.m_index;
-        m_block_count = other.m_block_count;
-        m_wall_count = other.m_wall_count;
-        m_blocks_dirty = other.m_blocks_dirty;
-        m_walls_dirty = other.m_walls_dirty;
-
-        return *this;
-    }
+    RenderChunk(RenderChunk&&) = default;
+    RenderChunk& operator=(RenderChunk&&) = default;
 
     void build_mesh(
         const WorldData& world,
@@ -122,22 +90,22 @@ public:
 
     [[nodiscard]]
     inline LLGL::BufferArray* block_buffer_array() const noexcept {
-        return m_block_buffer_array;
+        return m_block_buffer_array.get();
     }
 
     [[nodiscard]]
     inline LLGL::BufferArray* wall_buffer_array() const noexcept {
-        return m_wall_buffer_array;
+        return m_wall_buffer_array.get();
     }
 
     [[nodiscard]]
     inline LLGL::Buffer* block_instance_buffer() const noexcept {
-        return m_block_instance_buffer;
+        return m_block_instance_buffer.get();
     }
 
     [[nodiscard]]
     inline LLGL::Buffer* wall_instance_buffer() const noexcept {
-        return m_wall_instance_buffer;
+        return m_wall_instance_buffer.get();
     }
 
     ~RenderChunk() {
@@ -147,10 +115,10 @@ public:
 private:
     glm::vec2 m_world_pos;
     glm::uvec2 m_index;
-    LLGL::BufferArray* m_block_buffer_array = nullptr;
-    LLGL::BufferArray* m_wall_buffer_array = nullptr;
-    LLGL::Buffer* m_wall_instance_buffer = nullptr;
-    LLGL::Buffer* m_block_instance_buffer = nullptr;
+    sge::LLGLResource<LLGL::BufferArray> m_block_buffer_array = nullptr;
+    sge::LLGLResource<LLGL::BufferArray> m_wall_buffer_array = nullptr;
+    sge::LLGLResource<LLGL::Buffer> m_wall_instance_buffer = nullptr;
+    sge::LLGLResource<LLGL::Buffer> m_block_instance_buffer = nullptr;
     uint16_t m_block_count = 0;
     uint16_t m_wall_count = 0;
     bool m_blocks_dirty = false;

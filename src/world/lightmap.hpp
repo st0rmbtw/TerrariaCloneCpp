@@ -153,13 +153,13 @@ struct LightMap {
 
     uint32_t blur_until_black(int start, int stride, glm::vec3& prev_light, float& prev_decay);
 
-    void blur_horizontal(const sge::IRect& area, const LightMap& reference, glm::ivec2 reference_offset);
+    void blur_horizontal(const sge::IRect& area, const LightMap& reference, glm::ivec2 reference_offset = {});
 
     void blur_horizontal(const sge::IRect& area) {
         blur_horizontal(area, *this, glm::ivec2(0));
     }
 
-    void blur_vertical(const sge::IRect& area, const LightMap& reference, glm::ivec2 reference_offset);
+    void blur_vertical(const sge::IRect& area, const LightMap& reference, glm::ivec2 reference_offset = {});
 
     void blur_vertical(const sge::IRect& area) {
         blur_vertical(area, *this, glm::ivec2(0));

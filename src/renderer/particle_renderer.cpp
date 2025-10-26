@@ -56,7 +56,7 @@ void ParticleRenderer::init() {
     m_vertex_buffer = m_renderer->CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::ParticleVertex), "ParticleRenderer VertexBuffer");
     m_instance_buffer = m_renderer->CreateVertexBuffer(MAX_PARTICLES_COUNT * sizeof(ParticleInstance), Assets::GetVertexFormat(VertexFormatAsset::ParticleInstance), "ParticleRenderer InstanceBuffer");
 
-    LLGL::Buffer* buffers[] = { m_vertex_buffer, m_instance_buffer };
+    LLGL::Buffer* buffers[] = { m_vertex_buffer.get(), m_instance_buffer.get() };
     m_buffer_array = context->CreateBufferArray(2, buffers);
 
     {
@@ -119,7 +119,7 @@ void ParticleRenderer::init() {
     LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
     {
         const LLGL::ResourceViewDescriptor resource_views[] = {
-            m_renderer->GlobalUniformBuffer(), m_transform_buffer, m_atlas.texture()
+            m_renderer->GlobalUniformBuffer(), m_transform_buffer.get(), m_atlas.texture()
         };
 
         m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
@@ -176,7 +176,7 @@ void ParticleRenderer::init() {
     LLGL::PipelineLayout* compute_pipeline_layout = context->CreatePipelineLayout(compute_pipeline_layout_desc);
 
     const LLGL::ResourceViewDescriptor resource_views[] = {
-        m_renderer->GlobalUniformBuffer(), m_transform_buffer, m_position_buffer, m_rotation_buffer, m_scale_buffer
+        m_renderer->GlobalUniformBuffer(), m_transform_buffer.get(), m_position_buffer.get(), m_rotation_buffer.get(), m_scale_buffer.get()
     };
 
     m_compute_resource_heap = context->CreateResourceHeap(compute_pipeline_layout, resource_views);

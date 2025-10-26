@@ -31,20 +31,20 @@ public:
 private:
     sge::Renderer* m_renderer = nullptr;
 
-    LLGL::PipelineState* m_pipeline = nullptr;
-    LLGL::PipelineState* m_compute_pipeline = nullptr;
-    LLGL::ResourceHeap* m_resource_heap = nullptr;
-    LLGL::ResourceHeap* m_compute_resource_heap = nullptr;
+    sge::LLGLResource<LLGL::PipelineState> m_pipeline = nullptr;
+    sge::LLGLResource<LLGL::PipelineState> m_compute_pipeline = nullptr;
+    sge::LLGLResource<LLGL::ResourceHeap> m_resource_heap = nullptr;
+    sge::LLGLResource<LLGL::ResourceHeap> m_compute_resource_heap = nullptr;
 
-    LLGL::BufferArray* m_buffer_array = nullptr;
-    LLGL::Buffer* m_instance_buffer = nullptr;
-    LLGL::Buffer* m_vertex_buffer = nullptr;
+    sge::LLGLResource<LLGL::BufferArray> m_buffer_array = nullptr;
+    sge::LLGLResource<LLGL::Buffer> m_instance_buffer = nullptr;
+    sge::LLGLResource<LLGL::Buffer> m_vertex_buffer = nullptr;
 
-    LLGL::Buffer* m_position_buffer = nullptr;
-    LLGL::Buffer* m_rotation_buffer = nullptr;
-    LLGL::Buffer* m_scale_buffer = nullptr;
+    sge::LLGLResource<LLGL::Buffer> m_position_buffer = nullptr;
+    sge::LLGLResource<LLGL::Buffer> m_rotation_buffer = nullptr;
+    sge::LLGLResource<LLGL::Buffer> m_scale_buffer = nullptr;
 
-    LLGL::Buffer* m_transform_buffer = nullptr;
+    sge::LLGLResource<LLGL::Buffer> m_transform_buffer = nullptr;
 
     ParticleInstance* m_instance_buffer_data = nullptr;
     ParticleInstance* m_instance_buffer_data_ptr = nullptr;

@@ -98,7 +98,7 @@ void WorldRenderer::init() {
         LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
 
         const LLGL::ResourceViewDescriptor resource_views[] = {
-            m_renderer->GlobalUniformBuffer(), m_tile_texture_data_buffer
+            m_renderer->GlobalUniformBuffer(), m_tile_texture_data_buffer.get()
         };
 
         m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
@@ -111,7 +111,7 @@ void WorldRenderer::init() {
         pipelineDesc.fragmentShader = tilemap_shader.ps;
         pipelineDesc.geometryShader = tilemap_shader.gs;
         pipelineDesc.pipelineLayout = pipelineLayout;
-        pipelineDesc.renderPass = m_render_pass;
+        pipelineDesc.renderPass = m_render_pass.get();
         pipelineDesc.indexFormat = LLGL::Format::R16UInt;
         pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
         pipelineDesc.rasterizer.frontCCW = true;
@@ -170,7 +170,7 @@ void WorldRenderer::init() {
         lightPipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
         lightPipelineDesc.rasterizer.frontCCW = true;
         lightPipelineDesc.rasterizer.multiSampleEnabled = (samples > 1);
-        lightPipelineDesc.renderPass = m_static_lightmap_render_pass;
+        lightPipelineDesc.renderPass = m_static_lightmap_render_pass.get();
         lightPipelineDesc.blend = LLGL::BlendDescriptor {
             .targets = {
                 LLGL::BlendTargetDescriptor {
@@ -185,9 +185,9 @@ void WorldRenderer::init() {
 
 void WorldRenderer::init_lighting(const WorldData& world) {
     if (SupportsAcceleratedDynamicLighting(*m_renderer)) {
-        m_dynamic_lighting = std::make_unique<AcceleratedDynamicLighting>(world, m_dynamic_light_texture);
+        m_dynamic_lighting = std::make_unique<AcceleratedDynamicLighting>(world, m_dynamic_light_texture.get());
     } else {
-        m_dynamic_lighting = std::make_unique<DynamicLighting>(world, m_dynamic_light_texture);
+        m_dynamic_lighting = std::make_unique<DynamicLighting>(world, m_dynamic_light_texture.get());
     }
 }
 
@@ -251,28 +251,28 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
 
     {
         LLGL::RenderTargetDescriptor target_desc;
-        target_desc.renderPass = m_render_pass;
+        target_desc.renderPass = m_render_pass.get();
         target_desc.resolution = resolution;
         target_desc.samples = samples;
-        target_desc.depthStencilAttachment = m_depth_texture;
+        target_desc.depthStencilAttachment = m_depth_texture.get();
         if (samples > 1) {
             target_desc.colorAttachments[0] = m_target_texture->GetFormat();
-            target_desc.resolveAttachments[0] = m_target_texture;
+            target_desc.resolveAttachments[0] = m_target_texture.get();
         } else {
-            target_desc.colorAttachments[0] = m_target_texture;
+            target_desc.colorAttachments[0] = m_target_texture.get();
         }
         m_target = context->CreateRenderTarget(target_desc);
     }
     {
         LLGL::RenderTargetDescriptor target_desc;
-        target_desc.renderPass = m_static_lightmap_render_pass;
+        target_desc.renderPass = m_static_lightmap_render_pass.get();
         target_desc.resolution = resolution;
         target_desc.samples = samples;
         if (samples > 1) {
             target_desc.colorAttachments[0] = m_static_lightmap_texture->GetFormat();
-            target_desc.resolveAttachments[0] = m_static_lightmap_texture;
+            target_desc.resolveAttachments[0] = m_static_lightmap_texture.get();
         } else {
-            target_desc.colorAttachments[0] = m_static_lightmap_texture;
+            target_desc.colorAttachments[0] = m_static_lightmap_texture.get();
         }
         m_static_lightmap_target = context->CreateRenderTarget(target_desc);
     }
@@ -306,12 +306,12 @@ void WorldRenderer::init_textures(LLGL::Extent2D viewport) {
     LLGL::RenderTargetDescriptor lightTextureRenderTarget;
     lightTextureRenderTarget.resolution.width = width;
     lightTextureRenderTarget.resolution.height = height;
-    lightTextureRenderTarget.colorAttachments[0].texture = m_dynamic_light_texture;
+    lightTextureRenderTarget.colorAttachments[0].texture = m_dynamic_light_texture.get();
 
     m_dynamic_light_texture_target = context->CreateRenderTarget(lightTextureRenderTarget);
 
     if (m_dynamic_lighting) {
-        m_dynamic_lighting->set_light_texture(m_dynamic_light_texture);
+        m_dynamic_lighting->set_light_texture(m_dynamic_light_texture.get());
     }
 }
 

@@ -29,10 +29,14 @@ void RenderChunk::destroy() {
 
     const auto& context = sge::Engine::Renderer().Context();
 
-    SGE_RESOURCE_RELEASE(m_block_instance_buffer);
-    SGE_RESOURCE_RELEASE(m_wall_instance_buffer);
-    SGE_RESOURCE_RELEASE(m_block_buffer_array);
-    SGE_RESOURCE_RELEASE(m_wall_buffer_array);
+    if (m_block_instance_buffer)
+        context->Release(*m_block_instance_buffer);
+    if (m_wall_instance_buffer)
+        context->Release(*m_wall_instance_buffer);
+    if (m_block_buffer_array)
+        context->Release(*m_block_buffer_array);
+    if (m_wall_buffer_array)
+        context->Release(*m_wall_buffer_array);
 }
 
 static inline LLGL::BufferDescriptor GetBufferDescriptor() {
@@ -132,7 +136,7 @@ void RenderChunk::build_mesh(
 
         m_block_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
 
-        LLGL::Buffer* buffers[] = { GameRenderer::ChunkVertexBuffer(), m_block_instance_buffer };
+        LLGL::Buffer* buffers[] = { GameRenderer::ChunkVertexBuffer(), m_block_instance_buffer.get() };
 
         m_block_buffer_array = context->CreateBufferArray(2, buffers);
     }
@@ -142,7 +146,7 @@ void RenderChunk::build_mesh(
 
         m_wall_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
 
-        LLGL::Buffer* buffers[] = { GameRenderer::ChunkVertexBuffer(), m_wall_instance_buffer };
+        LLGL::Buffer* buffers[] = { GameRenderer::ChunkVertexBuffer(), m_wall_instance_buffer.get() };
 
         m_wall_buffer_array = context->CreateBufferArray(2, buffers);
     }

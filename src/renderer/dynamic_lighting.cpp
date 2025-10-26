@@ -361,7 +361,7 @@ void AcceleratedDynamicLighting::init_pipeline() {
         LLGL::PipelineLayout* lightInitPipelineLayout = context->CreatePipelineLayout(lightInitPipelineLayoutDesc);
 
         const LLGL::ResourceViewDescriptor lightInitResourceViews[] = {
-            m_uniform_buffer, m_light_buffer, m_light_texture
+            m_uniform_buffer.get(), m_light_buffer.get(), m_light_texture.get()
         };
 
         LLGL::ResourceHeapDescriptor lightResourceHeapDesc;
@@ -391,7 +391,7 @@ void AcceleratedDynamicLighting::init_pipeline() {
         LLGL::PipelineLayout* lightBlurPipelineLayout = context->CreatePipelineLayout(lightBlurPipelineLayoutDesc);
 
         const LLGL::ResourceViewDescriptor lightBlurResourceViews[] = {
-            m_uniform_buffer, m_tile_texture, m_light_texture
+            m_uniform_buffer.get(), m_tile_texture.get(), m_light_texture.get()
         };
 
         LLGL::ResourceHeapDescriptor lightBlurResourceHeapDesc;
@@ -526,12 +526,13 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
         commands->PopDebugGroup();
     };
 
+    LLGL::Texture* light_texture = m_light_texture.get();
     for (int i = 0; i < 2; ++i) {
         blur_horizontal();
-        commands->ResourceBarrier(0, nullptr, 1, &m_light_texture);
+        commands->ResourceBarrier(0, nullptr, 1, &light_texture);
 
         blur_vertical();
-        commands->ResourceBarrier(0, nullptr, 1, &m_light_texture);
+        commands->ResourceBarrier(0, nullptr, 1, &light_texture);
     }
     blur_horizontal();
 }

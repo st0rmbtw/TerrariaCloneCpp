@@ -44,7 +44,7 @@ private:
 
     LightMap m_dynamic_lightmap;
 
-    LLGL::Texture* m_light_texture = nullptr;
+    sge::LLGLResource<LLGL::Texture> m_light_texture = nullptr;
     sge::Renderer* m_renderer = nullptr;
 };
 
@@ -83,17 +83,17 @@ private:
 private:
     sge::Renderer* m_renderer = nullptr;
 
-    LLGL::Buffer* m_light_buffer = nullptr;
-    LLGL::Buffer* m_uniform_buffer = nullptr;
-    LLGL::Texture* m_tile_texture = nullptr;
-    LLGL::ResourceHeap* m_light_init_resource_heap = nullptr;
-    LLGL::ResourceHeap* m_light_blur_resource_heap = nullptr;
+    sge::LLGLResource<LLGL::Buffer> m_light_buffer = nullptr;
+    sge::LLGLResource<LLGL::Buffer> m_uniform_buffer = nullptr;
+    sge::LLGLResource<LLGL::Texture> m_tile_texture = nullptr;
+    sge::LLGLResource<LLGL::ResourceHeap> m_light_init_resource_heap = nullptr;
+    sge::LLGLResource<LLGL::ResourceHeap> m_light_blur_resource_heap = nullptr;
 
-    LLGL::Texture* m_light_texture = nullptr;
+    sge::LLGLResource<LLGL::Texture> m_light_texture = nullptr;
 
-    LLGL::PipelineState* m_light_set_light_sources_pipeline = nullptr;
-    LLGL::PipelineState* m_light_vertical_pipeline = nullptr;
-    LLGL::PipelineState* m_light_horizontal_pipeline = nullptr;
+    sge::LLGLResource<LLGL::PipelineState> m_light_set_light_sources_pipeline = nullptr;
+    sge::LLGLResource<LLGL::PipelineState> m_light_vertical_pipeline = nullptr;
+    sge::LLGLResource<LLGL::PipelineState> m_light_horizontal_pipeline = nullptr;
 
     uint32_t m_workgroup_size = 16;
 

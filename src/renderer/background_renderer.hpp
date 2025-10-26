@@ -40,8 +40,8 @@ public:
     }
 
     [[nodiscard]]
-    LLGL::RenderTarget* target() { return m_background_render_target; }
-    LLGL::Texture* target_texture() { return m_background_render_texture; }
+    LLGL::RenderTarget* target() { return m_background_render_target.get(); }
+    LLGL::Texture* target_texture() { return m_background_render_texture.get(); }
 
 private:
     static void draw_layer_internal(const BackgroundLayer& layer, BackgroundInstance** p_buffer);
@@ -52,17 +52,17 @@ private:
 
     sge::Renderer* m_renderer = nullptr;
 
-    LLGL::PipelineLayout* m_pipeline_layout = nullptr;
-    LLGL::PipelineState* m_pipeline = nullptr;
-    LLGL::PipelineState* m_pipeline_world = nullptr;
-    LLGL::ResourceHeap* m_resource_heap = nullptr;
-    LLGL::Buffer* m_vertex_buffer = nullptr;
+    sge::LLGLResource<LLGL::PipelineLayout> m_pipeline_layout = nullptr;
+    sge::LLGLResource<LLGL::PipelineState> m_pipeline = nullptr;
+    sge::LLGLResource<LLGL::PipelineState> m_pipeline_world = nullptr;
+    sge::LLGLResource<LLGL::ResourceHeap> m_resource_heap = nullptr;
+    sge::LLGLResource<LLGL::Buffer> m_vertex_buffer = nullptr;
 
-    LLGL::Buffer* m_instance_buffer = nullptr;
-    LLGL::Buffer* m_world_instance_buffer = nullptr;
+    sge::LLGLResource<LLGL::Buffer> m_instance_buffer = nullptr;
+    sge::LLGLResource<LLGL::Buffer> m_world_instance_buffer = nullptr;
 
-    LLGL::BufferArray* m_buffer_array = nullptr;
-    LLGL::BufferArray* m_world_buffer_array = nullptr;
+    sge::LLGLResource<LLGL::BufferArray> m_buffer_array = nullptr;
+    sge::LLGLResource<LLGL::BufferArray> m_world_buffer_array = nullptr;
 
     BackgroundInstance* m_buffer = nullptr;
     BackgroundInstance* m_buffer_ptr = nullptr;
@@ -70,8 +70,8 @@ private:
     BackgroundInstance* m_world_buffer = nullptr;
     BackgroundInstance* m_world_buffer_ptr = nullptr;
 
-    LLGL::RenderTarget* m_background_render_target;
-    LLGL::Texture* m_background_render_texture;
+    sge::LLGLResource<LLGL::RenderTarget> m_background_render_target;
+    sge::LLGLResource<LLGL::Texture> m_background_render_texture;
 };
 
 #endif
