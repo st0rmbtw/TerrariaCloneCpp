@@ -284,18 +284,18 @@ inline void DrawCategoryPanel(const UiElement& element, sge::Batch& batch, sge::
     }
 }
 
-inline void DrawTextInput(const UiElement& element, sge::Batch& batch, sge::Sprite& sprite) {
+inline void DrawTextInput(const UiElement& element, sge::Batch& batch) {
     ZoneScoped;
 
     const UiTextInputData* custom_data = static_cast<const UiTextInputData*>(element.custom_data);
     const sge::Font& font = custom_data->font;
     TextInputData& data = custom_data->data;
     const sge::LinearRgba color = custom_data->color;
-    const float size = custom_data->size;
+    const float text_size = custom_data->size;
     const bool bar_visible = custom_data->bar_visible;
+    const float bar_height = text_size;
     
-    const sge::Texture& cursor_texture = Assets::GetTexture(TextureAsset::UiSliderHandle);
-    const float line_width = element.size.x - cursor_texture.size().x;
+    const float line_width = element.size.x;
 
     std::string::iterator begin = data.text().begin();
     std::string::iterator end = data.text().begin() + data.cursor_position();
@@ -303,7 +303,7 @@ inline void DrawTextInput(const UiElement& element, sge::Batch& batch, sge::Spri
     float x = 0.0f;
 
     if (!data.empty()) {
-        fit_result = sge::chars_fit_in_line_from_end(font, size, std::string_view{ begin, end }, line_width);
+        fit_result = sge::chars_fit_in_line_from_end(font, text_size, std::string_view{ begin, end }, line_width);
 
         if (data.cursor_position() == data.size()) {
             data.set_window_begin(data.cursor_position() - fit_result.bytes);
@@ -313,44 +313,40 @@ inline void DrawTextInput(const UiElement& element, sge::Batch& batch, sge::Spri
 
         begin = data.text().begin() + data.display_begin();
         end = data.text().end();
-        fit_result = sge::chars_fit_in_line_from_start(font, size, std::string_view{ begin, end }, line_width);
+        fit_result = sge::chars_fit_in_line_from_start(font, text_size, std::string_view{ begin, end }, line_width);
 
         // Draw text before cursor
         const auto from = begin;
         const auto to = data.text().begin() + data.cursor_position();
         const std::string_view string = std::string_view{ from, to };
 
-        const glm::vec2 bounds = sge::calculate_text_bounds(font, size, string);
+        const glm::vec2 bounds = sge::calculate_text_bounds(font, text_size, string);
 
-        const sge::RichText text = sge::rich_text(string, size, color);
+        const sge::RichText text = sge::rich_text(string, text_size, color);
         const glm::vec2 position = glm::vec2(element.position.x + x, element.position.y + (element.size.y - bounds.y) * 0.5f);
         batch.DrawText(text.sections, text.size(), position, font, sge::Order(element.z_index));
         x += bounds.x;
     }
 
     if (data.active() && bar_visible) {
-        sprite.set_anchor(sge::Anchor::TopLeft);
-        sprite.set_texture(cursor_texture);
-        sprite.set_custom_size(std::nullopt);
-        sprite.set_position(element.position + glm::vec2(x, (element.size.y - cursor_texture.size().y) * 0.5f));
-        sprite.set_color(sge::LinearRgba::white());
-        sprite.set_rotation(glm::identity<glm::quat>());
-        batch.DrawSprite(sprite, sge::Order(element.z_index));
+        batch.DrawRect(element.position + glm::vec2(x, (element.size.y - bar_height) * 0.5f), sge::Order(element.z_index + 1), {
+            .size = glm::vec2(2.0f, bar_height),
+            .color = sge::LinearRgba::white(),
+            .anchor = sge::Anchor::TopLeft
+        });
     }
 
     // Draw text after
     if (!data.empty()) {
-        x += cursor_texture.size().x;
-
         const auto from = data.text().begin() + data.cursor_position();
         const auto to = begin + fit_result.bytes;
 
         if (from < to) {
             const std::string_view string = std::string_view{ from, to };
 
-            const glm::vec2 bounds = sge::calculate_text_bounds(font, size, string);
+            const glm::vec2 bounds = sge::calculate_text_bounds(font, text_size, string);
 
-            const sge::RichText text = sge::rich_text(string, size, color);
+            const sge::RichText text = sge::rich_text(string, text_size, color);
             const glm::vec2 position = glm::vec2(element.position.x + x, element.position.y + (element.size.y - bounds.y) * 0.5f);
             batch.DrawText(text.sections, text.size(), position, font, sge::Order(element.z_index));
         }

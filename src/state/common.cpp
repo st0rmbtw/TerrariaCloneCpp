@@ -41,7 +41,7 @@ void TextInputData::update() noexcept {
     }
 
     if (sge::Input::JustPressed(sge::Key::Backspace, sge::Modifier::Control)) {
-        clear();
+        clear_before_cursor();
     } else if (sge::Input::JustPressed(sge::Key::Backspace)) {
         remove_before_cursor();
     } else if (sge::Input::Pressed(sge::Key::Backspace)) {

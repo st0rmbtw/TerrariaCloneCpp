@@ -8,6 +8,8 @@
 
 class MenuSubstateCreateWorld {
 public:
+    static constexpr uint32_t SEED_LENGTH = 40;
+
     MenuSubstateCreateWorld() {
         set_random_name();
         set_random_seed();
@@ -21,8 +23,8 @@ private:
     void set_random_name();
 
 private:
-    TextInputData m_name_input_data;
-    TextInputData m_seed_input_data;
+    TextInputData m_name_input_data{ 255 };
+    TextInputData m_seed_input_data{ SEED_LENGTH };
 
     sge::Timer m_backspace_timer = sge::Timer::from_seconds(0.5f, sge::TimerMode::Once);
     sge::Timer m_bar_timer = sge::Timer::from_seconds(0.5f, sge::TimerMode::Repeating);

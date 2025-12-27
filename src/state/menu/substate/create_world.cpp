@@ -119,12 +119,10 @@ void MenuSubstateCreateWorld::update() {
 }
 
 void MenuSubstateCreateWorld::set_random_seed() {
-    static constexpr uint32_t LENGTH = 40;
-
     m_seed_input_data.clear();
-    m_seed_input_data.text().reserve(LENGTH);
+    m_seed_input_data.text().reserve(SEED_LENGTH);
 
-    for (uint32_t i = 0; i < LENGTH; ++i) {
+    for (uint32_t i = 0; i < SEED_LENGTH; ++i) {
         m_seed_input_data.add_char('0' + rand() % 10);
     }
 }

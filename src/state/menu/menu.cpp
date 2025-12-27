@@ -367,7 +367,7 @@ void MainMenuState::draw_ui() {
             } break;
 
             case widgets::UiTypeID::TextInput: {
-                widgets::DrawTextInput(element, m_batch, sprite);
+                widgets::DrawTextInput(element, m_batch);
             } break;
         }
     }

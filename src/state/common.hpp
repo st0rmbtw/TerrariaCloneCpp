@@ -69,7 +69,8 @@ private:
 
 class TextInputData {
 public:
-    TextInputData() = default;
+    TextInputData(uint32_t max_characters = UINT32_MAX) : m_max_characters(max_characters) {
+    }
     TextInputData(std::function<bool(uint32_t)> filter) noexcept :
         m_filter_function(std::move(filter)) {};
 
@@ -78,6 +79,7 @@ public:
     void clear() noexcept {
         m_data.clear();
         m_cursor_position = 0;
+        m_size = 0;
     }
 
     inline void set_active(bool active) noexcept {
@@ -87,6 +89,7 @@ public:
     inline void set_text(std::string_view text) noexcept {
         m_data = text;
         m_cursor_position = text.size();
+        m_size = sge::count_utf8_codepoints(text.data(), text.size());
     }
 
     inline void set_window_begin(uint32_t begin) noexcept {
@@ -96,6 +99,7 @@ public:
     void add_char(char c) {
         m_data.push_back(c);
         m_cursor_position += 1;
+        m_size += 1;
     }
 
     [[nodiscard]]
@@ -134,6 +138,12 @@ public:
     }
 
 private:
+    void clear_before_cursor() {
+        while (m_cursor_position > 0) {
+            remove_before_cursor();
+        }
+    }
+
     void remove_before_cursor() noexcept {
         if (m_data.empty()) return;
         if (m_cursor_position == 0) return;
