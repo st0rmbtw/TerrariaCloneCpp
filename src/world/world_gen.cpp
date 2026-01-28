@@ -676,8 +676,6 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
 
     const sge::IRect light_area = world.area * Constants::SUBDIVISION;
     world.lightmap = LightMap(light_area.size());
-    memset(world.lightmap.colors.data(), 0xFF, light_area.width() * light_area.height() * sizeof(Color));
-
     world.lightmap.init_area(world, light_area);
 
     world.lightmap.blur_horizontal(light_area);

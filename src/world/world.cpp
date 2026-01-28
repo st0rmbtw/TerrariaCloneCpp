@@ -274,7 +274,7 @@ void World::generate(uint32_t width, uint32_t height, uint32_t seed) {
 }
 
 inline static void internal_update_world_lightmap(LightMap& lightmap, const UpdateLightMapTaskResult& result) {
-    for (int y = 0; y < result.height; ++y) {
+    for (uint32_t y = 0; y < result.height; ++y) {
         memcpy(&lightmap.colors[(result.area.min.y + y) * lightmap.width + result.area.min.x], &result.colors[y * result.width], result.width * sizeof(Color));
         memcpy(&lightmap.masks[(result.area.min.y + y) * lightmap.width + result.area.min.x], &result.masks[y * result.width], result.width * sizeof(LightMask));
     }

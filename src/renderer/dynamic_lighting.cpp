@@ -56,10 +56,10 @@ DynamicLighting::DynamicLighting(const WorldData& world, LLGL::Texture* light_te
 
     m_line = HeapArray<Color>(Constants::LIGHT_AIR_DECAY_STEPS);
 
-    for (int y = 0; y < m_dynamic_lightmap.height; ++y) {
-        for (int x = 0; x < m_dynamic_lightmap.width; ++x) {
-            const TilePos color_pos = TilePos(x, y);
-            const TilePos tile_pos = color_pos / Constants::SUBDIVISION;
+    for (int64_t y = 0; y < m_dynamic_lightmap.height; ++y) {
+        for (int64_t x = 0; x < m_dynamic_lightmap.width; ++x) {
+            const LightPos color_pos = LightPos(x, y);
+            const glm::ivec2 tile_pos = color_pos / static_cast<int64_t>(Constants::SUBDIVISION);
 
             m_dynamic_lightmap.set_mask(color_pos, world.block_exists(tile_pos));
         }
@@ -76,7 +76,7 @@ SGE_FORCE_INLINE static void blur_line(LightMap& lightmap, int start, int end, i
     }
 }
 
-SGE_FORCE_INLINE static void blur_horizontal(LightMap& lightmap, const sge::IRect& area) {
+inline static void blur_horizontal(LightMap& lightmap, const sge::IRect& area) {
     #pragma omp parallel for
     for (int y = area.min.y; y < area.max.y; ++y) {
         glm::vec3 prev_light = lightmap.get_color({area.min.x, y});
@@ -89,7 +89,7 @@ SGE_FORCE_INLINE static void blur_horizontal(LightMap& lightmap, const sge::IRec
     }
 }
 
-SGE_FORCE_INLINE static void blur_vertical(LightMap& lightmap, const sge::IRect& area) {
+inline static void blur_vertical(LightMap& lightmap, const sge::IRect& area) {
     #pragma omp parallel for
     for (int x = area.min.x; x < area.max.x; ++x) {
         glm::vec3 prev_light = lightmap.get_color({x, area.min.y});
@@ -253,7 +253,7 @@ void DynamicLighting::compute_light(const sge::Camera& camera, const World& worl
         // Init
         for (uint32_t y = 0; y < light.size.y; ++y) {
             for (uint32_t x = 0; x < light.size.x; ++x) {
-                lightmap.set_color(light.pos + TilePos(x, y), light.color);
+                lightmap.set_color(LightPos(light.pos.x + x, light.pos.y + y), light.color);
             }
         }
     }
@@ -387,6 +387,9 @@ void AcceleratedDynamicLighting::init_pipeline() {
                 sge::BindingLayoutItem::TextureStorage(6, "LightTexture")
             }
         );
+        if (sge::Engine::Renderer().Backend().IsOpenGL()) {
+            lightBlurPipelineLayoutDesc.barrierFlags = LLGL::BarrierFlags::StorageTexture;
+        }
 
         LLGL::PipelineLayout* lightBlurPipelineLayout = context->CreatePipelineLayout(lightBlurPipelineLayoutDesc);
 

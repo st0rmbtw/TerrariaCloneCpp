@@ -35,8 +35,8 @@ struct UpdateLightMapTaskResult {
     HeapArray<Color> colors;
     HeapArray<LightMask> masks;
     sge::IRect area;
-    int width = 0;
-    int height = 0;
+    uint32_t width = 0;
+    uint32_t height = 0;
 };
 
 class World {
