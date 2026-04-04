@@ -16,6 +16,8 @@
 
 #include "../types/collision.hpp"
 
+#include "../renderer/renderer.hpp"
+
 static constexpr size_t WALK_ANIMATION_LENGTH = 13;
 
 static constexpr float PLAYER_WIDTH = 20.0f;
@@ -91,7 +93,7 @@ public:
     void pre_update();
     void fixed_update(const sge::Camera& camera, World& world, bool handle_input);
     void update(World& world);
-    void draw() const;
+    void draw(GameRenderer& renderer) const;
 
     void set_position(const World& world, const glm::vec2& position) noexcept;
 

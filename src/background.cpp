@@ -116,11 +116,11 @@ void Background::UpdateInGame(const sge::Camera &camera, const World& world) {
     }
 }
 
-void Background::Draw() {
+void Background::Draw(GameRenderer& renderer) {
     ZoneScoped;
 
     for (const BackgroundLayer& layer : state.layers) {
-        GameRenderer::DrawBackground(layer);
+        renderer.DrawBackground(layer);
     }
 }
 

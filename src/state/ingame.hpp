@@ -9,6 +9,7 @@
 
 #include "../player/player.hpp"
 #include "../background.hpp"
+#include "../renderer/renderer.hpp"
 
 #include "common.hpp"
 
@@ -16,14 +17,15 @@
 
 class InGameState : public BaseState {
 public:
-    InGameState(WorldData world);
-    void Render() override;
-    void PostRender() override;
+    InGameState(const std::shared_ptr<sge::Renderer>& renderer, WorldData world);
+    void Render(const std::shared_ptr<sge::GlfwWindow>& window) override;
     void PreUpdate() override;
     void Update() override;
     void FixedUpdate() override;
-    void OnWindowSizeChanged(glm::uvec2 size) override {
-        m_camera.set_viewport(size);
+    void OnWindowSizeChanged(LLGL::Extent2D size) override {
+        m_renderer->ResizeTextures(size);
+
+        m_camera.set_viewport({size.width, size.height});
         m_camera.update();
 
         m_world.chunk_manager().manage_chunks(m_world.data(), m_camera);
@@ -54,6 +56,8 @@ private:
     #endif
 
 private:
+    std::shared_ptr<GameRenderer> m_renderer;
+
     Player m_player;
     World m_world;
     sge::Camera m_camera;

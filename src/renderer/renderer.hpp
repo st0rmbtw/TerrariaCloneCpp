@@ -15,6 +15,8 @@
 #include <SGE/renderer/camera.hpp>
 #include <SGE/types/color.hpp>
 #include <SGE/types/blend_mode.hpp>
+#include <SGE/renderer/renderer.hpp>
+#include <SGE/types/binding_layout.hpp>
 
 #include "../types/background_layer.hpp"
 
@@ -23,13 +25,20 @@
 #include "../world/world_data.hpp"
 #include "../world/world.hpp"
 
-namespace GameRenderer {
-    bool Init(const LLGL::Extent2D& resolution);
+#include "background_renderer.hpp"
+#include "particle_renderer.hpp"
+#include "world_renderer.hpp"
+
+class GameRenderer {
+public:
+    GameRenderer(const std::shared_ptr<sge::Renderer>& renderer);
+    ~GameRenderer();
+
     void InitWorldRenderer(const WorldData& world);
     void ResizeTextures(LLGL::Extent2D resolution);
 
     void Begin(const sge::Camera& camera, World& world);
-    void Render(const World& world);
+    void Render(const std::shared_ptr<sge::GlfwWindow>& window, const sge::Camera& camera, const World& world);
 
     void UpdateLight();
 
@@ -88,11 +97,39 @@ namespace GameRenderer {
     void BeginBlendMode(sge::BlendMode blend_mode) noexcept;
     void EndBlendMode() noexcept;
 
-    void Terminate();
-
     [[nodiscard]] uint32_t GetMainOrderIndex();
     [[nodiscard]] uint32_t GetWorldOrderIndex();
     [[nodiscard]] LLGL::Buffer* ChunkVertexBuffer();
+
+    [[nodiscard]]
+    const std::shared_ptr<sge::Renderer> GetRenderer() const {
+        return m_renderer;
+    }
+
+private:
+    BackgroundRenderer m_background_renderer;
+    
+    std::shared_ptr<sge::Renderer> m_renderer = nullptr;
+
+    std::unique_ptr<sge::Batch> m_main_batch = nullptr;
+    std::unique_ptr<sge::Batch> m_world_batch = nullptr;
+    std::unique_ptr<sge::Batch> m_ui_batch = nullptr;
+
+    sge::Rect m_camera_frustums[2];
+    sge::Rect m_ui_frustum;
+
+    ParticleRenderer m_particle_renderer;
+    WorldRenderer m_world_renderer;
+
+    LLGL::ResourceHeap* m_resource_heap = nullptr;
+
+    LLGL::Buffer* m_chunk_vertex_buffer = nullptr;
+
+    uint32_t m_postprocess_pipeline_id = -1;
+    LLGL::Buffer* m_postprocess_vertex_buffer = nullptr;
+    LLGL::Buffer* m_postprocess_uniform_buffer = nullptr;
+
+    bool m_update_light = false;
 };
 
 #endif

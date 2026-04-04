@@ -14,7 +14,6 @@
 
 #include "../../ui/ui.hpp"
 #include "../../assets.hpp"
-#include "../../app.hpp"
 
 #include "../../world/world_gen.h"
 #include "../../world/io/load.hpp"
@@ -33,23 +32,22 @@ static constexpr float LOGO_ANIM_MAX_SCALE = 1.1f;
 static constexpr float LOGO_ANIM_MIN_ROTATION = -5.0f;
 static constexpr float LOGO_ANIM_MAX_ROTATION = 5.0f;
 
-MainMenuState::MainMenuState() :
-    m_camera(sge::CameraOrigin::Center, sge::CoordinateSystem {
+MainMenuState::MainMenuState(const std::shared_ptr<sge::Renderer>& renderer) :
+    m_camera(renderer->GetRenderContext()->Backend(), sge::CameraOrigin::Center, sge::CoordinateSystem {
         .up = sge::CoordinateDirectionY::Negative,
         .forward = sge::CoordinateDirectionZ::Negative,
     }),
-    m_batch(sge::Engine::Renderer(), {
+    m_batch(*renderer, {
         .font_shader = Assets::GetShader(ShaderAsset::FontShader).ps,
         .enable_scissor = true
-    })
+    }),
+    m_background_renderer(renderer),
+    m_renderer(renderer)
 {
-    m_camera.set_viewport(App::GetWindowResolution());
     m_camera.set_zoom(1.0f);
 
     m_cursor.SetForegroundColor(sge::LinearRgba(1.0, 0.08, 0.58));
     m_cursor.SetBackgroundColor(sge::LinearRgba(0.9, 0.9, 0.9));
-
-    m_background_renderer.init();
 
     m_batch.SetIsUi(true);
 
@@ -61,8 +59,7 @@ MainMenuState::MainMenuState() :
 }
 
 MainMenuState::~MainMenuState() {
-    m_batch.Destroy(sge::Engine::Renderer().Context());
-    m_background_renderer.terminate();
+    m_renderer->DestroyBatch(m_batch);
 }
 
 void MainMenuState::setup_background() {
@@ -172,7 +169,7 @@ void MainMenuState::update_logo() {
     m_logo_rotation = Quat::from_rotation_z(glm::radians(LOGO_ANIM_MIN_ROTATION + (LOGO_ANIM_MAX_ROTATION - LOGO_ANIM_MIN_ROTATION) * m_logo_animation.progress()));
 }
 
-void MainMenuState::Render() {
+void MainMenuState::Render(const std::shared_ptr<sge::GlfwWindow>& window) {
     m_batch.Reset();
     m_background_renderer.reset();
 
@@ -182,22 +179,20 @@ void MainMenuState::Render() {
         draw_background(layer);
     }
 
-    sge::Renderer& renderer = sge::Engine::Renderer();
+    m_renderer->Begin();
+        m_renderer->PrepareBatch(m_batch);
+        m_renderer->UploadBatchData();
 
-    renderer.Begin(m_camera);
+        m_renderer->BeginPass(window, m_camera);
+            m_renderer->Clear(LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f), LLGL::ClearFlags::ColorDepth);
 
-    renderer.PrepareBatch(m_batch);
-    renderer.UploadBatchData();
+            m_background_renderer.render();
 
-    renderer.BeginMainPass();
-        renderer.Clear(LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f), LLGL::ClearFlags::ColorDepth);
+            m_renderer->RenderBatch(m_batch);
+        m_renderer->EndPass();
+    m_renderer->End();
 
-        m_background_renderer.render();
-
-        renderer.RenderBatch(m_batch);
-    renderer.EndPass();
-
-    renderer.End();
+    m_renderer->Present(window);
 }
 
 void MainMenuState::draw_main_menu() {
@@ -386,13 +381,13 @@ BaseState* MainMenuState::GetNextState() {
         const WorldSelected& opts = m_nav_manager.get<WorldSelected>();
         WorldData world_data;
         load_world(world_data, opts.path);
-        return new InGameState(std::move(world_data));
+        return new InGameState(m_renderer, std::move(world_data));
     }
 
     if (m_nav_manager.is<WorldCreated>()) {
         WorldData world_data;
         world_generate(world_data, 200, 500, 0);
-        return new InGameState(std::move(world_data));
+        return new InGameState(m_renderer, std::move(world_data));
     }
 
     return this;

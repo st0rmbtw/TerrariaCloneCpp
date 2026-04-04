@@ -5,7 +5,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/random.hpp>
 
-#include "../app.hpp"
 #include "../ui/ui.hpp"
 #include "../particles.hpp"
 #include "../renderer/renderer.hpp"
@@ -48,22 +47,23 @@ struct UiInventorySlotIndexData {
     FontAsset font;
 };
 
-InGameState::InGameState(WorldData world) :
-    m_camera{ sge::CameraOrigin::Center, sge::CoordinateSystem {
+InGameState::InGameState(const std::shared_ptr<sge::Renderer>& renderer, WorldData world) :
+    m_renderer(std::make_shared<GameRenderer>(renderer)),
+    m_world(m_renderer),
+    m_camera(renderer->GetRenderContext()->Backend(), sge::CameraOrigin::Center, sge::CoordinateSystem {
         .up = sge::CoordinateDirectionY::Negative,
         .forward = sge::CoordinateDirectionZ::Negative,
-    }}
+    })
 {
     m_fps_update_timer = sge::Timer::from_seconds(0.5f, sge::TimerMode::Repeating);
     m_fps_update_timer.set_finished();
 
-    m_camera.set_viewport(App::GetWindowResolution());
     m_camera.set_zoom(1.0f);
 
     m_world.init();
     m_world.load(std::move(world));
 
-    GameRenderer::InitWorldRenderer(m_world.data());
+    m_renderer->InitWorldRenderer(m_world.data());
     Background::SetupWorldBackground(m_world);
 
     m_player.init();
@@ -243,36 +243,28 @@ void InGameState::FixedUpdate() {
     m_player.fixed_update(m_camera, m_world, handle_input);
     m_world.fixed_update(m_player.rect(), m_player.inventory());
 
-    GameRenderer::UpdateLight();
+    m_renderer->UpdateLight();
 
     ParticleManager::Update(m_world);
 }
 
-void InGameState::Render() {
+void InGameState::Render(const std::shared_ptr<sge::GlfwWindow>& window) {
     ZoneScoped;
+    
+    m_camera.set_viewport(glm::uvec2(window->GetContentSize().width, window->GetContentSize().height));
 
-    GameRenderer::Begin(m_camera, m_world);
+    m_renderer->Begin(m_camera, m_world);
 
-    Background::Draw();
+    Background::Draw(*m_renderer);
 
-    m_world.draw(m_camera);
-    m_player.draw();
+    m_world.draw(*m_renderer, m_camera);
+    m_player.draw(*m_renderer);
 
-    ParticleManager::Draw();
+    ParticleManager::Draw(*m_renderer);
 
     draw_ui();
 
-    GameRenderer::Render(m_world);
-}
-
-void InGameState::PostRender() {
-    ZoneScoped;
-
-#if DEBUG
-    if (sge::Input::Pressed(sge::Key::C)) {
-        sge::Engine::Renderer().PrintDebugInfo();
-    }
-#endif
+    m_renderer->Render(window, m_camera, m_world);
 }
 
 void InGameState::update_ui() noexcept {
@@ -327,24 +319,24 @@ void InGameState::update_ui() noexcept {
     }
 }
 
-static void draw_item(const glm::vec2& item_size, const glm::vec2& position, const Item& item) {
+static void draw_item(GameRenderer& renderer, const glm::vec2& item_size, const glm::vec2& position, const Item& item) {
     sge::Sprite item_sprite(Assets::GetItemTexture(item.id));
     item_sprite.set_position(position);
     item_sprite.set_anchor(sge::Anchor::Center);
     item_sprite.set_custom_size(item_size);
     item_sprite.set_color(sge::LinearRgba::white());
-    GameRenderer::DrawSpriteUI(item_sprite);
+    renderer.DrawSpriteUI(item_sprite);
 }
 
-static void draw_item_with_stack(const sge::Font& font, const glm::vec2& item_size, float stack_size, const glm::vec2& position, const Item& item) {
-    draw_item(item_size, position, item);
+static void draw_item_with_stack(GameRenderer& renderer, const sge::Font& font, const glm::vec2& item_size, float stack_size, const glm::vec2& position, const Item& item) {
+    draw_item(renderer, item_size, position, item);
 
     if (item.stack > 1) {
         const std::string stack_string = std::to_string(item.stack);
         const sge::RichText text = sge::rich_text(stack_string, stack_size, sge::LinearRgba(0.9f));
         const float a = stack_size / 14.0f;
         const glm::vec2 stack_position = glm::vec2(position.x - 15.0f * a, position.y + 2.5f * a);
-        GameRenderer::DrawTextUI(text, stack_position, font);
+        renderer.DrawTextUI(text, stack_position, font);
     }
 }
 
@@ -352,8 +344,8 @@ void InGameState::draw_cursor() noexcept {
     const sge::Font& font = Assets::GetFont(FontAsset::AndyBold);
     Inventory& inventory = m_player.inventory();
 
-    GameRenderer::DrawSpriteUI(m_cursor.Background());
-    GameRenderer::DrawSpriteUI(m_cursor.Foreground());
+    m_renderer->DrawSpriteUI(m_cursor.Background());
+    m_renderer->DrawSpriteUI(m_cursor.Foreground());
 
     const ItemSlot& taken_item = inventory.taken_item();
     const ItemSlot& selected_item = inventory.get_selected_item();
@@ -363,12 +355,12 @@ void InGameState::draw_cursor() noexcept {
         const sge::Texture& texture = Assets::GetItemTexture(taken_item.item->id);
         const glm::vec2 size = glm::vec2(texture.size()) * m_cursor.Scale();
 
-        draw_item_with_stack(font, size, 16.0f * m_cursor.Scale(), position, taken_item.item.value());
+        draw_item_with_stack(*m_renderer, font, size, 16.0f * m_cursor.Scale(), position, taken_item.item.value());
     } else if (m_player.can_use_item() && selected_item.has_item() && !UI::IsMouseOverUi()) {
         const sge::Texture& texture = Assets::GetItemTexture(selected_item.item->id);
         const glm::vec2 size = glm::vec2(texture.size()) * m_cursor.Scale();
 
-        draw_item(size, position, *selected_item.item);
+        draw_item(*m_renderer, size, position, *selected_item.item);
     }
 }
 
@@ -561,7 +553,7 @@ void InGameState::draw_ui() noexcept {
 
     const std::vector<UiElement>& elements = UI::Finish();
 
-    GameRenderer::BeginOrderMode();
+    m_renderer->BeginOrderMode();
 
     sge::Sprite sprite(Assets::GetTexture(TextureAsset::Stub));
     for (const UiElement& element : elements) {
@@ -576,7 +568,7 @@ void InGameState::draw_ui() noexcept {
                 sprite.set_anchor(sge::Anchor::TopLeft);
                 sprite.set_custom_size(element.size);
                 sprite.set_color(sge::LinearRgba(1.0f, 1.0f, 1.0f, 0.8f));
-                GameRenderer::DrawSpriteUI(sprite, order);
+                m_renderer->DrawSpriteUI(sprite, order);
             } break;
 
             case UiTypeID::InventorySlot: {
@@ -585,7 +577,7 @@ void InGameState::draw_ui() noexcept {
                 sprite.set_anchor(sge::Anchor::TopLeft);
                 sprite.set_custom_size(element.size);
                 sprite.set_color(sge::LinearRgba(1.0f, 1.0f, 1.0f, 0.8f));
-                GameRenderer::DrawSpriteUI(sprite, order);
+                m_renderer->DrawSpriteUI(sprite, order);
             } break;
 
             case UiTypeID::InventorySlotItem: {
@@ -596,23 +588,23 @@ void InGameState::draw_ui() noexcept {
                 sprite.set_anchor(sge::Anchor::TopLeft);
                 sprite.set_custom_size(element.size);
                 sprite.set_color(sge::LinearRgba(1.0f, 1.0f, 1.0f, 0.8f));
-                GameRenderer::DrawSpriteUI(sprite, order);
+                m_renderer->DrawSpriteUI(sprite, order);
             } break;
 
             case UiTypeID::InventorySlotIndex: {
                 const UiInventorySlotIndexData* data = static_cast<const UiInventorySlotIndexData*>(element.custom_data);
                 const sge::Font& font = Assets::GetFont(data->font);
-                GameRenderer::DrawCharUI(data->index, element.position, data->size, data->color, font, order);
+                m_renderer->DrawCharUI(data->index, element.position, data->size, data->color, font, order);
             } break;
 
             case UiTypeID::Text: {
                 const TextData* data = element.text_data;
-                GameRenderer::DrawTextUI(data->sections, data->sections_count, element.position, data->font, order);
+                m_renderer->DrawTextUI(data->sections, data->sections_count, element.position, data->font, order);
             } break;
         }
     }
 
-    GameRenderer::EndOrderMode();
+    m_renderer->EndOrderMode();
 
     draw_cursor();
 }

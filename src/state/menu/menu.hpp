@@ -6,6 +6,7 @@
 #include <variant>
 #include <SGE/renderer/camera.hpp>
 #include <SGE/renderer/batch.hpp>
+#include <SGE/renderer/renderer.hpp>
 #include <SGE/math/quat.hpp>
 #include <SGE/types/animation.hpp>
 #include <SGE/time/stopwatch.hpp>
@@ -20,14 +21,15 @@
 #include "substate/create_world.hpp"
 #include "substate/select_world.hpp"
 
+
 class MainMenuState : public BaseState {
 public:
-    MainMenuState();
-    void Render() override;
+    MainMenuState(const std::shared_ptr<sge::Renderer>& renderer);
     void Update() override;
+    void Render(const std::shared_ptr<sge::GlfwWindow>& window) override;
 
-    void OnWindowSizeChanged(glm::uvec2 size) override {
-        m_camera.set_viewport(size);
+    void OnWindowSizeChanged(LLGL::Extent2D size) override {
+        m_camera.set_viewport({size.width, size.height});
         m_camera.update();
         setup_background();
     }
@@ -58,6 +60,8 @@ private:
 
     glm::quat m_logo_rotation = Quat::from_rotation_z(glm::radians(-5.0f));
     sge::Animation m_logo_animation{ sge::Duration::SecondsFloat(10.0f), sge::RepeatStrategy::MirroredRepeat };
+
+    std::shared_ptr<sge::Renderer> m_renderer;
 
     float m_logo_scale = 0.9f;
 

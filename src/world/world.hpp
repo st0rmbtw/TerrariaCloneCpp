@@ -41,6 +41,9 @@ struct UpdateLightMapTaskResult {
 
 class World {
 public:
+    World(std::shared_ptr<GameRenderer> renderer) : m_chunk_manager(std::move(renderer)) {
+    }
+
     void init();
 
     void load(WorldData world) {
@@ -66,7 +69,7 @@ public:
     void update(const sge::Camera& camera);
     void fixed_update(const sge::Rect& player_rect, Inventory& inventory);
 
-    void draw(const sge::Camera& camera);
+    void draw(class GameRenderer& renderer, const sge::Camera& camera);
 
     [[nodiscard]]
     inline std::optional<Block> get_block(TilePos pos) const {

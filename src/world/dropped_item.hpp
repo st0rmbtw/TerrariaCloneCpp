@@ -25,7 +25,7 @@ public:
         m_sprite.set_position(position);
     }
 
-    void draw() const;
+    void draw(class GameRenderer& renderer) const;
     void update(const WorldData& world, float dt);
 
     bool follow_player(const sge::Rect& player_rect, const Inventory& inventory);

@@ -10,12 +10,12 @@
 
 class TestUI : public BaseState {
 public:
-    TestUI();
-    void Render() override;
+    TestUI(const std::shared_ptr<sge::Renderer>& renderer);
     void Update() override;
+    void Render(const std::shared_ptr<sge::GlfwWindow>& window) override;
 
-    void OnWindowSizeChanged(glm::uvec2 size) override {
-        m_camera.set_viewport(size);
+    void OnWindowSizeChanged(LLGL::Extent2D size) override {
+        m_camera.set_viewport({size.width, size.height});
         m_camera.update();
     }
 
@@ -24,6 +24,8 @@ public:
 private:
     sge::Camera m_camera;
     sge::Batch m_batch;
+
+    std::shared_ptr<sge::Renderer> m_renderer;
 };
 
 #endif

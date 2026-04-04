@@ -36,18 +36,16 @@ struct SGE_ALIGN(16) TileTextureData {
     float depth;
 };
 
-void WorldRenderer::init() {
+WorldRenderer::WorldRenderer(const std::shared_ptr<sge::Renderer>& renderer) : m_renderer(renderer) {
     ZoneScoped;
 
     using Constants::TILE_SIZE;
     using Constants::WALL_SIZE;
     using Constants::TORCH_SIZE;
 
-    m_renderer = &sge::Engine::Renderer();
+    const auto& context = renderer->GetRenderContext()->Context();
 
-    const auto& context = m_renderer->Context();
-
-    const uint32_t samples = m_renderer->SwapChain()->GetSamples();
+    // const uint32_t samples = m_renderer->SwapChain()->GetSamples();
 
     {
         const glm::vec2 tile_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Tiles).size());
@@ -105,23 +103,21 @@ void WorldRenderer::init() {
 
         const sge::ShaderPipeline& tilemap_shader = Assets::GetShader(ShaderAsset::TilemapShader);
 
-        LLGL::GraphicsPipelineDescriptor pipelineDesc;
-        pipelineDesc.debugName = "World Pipeline";
-        pipelineDesc.vertexShader = tilemap_shader.vs;
-        pipelineDesc.fragmentShader = tilemap_shader.ps;
-        pipelineDesc.geometryShader = tilemap_shader.gs;
-        pipelineDesc.pipelineLayout = pipelineLayout;
-        pipelineDesc.renderPass = m_render_pass.get();
-        pipelineDesc.indexFormat = LLGL::Format::R16UInt;
-        pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
-        pipelineDesc.rasterizer.frontCCW = true;
-        pipelineDesc.rasterizer.multiSampleEnabled = (samples > 1);
-        pipelineDesc.depth = LLGL::DepthDescriptor {
+        sge::GraphicsPipelineConfig pipelineConfig;
+        pipelineConfig.debugName = "World Pipeline";
+        pipelineConfig.vertexShader = tilemap_shader.vs;
+        pipelineConfig.pixelShader = tilemap_shader.ps;
+        pipelineConfig.geometryShader = tilemap_shader.gs;
+        pipelineConfig.layout = pipelineLayout;
+        pipelineConfig.indexFormat = LLGL::Format::R16UInt;
+        pipelineConfig.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
+        pipelineConfig.frontCCW = true;
+        pipelineConfig.depth = LLGL::DepthDescriptor {
             .testEnabled = true,
             .writeEnabled = true,
             .compareOp = LLGL::CompareOp::GreaterEqual
         };
-        pipelineDesc.blend = LLGL::BlendDescriptor {
+        pipelineConfig.blend = LLGL::BlendDescriptor {
             .targets = {
                 LLGL::BlendTargetDescriptor {
                     .blendEnabled = true,
@@ -133,7 +129,7 @@ void WorldRenderer::init() {
             }
         };
 
-        m_pipeline = context->CreatePipelineState(pipelineDesc);
+        m_pipeline_id = renderer->GetRenderContext()->AddPipelineConfig(pipelineConfig);
     }
 
     {
@@ -161,17 +157,15 @@ void WorldRenderer::init() {
 
         const sge::ShaderPipeline lightmap_shader = Assets::GetShader(ShaderAsset::StaticLightMapShader);
 
-        LLGL::GraphicsPipelineDescriptor lightPipelineDesc;
-        lightPipelineDesc.debugName = "WorldStaticLightMapPipeline";
-        lightPipelineDesc.vertexShader = lightmap_shader.vs;
-        lightPipelineDesc.fragmentShader = lightmap_shader.ps;
-        lightPipelineDesc.pipelineLayout = lightmapPipelineLayout;
-        lightPipelineDesc.indexFormat = LLGL::Format::R16UInt;
-        lightPipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
-        lightPipelineDesc.rasterizer.frontCCW = true;
-        lightPipelineDesc.rasterizer.multiSampleEnabled = (samples > 1);
-        lightPipelineDesc.renderPass = m_static_lightmap_render_pass.get();
-        lightPipelineDesc.blend = LLGL::BlendDescriptor {
+        sge::GraphicsPipelineConfig lightPipelineConfig;
+        lightPipelineConfig.debugName = "WorldStaticLightMapPipeline";
+        lightPipelineConfig.vertexShader = lightmap_shader.vs;
+        lightPipelineConfig.pixelShader = lightmap_shader.ps;
+        lightPipelineConfig.layout = lightmapPipelineLayout;
+        lightPipelineConfig.indexFormat = LLGL::Format::R16UInt;
+        lightPipelineConfig.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
+        lightPipelineConfig.frontCCW = true;
+        lightPipelineConfig.blend = LLGL::BlendDescriptor {
             .targets = {
                 LLGL::BlendTargetDescriptor {
                     .blendEnabled = false,
@@ -179,23 +173,23 @@ void WorldRenderer::init() {
             }
         };
 
-        m_lightmap_pipeline = context->CreatePipelineState(lightPipelineDesc);
+        m_lightmap_pipeline_id = renderer->GetRenderContext()->AddPipelineConfig(lightPipelineConfig);
     }
 }
 
 void WorldRenderer::init_lighting(const WorldData& world) {
-    if (SupportsAcceleratedDynamicLighting(*m_renderer)) {
-        m_dynamic_lighting = std::make_unique<AcceleratedDynamicLighting>(world, m_dynamic_light_texture.get());
+    if (SupportsAcceleratedDynamicLighting(*m_renderer->GetRenderContext())) {
+        m_dynamic_lighting = std::make_unique<AcceleratedDynamicLighting>(m_renderer, world, m_dynamic_light_texture.get());
     } else {
-        m_dynamic_lighting = std::make_unique<DynamicLighting>(world, m_dynamic_light_texture.get());
+        m_dynamic_lighting = std::make_unique<DynamicLighting>(m_renderer, world, m_dynamic_light_texture.get());
     }
 }
 
 void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
-    const auto& context = m_renderer->Context();
-    const LLGL::SwapChain* swap_chain = m_renderer->SwapChain();
+    const auto& context = m_renderer->GetRenderContext()->Context();
 
-    const uint32_t samples = swap_chain->GetSamples();
+    // const uint32_t samples = swap_chain->GetSamples();
+    const uint32_t samples = 1;
 
     SGE_RESOURCE_RELEASE(m_target);
     SGE_RESOURCE_RELEASE(m_target_texture);
@@ -211,40 +205,40 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
 
     texture_desc.extent.width = resolution.width;
     texture_desc.extent.height = resolution.height;
-    texture_desc.format = swap_chain->GetColorFormat();
+    texture_desc.format = LLGL::Format::RGBA8UNorm;
     texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
     m_target_texture = context->CreateTexture(texture_desc);
     m_static_lightmap_texture = context->CreateTexture(texture_desc);
 
-    if (swap_chain->GetDepthStencilFormat() != LLGL::Format::Undefined) {
+    // if (swap_chain->GetDepthStencilFormat() != LLGL::Format::Undefined) {
         LLGL::TextureDescriptor depth_texture_desc = texture_desc;
         depth_texture_desc.type = samples > 1 ? LLGL::TextureType::Texture2DMS : LLGL::TextureType::Texture2D;
         depth_texture_desc.samples = samples;
         depth_texture_desc.extent.width = resolution.width;
         depth_texture_desc.extent.height = resolution.height;
-        depth_texture_desc.format = swap_chain->GetDepthStencilFormat();
+        depth_texture_desc.format = LLGL::Format::D24UNormS8UInt;
         depth_texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::DepthStencilAttachment;
         m_depth_texture = context->CreateTexture(depth_texture_desc);
-    }
+    // }
 
-    if (m_render_pass == nullptr) {
+    if (!m_render_pass) {
         LLGL::RenderPassDescriptor render_pass;
         render_pass.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Load;
         render_pass.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
         render_pass.colorAttachments[0].format = texture_desc.format;
-        render_pass.depthAttachment.format = swap_chain->GetDepthStencilFormat();
+        render_pass.depthAttachment.format = LLGL::Format::D24UNormS8UInt;
         render_pass.depthAttachment.storeOp = LLGL::AttachmentStoreOp::Store;
-        render_pass.stencilAttachment.format = swap_chain->GetDepthStencilFormat();
+        render_pass.stencilAttachment.format = LLGL::Format::D24UNormS8UInt;
         render_pass.stencilAttachment.storeOp = LLGL::AttachmentStoreOp::Store;
         render_pass.samples = samples;
         m_render_pass = context->CreateRenderPass(render_pass);
     }
 
-    if (m_static_lightmap_render_pass == nullptr) {
+    if (!m_static_lightmap_render_pass) {
         LLGL::RenderPassDescriptor render_pass_desc;
         render_pass_desc.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Undefined;
         render_pass_desc.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
-        render_pass_desc.colorAttachments[0].format = swap_chain->GetColorFormat();
+        render_pass_desc.colorAttachments[0].format = LLGL::Format::RGBA8UNorm;
         render_pass_desc.samples = samples;
         m_static_lightmap_render_pass = context->CreateRenderPass(render_pass_desc);
     }
@@ -283,7 +277,7 @@ void WorldRenderer::init_textures(LLGL::Extent2D viewport) {
 
     using Constants::SUBDIVISION;
 
-    auto& context = m_renderer->Context();
+    auto& context = m_renderer->GetRenderContext()->Context();
 
     SGE_RESOURCE_RELEASE(m_dynamic_light_texture_target);
     SGE_RESOURCE_RELEASE(m_dynamic_light_texture);
@@ -325,7 +319,7 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
 
     auto* const commands = m_renderer->CommandBuffer();
 
-    commands->SetPipelineState(*m_pipeline);
+    commands->SetPipelineState(m_renderer->GetRenderContext()->GetOrCreatePipeline(m_pipeline_id));
 
     const sge::Texture& walls_texture = Assets::GetTexture(TextureAsset::Walls);
     const sge::Texture& tiles_texture = Assets::GetTexture(TextureAsset::Tiles);
@@ -355,7 +349,7 @@ void WorldRenderer::render(const ChunkManager& chunk_manager) {
 void WorldRenderer::render_lightmap(const ChunkManager& chunk_manager) {
     auto* const commands = m_renderer->CommandBuffer();
 
-    commands->SetPipelineState(*m_lightmap_pipeline);
+    commands->SetPipelineState(m_renderer->GetRenderContext()->GetOrCreatePipeline(m_lightmap_pipeline_id));
     commands->SetResourceHeap(*m_lightmap_resource_heap);
 
     for (glm::uvec2 chunk_pos : chunk_manager.visible_light_chunks()) {
@@ -372,13 +366,13 @@ void WorldRenderer::compute_light(const sge::Camera& camera, const World& world)
     m_dynamic_lighting->compute_light(camera, world);
 }
 
-void WorldRenderer::terminate() {
-    const auto& context = m_renderer->Context();
+WorldRenderer::~WorldRenderer() {
+    const auto& context = m_renderer->GetRenderContext()->Context();
 
     if (m_dynamic_lighting)
         m_dynamic_lighting->destroy();
 
-    SGE_RESOURCE_RELEASE(m_pipeline);
+    m_renderer->GetRenderContext()->DeletePipeline(m_pipeline_id);
     SGE_RESOURCE_RELEASE(m_resource_heap);
     SGE_RESOURCE_RELEASE(m_tile_texture_data_buffer);
     SGE_RESOURCE_RELEASE(m_dynamic_light_texture_target);

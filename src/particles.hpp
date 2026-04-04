@@ -148,7 +148,7 @@ private:
 namespace ParticleManager {
     void Init();
 
-    void Draw();
+    void Draw(GameRenderer& renderer);
     void Update(World& world);
     void DeleteExpired();
 

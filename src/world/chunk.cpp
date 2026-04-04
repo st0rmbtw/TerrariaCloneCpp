@@ -24,10 +24,13 @@ using Constants::LIGHTMAP_CHUNK_TILE_SIZE;
 static constexpr float LIGHTMAP_CHUNK_WORLD_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * Constants::TILE_SIZE;
 static constexpr float LIGHTMAP_TO_WORLD = Constants::TILE_SIZE / Constants::SUBDIVISION;
 
-void RenderChunk::destroy() {
+RenderChunk::~RenderChunk() {
     ZoneScoped;
 
-    const auto& context = sge::Engine::Renderer().Context();
+    if (!m_renderer)
+        return;
+
+    const auto& context = m_renderer->GetRenderer()->GetRenderContext()->Context();
 
     if (m_block_instance_buffer)
         context->Release(*m_block_instance_buffer);
@@ -128,7 +131,7 @@ void RenderChunk::build_mesh(
     m_block_count = fill_block_buffer(world, block_data_arena, m_index, m_world_pos);
     m_wall_count = fill_wall_buffer(world, wall_data_arena, m_index, m_world_pos);
 
-    const auto& context = sge::Engine::Renderer().Context();
+    const auto& context = m_renderer->GetRenderer()->GetRenderContext()->Context();
 
     {
         const size_t size = m_block_count * sizeof(ChunkInstance);
@@ -136,7 +139,7 @@ void RenderChunk::build_mesh(
 
         m_block_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
 
-        LLGL::Buffer* buffers[] = { GameRenderer::ChunkVertexBuffer(), m_block_instance_buffer.get() };
+        LLGL::Buffer* buffers[] = { m_renderer->ChunkVertexBuffer(), m_block_instance_buffer.get() };
 
         m_block_buffer_array = context->CreateBufferArray(2, buffers);
     }
@@ -146,7 +149,7 @@ void RenderChunk::build_mesh(
 
         m_wall_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
 
-        LLGL::Buffer* buffers[] = { GameRenderer::ChunkVertexBuffer(), m_wall_instance_buffer.get() };
+        LLGL::Buffer* buffers[] = { m_renderer->ChunkVertexBuffer(), m_wall_instance_buffer.get() };
 
         m_wall_buffer_array = context->CreateBufferArray(2, buffers);
     }
@@ -159,7 +162,7 @@ void RenderChunk::rebuild_mesh(
 ) {
     ZoneScoped;
 
-    const auto& context = sge::Engine::Renderer().Context();
+    const auto& context = m_renderer->GetRenderer()->GetRenderContext()->Context();
 
     if (m_blocks_dirty) {
         m_block_count = fill_block_buffer(world, block_data_arena, m_index, m_world_pos);
@@ -179,13 +182,13 @@ void RenderChunk::rebuild_mesh(
     m_walls_dirty = false;
 }
 
-StaticLightMapChunk::StaticLightMapChunk(glm::uvec2 index, const LightMap& lightmap) :
-    index{ index }
+StaticLightMapChunk::StaticLightMapChunk(std::shared_ptr<sge::RenderContext> ctx, glm::uvec2 index, const LightMap& lightmap) :
+    index{ index },
+    render_context(std::move(ctx))
 {
     ZoneScoped;
 
-    sge::Renderer& renderer = sge::Engine::Renderer();
-    const auto& context = renderer.Context();
+    const auto& context = render_context->Context();
 
     SGE_RESOURCE_RELEASE(texture);
     SGE_RESOURCE_RELEASE(vertex_buffer);
@@ -233,11 +236,11 @@ StaticLightMapChunk::StaticLightMapChunk(glm::uvec2 index, const LightMap& light
         )
     };
 
-    vertex_buffer = renderer.CreateVertexBuffer(vertices, Assets::GetVertexFormat(VertexFormatAsset::StaticLightMapVertex), "StaticLightMap VertexBuffer");
+    vertex_buffer = render_context->CreateVertexBuffer(vertices, Assets::GetVertexFormat(VertexFormatAsset::StaticLightMapVertex), "StaticLightMap VertexBuffer");
 }
 
 void StaticLightMapChunk::update_texture(glm::uvec2 source_offset, uint32_t source_stride, glm::uvec2 texture_offset, glm::uvec2 size, Color* colors) {
-    const auto& context = sge::Engine::Renderer().Context();
+    const auto& context = render_context->Context();
 
     LLGL::ImageView image_view;
     image_view.format = LLGL::ImageFormat::RGB;
@@ -250,7 +253,7 @@ void StaticLightMapChunk::update_texture(glm::uvec2 source_offset, uint32_t sour
 }
 
 StaticLightMapChunk::~StaticLightMapChunk() {
-    const auto& context = sge::Engine::Renderer().Context();
+    const auto& context = render_context->Context();
     SGE_RESOURCE_RELEASE(texture);
     SGE_RESOURCE_RELEASE(vertex_buffer);
 }

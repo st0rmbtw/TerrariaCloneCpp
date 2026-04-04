@@ -13,8 +13,8 @@ static constexpr float PLAYER_GRAB_DELAY = 1.5f;
 
 using Constants::ITEM_GRAB_RANGE;
 
-void DroppedItem::draw() const {
-    GameRenderer::DrawSpriteWorld(m_sprite);
+void DroppedItem::draw(GameRenderer& renderer) const {
+    renderer.DrawSpriteWorld(m_sprite);
 }
 
 void DroppedItem::update(const WorldData& world, float dt) {

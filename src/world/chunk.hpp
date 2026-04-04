@@ -10,6 +10,7 @@
 #include <LLGL/Texture.h>
 
 #include <SGE/utils/llgl.hpp>
+#include <SGE/renderer/renderer.hpp>
 
 #include "../constants.hpp"
 #include "../renderer/types.hpp"
@@ -20,11 +21,12 @@
 struct StaticLightMapChunk {
     glm::uvec2 index;
 
+    std::shared_ptr<sge::RenderContext> render_context = nullptr;
     sge::LLGLResource<LLGL::Texture> texture = nullptr;
     sge::LLGLResource<LLGL::Buffer> vertex_buffer = nullptr;
 
     StaticLightMapChunk() = default;
-    StaticLightMapChunk(glm::uvec2 index, const LightMap& lightmap);
+    StaticLightMapChunk(std::shared_ptr<sge::RenderContext> context, glm::uvec2 index, const LightMap& lightmap);
 
     StaticLightMapChunk(StaticLightMapChunk&&) = default;
     StaticLightMapChunk& operator=(StaticLightMapChunk&&) = default;
@@ -37,12 +39,15 @@ struct StaticLightMapChunk {
 class RenderChunk {
 public:
     RenderChunk(
+        std::shared_ptr<class GameRenderer> renderer,
         glm::uvec2 index,
         const glm::vec2& world_pos,
         const WorldData& world,
         ChunkInstance* block_data_arena,
         ChunkInstance* wall_data_arena
-    ) : m_world_pos(world_pos * Constants::RENDER_CHUNK_SIZE),
+    ) :
+        m_renderer(std::move(renderer)),
+        m_world_pos(world_pos * Constants::RENDER_CHUNK_SIZE),
         m_index(index)
     {
         build_mesh(world, block_data_arena, wall_data_arena);
@@ -62,8 +67,6 @@ public:
         ChunkInstance* block_data_arena,
         ChunkInstance* wall_data_arena
     );
-
-    void destroy();
 
     inline void set_blocks_dirty() noexcept {
         m_blocks_dirty = true;
@@ -108,11 +111,11 @@ public:
         return m_wall_instance_buffer.get();
     }
 
-    ~RenderChunk() {
-        destroy();
-    }
+    ~RenderChunk();
 
 private:
+    std::shared_ptr<class GameRenderer> m_renderer = nullptr;
+
     glm::vec2 m_world_pos;
     glm::uvec2 m_index;
     sge::LLGLResource<LLGL::BufferArray> m_block_buffer_array = nullptr;

@@ -230,15 +230,14 @@ static struct AssetsState {
     std::vector<sge::Sampler> samplers;
 } state;
 
-static bool load_font(sge::Font& font, const char* meta_file_path, const char* atlas_file_path);
-static bool load_texture(const char* path, int sampler, sge::Texture* texture);
+static bool load_font(sge::RenderContext& context, sge::Font& font, const char* meta_file_path, const char* atlas_file_path);
+static bool load_texture(sge::RenderContext& context, const char* path, int sampler, sge::Texture* texture);
 
 template <size_t T>
-static sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*, glm::uvec2>, T>& assets, int sampler, bool generate_mip_maps = false);
+static sge::Texture load_texture_array(sge::RenderContext& context, const std::array<std::tuple<uint16_t, TextureAsset, const char*, glm::uvec2>, T>& assets, int sampler, bool generate_mip_maps = false);
 
-void InitSamplers() {
-    sge::Renderer& renderer = sge::Engine::Renderer();
-    const auto& context = renderer.Context();
+void InitSamplers(sge::RenderContext& render_context) {
+    const auto& context = render_context.Context();
 
     state.samplers.resize(4);
     {
@@ -303,21 +302,19 @@ void InitSamplers() {
     }
 }
 
-bool Assets::Load() {
-    InitSamplers();
-
-    sge::Renderer& renderer = sge::Engine::Renderer();
+bool Assets::Load(sge::RenderContext& context) {
+    InitSamplers(context);
 
     const uint8_t data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
-    state.textures[TextureAsset::Stub] = renderer.CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, 1, 1, 1, Assets::GetSampler(sge::TextureSampler::Nearest), data);
+    state.textures[TextureAsset::Stub] = context.CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, 1, 1, 1, Assets::GetSampler(sge::TextureSampler::Nearest), data);
 
     // There are some glitches in mipmaps on Metal
-    const bool mip_maps = !renderer.Backend().IsMetal();
+    const bool mip_maps = !context.Backend().IsMetal();
 
     for (const auto& [key, asset] : TEXTURE_ASSETS) {
         sge::Texture texture;
         const uint8_t sampler = !mip_maps ? sge::TextureSampler::DisableMips(asset.sampler) : asset.sampler;
-        if (!load_texture(asset.path.c_str(), sampler, &texture)) {
+        if (!load_texture(context, asset.path.c_str(), sampler, &texture)) {
             return false;
         }
         state.textures[key] = texture;
@@ -326,7 +323,7 @@ bool Assets::Load() {
     for (const auto& [_, asset_key, path, size] : BLOCK_ASSETS) {
         sge::Texture texture;
         const uint8_t sampler = mip_maps ? sge::TextureSampler::NearestMips : sge::TextureSampler::Nearest;
-        if (!load_texture(path, sampler, &texture)) {
+        if (!load_texture(context, path, sampler, &texture)) {
             return false;
         }
         state.textures[asset_key] = texture;
@@ -350,23 +347,21 @@ bool Assets::Load() {
 
     for (const auto& [key, asset] : ITEM_ASSETS) {
         sge::Texture texture;
-        if (!load_texture(asset.c_str(), sge::TextureSampler::Nearest, &texture)) {
+        if (!load_texture(context, asset.c_str(), sge::TextureSampler::Nearest, &texture)) {
             return false;
         }
         state.items[key] = texture;
     }
 
-    state.textures[TextureAsset::Tiles] = load_texture_array(BLOCK_ASSETS, mip_maps ? sge::TextureSampler::NearestMips : sge::TextureSampler::Nearest, mip_maps);
-    state.textures[TextureAsset::Walls] = load_texture_array(WALL_ASSETS, sge::TextureSampler::Nearest);
-    state.textures[TextureAsset::Backgrounds] = load_texture_array(BACKGROUND_ASSETS, sge::TextureSampler::Nearest);
+    state.textures[TextureAsset::Tiles] = load_texture_array(context, BLOCK_ASSETS, mip_maps ? sge::TextureSampler::NearestMips : sge::TextureSampler::Nearest, mip_maps);
+    state.textures[TextureAsset::Walls] = load_texture_array(context, WALL_ASSETS, sge::TextureSampler::Nearest);
+    state.textures[TextureAsset::Backgrounds] = load_texture_array(context, BACKGROUND_ASSETS, sge::TextureSampler::Nearest);
 
     return true;
 }
 
-bool Assets::LoadShaders(const std::vector<sge::ShaderDef>& shader_defs) {
-    InitVertexFormats();
-
-    sge::Renderer& renderer = sge::Engine::Renderer();
+bool Assets::LoadShaders(sge::RenderContext& context, const std::vector<sge::ShaderDef>& shader_defs) {
+    InitVertexFormats(context.Backend());
 
     for (const auto& [key, asset] : SHADER_ASSETS) {
         sge::ShaderPipeline shader_pipeline;
@@ -379,17 +374,17 @@ bool Assets::LoadShaders(const std::vector<sge::ShaderDef>& shader_defs) {
         }
 
         if (BITFLAG_CHECK(asset.stages, ShaderStages::Vertex)) {
-            if (!(shader_pipeline.vs = renderer.LoadShader(sge::ShaderPath(sge::ShaderType::Vertex, asset.file_name), shader_defs, attributes)))
+            if (!(shader_pipeline.vs = context.LoadShader(sge::ShaderPath(sge::ShaderType::Vertex, asset.file_name), shader_defs, attributes)))
                 return false;
         }
 
         if (BITFLAG_CHECK(asset.stages, ShaderStages::Fragment)) {
-            if (!(shader_pipeline.ps = renderer.LoadShader(sge::ShaderPath(sge::ShaderType::Fragment, asset.file_name), shader_defs)))
+            if (!(shader_pipeline.ps = context.LoadShader(sge::ShaderPath(sge::ShaderType::Fragment, asset.file_name), shader_defs)))
                 return false;
         }
 
         if (BITFLAG_CHECK(asset.stages, ShaderStages::Geometry)) {
-            if (!(shader_pipeline.gs = renderer.LoadShader(sge::ShaderPath(sge::ShaderType::Geometry, asset.file_name), shader_defs)))
+            if (!(shader_pipeline.gs = context.LoadShader(sge::ShaderPath(sge::ShaderType::Geometry, asset.file_name), shader_defs)))
                 return false;
         }
 
@@ -397,14 +392,14 @@ bool Assets::LoadShaders(const std::vector<sge::ShaderDef>& shader_defs) {
     }
 
     for (const auto& [key, asset] : COMPUTE_SHADER_ASSETS) {
-        if (!(state.compute_shaders[key] = renderer.LoadShader(sge::ShaderPath(sge::ShaderType::Compute, asset.file_name, asset.func_name), shader_defs)))
+        if (!(state.compute_shaders[key] = context.LoadShader(sge::ShaderPath(sge::ShaderType::Compute, asset.file_name, asset.func_name), shader_defs)))
             return false;
     }
 
     return true;
 };
 
-bool Assets::LoadFonts() {
+bool Assets::LoadFonts(sge::RenderContext& context) {
     for (const auto& [key, name] : FONT_ASSETS) {
         const fs::path fonts_folder = fs::path("assets") / "fonts";
         const std::string meta_file = (fonts_folder / fs::path(name).concat(".meta")).string();
@@ -421,7 +416,7 @@ bool Assets::LoadFonts() {
         }
 
         sge::Font font;
-        if (!load_font(font, meta_file.c_str(), atlas_file.c_str())) return false;
+        if (!load_font(context, font, meta_file.c_str(), atlas_file.c_str())) return false;
 
         state.fonts[key] = font;
     }
@@ -429,11 +424,7 @@ bool Assets::LoadFonts() {
     return true;
 }
 
-void Assets::InitVertexFormats() {
-    sge::Renderer& renderer = sge::Engine::Renderer();
-
-    const sge::RenderBackend backend = renderer.Backend();
-
+void Assets::InitVertexFormats(sge::RenderBackend backend) {
     LLGL::VertexFormat tilemap_vertex_format = sge::Attributes(backend, {
         sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_position", "Position"),
     });
@@ -492,24 +483,24 @@ void Assets::InitVertexFormats() {
     state.vertex_formats[VertexFormatAsset::StaticLightMapVertex] = static_lightmap_vertex_format;
 }
 
-void Assets::DestroyTextures() {
-    const auto& context = sge::Engine::Renderer().Context();
+void Assets::DestroyTextures(sge::RenderContext& render_context) {
+    const auto& context = render_context.Context();
 
     for (auto& entry : state.textures) {
         context->Release(entry.second);
     }
 }
 
-void Assets::DestroySamplers() {
-    const auto& context = sge::Engine::Renderer().Context();
+void Assets::DestroySamplers(sge::RenderContext& render_context) {
+    const auto& context = render_context.Context();
 
     for (auto& sampler : state.samplers) {
         context->Release(sampler);
     }
 }
 
-void Assets::DestroyShaders() {
-    const auto& context = sge::Engine::Renderer().Context();
+void Assets::DestroyShaders(sge::RenderContext& render_context) {
+    const auto& context = render_context.Context();
 
     for (auto& entry : state.shaders) {
         entry.second.Unload(context);
@@ -563,7 +554,7 @@ const LLGL::VertexFormat& Assets::GetVertexFormat(VertexFormatAsset key) {
     return entry->second;
 }
 
-static bool load_texture(const char* path, int sampler, sge::Texture* texture) {
+static bool load_texture(sge::RenderContext& context, const char* path, int sampler, sge::Texture* texture) {
     int width, height;
 
     uint8_t* data = stbi_load(path, &width, &height, nullptr, 4);
@@ -573,7 +564,7 @@ static bool load_texture(const char* path, int sampler, sge::Texture* texture) {
     }
 
     const bool generate_mips = sampler == sge::TextureSampler::NearestMips || sampler == sge::TextureSampler::LinearMips;
-    *texture = sge::Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, width, height, 1, Assets::GetSampler(sampler), data, generate_mips);
+    *texture = context.CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, width, height, 1, Assets::GetSampler(sampler), data, generate_mips);
 
     stbi_image_free(data);
 
@@ -581,7 +572,7 @@ static bool load_texture(const char* path, int sampler, sge::Texture* texture) {
 }
 
 template <size_t T>
-static sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, TextureAsset, const char*, glm::uvec2>, T>& assets, int sampler, bool generate_mip_maps) {
+static sge::Texture load_texture_array(sge::RenderContext& render_context, const std::array<std::tuple<uint16_t, TextureAsset, const char*, glm::uvec2>, T>& assets, int sampler, bool generate_mip_maps) {
     uint32_t width = 0;
     uint32_t height = 0;
     uint32_t layers_count = 0;
@@ -625,7 +616,7 @@ static sge::Texture load_texture_array(const std::array<std::tuple<uint16_t, Tex
         stbi_image_free(layer_data.data);
     }
 
-    return sge::Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2DArray, LLGL::ImageFormat::RGBA, LLGL::DataType::UInt8, width, height, layers_count, Assets::GetSampler(sampler), pixels.data(), generate_mip_maps);
+    return render_context.CreateTexture(LLGL::TextureType::Texture2DArray, LLGL::ImageFormat::RGBA, LLGL::DataType::UInt8, width, height, layers_count, Assets::GetSampler(sampler), pixels.data(), generate_mip_maps);
 }
 
 template <typename T>
@@ -635,7 +626,7 @@ static T read(std::ifstream& file) {
     return data;
 }
 
-static bool load_font(sge::Font& font, const char* meta_file_path, const char* atlas_file_path) {
+static bool load_font(sge::RenderContext& render_context, sge::Font& font, const char* meta_file_path, const char* atlas_file_path) {
     std::ifstream meta_file(meta_file_path, std::ios::in | std::ios::binary);
 
     if (!meta_file.good()) {
@@ -678,7 +669,7 @@ static bool load_font(sge::Font& font, const char* meta_file_path, const char* a
     stbi_uc* data = stbi_load(atlas_file_path, &w, &h, nullptr, 1);
 
     const sge::Sampler& linear_sampler = Assets::GetSampler(sge::TextureSampler::Linear);
-    font.texture = sge::Engine::Renderer().CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::R, LLGL::DataType::UInt8, texture_width, texture_height, 1, linear_sampler, data);
+    font.texture = render_context.CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::R, LLGL::DataType::UInt8, texture_width, texture_height, 1, linear_sampler, data);
     stbi_image_free(data);
 
     font.font_size = font_size;

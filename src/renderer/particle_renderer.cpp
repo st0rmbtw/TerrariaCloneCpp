@@ -26,16 +26,12 @@ static inline constexpr size_t get_particle_index(Particle::Type type, uint8_t v
     return (y * 3 + variant) * PARTICLES_ATLAS_COLUMNS + x;
 }
 
-void ParticleRenderer::init() {
+ParticleRenderer::ParticleRenderer(const std::shared_ptr<sge::Renderer>& renderer) : m_renderer(renderer) {
     ZoneScoped;
 
-    m_renderer = &sge::Engine::Renderer();
-
-    const sge::RenderBackend backend = m_renderer->Backend();
-    const auto& context = m_renderer->Context();
-    const auto* swap_chain = m_renderer->SwapChain();
-
-    const uint32_t samples = swap_chain->GetSamples();
+    const auto& render_context = m_renderer->GetRenderContext();
+    const sge::RenderBackend backend = render_context->Backend();
+    const auto& context = render_context->Context();
 
     m_atlas = Assets::GetTextureAtlas(TextureAsset::Particles);
 
@@ -53,8 +49,8 @@ void ParticleRenderer::init() {
         ParticleVertex(1.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size()), glm::vec2(m_atlas.texture().size())),
     };
 
-    m_vertex_buffer = m_renderer->CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::ParticleVertex), "ParticleRenderer VertexBuffer");
-    m_instance_buffer = m_renderer->CreateVertexBuffer(MAX_PARTICLES_COUNT * sizeof(ParticleInstance), Assets::GetVertexFormat(VertexFormatAsset::ParticleInstance), "ParticleRenderer InstanceBuffer");
+    m_vertex_buffer = render_context->CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::ParticleVertex), "ParticleRenderer VertexBuffer");
+    m_instance_buffer = render_context->CreateVertexBuffer(MAX_PARTICLES_COUNT * sizeof(ParticleInstance), Assets::GetVertexFormat(VertexFormatAsset::ParticleInstance), "ParticleRenderer InstanceBuffer");
 
     LLGL::Buffer* buffers[] = { m_vertex_buffer.get(), m_instance_buffer.get() };
     m_buffer_array = context->CreateBufferArray(2, buffers);
@@ -127,23 +123,20 @@ void ParticleRenderer::init() {
 
     const sge::ShaderPipeline& particle_shader = Assets::GetShader(ShaderAsset::ParticleShader);
 
-    LLGL::GraphicsPipelineDescriptor pipelineDesc;
+    sge::GraphicsPipelineConfig pipelineConfig;
     pipelineLayoutDesc.debugName = "ParticleRenderer Pipeline";
-    pipelineDesc.vertexShader = particle_shader.vs;
-    pipelineDesc.geometryShader = particle_shader.gs;
-    pipelineDesc.fragmentShader = particle_shader.ps;
-    pipelineDesc.pipelineLayout = pipelineLayout;
-    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
-    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
-    pipelineDesc.renderPass = swap_chain->GetRenderPass();
-    pipelineDesc.rasterizer.frontCCW = true;
-    pipelineDesc.rasterizer.multiSampleEnabled = (samples > 1);
-    pipelineDesc.depth = LLGL::DepthDescriptor {
+    pipelineConfig.vertexShader = particle_shader.vs;
+    pipelineConfig.geometryShader = particle_shader.gs;
+    pipelineConfig.pixelShader = particle_shader.ps;
+    pipelineConfig.layout = pipelineLayout;
+    pipelineConfig.indexFormat = LLGL::Format::R16UInt;
+    pipelineConfig.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
+    pipelineConfig.depth = LLGL::DepthDescriptor {
         .testEnabled = true,
         .writeEnabled = true,
         .compareOp = LLGL::CompareOp::GreaterEqual
     };
-    pipelineDesc.blend = LLGL::BlendDescriptor {
+    pipelineConfig.blend = LLGL::BlendDescriptor {
         .targets = {
             LLGL::BlendTargetDescriptor {
                 .blendEnabled = true,
@@ -156,10 +149,7 @@ void ParticleRenderer::init() {
         }
     };
 
-    m_pipeline = context->CreatePipelineState(pipelineDesc);
-    if (const LLGL::Report* report = m_pipeline->GetReport()) {
-        if (report->HasErrors()) SGE_LOG_ERROR("{}", report->GetText());
-    }
+    m_pipeline_id = render_context->AddPipelineConfig(pipelineConfig);
 
     LLGL::PipelineLayoutDescriptor compute_pipeline_layout_desc;
     compute_pipeline_layout_desc.heapBindings = sge::BindingLayout(
@@ -248,7 +238,7 @@ void ParticleRenderer::compute() {
 
     ZoneScoped;
 
-    const auto& context = m_renderer->Context();
+    const auto& context = m_renderer->GetRenderContext()->Context();
     auto* const commands = m_renderer->CommandBuffer();
 
     ptrdiff_t size = (uint8_t*) m_position_buffer_data_ptr - (uint8_t*) m_position_buffer_data;
@@ -294,7 +284,7 @@ void ParticleRenderer::compute() {
 void ParticleRenderer::prepare() {
     ZoneScoped;
 
-    const auto& context = m_renderer->Context();
+    const auto& context = m_renderer->GetRenderContext()->Context();
     auto* const commands = m_renderer->CommandBuffer();
 
     if (m_particle_count > 0) {
@@ -324,7 +314,7 @@ void ParticleRenderer::render() {
     auto* const commands = m_renderer->CommandBuffer();
 
     commands->SetVertexBufferArray(*m_buffer_array);
-    commands->SetPipelineState(*m_pipeline);
+    commands->SetPipelineState(m_renderer->GetRenderContext()->GetOrCreatePipeline(m_pipeline_id));
 
     commands->SetResourceHeap(*m_resource_heap);
 
@@ -339,7 +329,7 @@ void ParticleRenderer::render_world() {
     auto* const commands = m_renderer->CommandBuffer();
 
     commands->SetVertexBufferArray(*m_buffer_array);
-    commands->SetPipelineState(*m_pipeline);
+    commands->SetPipelineState(m_renderer->GetRenderContext()->GetOrCreatePipeline(m_pipeline_id));
 
     commands->SetResourceHeap(*m_resource_heap);
 
@@ -357,8 +347,8 @@ void ParticleRenderer::reset() {
     m_particle_id = 0;
 }
 
-void ParticleRenderer::terminate() {
-    const auto& context = m_renderer->Context();
+ParticleRenderer::~ParticleRenderer() {
+    const auto& context = m_renderer->GetRenderContext()->Context();
 
     SGE_RESOURCE_RELEASE(m_buffer_array);
     SGE_RESOURCE_RELEASE(m_instance_buffer);
@@ -370,7 +360,8 @@ void ParticleRenderer::terminate() {
 
     SGE_RESOURCE_RELEASE(m_transform_buffer);
 
-    SGE_RESOURCE_RELEASE(m_pipeline);
+    m_renderer->GetRenderContext()->DeletePipeline(m_pipeline_id);
+
     SGE_RESOURCE_RELEASE(m_compute_pipeline);
 
     delete[] m_instance_buffer_data;

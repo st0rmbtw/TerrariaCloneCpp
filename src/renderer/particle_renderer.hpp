@@ -17,21 +17,23 @@
 
 class ParticleRenderer {
 public:
-    void init();
+    ParticleRenderer(const std::shared_ptr<sge::Renderer>& renderer);
+    ~ParticleRenderer();
+
     void render();
     void render_world();
     void compute();
-    void terminate();
     void prepare();
     void reset();
+    
 
     void draw_particle(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, sge::Order order);
     void draw_particle_world(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, sge::Order order);
 
 private:
-    sge::Renderer* m_renderer = nullptr;
+    std::shared_ptr<sge::Renderer> m_renderer = nullptr;
 
-    sge::LLGLResource<LLGL::PipelineState> m_pipeline = nullptr;
+    uint32_t m_pipeline_id = -1;
     sge::LLGLResource<LLGL::PipelineState> m_compute_pipeline = nullptr;
     sge::LLGLResource<LLGL::ResourceHeap> m_resource_heap = nullptr;
     sge::LLGLResource<LLGL::ResourceHeap> m_compute_resource_heap = nullptr;

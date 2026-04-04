@@ -6,8 +6,8 @@
     #include <LLGL/Backend/Metal/NativeHandle.h>
 #endif
 
-bool SupportsAcceleratedDynamicLighting(const sge::Renderer& renderer) {
-    const LLGL::RenderingFeatures& features = renderer.GetRenderingCaps().features;
+bool SupportsAcceleratedDynamicLighting(const sge::RenderContext& context) {
+    const LLGL::RenderingFeatures& features = context.GetRenderingCaps().features;
 
 #if SGE_PLATFORM_APPLE
     bool supportsReadWriteTextures = true;

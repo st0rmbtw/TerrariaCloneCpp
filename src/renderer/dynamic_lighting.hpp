@@ -25,7 +25,7 @@ public:
 
 class DynamicLighting : public IDynamicLighting {
 public:
-    DynamicLighting(const WorldData& world, LLGL::Texture* light_texture);
+    DynamicLighting(std::shared_ptr<sge::Renderer> renderer, const WorldData& world, LLGL::Texture* light_texture);
 
     void update(World& world) override;
     void compute_light(const sge::Camera& camera, const World& world) override;
@@ -44,8 +44,8 @@ private:
 
     LightMap m_dynamic_lightmap;
 
+    std::shared_ptr<sge::Renderer> m_renderer = nullptr;
     sge::LLGLResource<LLGL::Texture> m_light_texture = nullptr;
-    sge::Renderer* m_renderer = nullptr;
 };
 
 class AcceleratedDynamicLighting : public IDynamicLighting {
@@ -57,11 +57,11 @@ private:
     };
 
 public:
-    AcceleratedDynamicLighting(const WorldData& world, LLGL::Texture* light_texture);
+    AcceleratedDynamicLighting(std::shared_ptr<sge::Renderer> renderer, const WorldData& world, LLGL::Texture* light_texture);
 
     void set_light_texture(LLGL::Texture* light_texture) noexcept override {
         SGE_ASSERT(light_texture != nullptr);
-        const auto& context = m_renderer->Context();
+        const auto& context = m_renderer->GetRenderContext()->Context();
         context->WriteResourceHeap(*m_light_blur_resource_heap, 2, { light_texture });
         context->WriteResourceHeap(*m_light_init_resource_heap, 2, { light_texture });
         m_light_texture = light_texture;
@@ -81,7 +81,7 @@ private:
 
     void update_tile_texture(WorldData& world);
 private:
-    sge::Renderer* m_renderer = nullptr;
+    std::shared_ptr<sge::Renderer> m_renderer = nullptr;
 
     sge::LLGLResource<LLGL::Buffer> m_light_buffer = nullptr;
     sge::LLGLResource<LLGL::Buffer> m_uniform_buffer = nullptr;

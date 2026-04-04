@@ -27,7 +27,7 @@ public:
     using RenderChunks = LRUCache<glm::uvec2, RenderChunk>;
     using LightChunks = LRUCache<glm::uvec2, StaticLightMapChunk>;
 
-    ChunkManager() {
+    ChunkManager(std::shared_ptr<GameRenderer> renderer) : m_renderer(std::move(renderer)) {
         using Constants::RENDER_CHUNK_SIZE_U;
         using Constants::LIGHTMAP_CHUNK_SIZE;
         m_block_data_arena = sge::checked_alloc<ChunkInstance>(RENDER_CHUNK_SIZE_U * RENDER_CHUNK_SIZE_U);
@@ -78,6 +78,8 @@ private:
     void preload_light_chunks(const WorldData& world, const sge::Camera& camera);
 
 private:
+    std::shared_ptr<GameRenderer> m_renderer = nullptr;
+
     RenderChunks m_render_chunks{ 5 };
     LightChunks m_light_chunks{ 10 };
 

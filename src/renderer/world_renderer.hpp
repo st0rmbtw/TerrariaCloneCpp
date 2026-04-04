@@ -15,9 +15,9 @@
 
 class WorldRenderer {
 public:
-    WorldRenderer() = default;
+    WorldRenderer(const std::shared_ptr<sge::Renderer>& renderer);
+    ~WorldRenderer();
 
-    void init();
     void init_lighting(const WorldData& world);
     void init_textures(LLGL::Extent2D viewport);
     
@@ -27,7 +27,6 @@ public:
 
     void render(const ChunkManager& chunk_manager);
     void render_lightmap(const ChunkManager& chunk_manager);
-    void terminate();
 
     void init_targets(LLGL::Extent2D resolution);
 
@@ -44,27 +43,27 @@ public:
     inline LLGL::RenderTarget* light_texture_target() { return m_dynamic_light_texture_target.get(); }
     
 private:
-    sge::Renderer* m_renderer = nullptr;
+    std::shared_ptr<sge::Renderer> m_renderer = nullptr;
 
     sge::LLGLResource<LLGL::Buffer> m_tile_texture_data_buffer = nullptr;
-    sge::LLGLResource<LLGL::PipelineState> m_pipeline = nullptr;
     sge::LLGLResource<LLGL::ResourceHeap> m_resource_heap = nullptr;
-
+    
     sge::LLGLResource<LLGL::ResourceHeap> m_lightmap_resource_heap = nullptr;
-
+    
     sge::LLGLResource<LLGL::Texture> m_dynamic_light_texture = nullptr;
     sge::LLGLResource<LLGL::RenderTarget> m_dynamic_light_texture_target = nullptr;
-
+    
     sge::LLGLResource<LLGL::Texture> m_static_lightmap_texture = nullptr;
     sge::LLGLResource<LLGL::RenderTarget> m_static_lightmap_target = nullptr;
     sge::LLGLResource<LLGL::RenderPass> m_static_lightmap_render_pass = nullptr;
-
+    
     sge::LLGLResource<LLGL::Texture> m_target_texture = nullptr;
     sge::LLGLResource<LLGL::Texture> m_depth_texture = nullptr;
     sge::LLGLResource<LLGL::RenderTarget> m_target = nullptr;
     sge::LLGLResource<LLGL::RenderPass> m_render_pass = nullptr;
-
-    sge::LLGLResource<LLGL::PipelineState> m_lightmap_pipeline = nullptr;
+    
+    uint32_t m_pipeline_id = -1;
+    uint32_t m_lightmap_pipeline_id = -1;
 
     std::unique_ptr<IDynamicLighting> m_dynamic_lighting = nullptr;
 };

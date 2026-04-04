@@ -682,30 +682,30 @@ void Player::update_sprites() {
         .set_position(position);
 }
 
-void Player::draw() const {
+void Player::draw(GameRenderer& renderer) const {
     ZoneScoped;
 
-    GameRenderer::DrawAtlasSpriteWorld(m_head.sprite);
+    renderer.DrawAtlasSpriteWorld(m_head.sprite);
 
-    GameRenderer::DrawAtlasSpriteWorld(m_right_arm.sprite);
+    renderer.DrawAtlasSpriteWorld(m_right_arm.sprite);
 
-    GameRenderer::DrawAtlasSpriteWorld(m_hair.sprite);
-    GameRenderer::DrawAtlasSpriteWorld(m_body.sprite);
-    GameRenderer::DrawAtlasSpriteWorld(m_legs.sprite);
+    renderer.DrawAtlasSpriteWorld(m_hair.sprite);
+    renderer.DrawAtlasSpriteWorld(m_body.sprite);
+    renderer.DrawAtlasSpriteWorld(m_legs.sprite);
 
-    GameRenderer::BeginOrderMode();
-        GameRenderer::DrawAtlasSpriteWorld(m_left_eye.sprite);
-        GameRenderer::DrawAtlasSpriteWorld(m_right_eye.sprite);
-    GameRenderer::EndOrderMode();
+    renderer.BeginOrderMode();
+        renderer.DrawAtlasSpriteWorld(m_left_eye.sprite);
+        renderer.DrawAtlasSpriteWorld(m_right_eye.sprite);
+    renderer.EndOrderMode();
 
     if (m_using_item_visible) {
-        GameRenderer::DrawSpriteWorld(m_using_item);
+        renderer.DrawSpriteWorld(m_using_item);
     }
 
-    GameRenderer::BeginOrderMode();
-        GameRenderer::DrawAtlasSpriteWorld(m_left_hand.sprite);
-        GameRenderer::DrawAtlasSpriteWorld(m_left_shoulder.sprite);
-    GameRenderer::EndOrderMode();
+    renderer.BeginOrderMode();
+        renderer.DrawAtlasSpriteWorld(m_left_hand.sprite);
+        renderer.DrawAtlasSpriteWorld(m_left_shoulder.sprite);
+    renderer.EndOrderMode();
 }
 
 static void break_tree(World& world, TilePos start_pos) {

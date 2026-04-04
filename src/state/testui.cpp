@@ -9,7 +9,6 @@
 
 #include "../ui/ui.hpp"
 #include "../assets.hpp"
-#include "../app.hpp"
 
 namespace UiTypeID {
     enum : uint8_t {
@@ -22,14 +21,14 @@ struct UiRectangleData {
     sge::LinearRgba color;
 };
 
-TestUI::TestUI() :
-    m_camera{ sge::CameraOrigin::TopLeft },
-    m_batch(sge::Engine::Renderer(), {
+TestUI::TestUI(const std::shared_ptr<sge::Renderer>& renderer) :
+    m_camera(renderer->GetRenderContext()->Backend(), sge::CameraOrigin::TopLeft),
+    m_batch(*renderer, {
         .font_shader = Assets::GetShader(ShaderAsset::FontShader).ps,
         .enable_scissor = true
-    })
+    }),
+    m_renderer(renderer)
 {
-    m_camera.set_viewport(App::GetWindowResolution());
     m_camera.set_zoom(1.0f);
     
     m_batch.SetIsUi(true);
@@ -39,9 +38,10 @@ void TestUI::Update() {
     UI::Update();
 }
 
-void TestUI::Render() {
+void TestUI::Render(const std::shared_ptr<sge::GlfwWindow>& window) {
+    m_camera.set_viewport(glm::uvec2(window->GetContentSize().width, window->GetContentSize().height));
+
     const sge::Font& font = Assets::GetFont(FontAsset::AndyBold);
-    sge::Renderer& renderer = sge::Engine::Renderer();
 
     UI::Start(RootDesc(m_camera.viewport()));
 
@@ -133,17 +133,19 @@ void TestUI::Render() {
         }
     }
 
-    renderer.Begin(m_camera);
+    m_renderer->Begin();
 
-    renderer.PrepareBatch(m_batch);
-    renderer.UploadBatchData();
+    m_renderer->PrepareBatch(m_batch);
+    m_renderer->UploadBatchData();
 
-    renderer.BeginMainPass();
-        renderer.Clear(LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f));
-        renderer.RenderBatch(m_batch);
-    renderer.EndPass();
+    m_renderer->BeginPass(window, m_camera);
+        m_renderer->Clear(LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f));
+        m_renderer->RenderBatch(m_batch);
+    m_renderer->EndPass();
 
-    renderer.End();
+    m_renderer->End();
+
+    m_renderer->Present(window);
 
     m_batch.Reset();
 }

@@ -13,6 +13,8 @@
 #include <SGE/types/font.hpp>
 #include <SGE/types/sampler.hpp>
 #include <SGE/types/shader_def.hpp>
+#include <SGE/types/backend.hpp>
+#include <SGE/renderer/context.hpp>
 
 enum class TextureAsset : uint8_t {
     Stub = 0,
@@ -122,14 +124,14 @@ enum class VertexFormatAsset : uint8_t {
 constexpr uint32_t PARTICLES_ATLAS_COLUMNS = 100;
 
 namespace Assets {
-    bool Load();
-    bool LoadShaders(const std::vector<sge::ShaderDef>& shader_defs);
-    bool LoadFonts();
-    void InitVertexFormats();
+    bool Load(sge::RenderContext& context);
+    bool LoadShaders(sge::RenderContext& context, const std::vector<sge::ShaderDef>& shader_defs);
+    bool LoadFonts(sge::RenderContext& context);
+    void InitVertexFormats(sge::RenderBackend backend);
 
-    void DestroyTextures();
-    void DestroyShaders();
-    void DestroySamplers();
+    void DestroyTextures(sge::RenderContext& context);
+    void DestroyShaders(sge::RenderContext& context);
+    void DestroySamplers(sge::RenderContext& context);
     void DestroyFonts();
 
     const sge::Texture& GetTexture(TextureAsset key);

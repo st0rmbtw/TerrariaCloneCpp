@@ -20,16 +20,15 @@ namespace BackgroundFlags {
     };
 };
 
-void BackgroundRenderer::init() {
+BackgroundRenderer::BackgroundRenderer(const std::shared_ptr<sge::Renderer>& renderer) : m_renderer(renderer) {
     ZoneScoped;
 
-    m_renderer = &sge::Engine::Renderer();
+    const sge::RenderBackend backend = m_renderer->GetRenderContext()->Backend();
+    const auto& render_context = m_renderer->GetRenderContext();
+    const auto& context = m_renderer->GetRenderContext()->Context();
 
-    const sge::RenderBackend backend = m_renderer->Backend();
-    const auto& context = m_renderer->Context();
-    const auto* swap_chain = m_renderer->SwapChain();
-
-    const uint32_t samples = swap_chain->GetSamples();
+    // const uint32_t samples = swap_chain->GetSamples();
+    const uint32_t samples = 1;
 
     const sge::Texture& backgrounds_texture = Assets::GetTexture(TextureAsset::Backgrounds);
 
@@ -46,9 +45,9 @@ void BackgroundRenderer::init() {
         BackgroundVertex(glm::vec2(1.0f, 1.0f), backgrounds_texture.size()),
     };
 
-    m_vertex_buffer = m_renderer->CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::BackgroundVertex), "BackgroundRenderer VertexBuffer");
-    m_instance_buffer = m_renderer->CreateVertexBuffer(MAX_QUADS * sizeof(BackgroundInstance), Assets::GetVertexFormat(VertexFormatAsset::BackgroundInstance), "BackgroundRenderer InstanceBuffer");
-    m_world_instance_buffer = m_renderer->CreateVertexBuffer(MAX_QUADS * sizeof(BackgroundInstance), Assets::GetVertexFormat(VertexFormatAsset::BackgroundInstance), "BackgroundRenderer InstanceBuffer");
+    m_vertex_buffer = render_context->CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::BackgroundVertex), "BackgroundRenderer VertexBuffer");
+    m_instance_buffer = render_context->CreateVertexBuffer(MAX_QUADS * sizeof(BackgroundInstance), Assets::GetVertexFormat(VertexFormatAsset::BackgroundInstance), "BackgroundRenderer InstanceBuffer");
+    m_world_instance_buffer = render_context->CreateVertexBuffer(MAX_QUADS * sizeof(BackgroundInstance), Assets::GetVertexFormat(VertexFormatAsset::BackgroundInstance), "BackgroundRenderer InstanceBuffer");
 
     {
         LLGL::Buffer* buffers[] = { m_vertex_buffer.get(), m_instance_buffer.get() };
@@ -83,7 +82,7 @@ void BackgroundRenderer::init() {
     LLGL::RenderPassDescriptor render_pass;
     render_pass.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Load;
     render_pass.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
-    render_pass.colorAttachments[0].format = swap_chain->GetColorFormat();
+    render_pass.colorAttachments[0].format = LLGL::Format::RGBA8UNorm;
     render_pass.samples = samples;
 
     LLGL::GraphicsPipelineDescriptor pipelineDesc;
@@ -105,10 +104,11 @@ void BackgroundRenderer::init() {
 }
 
 void BackgroundRenderer::init_targets(LLGL::Extent2D resolution) {
-    const auto& context = m_renderer->Context();
-    const auto* swap_chain = m_renderer->SwapChain();
+    const auto& context = m_renderer->GetRenderContext()->Context();
+    // const auto* swap_chain = m_renderer->SwapChain();
 
-    const uint32_t samples = swap_chain->GetSamples();
+    // const uint32_t samples = swap_chain->GetSamples();
+    const uint32_t samples = 1;
 
     SGE_RESOURCE_RELEASE(m_background_render_target);
     SGE_RESOURCE_RELEASE(m_background_render_texture);
@@ -116,7 +116,8 @@ void BackgroundRenderer::init_targets(LLGL::Extent2D resolution) {
     LLGL::TextureDescriptor texture_desc;
     texture_desc.extent.width = resolution.width;
     texture_desc.extent.height = resolution.height;
-    texture_desc.format = swap_chain->GetColorFormat();
+    // texture_desc.format = swap_chain->GetColorFormat();
+    texture_desc.format = LLGL::Format::RGBA8UNorm;
     texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
     texture_desc.miscFlags = LLGL::MiscFlags::FixedSamples;
     texture_desc.cpuAccessFlags = 0;
@@ -137,10 +138,10 @@ void BackgroundRenderer::init_targets(LLGL::Extent2D resolution) {
 }
 
 void BackgroundRenderer::init_world(WorldRenderer& world_renderer) {
-    const auto& context = m_renderer->Context();
-    const auto* swap_chain = m_renderer->SwapChain();
+    const auto& context = m_renderer->GetRenderContext()->Context();
 
-    const uint32_t samples = swap_chain->GetSamples();
+    // const uint32_t samples = swap_chain->GetSamples();
+    const uint32_t samples = 1;
 
     const sge::ShaderPipeline& background_shader = Assets::GetShader(ShaderAsset::BackgroundShader);
 
@@ -232,8 +233,8 @@ void BackgroundRenderer::render_world() {
     m_world_layer_count = 0;
 }
 
-void BackgroundRenderer::terminate() {
-    const auto& context = m_renderer->Context();
+BackgroundRenderer::~BackgroundRenderer() {
+    const auto& context = m_renderer->GetRenderContext()->Context();
 
     SGE_RESOURCE_RELEASE(m_vertex_buffer);
     SGE_RESOURCE_RELEASE(m_instance_buffer);

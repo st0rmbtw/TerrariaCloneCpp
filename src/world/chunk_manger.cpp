@@ -4,6 +4,8 @@
 #include <SGE/profile.hpp>
 #include <ranges>
 
+#include "../renderer/renderer.hpp"
+
 #include "lightmap.hpp"
 #include "utils.hpp"
 
@@ -64,7 +66,7 @@ void ChunkManager::manage_render_chunks(const WorldData& world, const sge::Camer
 
             if (!m_render_chunks.contains(chunk_pos)) {
                 const glm::vec2 world_pos = glm::vec2(x * TILE_SIZE, y * TILE_SIZE);
-                m_render_chunks.insert(chunk_pos, RenderChunk(chunk_pos, world_pos, world, m_block_data_arena, m_wall_data_arena));
+                m_render_chunks.insert(chunk_pos, RenderChunk(m_renderer, chunk_pos, world_pos, world, m_block_data_arena, m_wall_data_arena));
             }
         }
     }
@@ -87,7 +89,7 @@ void ChunkManager::manage_light_chunks(const WorldData& world, const sge::Camera
             m_visible_light_chunks.insert(chunk_pos);
 
             if (!m_light_chunks.contains(chunk_pos)) {
-                StaticLightMapChunk chunk(chunk_pos, world.lightmap);
+                StaticLightMapChunk chunk(m_renderer->GetRenderer()->GetRenderContext(), chunk_pos, world.lightmap);
                 m_light_chunks.insert(chunk_pos, std::move(chunk));
             }
         }

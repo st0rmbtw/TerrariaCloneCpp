@@ -21,12 +21,13 @@ struct LayerData {
 
 class BackgroundRenderer {
 public:
-    void init();
+    BackgroundRenderer(const std::shared_ptr<sge::Renderer>& renderer);
+    ~BackgroundRenderer();
+
     void init_world(WorldRenderer& renderer);
     void init_targets(LLGL::Extent2D resolution);
     void render();
     void render_world();
-    void terminate();
     void reset();
 
     inline void draw_layer(const BackgroundLayer& layer) {
@@ -50,7 +51,7 @@ private:
     size_t m_layer_count = 0;
     size_t m_world_layer_count = 0;
 
-    sge::Renderer* m_renderer = nullptr;
+    std::shared_ptr<sge::Renderer> m_renderer = nullptr;
 
     sge::LLGLResource<LLGL::PipelineLayout> m_pipeline_layout = nullptr;
     sge::LLGLResource<LLGL::PipelineState> m_pipeline = nullptr;

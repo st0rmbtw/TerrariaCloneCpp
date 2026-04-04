@@ -433,18 +433,18 @@ void World::stack_dropped_items() {
     }
 }
 
-void World::draw(const sge::Camera& camera) {
+void World::draw(GameRenderer& renderer, const sge::Camera& camera) {
     ZoneScoped;
 
-    GameRenderer::BeginOrderMode();
+    renderer.BeginOrderMode();
         for (const TilePos& tile_pos : m_data.torches) {
             for (const glm::vec2& offset : m_offsets) {
                 const glm::vec2 flame_pos = tile_pos.to_world_pos() - glm::vec2((20.0f - 16.0f) / 2.0f, 0.0f);
                 m_flames_sprite.set_position(flame_pos + offset);
-                GameRenderer::DrawAtlasSpriteWorldPremultiplied(m_flames_sprite);
+                renderer.DrawAtlasSpriteWorldPremultiplied(m_flames_sprite);
             }
         }
-    GameRenderer::EndOrderMode();
+    renderer.EndOrderMode();
 
     m_cracks_sprite.set_scale(1.0f);
 
@@ -453,7 +453,7 @@ void World::draw(const sge::Camera& camera) {
         m_cracks_sprite.set_index(cracks);
         m_cracks_sprite.set_z(0.4f);
 
-        GameRenderer::DrawAtlasSpriteWorld(m_cracks_sprite);
+        renderer.DrawAtlasSpriteWorld(m_cracks_sprite);
     }
 
     for (const auto& [pos, cracks] : m_wall_cracks) {
@@ -461,12 +461,12 @@ void World::draw(const sge::Camera& camera) {
         m_cracks_sprite.set_index(cracks);
         m_cracks_sprite.set_z(0.2f);
 
-        GameRenderer::DrawAtlasSpriteWorld(m_cracks_sprite);
+        renderer.DrawAtlasSpriteWorld(m_cracks_sprite);
     }
 
     m_cracks_sprite.set_z(1.0f);
 
-    GameRenderer::BeginOrderMode();
+    renderer.BeginOrderMode();
         for (const TileDigAnimation& anim : m_tile_dig_animations) {
             const float zoom = glm::max(camera.zoom(), 0.6f);
             const glm::vec2 scale = glm::vec2(1.0f + anim.scale * 0.8f * zoom);
@@ -475,7 +475,7 @@ void World::draw(const sge::Camera& camera) {
             sge::TextureAtlasSprite sprite(Assets::GetTextureAtlas(block_texture_asset(anim.block)), position, scale);
             sprite.set_index(anim.atlas_pos.x, anim.atlas_pos.y);
 
-            GameRenderer::DrawAtlasSpriteWorld(sprite);
+            renderer.DrawAtlasSpriteWorld(sprite);
 
             const auto cracks = m_block_cracks.find(anim.tile_pos);
             if (cracks != m_block_cracks.end()) {
@@ -483,16 +483,16 @@ void World::draw(const sge::Camera& camera) {
                 m_cracks_sprite.set_scale(scale);
                 m_cracks_sprite.set_index(cracks->second);
 
-                GameRenderer::DrawAtlasSpriteWorld(m_cracks_sprite, sge::Order(1));
+                renderer.DrawAtlasSpriteWorld(m_cracks_sprite, sge::Order(1));
             }
         }
-    GameRenderer::EndOrderMode();
+    renderer.EndOrderMode();
 
-    GameRenderer::BeginOrderMode();
+    renderer.BeginOrderMode();
         for (const DroppedItem& item : m_dropped_items) {
-            item.draw();
+            item.draw(renderer);
         }
-    GameRenderer::EndOrderMode();
+    renderer.EndOrderMode();
 }
 
 void World::update_neighbors(TilePos initial_pos) {

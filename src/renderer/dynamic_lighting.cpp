@@ -49,10 +49,12 @@ static bool blur(LightMap& lightmap, int index, glm::vec3& prev_light, float& pr
     return this_light.r < LIGHT_EPSILON && this_light.g < LIGHT_EPSILON && this_light.b < LIGHT_EPSILON;
 }
 
-DynamicLighting::DynamicLighting(const WorldData& world, LLGL::Texture* light_texture) : m_light_texture(light_texture) {
+DynamicLighting::DynamicLighting(std::shared_ptr<sge::Renderer> renderer, const WorldData& world, LLGL::Texture* light_texture) :
+    m_renderer(std::move(renderer)),
+    m_light_texture(light_texture)
+{
     using Constants::SUBDIVISION;
     m_dynamic_lightmap = LightMap(world.area.size() * SUBDIVISION);
-    m_renderer = &sge::Engine::Renderer();
 
     m_line = HeapArray<Color>(Constants::LIGHT_AIR_DECAY_STEPS);
 
@@ -271,7 +273,7 @@ void DynamicLighting::compute_light(const sge::Camera& camera, const World& worl
         blur_horizontal(lightmap, area);
     });
 
-    const auto& context = m_renderer->Context();
+    const auto& context = m_renderer->GetRenderContext()->Context();
 
     for (const sge::IRect& area : m_areas) {
         if (area.width() < 2 || area.height() < 2)
@@ -300,14 +302,13 @@ static SGE_FORCE_INLINE void blur_dispatch_metal(LLGL::CommandBuffer* commands, 
     commands->Dispatch(w, h, 1);
 }
 
-AcceleratedDynamicLighting::AcceleratedDynamicLighting(const WorldData& world, LLGL::Texture* light_texture) :
+AcceleratedDynamicLighting::AcceleratedDynamicLighting(std::shared_ptr<sge::Renderer> renderer, const WorldData& world, LLGL::Texture* light_texture) :
+    m_renderer(std::move(renderer)),
     m_light_texture(light_texture)
 {
     using Constants::TILE_SIZE;
 
-    m_renderer = &sge::Engine::Renderer();
-
-    const sge::RenderBackend backend = m_renderer->Backend();
+    const sge::RenderBackend backend = m_renderer->GetRenderContext()->Backend();
     is_metal = backend.IsMetal();
 
     if (backend.IsMetal())
@@ -318,7 +319,7 @@ AcceleratedDynamicLighting::AcceleratedDynamicLighting(const WorldData& world, L
 }
 
 void AcceleratedDynamicLighting::destroy() {
-    const auto& context = m_renderer->Context();
+    const auto& context = m_renderer->GetRenderContext()->Context();
 
     SGE_RESOURCE_RELEASE(m_light_set_light_sources_pipeline);
     SGE_RESOURCE_RELEASE(m_light_vertical_pipeline);
@@ -331,7 +332,8 @@ void AcceleratedDynamicLighting::destroy() {
 void AcceleratedDynamicLighting::init_pipeline() {
     using Constants::WORLD_MAX_LIGHT_COUNT;
 
-    const auto& context = m_renderer->Context();
+    const auto& render_context = m_renderer->GetRenderContext();
+    const auto& context = render_context->Context();
 
     {
         LLGL::BufferDescriptor light_buffer;
@@ -387,7 +389,7 @@ void AcceleratedDynamicLighting::init_pipeline() {
                 sge::BindingLayoutItem::TextureStorage(6, "LightTexture")
             }
         );
-        if (sge::Engine::Renderer().Backend().IsOpenGL()) {
+        if (render_context->Backend().IsOpenGL()) {
             lightBlurPipelineLayoutDesc.barrierFlags = LLGL::BarrierFlags::StorageTexture;
         }
 
@@ -421,7 +423,7 @@ void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
 
     using Constants::SUBDIVISION;
 
-    auto& context = m_renderer->Context();
+    auto& context = m_renderer->GetRenderContext()->Context();
 
     SGE_RESOURCE_RELEASE(m_tile_texture);
 
@@ -551,6 +553,6 @@ void AcceleratedDynamicLighting::update_tile_texture(WorldData& world) {
         world.changed_tiles.pop_back();
 
         image_view.data     = &value;
-        m_renderer->Context()->WriteTexture(*m_tile_texture, LLGL::TextureRegion(LLGL::Offset3D(pos.x, pos.y, 0), LLGL::Extent3D(1, 1, 1)), image_view);
+        m_renderer->GetRenderContext()->Context()->WriteTexture(*m_tile_texture, LLGL::TextureRegion(LLGL::Offset3D(pos.x, pos.y, 0), LLGL::Extent3D(1, 1, 1)), image_view);
     }
 }
