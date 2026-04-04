@@ -4,8 +4,7 @@
 __MACOSX/
 out/
 out_release/
-build/
-build_release/
+build*/
 .cache/
 glslang.exe
 glslang

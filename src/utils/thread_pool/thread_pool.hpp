@@ -155,16 +155,20 @@ namespace dp {
             auto future = promise.get_future();
             auto task = [func = std::move(f), ... largs = std::move(args),
                          promise = std::move(promise)]() mutable {
+                #if __cpp_exceptions
                 try {
+                #endif
                     if constexpr (std::is_same_v<ReturnType, void>) {
                         func(largs...);
                         promise.set_value();
                     } else {
                         promise.set_value(func(largs...));
                     }
+                #if __cpp_exceptions
                 } catch (...) {
                     promise.set_exception(std::current_exception());
                 }
+                #endif
             };
             enqueue_task(std::move(task));
             return future;
