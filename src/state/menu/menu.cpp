@@ -32,10 +32,14 @@ static constexpr float LOGO_ANIM_MAX_SCALE = 1.1f;
 static constexpr float LOGO_ANIM_MIN_ROTATION = -5.0f;
 static constexpr float LOGO_ANIM_MAX_ROTATION = 5.0f;
 
-MainMenuState::MainMenuState(const std::shared_ptr<sge::Renderer>& renderer) :
-    m_camera(renderer->GetRenderContext()->Backend(), sge::CameraOrigin::Center, sge::CoordinateSystem {
-        .up = sge::CoordinateDirectionY::Negative,
-        .forward = sge::CoordinateDirectionZ::Negative,
+MainMenuState::MainMenuState(const std::shared_ptr<sge::Renderer>& renderer, uint8_t samples) :
+    m_camera(sge::CameraConfig {
+        .origin = sge::CameraOrigin::Center,
+        .coordinateSystem = sge::CoordinateSystem {
+            .up = sge::CoordinateDirectionY::Negative,
+            .forward = sge::CoordinateDirectionZ::Negative,
+        },
+        .samples = samples
     }),
     m_batch(*renderer, {
         .font_shader = Assets::GetShader(ShaderAsset::FontShader).ps,
@@ -44,8 +48,6 @@ MainMenuState::MainMenuState(const std::shared_ptr<sge::Renderer>& renderer) :
     m_background_renderer(renderer),
     m_renderer(renderer)
 {
-    m_camera.set_zoom(1.0f);
-
     m_cursor.SetForegroundColor(sge::LinearRgba(1.0, 0.08, 0.58));
     m_cursor.SetBackgroundColor(sge::LinearRgba(0.9, 0.9, 0.9));
 
@@ -121,7 +123,7 @@ void MainMenuState::setup_background() {
 void MainMenuState::Update() {
     UI::Update();
 
-    m_cursor.Update(sge::Input::MouseScreenPosition());
+    m_cursor.Update(sge::Input::CursorPosition());
 
     m_camera.set_position(m_camera.position() + glm::vec2(50.0f, 0.0f) * sge::Time::DeltaSeconds());
 
@@ -381,13 +383,13 @@ BaseState* MainMenuState::GetNextState() {
         const WorldSelected& opts = m_nav_manager.get<WorldSelected>();
         WorldData world_data;
         load_world(world_data, opts.path);
-        return new InGameState(m_renderer, std::move(world_data));
+        return new InGameState(m_renderer, m_camera.samples(), std::move(world_data));
     }
 
     if (m_nav_manager.is<WorldCreated>()) {
         WorldData world_data;
         world_generate(world_data, 200, 500, 0);
-        return new InGameState(m_renderer, std::move(world_data));
+        return new InGameState(m_renderer, m_camera.samples(), std::move(world_data));
     }
 
     return this;

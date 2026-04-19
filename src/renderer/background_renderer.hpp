@@ -22,7 +22,6 @@ struct LayerData {
 class BackgroundRenderer {
 public:
     BackgroundRenderer(const std::shared_ptr<sge::Renderer>& renderer);
-    ~BackgroundRenderer();
 
     void init_world(WorldRenderer& renderer);
     void init_targets(LLGL::Extent2D resolution);
@@ -41,8 +40,8 @@ public:
     }
 
     [[nodiscard]]
-    LLGL::RenderTarget* target() { return m_background_render_target.get(); }
-    LLGL::Texture* target_texture() { return m_background_render_texture.get(); }
+    sge::Handle<LLGL::RenderTarget> target() { return m_background_render_target; }
+    const sge::Ref<LLGL::Texture>& target_texture() { return m_background_render_texture; }
 
 private:
     static void draw_layer_internal(const BackgroundLayer& layer, BackgroundInstance** p_buffer);
@@ -53,26 +52,27 @@ private:
 
     std::shared_ptr<sge::Renderer> m_renderer = nullptr;
 
-    sge::LLGLResource<LLGL::PipelineLayout> m_pipeline_layout = nullptr;
-    sge::LLGLResource<LLGL::PipelineState> m_pipeline = nullptr;
-    sge::LLGLResource<LLGL::PipelineState> m_pipeline_world = nullptr;
-    sge::LLGLResource<LLGL::ResourceHeap> m_resource_heap = nullptr;
-    sge::LLGLResource<LLGL::Buffer> m_vertex_buffer = nullptr;
+    sge::Ref<LLGL::PipelineLayout> m_pipeline_layout = nullptr;
+    sge::Ref<LLGL::ResourceHeap> m_resource_heap = nullptr;
+    sge::Ref<LLGL::Buffer> m_vertex_buffer = nullptr;
+    
+    sge::Ref<LLGL::Buffer> m_instance_buffer = nullptr;
+    sge::Ref<LLGL::Buffer> m_world_instance_buffer = nullptr;
+    
+    sge::Ref<LLGL::BufferArray> m_buffer_array = nullptr;
+    sge::Ref<LLGL::BufferArray> m_world_buffer_array = nullptr;
+    
+    sge::Ref<LLGL::Texture> m_background_render_texture = nullptr;
 
-    sge::LLGLResource<LLGL::Buffer> m_instance_buffer = nullptr;
-    sge::LLGLResource<LLGL::Buffer> m_world_instance_buffer = nullptr;
-
-    sge::LLGLResource<LLGL::BufferArray> m_buffer_array = nullptr;
-    sge::LLGLResource<LLGL::BufferArray> m_world_buffer_array = nullptr;
-
-    BackgroundInstance* m_buffer = nullptr;
+    HeapArray<BackgroundInstance> m_buffer;
+    HeapArray<BackgroundInstance> m_world_buffer;
+    
     BackgroundInstance* m_buffer_ptr = nullptr;
-
-    BackgroundInstance* m_world_buffer = nullptr;
     BackgroundInstance* m_world_buffer_ptr = nullptr;
-
-    sge::LLGLResource<LLGL::RenderTarget> m_background_render_target;
-    sge::LLGLResource<LLGL::Texture> m_background_render_texture;
+    
+    sge::Handle<LLGL::RenderTarget> m_background_render_target;
+    sge::Handle<LLGL::PipelineState> m_pipeline_world;
+    sge::Handle<LLGL::PipelineState> m_pipeline;
 };
 
 #endif

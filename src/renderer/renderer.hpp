@@ -99,7 +99,7 @@ public:
 
     [[nodiscard]] uint32_t GetMainOrderIndex();
     [[nodiscard]] uint32_t GetWorldOrderIndex();
-    [[nodiscard]] LLGL::Buffer* ChunkVertexBuffer();
+    [[nodiscard]] const sge::Unique<LLGL::Buffer>& ChunkVertexBuffer();
 
     [[nodiscard]]
     const std::shared_ptr<sge::Renderer> GetRenderer() const {
@@ -107,27 +107,25 @@ public:
     }
 
 private:
+    ParticleRenderer m_particle_renderer;
+    WorldRenderer m_world_renderer;
     BackgroundRenderer m_background_renderer;
-    
+
+    sge::Rect m_camera_frustums[2];
+    sge::Rect m_ui_frustum;
+
     std::shared_ptr<sge::Renderer> m_renderer = nullptr;
 
     std::unique_ptr<sge::Batch> m_main_batch = nullptr;
     std::unique_ptr<sge::Batch> m_world_batch = nullptr;
     std::unique_ptr<sge::Batch> m_ui_batch = nullptr;
 
-    sge::Rect m_camera_frustums[2];
-    sge::Rect m_ui_frustum;
+    sge::Unique<LLGL::ResourceHeap> m_resource_heap = nullptr;
+    sge::Unique<LLGL::Buffer> m_chunk_vertex_buffer = nullptr;
+    sge::Unique<LLGL::Buffer> m_postprocess_vertex_buffer = nullptr;
+    sge::Unique<LLGL::Buffer> m_postprocess_uniform_buffer = nullptr;
 
-    ParticleRenderer m_particle_renderer;
-    WorldRenderer m_world_renderer;
-
-    LLGL::ResourceHeap* m_resource_heap = nullptr;
-
-    LLGL::Buffer* m_chunk_vertex_buffer = nullptr;
-
-    uint32_t m_postprocess_pipeline_id = -1;
-    LLGL::Buffer* m_postprocess_vertex_buffer = nullptr;
-    LLGL::Buffer* m_postprocess_uniform_buffer = nullptr;
+    sge::Handle<LLGL::PipelineState> m_postprocess_pipeline;
 
     bool m_update_light = false;
 };

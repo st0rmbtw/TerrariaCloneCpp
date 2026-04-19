@@ -61,11 +61,6 @@ inline void dfs(TNode start_node, TGetNeighborsFunc&& get_neighbors_func, TProce
     }
 }
 
-template <class T>
-inline void hash_combine(std::size_t& hash, const T& v) {
-    hash ^= std::hash<T>{}(v) + 0x9e3779b9 + (hash<<6) + (hash>>2);
-}
-
 template <typename... _Args>
 std::string_view temp_format(std::format_string<_Args...> __fmt, _Args&&... __args) {
     static std::string buffer;

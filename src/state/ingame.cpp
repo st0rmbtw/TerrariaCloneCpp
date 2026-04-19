@@ -47,18 +47,20 @@ struct UiInventorySlotIndexData {
     FontAsset font;
 };
 
-InGameState::InGameState(const std::shared_ptr<sge::Renderer>& renderer, WorldData world) :
+InGameState::InGameState(const std::shared_ptr<sge::Renderer>& renderer, uint8_t samples, WorldData world) :
     m_renderer(std::make_shared<GameRenderer>(renderer)),
     m_world(m_renderer),
-    m_camera(renderer->GetRenderContext()->Backend(), sge::CameraOrigin::Center, sge::CoordinateSystem {
-        .up = sge::CoordinateDirectionY::Negative,
-        .forward = sge::CoordinateDirectionZ::Negative,
+    m_camera(sge::CameraConfig {
+        .origin = sge::CameraOrigin::Center,
+        .coordinateSystem = sge::CoordinateSystem {
+            .up = sge::CoordinateDirectionY::Negative,
+            .forward = sge::CoordinateDirectionZ::Negative,
+        },
+        .samples = samples
     })
 {
     m_fps_update_timer = sge::Timer::from_seconds(0.5f, sge::TimerMode::Repeating);
     m_fps_update_timer.set_finished();
-
-    m_camera.set_zoom(1.0f);
 
     m_world.init();
     m_world.load(std::move(world));
@@ -178,7 +180,7 @@ void InGameState::Update() {
 
 #if DEBUG_TOOLS
     if (m_free_camera && sge::Input::Pressed(sge::MouseButton::Right)) {
-        m_player.set_position(m_world, m_camera.screen_to_world(sge::Input::MouseScreenPosition()));
+        m_player.set_position(m_world, m_camera.screen_to_world(sge::Input::CursorPosition()));
     }
     const glm::vec2 position = m_free_camera ? camera_free() : camera_follow_player();
 #else
@@ -198,14 +200,14 @@ void InGameState::Update() {
 
     m_world.add_light(Light {
         .color = glm::vec3(1.0f, 0.0f, 0.0f),
-        .pos = get_lightmap_pos(m_camera.screen_to_world(sge::Input::MouseScreenPosition())),
+        .pos = get_lightmap_pos(m_camera.screen_to_world(sge::Input::CursorPosition())),
         .size = glm::uvec2(2)
     });
 
     if (sge::Input::JustPressed(sge::Key::Q)) {
         m_lights.push_back(Light {
             .color = glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f)),
-            .pos = get_lightmap_pos(m_camera.screen_to_world(sge::Input::MouseScreenPosition())),
+            .pos = get_lightmap_pos(m_camera.screen_to_world(sge::Input::CursorPosition())),
             .size = glm::uvec2(2)
         });
     }
@@ -216,7 +218,7 @@ void InGameState::Update() {
 
 #if DEBUG_TOOLS
     if (sge::Input::Pressed(sge::Key::K)) {
-        const glm::vec2 position = m_camera.screen_to_world(sge::Input::MouseScreenPosition());
+        const glm::vec2 position = m_camera.screen_to_world(sge::Input::CursorPosition());
 
         for (int i = 0; i < 500; ++i) {
             const glm::vec2 velocity = glm::diskRand(1.5f);
@@ -250,8 +252,6 @@ void InGameState::FixedUpdate() {
 
 void InGameState::Render(const std::shared_ptr<sge::GlfwWindow>& window) {
     ZoneScoped;
-    
-    m_camera.set_viewport(glm::uvec2(window->GetContentSize().width, window->GetContentSize().height));
 
     m_renderer->Begin(m_camera, m_world);
 
@@ -270,7 +270,7 @@ void InGameState::Render(const std::shared_ptr<sge::GlfwWindow>& window) {
 void InGameState::update_ui() noexcept {
     UI::Update();
 
-    m_cursor.Update(sge::Input::MouseScreenPosition());
+    m_cursor.Update(sge::Input::CursorPosition());
 
     Inventory& inventory = m_player.inventory();
 

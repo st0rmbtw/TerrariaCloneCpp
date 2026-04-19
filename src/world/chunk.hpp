@@ -9,7 +9,6 @@
 #include <LLGL/BufferArray.h>
 #include <LLGL/Texture.h>
 
-#include <SGE/utils/llgl.hpp>
 #include <SGE/renderer/renderer.hpp>
 
 #include "../constants.hpp"
@@ -19,11 +18,11 @@
 #include "lightmap.hpp"
 
 struct StaticLightMapChunk {
-    glm::uvec2 index;
-
     std::shared_ptr<sge::RenderContext> render_context = nullptr;
-    sge::LLGLResource<LLGL::Texture> texture = nullptr;
-    sge::LLGLResource<LLGL::Buffer> vertex_buffer = nullptr;
+    LLGL::Texture* texture = nullptr;
+    LLGL::Buffer* vertex_buffer = nullptr;
+
+    glm::uvec2 index;
 
     StaticLightMapChunk() = default;
     StaticLightMapChunk(std::shared_ptr<sge::RenderContext> context, glm::uvec2 index, const LightMap& lightmap);
@@ -93,22 +92,22 @@ public:
 
     [[nodiscard]]
     inline LLGL::BufferArray* block_buffer_array() const noexcept {
-        return m_block_buffer_array.get();
+        return m_block_buffer_array;
     }
 
     [[nodiscard]]
     inline LLGL::BufferArray* wall_buffer_array() const noexcept {
-        return m_wall_buffer_array.get();
+        return m_wall_buffer_array;
     }
 
     [[nodiscard]]
     inline LLGL::Buffer* block_instance_buffer() const noexcept {
-        return m_block_instance_buffer.get();
+        return m_block_instance_buffer;
     }
 
     [[nodiscard]]
     inline LLGL::Buffer* wall_instance_buffer() const noexcept {
-        return m_wall_instance_buffer.get();
+        return m_wall_instance_buffer;
     }
 
     ~RenderChunk();
@@ -118,10 +117,10 @@ private:
 
     glm::vec2 m_world_pos;
     glm::uvec2 m_index;
-    sge::LLGLResource<LLGL::BufferArray> m_block_buffer_array = nullptr;
-    sge::LLGLResource<LLGL::BufferArray> m_wall_buffer_array = nullptr;
-    sge::LLGLResource<LLGL::Buffer> m_wall_instance_buffer = nullptr;
-    sge::LLGLResource<LLGL::Buffer> m_block_instance_buffer = nullptr;
+    LLGL::BufferArray* m_block_buffer_array = nullptr;
+    LLGL::BufferArray* m_wall_buffer_array = nullptr;
+    LLGL::Buffer* m_wall_instance_buffer = nullptr;
+    LLGL::Buffer* m_block_instance_buffer = nullptr;
     uint16_t m_block_count = 0;
     uint16_t m_wall_count = 0;
     bool m_blocks_dirty = false;

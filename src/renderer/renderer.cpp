@@ -21,7 +21,6 @@
 #include <SGE/profile.hpp>
 
 #include "../assets.hpp"
-#include "../utils.hpp"
 
 #include "world_renderer.hpp"
 #include "background_renderer.hpp"
@@ -37,13 +36,13 @@ struct SGE_ALIGN(16) PostProcessUniforms {
 
 uint32_t GameRenderer::GetMainOrderIndex() { return m_main_batch->Order(); }
 uint32_t GameRenderer::GetWorldOrderIndex() { return m_world_batch->Order(); }
-LLGL::Buffer* GameRenderer::ChunkVertexBuffer() { return m_chunk_vertex_buffer; }
+const sge::Unique<LLGL::Buffer>& GameRenderer::ChunkVertexBuffer() { return m_chunk_vertex_buffer; }
 
 GameRenderer::GameRenderer(const std::shared_ptr<sge::Renderer>& renderer) :
-    m_background_renderer(renderer),
-    m_renderer(renderer),
     m_particle_renderer(renderer),
-    m_world_renderer(m_renderer)
+    m_world_renderer(renderer),
+    m_background_renderer(renderer),
+    m_renderer(renderer)
 {
     const auto& render_context = renderer->GetRenderContext();
 
@@ -54,16 +53,14 @@ GameRenderer::GameRenderer(const std::shared_ptr<sge::Renderer>& renderer) :
         sge::Vertex(1.0, 1.0),
     };
 
-    const auto& context = render_context->Context();
-
-    m_chunk_vertex_buffer = render_context->CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex), "WorldRenderer VertexBuffer");
+    m_chunk_vertex_buffer = render_context->CreateVertexBuffer(vertices, Assets::GetVertexFormat(VertexFormatAsset::TilemapVertex), "WorldRenderer VertexBuffer");
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.staticSamplers = {
-        LLGL::StaticSamplerDescriptor("BackgroundTextureSampler", LLGL::StageFlags::FragmentStage, 5, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
-        LLGL::StaticSamplerDescriptor("WorldTextureSampler", LLGL::StageFlags::FragmentStage, 7, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
-        LLGL::StaticSamplerDescriptor("LightMapSampler", LLGL::StageFlags::FragmentStage, 9, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
-        LLGL::StaticSamplerDescriptor("LightSampler", LLGL::StageFlags::FragmentStage, 11, Assets::GetSampler(sge::TextureSampler::Nearest).descriptor()),
+        LLGL::StaticSamplerDescriptor("BackgroundTextureSampler", LLGL::StageFlags::FragmentStage, 5, Assets::GetSampler(sge::TextureSampler::Nearest)->descriptor()),
+        LLGL::StaticSamplerDescriptor("WorldTextureSampler", LLGL::StageFlags::FragmentStage, 7, Assets::GetSampler(sge::TextureSampler::Nearest)->descriptor()),
+        LLGL::StaticSamplerDescriptor("LightMapSampler", LLGL::StageFlags::FragmentStage, 9, Assets::GetSampler(sge::TextureSampler::Nearest)->descriptor()),
+        LLGL::StaticSamplerDescriptor("LightSampler", LLGL::StageFlags::FragmentStage, 11, Assets::GetSampler(sge::TextureSampler::Nearest)->descriptor()),
     };
     pipelineLayoutDesc.combinedTextureSamplers = {
         LLGL::CombinedTextureSamplerDescriptor{ "BackgroundTexture", "BackgroundTexture", "BackgroundTextureSampler", 4 },
@@ -80,7 +77,7 @@ GameRenderer::GameRenderer(const std::shared_ptr<sge::Renderer>& renderer) :
         sge::BindingLayoutItem::Texture(10, "Light", LLGL::StageFlags::FragmentStage),
     });
 
-    LLGL::PipelineLayout* pipelineLayout = render_context->Context()->CreatePipelineLayout(pipelineLayoutDesc);
+    sge::Ref<LLGL::PipelineLayout> pipelineLayout = render_context->CreatePipelineLayout(pipelineLayoutDesc);
 
     {
         m_postprocess_uniform_buffer = render_context->CreateConstantBuffer(sizeof(PostProcessUniforms));
@@ -89,18 +86,17 @@ GameRenderer::GameRenderer(const std::shared_ptr<sge::Renderer>& renderer) :
             glm::vec2(3.0f,  1.0f),  glm::vec2(2.0f, 0.0f),
             glm::vec2(-1.0f, -3.0f), glm::vec2(0.0f, 2.0f),
         };
-        m_postprocess_vertex_buffer = render_context->CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::PostProcessVertex));
+        m_postprocess_vertex_buffer = render_context->CreateVertexBuffer(vertices, Assets::GetVertexFormat(VertexFormatAsset::PostProcessVertex));
     }
 
-    const LLGL::ResourceViewDescriptor resource_views[] = {
-        m_renderer->GlobalUniformBuffer(),
-        m_postprocess_uniform_buffer,
-        m_background_renderer.target_texture(),
-        m_world_renderer.target_texture(),
-        m_world_renderer.static_lightmap_texture(),
-        m_world_renderer.light_texture()
-    };
-    m_resource_heap = context->CreateResourceHeap(LLGL::ResourceHeapDescriptor(pipelineLayout, ARRAY_LEN(resource_views)), resource_views);
+    m_resource_heap = render_context->CreateResourceHeap(pipelineLayout, {
+        m_renderer->GlobalUniformBuffer().Get(),
+        m_postprocess_uniform_buffer.Get(),
+        m_background_renderer.target_texture().Get(),
+        m_world_renderer.target_texture().Get(),
+        m_world_renderer.static_lightmap_texture().Get(),
+        m_world_renderer.light_texture().Get()
+    });
 
     const sge::ShaderPipeline& postprocess_shader = Assets::GetShader(ShaderAsset::PostProcessShader);
 
@@ -111,9 +107,8 @@ GameRenderer::GameRenderer(const std::shared_ptr<sge::Renderer>& renderer) :
     pipelineConfig.layout = pipelineLayout;
     pipelineConfig.indexFormat = LLGL::Format::R16UInt;
     pipelineConfig.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
-    pipelineConfig.frontCCW = true;
 
-    m_postprocess_pipeline_id = render_context->AddPipelineConfig(pipelineConfig);
+    m_postprocess_pipeline = render_context->CreatePipelineState(pipelineConfig);
 
     m_background_renderer.init_world(m_world_renderer);
 
@@ -134,18 +129,18 @@ GameRenderer::GameRenderer(const std::shared_ptr<sge::Renderer>& renderer) :
 }
 
 void GameRenderer::ResizeTextures(LLGL::Extent2D size) {
-    const auto& context = m_renderer->GetRenderContext()->Context();
+    const auto& context = m_renderer->GetRenderContext()->GetLLGLContext();
 
     m_world_renderer.init_targets(size);
     m_background_renderer.init_targets(size);
     m_world_renderer.init_textures(size);
 
-    if (m_resource_heap != nullptr) {
+    if (m_resource_heap.IsValid()) {
         context->WriteResourceHeap(*m_resource_heap, 2, {
-            m_background_renderer.target_texture(),
-            m_world_renderer.target_texture(),
-            m_world_renderer.static_lightmap_texture(),
-            m_world_renderer.light_texture()
+            m_background_renderer.target_texture().Get(),
+            m_world_renderer.target_texture().Get(),
+            m_world_renderer.static_lightmap_texture().Get(),
+            m_world_renderer.light_texture().Get()
         });
     }
 }
@@ -162,7 +157,9 @@ void GameRenderer::UpdateLight() {
 void GameRenderer::Begin(const sge::Camera& camera, World& world) {
     ZoneScoped;
 
-    auto* const commands = m_renderer->CommandBuffer();
+    const auto& render_context = m_renderer->GetRenderContext();
+
+    const auto& commands = m_renderer->CommandBuffer();
     auto* const command_queue = m_renderer->CommandQueue();
 
     const sge::Rect camera_frustum = sge::Rect::from_corners(
@@ -183,7 +180,7 @@ void GameRenderer::Begin(const sge::Camera& camera, World& world) {
 
     if (m_update_light) {
         commands->Begin();
-            commands->BeginRenderPass(*m_world_renderer.light_texture_target());
+            commands->BeginRenderPass(render_context->GetOrCreateRenderTarget(m_world_renderer.light_texture_target(), camera.samples()));
                 m_renderer->Clear(LLGL::ClearValue(0.0f, 0.0f, 0.0f, 0.0f, 0.0f), LLGL::ClearFlags::Color);
             commands->EndRenderPass();
         commands->End();
@@ -217,7 +214,8 @@ void GameRenderer::Begin(const sge::Camera& camera, World& world) {
 void GameRenderer::Render(const std::shared_ptr<sge::GlfwWindow>& window, const sge::Camera& camera, const World& world) {
     ZoneScoped;
 
-    auto* const commands = m_renderer->CommandBuffer();
+    const auto& render_context = m_renderer->GetRenderContext();
+    const auto& commands = m_renderer->CommandBuffer();
 
     m_particle_renderer.compute();
     m_particle_renderer.prepare();
@@ -231,7 +229,7 @@ void GameRenderer::Render(const std::shared_ptr<sge::GlfwWindow>& window, const 
     m_renderer->UploadBatchData();
 
     if (m_update_light) {
-        m_renderer->BeginPass(*m_world_renderer.static_lightmap_target(), camera);
+        m_renderer->BeginPass(render_context->GetOrCreateRenderTarget(m_world_renderer.static_lightmap_target(), camera.samples()), camera);
             m_renderer->Clear(clear_value, LLGL::ClearFlags::Color);
             m_world_renderer.render_lightmap(world.chunk_manager());
         m_renderer->EndPass();
@@ -244,7 +242,7 @@ void GameRenderer::Render(const std::shared_ptr<sge::GlfwWindow>& window, const 
     //     m_background_renderer.render();
     // m_renderer->EndPass();
 
-    commands->BeginRenderPass(*m_world_renderer.target());
+    m_renderer->BeginPass(render_context->GetOrCreateRenderTarget(m_world_renderer.target(), camera.samples()), camera);
         m_renderer->Clear(clear_value, LLGL::ClearFlags::ColorDepth);
 
         m_background_renderer.render();
@@ -254,13 +252,13 @@ void GameRenderer::Render(const std::shared_ptr<sge::GlfwWindow>& window, const 
         m_particle_renderer.render_world();
 
         m_renderer->RenderBatch(*m_world_batch);
-    commands->EndRenderPass();
+    m_renderer->EndPass();
 
     m_renderer->BeginPass(window, camera);
         m_renderer->Clear(clear_value);
 
         commands->SetVertexBuffer(*m_postprocess_vertex_buffer);
-        commands->SetPipelineState(m_renderer->GetRenderContext()->GetOrCreatePipeline(m_postprocess_pipeline_id));
+        commands->SetPipelineState(render_context->GetOrCreatePipeline(m_postprocess_pipeline));
         commands->SetResourceHeap(*m_resource_heap);
         commands->Draw(3, 0);
 
@@ -423,10 +421,5 @@ GameRenderer::~GameRenderer() {
         m_renderer->DestroyBatch(*m_ui_batch);
 
     const auto& render_context = m_renderer->GetRenderContext();
-    auto& context = render_context->Context();
-
-    SGE_RESOURCE_RELEASE(m_resource_heap);
-    SGE_RESOURCE_RELEASE(m_chunk_vertex_buffer);
-    render_context->DeletePipeline(m_postprocess_pipeline_id);
-    SGE_RESOURCE_RELEASE(m_postprocess_vertex_buffer);
+    render_context->DeletePipeline(m_postprocess_pipeline);
 }

@@ -9,10 +9,10 @@
 class Collision {
 private:
     enum class Type : uint8_t {
-        Up = 1 << 0,
-        Down = 1 << 1,
-        Left = 1 << 2,
-        Right = 1 << 3
+        Up = 0,
+        Down = 1,
+        Left = 2,
+        Right = 3
     };
 
 public:

@@ -49,9 +49,9 @@ static bool blur(LightMap& lightmap, int index, glm::vec3& prev_light, float& pr
     return this_light.r < LIGHT_EPSILON && this_light.g < LIGHT_EPSILON && this_light.b < LIGHT_EPSILON;
 }
 
-DynamicLighting::DynamicLighting(std::shared_ptr<sge::Renderer> renderer, const WorldData& world, LLGL::Texture* light_texture) :
+DynamicLighting::DynamicLighting(std::shared_ptr<sge::Renderer> renderer, const WorldData& world, sge::Ref<LLGL::Texture> light_texture) :
     m_renderer(std::move(renderer)),
-    m_light_texture(light_texture)
+    m_light_texture(std::move(light_texture))
 {
     using Constants::SUBDIVISION;
     m_dynamic_lightmap = LightMap(world.area.size() * SUBDIVISION);
@@ -273,7 +273,7 @@ void DynamicLighting::compute_light(const sge::Camera& camera, const World& worl
         blur_horizontal(lightmap, area);
     });
 
-    const auto& context = m_renderer->GetRenderContext()->Context();
+    const auto& context = m_renderer->GetRenderContext()->GetLLGLContext();
 
     for (const sge::IRect& area : m_areas) {
         if (area.width() < 2 || area.height() < 2)
@@ -292,19 +292,19 @@ void DynamicLighting::compute_light(const sge::Camera& camera, const World& worl
 
 // -------------------- AcceleratedDynamicLighting --------------------
 
-static SGE_FORCE_INLINE void blur_dispatch(LLGL::CommandBuffer* commands, uint32_t width) {
+static SGE_FORCE_INLINE void blur_dispatch(const sge::Unique<LLGL::CommandBuffer>& commands, uint32_t width) {
     commands->Dispatch(width, 1, 1);
 }
 
-static SGE_FORCE_INLINE void blur_dispatch_metal(LLGL::CommandBuffer* commands, uint32_t width) {
+static SGE_FORCE_INLINE void blur_dispatch_metal(const sge::Unique<LLGL::CommandBuffer>& commands, uint32_t width) {
     const uint32_t h = (width + 512 - 1) / 512;
     const uint32_t w = std::min(512u, width);
     commands->Dispatch(w, h, 1);
 }
 
-AcceleratedDynamicLighting::AcceleratedDynamicLighting(std::shared_ptr<sge::Renderer> renderer, const WorldData& world, LLGL::Texture* light_texture) :
+AcceleratedDynamicLighting::AcceleratedDynamicLighting(std::shared_ptr<sge::Renderer> renderer, const WorldData& world, sge::Ref<LLGL::Texture> light_texture) :
     m_renderer(std::move(renderer)),
-    m_light_texture(light_texture)
+    m_light_texture(std::move(light_texture))
 {
     using Constants::TILE_SIZE;
 
@@ -318,35 +318,23 @@ AcceleratedDynamicLighting::AcceleratedDynamicLighting(std::shared_ptr<sge::Rend
     init_pipeline();
 }
 
-void AcceleratedDynamicLighting::destroy() {
-    const auto& context = m_renderer->GetRenderContext()->Context();
-
-    SGE_RESOURCE_RELEASE(m_light_set_light_sources_pipeline);
-    SGE_RESOURCE_RELEASE(m_light_vertical_pipeline);
-    SGE_RESOURCE_RELEASE(m_light_horizontal_pipeline);
-    SGE_RESOURCE_RELEASE(m_light_init_resource_heap);
-    SGE_RESOURCE_RELEASE(m_light_blur_resource_heap);
-    SGE_RESOURCE_RELEASE(m_tile_texture);
-}
-
 void AcceleratedDynamicLighting::init_pipeline() {
     using Constants::WORLD_MAX_LIGHT_COUNT;
 
     const auto& render_context = m_renderer->GetRenderContext();
-    const auto& context = render_context->Context();
 
     {
         LLGL::BufferDescriptor light_buffer;
         light_buffer.bindFlags = LLGL::BindFlags::Sampled;
         light_buffer.stride = sizeof(Light);
         light_buffer.size = sizeof(Light) * WORLD_MAX_LIGHT_COUNT;
-        m_light_buffer = context->CreateBuffer(light_buffer);
+        m_light_buffer = render_context->CreateBuffer(light_buffer);
     }
     {
         LLGL::BufferDescriptor uniform_buffer;
         uniform_buffer.bindFlags = LLGL::BindFlags::ConstantBuffer;
         uniform_buffer.size = sizeof(UniformBuffer);
-        m_uniform_buffer = context->CreateBuffer(uniform_buffer);
+        m_uniform_buffer = render_context->CreateBuffer(uniform_buffer);
     }
 
     {
@@ -360,24 +348,18 @@ void AcceleratedDynamicLighting::init_pipeline() {
             }
         );
 
-        LLGL::PipelineLayout* lightInitPipelineLayout = context->CreatePipelineLayout(lightInitPipelineLayoutDesc);
+        m_light_init_pipeline_layout = render_context->CreatePipelineLayout(lightInitPipelineLayoutDesc);
 
         const LLGL::ResourceViewDescriptor lightInitResourceViews[] = {
-            m_uniform_buffer.get(), m_light_buffer.get(), m_light_texture.get()
+            m_uniform_buffer.Get(), m_light_buffer.Get(), m_light_texture.Get()
         };
+        m_light_init_resource_heap = render_context->CreateResourceHeap(m_light_init_pipeline_layout, lightInitResourceViews);
 
-        LLGL::ResourceHeapDescriptor lightResourceHeapDesc;
-        lightResourceHeapDesc.pipelineLayout = lightInitPipelineLayout;
-        lightResourceHeapDesc.numResourceViews = ARRAY_LEN(lightInitResourceViews);
-
-        m_light_init_resource_heap = context->CreateResourceHeap(lightResourceHeapDesc, lightInitResourceViews);
-
-        LLGL::ComputePipelineDescriptor lightPipelineDesc;
-        lightPipelineDesc.debugName = "WorldLightSetLightSourcesComputePipeline";
-        lightPipelineDesc.pipelineLayout = lightInitPipelineLayout;
-        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightSetLightSources);
-
-        m_light_set_light_sources_pipeline = context->CreatePipelineState(lightPipelineDesc);
+        sge::ComputePipelineConfig lightPipelineConfig;
+        lightPipelineConfig.debugName = "WorldLightSetLightSourcesComputePipeline";
+        lightPipelineConfig.pipelineLayout = m_light_init_pipeline_layout.Get();
+        lightPipelineConfig.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightSetLightSources).Get();
+        m_light_set_light_sources_pipeline = render_context->CreateComputePipelineState(lightPipelineConfig);
     }
     {
         LLGL::PipelineLayoutDescriptor lightBlurPipelineLayoutDesc;
@@ -393,28 +375,23 @@ void AcceleratedDynamicLighting::init_pipeline() {
             lightBlurPipelineLayoutDesc.barrierFlags = LLGL::BarrierFlags::StorageTexture;
         }
 
-        LLGL::PipelineLayout* lightBlurPipelineLayout = context->CreatePipelineLayout(lightBlurPipelineLayoutDesc);
+        m_light_blur_pipeline_layout = render_context->CreatePipelineLayout(lightBlurPipelineLayoutDesc);
 
         const LLGL::ResourceViewDescriptor lightBlurResourceViews[] = {
-            m_uniform_buffer.get(), m_tile_texture.get(), m_light_texture.get()
+            m_uniform_buffer.Get(), m_tile_texture.Get(), m_light_texture.Get()
         };
+        m_light_blur_resource_heap = render_context->CreateResourceHeap(m_light_blur_pipeline_layout, lightBlurResourceViews);
 
-        LLGL::ResourceHeapDescriptor lightBlurResourceHeapDesc;
-        lightBlurResourceHeapDesc.pipelineLayout = lightBlurPipelineLayout;
-        lightBlurResourceHeapDesc.numResourceViews = ARRAY_LEN(lightBlurResourceViews);
-
-        m_light_blur_resource_heap = context->CreateResourceHeap(lightBlurResourceHeapDesc, lightBlurResourceViews);
-
-        LLGL::ComputePipelineDescriptor lightPipelineDesc;
-        lightPipelineDesc.pipelineLayout = lightBlurPipelineLayout;
+        sge::ComputePipelineConfig lightPipelineDesc;
+        lightPipelineDesc.pipelineLayout = m_light_blur_pipeline_layout.Get();
 
         lightPipelineDesc.debugName = "WorldLightVerticalComputePipeline";
-        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightVertical);
-        m_light_vertical_pipeline = context->CreatePipelineState(lightPipelineDesc);
+        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightVertical).Get();
+        m_light_vertical_pipeline = render_context->CreateComputePipelineState(lightPipelineDesc);
 
         lightPipelineDesc.debugName = "WorldLightHorizontalComputePipeline";
-        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightHorizontal);
-        m_light_horizontal_pipeline = context->CreatePipelineState(lightPipelineDesc);
+        lightPipelineDesc.computeShader = Assets::GetComputeShader(ComputeShaderAsset::LightHorizontal).Get();
+        m_light_horizontal_pipeline = render_context->CreateComputePipelineState(lightPipelineDesc);
     }
 }
 
@@ -423,9 +400,7 @@ void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
 
     using Constants::SUBDIVISION;
 
-    auto& context = m_renderer->GetRenderContext()->Context();
-
-    SGE_RESOURCE_RELEASE(m_tile_texture);
+    auto& context = m_renderer->GetRenderContext();
 
     LLGL::TextureDescriptor tile_texture_desc;
     tile_texture_desc.type      = LLGL::TextureType::Texture2D;
@@ -465,7 +440,7 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
 
     if (world.light_count() == 0) return;
 
-    auto* const commands = m_renderer->CommandBuffer();
+    const auto& commands = m_renderer->CommandBuffer();
 
     const size_t size = world.light_count() * sizeof(Light);
     commands->UpdateBuffer(*m_light_buffer, 0, world.lights(), size);
@@ -501,7 +476,7 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
     }
     commands->PopDebugGroup();
 
-    const auto blur_horizontal = [commands, grid_w, this] {
+    const auto blur_horizontal = [&commands, grid_w, this] {
         commands->PushDebugGroup("CS Light BlurHorizontal");
         {
             commands->SetPipelineState(*m_light_horizontal_pipeline);
@@ -516,7 +491,7 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
         commands->PopDebugGroup();
     };
 
-    const auto blur_vertical = [commands, grid_h, this] {
+    const auto blur_vertical = [&commands, grid_h, this] {
         commands->PushDebugGroup("CS Light BlurVertical");
         {
             commands->SetPipelineState(*m_light_vertical_pipeline);
@@ -531,7 +506,7 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
         commands->PopDebugGroup();
     };
 
-    LLGL::Texture* light_texture = m_light_texture.get();
+    LLGL::Texture* light_texture = m_light_texture.Get();
     for (int i = 0; i < 2; ++i) {
         blur_horizontal();
         commands->ResourceBarrier(0, nullptr, 1, &light_texture);
@@ -553,6 +528,6 @@ void AcceleratedDynamicLighting::update_tile_texture(WorldData& world) {
         world.changed_tiles.pop_back();
 
         image_view.data     = &value;
-        m_renderer->GetRenderContext()->Context()->WriteTexture(*m_tile_texture, LLGL::TextureRegion(LLGL::Offset3D(pos.x, pos.y, 0), LLGL::Extent3D(1, 1, 1)), image_view);
+        m_renderer->GetRenderContext()->GetLLGLContext()->WriteTexture(*m_tile_texture, LLGL::TextureRegion(LLGL::Offset3D(pos.x, pos.y, 0), LLGL::Extent3D(1, 1, 1)), image_view);
     }
 }

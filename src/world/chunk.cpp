@@ -30,7 +30,7 @@ RenderChunk::~RenderChunk() {
     if (!m_renderer)
         return;
 
-    const auto& context = m_renderer->GetRenderer()->GetRenderContext()->Context();
+    const auto& context = m_renderer->GetRenderer()->GetRenderContext();
 
     if (m_block_instance_buffer)
         context->Release(*m_block_instance_buffer);
@@ -131,27 +131,21 @@ void RenderChunk::build_mesh(
     m_block_count = fill_block_buffer(world, block_data_arena, m_index, m_world_pos);
     m_wall_count = fill_wall_buffer(world, wall_data_arena, m_index, m_world_pos);
 
-    const auto& context = m_renderer->GetRenderer()->GetRenderContext()->Context();
+    const auto& context = m_renderer->GetRenderer()->GetRenderContext();
 
     {
         const size_t size = m_block_count * sizeof(ChunkInstance);
         const void* data = size > 0 ? block_data_arena : nullptr;
 
         m_block_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
-
-        LLGL::Buffer* buffers[] = { m_renderer->ChunkVertexBuffer(), m_block_instance_buffer.get() };
-
-        m_block_buffer_array = context->CreateBufferArray(2, buffers);
+        m_block_buffer_array = context->CreateBufferArray({ m_renderer->ChunkVertexBuffer(), m_block_instance_buffer });
     }
     {
         const size_t size = m_wall_count * sizeof(ChunkInstance);
         const void* data = size > 0 ? wall_data_arena : nullptr;
 
         m_wall_instance_buffer = context->CreateBuffer(GetBufferDescriptor(), data);
-
-        LLGL::Buffer* buffers[] = { m_renderer->ChunkVertexBuffer(), m_wall_instance_buffer.get() };
-
-        m_wall_buffer_array = context->CreateBufferArray(2, buffers);
+        m_wall_buffer_array = context->CreateBufferArray({ m_renderer->ChunkVertexBuffer(), m_wall_instance_buffer });
     }
 }
 
@@ -162,7 +156,7 @@ void RenderChunk::rebuild_mesh(
 ) {
     ZoneScoped;
 
-    const auto& context = m_renderer->GetRenderer()->GetRenderContext()->Context();
+    const auto& context = m_renderer->GetRenderer()->GetRenderContext()->GetLLGLContext();
 
     if (m_blocks_dirty) {
         m_block_count = fill_block_buffer(world, block_data_arena, m_index, m_world_pos);
@@ -183,15 +177,10 @@ void RenderChunk::rebuild_mesh(
 }
 
 StaticLightMapChunk::StaticLightMapChunk(std::shared_ptr<sge::RenderContext> ctx, glm::uvec2 index, const LightMap& lightmap) :
-    index{ index },
-    render_context(std::move(ctx))
+    render_context(std::move(ctx)),
+    index{ index }
 {
     ZoneScoped;
-
-    const auto& context = render_context->Context();
-
-    SGE_RESOURCE_RELEASE(texture);
-    SGE_RESOURCE_RELEASE(vertex_buffer);
 
     const glm::uvec2 offset = index * LIGHTMAP_CHUNK_SIZE;
     const glm::uvec2 chunk_size = glm::min(offset + glm::uvec2(LIGHTMAP_CHUNK_SIZE), glm::uvec2(lightmap.width, lightmap.height)) - offset;
@@ -209,7 +198,7 @@ StaticLightMapChunk::StaticLightMapChunk(std::shared_ptr<sge::RenderContext> ctx
         image_view.dataSize = chunk_size.x * chunk_size.y * sizeof(Color);
         image_view.rowStride = lightmap.width * sizeof(Color);
 
-        texture = context->CreateTexture(texture_desc, &image_view);
+        texture = render_context->CreateTexture(texture_desc, &image_view);
     }
 
     const glm::vec2 position = glm::vec2(index) * LIGHTMAP_CHUNK_WORLD_SIZE;
@@ -240,7 +229,7 @@ StaticLightMapChunk::StaticLightMapChunk(std::shared_ptr<sge::RenderContext> ctx
 }
 
 void StaticLightMapChunk::update_texture(glm::uvec2 source_offset, uint32_t source_stride, glm::uvec2 texture_offset, glm::uvec2 size, Color* colors) {
-    const auto& context = render_context->Context();
+    const auto& context = render_context->GetLLGLContext();
 
     LLGL::ImageView image_view;
     image_view.format = LLGL::ImageFormat::RGB;
@@ -253,7 +242,8 @@ void StaticLightMapChunk::update_texture(glm::uvec2 source_offset, uint32_t sour
 }
 
 StaticLightMapChunk::~StaticLightMapChunk() {
-    const auto& context = render_context->Context();
-    SGE_RESOURCE_RELEASE(texture);
-    SGE_RESOURCE_RELEASE(vertex_buffer);
+    if (render_context) {
+        render_context->Release(*texture);
+        render_context->Release(*vertex_buffer);
+    }
 }

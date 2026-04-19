@@ -17,7 +17,6 @@
 #include <SGE/profile.hpp>
 
 #include "diagnostic/frametime.hpp"
-#include "renderer/renderer.hpp"
 #include "state/menu/menu.hpp"
 #include "world/autotile.hpp"
 #include "state/base.hpp"
@@ -28,8 +27,13 @@
 #include "assets.hpp"
 #include "constants.hpp"
 
-App::App(AppConfig config, int16_t world_width, int16_t world_height) {
-    InitRenderContext(config.backend);
+bool App::Init() {
+    if (!IEngine::Init()) {
+        return false;
+    }
+    if (!InitRenderContext(m_config.backend)) {
+        return false;
+    }
     
     if (!Assets::Load(*GetRenderContext()))
         std::abort();
@@ -54,10 +58,9 @@ App::App(AppConfig config, int16_t world_width, int16_t world_height) {
     window_settings.width = 1280;
     window_settings.height = 720;
     window_settings.cursor_mode = sge::CursorMode::Hidden;
-    window_settings.samples = config.samples;
-    window_settings.fullscreen = config.fullscreen;
-    window_settings.vsync = config.vsync;
-    window_settings.samples = config.samples;
+    window_settings.samples = m_config.samples;
+    window_settings.fullscreen = m_config.fullscreen;
+    window_settings.vsync = m_config.vsync;
     window_settings.hidden = true;
 
     auto result = CreateWindow(window_settings);
@@ -72,15 +75,17 @@ App::App(AppConfig config, int16_t world_width, int16_t world_height) {
 
     sge::Time::SetFixedTimestepSeconds(Constants::FIXED_UPDATE_INTERVAL);
 
-    init_tile_rules();
+    InitTileRules();
 
     ParticleManager::Init();
 
     m_renderer = std::make_shared<sge::Renderer>(GetRenderContext());
-    m_current_state = std::make_unique<MainMenuState>(m_renderer);
+    m_current_state = std::make_unique<MainMenuState>(m_renderer, m_config.samples);
     m_current_state->OnWindowSizeChanged(m_primary_window->GetSize());
 
     m_primary_window->ShowWindow();
+
+    return true;
 }
 
 App::~App() {
@@ -132,7 +137,6 @@ void App::OnWindowResized(const std::shared_ptr<sge::GlfwWindow>&, int width, in
 }
 
 void App::OnFramebufferResize(const std::shared_ptr<sge::GlfwWindow>& window, int width, int height) {
-    // m_renderer->ResizeTextures(LLGL::Extent2D(width, height));
     m_current_state->OnFramebufferSizeChanged(LLGL::Extent2D(width, height));
     OnRender(window);
 }

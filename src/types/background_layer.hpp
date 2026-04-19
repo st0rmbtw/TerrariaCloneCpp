@@ -13,13 +13,13 @@
 
 class BackgroundLayer {
     enum class Flags : uint8_t {
-        Nonscale         = 1 << 0,
-        IsUI             = 1 << 1,
-        FollowCamera     = 1 << 2,
-        FillScreenHeight = 1 << 3,
-        FillScreenWidth  = 1 << 4,
-        World            = 1 << 5,
-        SurfaceLayer     = 1 << 6,
+        Nonscale = 0,
+        IsUI,
+        FollowCamera,
+        FillScreenHeight,
+        FillScreenWidth,
+        World,
+        SurfaceLayer,
     };
 
 public:

@@ -10,7 +10,7 @@
 
 class TestUI : public BaseState {
 public:
-    TestUI(const std::shared_ptr<sge::Renderer>& renderer);
+    TestUI(const std::shared_ptr<sge::Renderer>& renderer, uint8_t samples);
     void Update() override;
     void Render(const std::shared_ptr<sge::GlfwWindow>& window) override;
 

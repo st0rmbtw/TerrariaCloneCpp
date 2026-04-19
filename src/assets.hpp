@@ -129,9 +129,9 @@ namespace Assets {
     bool LoadFonts(sge::RenderContext& context);
     void InitVertexFormats(sge::RenderBackend backend);
 
-    void DestroyTextures(sge::RenderContext& context);
-    void DestroyShaders(sge::RenderContext& context);
-    void DestroySamplers(sge::RenderContext& context);
+    void DestroyTextures();
+    void DestroyShaders();
+    void DestroySamplers();
     void DestroyFonts();
 
     const sge::Texture& GetTexture(TextureAsset key);
@@ -139,8 +139,8 @@ namespace Assets {
     const sge::Font& GetFont(FontAsset key);
     const sge::Texture& GetItemTexture(uint16_t id);
     const sge::ShaderPipeline& GetShader(ShaderAsset key);
-    LLGL::Shader* GetComputeShader(ComputeShaderAsset key);
-    const sge::Sampler& GetSampler(size_t index);
+    const sge::Ref<LLGL::Shader>& GetComputeShader(ComputeShaderAsset key);
+    const sge::Ref<sge::Sampler>& GetSampler(size_t index);
     const LLGL::VertexFormat& GetVertexFormat(VertexFormatAsset key);
 };
 

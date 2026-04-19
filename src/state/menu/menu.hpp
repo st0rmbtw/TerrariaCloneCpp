@@ -24,7 +24,7 @@
 
 class MainMenuState : public BaseState {
 public:
-    MainMenuState(const std::shared_ptr<sge::Renderer>& renderer);
+    MainMenuState(const std::shared_ptr<sge::Renderer>& renderer, uint8_t samples);
     void Update() override;
     void Render(const std::shared_ptr<sge::GlfwWindow>& window) override;
 

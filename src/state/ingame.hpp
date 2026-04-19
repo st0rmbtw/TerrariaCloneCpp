@@ -17,7 +17,7 @@
 
 class InGameState : public BaseState {
 public:
-    InGameState(const std::shared_ptr<sge::Renderer>& renderer, WorldData world);
+    InGameState(const std::shared_ptr<sge::Renderer>& renderer, uint8_t samples, WorldData world);
     void Render(const std::shared_ptr<sge::GlfwWindow>& window) override;
     void PreUpdate() override;
     void Update() override;

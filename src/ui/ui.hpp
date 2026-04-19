@@ -401,7 +401,7 @@ struct UiElement {
     const TextData* text_data = nullptr;
     const ScissorData* scissor_data = nullptr;
 
-    uint32_t type_id = 0;
+    uint32_t type_id = -1;
     uint32_t z_index = 0;
 
     bool scissor_start = false;

@@ -224,10 +224,10 @@ static struct AssetsState {
     std::unordered_map<TextureAsset, sge::Texture> textures;
     std::unordered_map<TextureAsset, sge::TextureAtlas> textures_atlases;
     std::unordered_map<ShaderAsset, sge::ShaderPipeline> shaders;
-    std::unordered_map<ComputeShaderAsset, LLGL::Shader*> compute_shaders;
+    std::unordered_map<ComputeShaderAsset, sge::Ref<LLGL::Shader>> compute_shaders;
     std::unordered_map<FontAsset, sge::Font> fonts;
     std::unordered_map<VertexFormatAsset, LLGL::VertexFormat> vertex_formats;
-    std::vector<sge::Sampler> samplers;
+    std::vector<sge::Ref<sge::Sampler>> samplers;
 } state;
 
 static bool load_font(sge::RenderContext& context, sge::Font& font, const char* meta_file_path, const char* atlas_file_path);
@@ -237,8 +237,6 @@ template <size_t T>
 static sge::Texture load_texture_array(sge::RenderContext& context, const std::array<std::tuple<uint16_t, TextureAsset, const char*, glm::uvec2>, T>& assets, int sampler, bool generate_mip_maps = false);
 
 void InitSamplers(sge::RenderContext& render_context) {
-    const auto& context = render_context.Context();
-
     state.samplers.resize(4);
     {
         LLGL::SamplerDescriptor sampler_desc;
@@ -253,7 +251,7 @@ void InitSamplers(sge::RenderContext& render_context) {
         sampler_desc.mipMapEnabled = false;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[sge::TextureSampler::Linear] = sge::Sampler(context->CreateSampler(sampler_desc), sampler_desc);
+        state.samplers[sge::TextureSampler::Linear] = render_context.CreateSampler(sampler_desc).AsRef();
     }
     {
         LLGL::SamplerDescriptor sampler_desc;
@@ -268,7 +266,7 @@ void InitSamplers(sge::RenderContext& render_context) {
         sampler_desc.mipMapEnabled = true;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[sge::TextureSampler::LinearMips] = sge::Sampler(context->CreateSampler(sampler_desc), sampler_desc);
+        state.samplers[sge::TextureSampler::LinearMips] = render_context.CreateSampler(sampler_desc).AsRef();
     }
     {
         LLGL::SamplerDescriptor sampler_desc;
@@ -283,7 +281,7 @@ void InitSamplers(sge::RenderContext& render_context) {
         sampler_desc.mipMapEnabled = false;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[sge::TextureSampler::Nearest] = sge::Sampler(context->CreateSampler(sampler_desc), sampler_desc);
+        state.samplers[sge::TextureSampler::Nearest] = render_context.CreateSampler(sampler_desc).AsRef();
     }
     {
         LLGL::SamplerDescriptor sampler_desc;
@@ -298,7 +296,7 @@ void InitSamplers(sge::RenderContext& render_context) {
         sampler_desc.mipMapEnabled = true;
         sampler_desc.maxAnisotropy = 1;
 
-        state.samplers[sge::TextureSampler::NearestMips] = sge::Sampler(context->CreateSampler(sampler_desc), sampler_desc);
+        state.samplers[sge::TextureSampler::NearestMips] = render_context.CreateSampler(sampler_desc).AsRef();
     }
 }
 
@@ -374,17 +372,17 @@ bool Assets::LoadShaders(sge::RenderContext& context, const std::vector<sge::Sha
         }
 
         if (BITFLAG_CHECK(asset.stages, ShaderStages::Vertex)) {
-            if (!(shader_pipeline.vs = context.LoadShader(sge::ShaderPath(sge::ShaderType::Vertex, asset.file_name), shader_defs, attributes)))
+            if (!(shader_pipeline.vs = context.LoadShaderFromFile(sge::ShaderPath(sge::ShaderType::Vertex, asset.file_name), shader_defs, attributes).AsRef()))
                 return false;
         }
 
         if (BITFLAG_CHECK(asset.stages, ShaderStages::Fragment)) {
-            if (!(shader_pipeline.ps = context.LoadShader(sge::ShaderPath(sge::ShaderType::Fragment, asset.file_name), shader_defs)))
+            if (!(shader_pipeline.ps = context.LoadShaderFromFile(sge::ShaderPath(sge::ShaderType::Fragment, asset.file_name), shader_defs).AsRef()))
                 return false;
         }
 
         if (BITFLAG_CHECK(asset.stages, ShaderStages::Geometry)) {
-            if (!(shader_pipeline.gs = context.LoadShader(sge::ShaderPath(sge::ShaderType::Geometry, asset.file_name), shader_defs)))
+            if (!(shader_pipeline.gs = context.LoadShaderFromFile(sge::ShaderPath(sge::ShaderType::Geometry, asset.file_name), shader_defs).AsRef()))
                 return false;
         }
 
@@ -392,7 +390,7 @@ bool Assets::LoadShaders(sge::RenderContext& context, const std::vector<sge::Sha
     }
 
     for (const auto& [key, asset] : COMPUTE_SHADER_ASSETS) {
-        if (!(state.compute_shaders[key] = context.LoadShader(sge::ShaderPath(sge::ShaderType::Compute, asset.file_name, asset.func_name), shader_defs)))
+        if (!(state.compute_shaders[key] = context.LoadShaderFromFile(sge::ShaderPath(sge::ShaderType::Compute, asset.file_name, asset.func_name), shader_defs).AsRef()))
             return false;
     }
 
@@ -447,7 +445,7 @@ void Assets::InitVertexFormats(sge::RenderBackend backend) {
         sge::Attribute::Instance(LLGL::Format::RG32Float, "i_tex_size", "I_TexSize", 1),
         sge::Attribute::Instance(LLGL::Format::RG32Float, "i_speed", "I_Speed", 1),
         sge::Attribute::Instance(LLGL::Format::R32UInt, "i_id", "I_ID", 1),
-        sge::Attribute::Instance(LLGL::Format::R32SInt, "i_flags", "I_Flags", 1),
+        sge::Attribute::Instance(LLGL::Format::R32UInt, "i_flags", "I_Flags", 1),
     });
 
     LLGL::VertexFormat particle_vertex_format = sge::Attributes(backend, {
@@ -483,28 +481,16 @@ void Assets::InitVertexFormats(sge::RenderBackend backend) {
     state.vertex_formats[VertexFormatAsset::StaticLightMapVertex] = static_lightmap_vertex_format;
 }
 
-void Assets::DestroyTextures(sge::RenderContext& render_context) {
-    const auto& context = render_context.Context();
-
-    for (auto& entry : state.textures) {
-        context->Release(entry.second);
-    }
+void Assets::DestroyTextures() {
+    state.textures.clear();
 }
 
-void Assets::DestroySamplers(sge::RenderContext& render_context) {
-    const auto& context = render_context.Context();
-
-    for (auto& sampler : state.samplers) {
-        context->Release(sampler);
-    }
+void Assets::DestroySamplers() {
+    state.samplers.clear();
 }
 
-void Assets::DestroyShaders(sge::RenderContext& render_context) {
-    const auto& context = render_context.Context();
-
-    for (auto& entry : state.shaders) {
-        entry.second.Unload(context);
-    }
+void Assets::DestroyShaders() {
+    state.shaders.clear();
 }
 
 const sge::Texture& Assets::GetTexture(TextureAsset key) {
@@ -537,13 +523,13 @@ const sge::ShaderPipeline& Assets::GetShader(ShaderAsset key) {
     return entry->second;
 }
 
-LLGL::Shader* Assets::GetComputeShader(ComputeShaderAsset key) {
+const sge::Ref<LLGL::Shader>& Assets::GetComputeShader(ComputeShaderAsset key) {
     const auto entry = std::as_const(state.compute_shaders).find(key);
     SGE_ASSERT(entry != state.compute_shaders.cend());
     return entry->second;
 }
 
-const sge::Sampler& Assets::GetSampler(size_t index) {
+const sge::Ref<sge::Sampler>& Assets::GetSampler(size_t index) {
     SGE_ASSERT(index < state.samplers.size());
     return state.samplers[index];
 }
@@ -668,7 +654,7 @@ static bool load_font(sge::RenderContext& render_context, sge::Font& font, const
     int w, h;
     stbi_uc* data = stbi_load(atlas_file_path, &w, &h, nullptr, 1);
 
-    const sge::Sampler& linear_sampler = Assets::GetSampler(sge::TextureSampler::Linear);
+    const sge::Ref<sge::Sampler>& linear_sampler = Assets::GetSampler(sge::TextureSampler::Linear);
     font.texture = render_context.CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::R, LLGL::DataType::UInt8, texture_width, texture_height, 1, linear_sampler, data);
     stbi_image_free(data);
 

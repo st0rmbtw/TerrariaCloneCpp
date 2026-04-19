@@ -194,7 +194,7 @@ static std::optional<std::vector<ResultFile>> GenerateSpirvTarget(const Slang::C
                 DiagnoseIfNeeded(diagnosticsBlob);
                 
                 if (SLANG_SUCCEEDED(result)) {
-                    std::string name = std::format("{}.{}.comp.spv", functionName, slangModule->getName());
+                    std::string name = std::format("{}.comp.spv", functionName);
                     resultFiles.push_back(ResultFile{ std::move(name), outputBlob });
                 }
             }
@@ -207,22 +207,33 @@ static std::optional<std::vector<ResultFile>> GenerateSpirvTarget(const Slang::C
 static std::optional<std::vector<ResultFile>> GenerateHLSLTarget(const Slang::ComPtr<slang::ISession>& session, const Slang::ComPtr<slang::IModule>& slangModule) {
     std::vector<ResultFile> resultFiles;
 
+    if (slangModule->getDefinedEntryPointCount() == 0) {
+        return std::vector<ResultFile>{};
+    }
+
     std::vector<slang::IComponentType*> componentTypes;
     componentTypes.reserve(slangModule->getDefinedEntryPointCount() + 1);
     componentTypes.push_back(slangModule);
 
-    std::vector<slang::FunctionReflection*> entryPointReflections;
-    componentTypes.reserve(slangModule->getDefinedEntryPointCount());
+    std::vector<slang::IComponentType*> computeComponentTypes;
+    computeComponentTypes.push_back(slangModule);
+
+    std::vector<const char*> computeFunctionNames;
 
     for (SlangInt32 i = 0; i < slangModule->getDefinedEntryPointCount(); ++i) {
         Slang::ComPtr<slang::IEntryPoint> entryPoint;
-        {
-            Slang::ComPtr<slang::IBlob> diagnosticsBlob;
-            slangModule->getDefinedEntryPoint(i, entryPoint.writeRef());
-        }
+        slangModule->getDefinedEntryPoint(i, entryPoint.writeRef());
 
-        componentTypes.push_back(entryPoint);
-        entryPointReflections.push_back(entryPoint->getFunctionReflection());
+        slang::FunctionReflection* reflection = entryPoint->getFunctionReflection();
+        slang::Attribute* attribute = reflection->findAttributeByName(session->getGlobalSession(), "shader");
+        const char* entryPointType = attribute->getArgumentValueString(0, nullptr);
+
+        if (std::strcmp(entryPointType, "compute") != 0) {
+            componentTypes.push_back(entryPoint);
+        } else {
+            computeComponentTypes.push_back(entryPoint);
+            computeFunctionNames.push_back(reflection->getName());
+        }
     }
 
     Slang::ComPtr<slang::IComponentType> composedProgram;
@@ -234,65 +245,60 @@ static std::optional<std::vector<ResultFile>> GenerateHLSLTarget(const Slang::Co
             composedProgram.writeRef(),
             diagnosticsBlob.writeRef());
         DiagnoseIfNeeded(diagnosticsBlob);
-    }
-    
-    Slang::ComPtr<slang::IComponentType> linkedProgram;
-    {
-        Slang::ComPtr<slang::IBlob> diagnosticsBlob;
-        SlangResult result = composedProgram->link(
-            linkedProgram.writeRef(),
-            diagnosticsBlob.writeRef());
-        DiagnoseIfNeeded(diagnosticsBlob);
-        
         if (SLANG_FAILED(result)) {
             return std::nullopt;
         }
     }
 
-    for (int i = 0; i < slangModule->getDefinedEntryPointCount(); ++i) {
-        slang::FunctionReflection* reflection = entryPointReflections[i];
-        slang::Attribute* shaderAttribute = reflection->findAttributeByName(session->getGlobalSession(), "shader");
-        const char* entryPointType = shaderAttribute->getArgumentValueString(0, nullptr);
-        const char* functionName = reflection->getName();
-
-        if (entryPointType == nullptr) {
-            printf("ERROR: Each entry point must have the `shader` attibute. Error caused by '%s'.\n", functionName);
+    Slang::ComPtr<slang::IComponentType> linkedProgram;
+    {
+        Slang::ComPtr<slang::IBlob> diagnosticsBlob;
+        SlangResult result = composedProgram->link(linkedProgram.writeRef(), diagnosticsBlob.writeRef());
+        DiagnoseIfNeeded(diagnosticsBlob);
+        if (SLANG_FAILED(result)) {
             return std::nullopt;
         }
+    }
 
-        if (strcmp(entryPointType, "vertex") == 0) {
-            Slang::ComPtr<slang::IBlob> outputBlob;
-            {
-                Slang::ComPtr<slang::IBlob> diagnosticsBlob;
-                SlangResult result = linkedProgram->getEntryPointCode(
-                    i, // entryPointIndex
-                    TargetType::HLSL, // targetIndex
-                    outputBlob.writeRef(),
-                    diagnosticsBlob.writeRef());
-                DiagnoseIfNeeded(diagnosticsBlob);
-                
-                if (SLANG_SUCCEEDED(result)) {
-                    std::string name = std::format("{}.vert.hlsl", slangModule->getName());
-                    resultFiles.push_back(ResultFile{ std::move(name), outputBlob });
-                }
+    Slang::ComPtr<slang::IBlob> outputBlob;
+    {
+        Slang::ComPtr<slang::IBlob> diagnosticsBlob;
+        SlangResult result = linkedProgram->getTargetCode(TargetType::HLSL, outputBlob.writeRef(), diagnosticsBlob.writeRef());
+        DiagnoseIfNeeded(diagnosticsBlob);
+        if (SLANG_FAILED(result)) {
+            return std::nullopt;
+        }
+    }
+
+    std::string name = std::format("{}.hlsl", slangModule->getName());
+    resultFiles.push_back(ResultFile{ std::move(name), outputBlob });
+
+    if (!computeFunctionNames.empty()) {
+        {
+            Slang::ComPtr<slang::IBlob> diagnosticsBlob;
+            SlangResult result = session->createCompositeComponentType(
+                computeComponentTypes.data(),
+                computeComponentTypes.size(),
+                composedProgram.writeRef(),
+                diagnosticsBlob.writeRef());
+            DiagnoseIfNeeded(diagnosticsBlob);
+            if (SLANG_FAILED(result)) {
+                return std::nullopt;
             }
-        } else if (strcmp(entryPointType, "fragment") == 0) {
-            Slang::ComPtr<slang::IBlob> outputBlob;
-            {
-                Slang::ComPtr<slang::IBlob> diagnosticsBlob;
-                SlangResult result = linkedProgram->getEntryPointCode(
-                    i, // entryPointIndex
-                    TargetType::HLSL, // targetIndex
-                    outputBlob.writeRef(),
-                    diagnosticsBlob.writeRef());
-                DiagnoseIfNeeded(diagnosticsBlob);
-                
-                if (SLANG_SUCCEEDED(result)) {
-                    std::string name = std::format("{}.frag.hlsl", slangModule->getName());
-                    resultFiles.push_back(ResultFile{ std::move(name), outputBlob });
-                }
+        }
+
+        {
+            Slang::ComPtr<slang::IBlob> diagnosticsBlob;
+            SlangResult result = composedProgram->link(linkedProgram.writeRef(), diagnosticsBlob.writeRef());
+            DiagnoseIfNeeded(diagnosticsBlob);
+            if (SLANG_FAILED(result)) {
+                return std::nullopt;
             }
-        } else if (strcmp(entryPointType, "compute") == 0) {
+        }
+
+        for (size_t i = 0; i < computeFunctionNames.size(); ++i) {
+            const char* functionName = computeFunctionNames[i];
+
             Slang::ComPtr<slang::IBlob> outputBlob;
             {
                 Slang::ComPtr<slang::IBlob> diagnosticsBlob;
@@ -304,7 +310,7 @@ static std::optional<std::vector<ResultFile>> GenerateHLSLTarget(const Slang::Co
                 DiagnoseIfNeeded(diagnosticsBlob);
                 
                 if (SLANG_SUCCEEDED(result)) {
-                    std::string name = std::format("{}.{}.comp.hlsl", functionName, slangModule->getName());
+                    std::string name = std::format("{}.hlsl", functionName, slangModule->getName());
                     resultFiles.push_back(ResultFile{ std::move(name), outputBlob });
                 }
             }

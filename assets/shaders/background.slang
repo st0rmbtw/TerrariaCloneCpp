@@ -15,19 +15,19 @@ struct VSInput
     float2 i_tex_size : I_TexSize;
     float2 i_speed : I_Speed;
     uint i_id : I_ID;
-    int i_flags : I_Flags;
+    uint i_flags : I_Flags;
 };
 
 struct VSOutput
 {
     float4 position : SV_Position;
-    nointerpolation float2 texture_size : TextureSize;
     float2 uv : UV;
+    nointerpolation float2 texture_size : TextureSize;
     nointerpolation float2 size : Size;
     nointerpolation float2 tex_size : TexSize;
     nointerpolation float2 speed : Speed;
-    nointerpolation uint id : I_ID;
     nointerpolation float2 offset : Offset;
+    nointerpolation uint id : I_ID;
     nointerpolation int nonscale : NonScale;
 };
 
@@ -79,13 +79,13 @@ static float2 scroll(
     return new_uv * tex_size / texture_size;
 }
 
-static const int IGNORE_CAMERA_ZOOM_FLAG = 1 << 0;
-static const int UI_FLAG = 1 << 1;
+static const uint IGNORE_CAMERA_ZOOM_FLAG = 1 << 0;
+static const uint UI_FLAG = 1 << 1;
 
 [shader("vertex")]
 VSOutput VS(VSInput inp)
 {
-    const int flags = inp.i_flags;
+    const uint flags = inp.i_flags;
     const bool ignore_camera_zoom = (flags & IGNORE_CAMERA_ZOOM_FLAG) == IGNORE_CAMERA_ZOOM_FLAG;
     const bool ui_flag = (flags & UI_FLAG) == UI_FLAG;
 
@@ -93,7 +93,7 @@ VSOutput VS(VSInput inp)
 
     const float2 offset = mul(uniforms.nonscale_projection, float4(uniforms.camera_position.x, uniforms.camera_position.y, 0.0, 1.0)).xy;
 
-    const float2 position = inp.i_position.xy + inp.i_size * inp.position;
+    const float2 position = inp.i_position + inp.i_size * inp.position;
 
     VSOutput outp;
     outp.position = mul(view_proj, float4(position.x, position.y, 0.0, 1.0));

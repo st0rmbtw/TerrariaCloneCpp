@@ -31,16 +31,15 @@ ParticleRenderer::ParticleRenderer(const std::shared_ptr<sge::Renderer>& rendere
 
     const auto& render_context = m_renderer->GetRenderContext();
     const sge::RenderBackend backend = render_context->Backend();
-    const auto& context = render_context->Context();
 
     m_atlas = Assets::GetTextureAtlas(TextureAsset::Particles);
 
-    m_instance_buffer_data = new ParticleInstance[MAX_PARTICLES_COUNT];
-    m_instance_buffer_data_world = new ParticleInstance[MAX_PARTICLES_COUNT];
+    m_instance_buffer_data = HeapArray<ParticleInstance>(MAX_PARTICLES_COUNT);
+    m_instance_buffer_data_world = HeapArray<ParticleInstance>(MAX_PARTICLES_COUNT);
 
-    m_position_buffer_data = new glm::vec2[MAX_PARTICLES_COUNT];
-    m_rotation_buffer_data = new glm::quat[MAX_PARTICLES_COUNT];
-    m_scale_buffer_data = new float[MAX_PARTICLES_COUNT];
+    m_position_buffer_data = HeapArray<glm::vec2>(MAX_PARTICLES_COUNT);
+    m_rotation_buffer_data = HeapArray<glm::quat>(MAX_PARTICLES_COUNT);
+    m_scale_buffer_data = HeapArray<float>(MAX_PARTICLES_COUNT);
 
     const ParticleVertex vertices[] = {
         ParticleVertex(0.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size()), glm::vec2(m_atlas.texture().size())),
@@ -49,11 +48,9 @@ ParticleRenderer::ParticleRenderer(const std::shared_ptr<sge::Renderer>& rendere
         ParticleVertex(1.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size()), glm::vec2(m_atlas.texture().size())),
     };
 
-    m_vertex_buffer = render_context->CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::ParticleVertex), "ParticleRenderer VertexBuffer");
+    m_vertex_buffer = render_context->CreateVertexBuffer(vertices, Assets::GetVertexFormat(VertexFormatAsset::ParticleVertex), "ParticleRenderer VertexBuffer");
     m_instance_buffer = render_context->CreateVertexBuffer(MAX_PARTICLES_COUNT * sizeof(ParticleInstance), Assets::GetVertexFormat(VertexFormatAsset::ParticleInstance), "ParticleRenderer InstanceBuffer");
-
-    LLGL::Buffer* buffers[] = { m_vertex_buffer.get(), m_instance_buffer.get() };
-    m_buffer_array = context->CreateBufferArray(2, buffers);
+    m_buffer_array = render_context->CreateBufferArray({ m_vertex_buffer.Get(), m_instance_buffer.Get() });
 
     {
         long bindFlags = LLGL::BindFlags::Storage;
@@ -63,7 +60,7 @@ ParticleRenderer::ParticleRenderer(const std::shared_ptr<sge::Renderer>& rendere
         bufferDesc.bindFlags    = bindFlags;
         bufferDesc.format       = LLGL::Format::RGBA32Float;
 
-        m_transform_buffer = context->CreateBuffer(bufferDesc);
+        m_transform_buffer = render_context->CreateBuffer(bufferDesc);
     }
 
     {
@@ -74,7 +71,7 @@ ParticleRenderer::ParticleRenderer(const std::shared_ptr<sge::Renderer>& rendere
         bufferDesc.bindFlags    = bindFlags;
         bufferDesc.format       = LLGL::Format::RG32Float;
 
-        m_position_buffer = context->CreateBuffer(bufferDesc);
+        m_position_buffer = render_context->CreateBuffer(bufferDesc);
     }
 
     {
@@ -85,7 +82,7 @@ ParticleRenderer::ParticleRenderer(const std::shared_ptr<sge::Renderer>& rendere
         bufferDesc.bindFlags    = bindFlags;
         bufferDesc.format       = LLGL::Format::RGBA32Float;
 
-        m_rotation_buffer = context->CreateBuffer(bufferDesc);
+        m_rotation_buffer = render_context->CreateBuffer(bufferDesc);
     }
 
     {
@@ -96,7 +93,7 @@ ParticleRenderer::ParticleRenderer(const std::shared_ptr<sge::Renderer>& rendere
         bufferDesc.bindFlags    = bindFlags;
         bufferDesc.format       = LLGL::Format::R32Float;
 
-        m_scale_buffer = context->CreateBuffer(bufferDesc);
+        m_scale_buffer = render_context->CreateBuffer(bufferDesc);
     }
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
@@ -106,20 +103,18 @@ ParticleRenderer::ParticleRenderer(const std::shared_ptr<sge::Renderer>& rendere
         sge::BindingLayoutItem::Texture(3, "Texture", LLGL::StageFlags::FragmentStage),
     });
     pipelineLayoutDesc.staticSamplers = {
-        LLGL::StaticSamplerDescriptor("Sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4), m_atlas.texture().sampler().descriptor())
+        LLGL::StaticSamplerDescriptor("Sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(4), m_atlas.texture().sampler()->descriptor())
     };
     pipelineLayoutDesc.combinedTextureSamplers = {
         LLGL::CombinedTextureSamplerDescriptor{ "Texture", "Texture", "Sampler", 3 }
     };
 
-    LLGL::PipelineLayout* pipelineLayout = context->CreatePipelineLayout(pipelineLayoutDesc);
-    {
-        const LLGL::ResourceViewDescriptor resource_views[] = {
-            m_renderer->GlobalUniformBuffer(), m_transform_buffer.get(), m_atlas.texture()
-        };
-
-        m_resource_heap = context->CreateResourceHeap(pipelineLayout, resource_views);
-    }
+    sge::Ref<LLGL::PipelineLayout> pipelineLayout = render_context->CreatePipelineLayout(pipelineLayoutDesc);
+    m_resource_heap = render_context->CreateResourceHeap(pipelineLayout, {
+        m_renderer->GlobalUniformBuffer().Get(),
+        m_transform_buffer.Get(),
+        m_atlas.texture()
+    });
 
     const sge::ShaderPipeline& particle_shader = Assets::GetShader(ShaderAsset::ParticleShader);
 
@@ -129,7 +124,6 @@ ParticleRenderer::ParticleRenderer(const std::shared_ptr<sge::Renderer>& rendere
     pipelineConfig.geometryShader = particle_shader.gs;
     pipelineConfig.pixelShader = particle_shader.ps;
     pipelineConfig.layout = pipelineLayout;
-    pipelineConfig.indexFormat = LLGL::Format::R16UInt;
     pipelineConfig.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineConfig.depth = LLGL::DepthDescriptor {
         .testEnabled = true,
@@ -149,7 +143,7 @@ ParticleRenderer::ParticleRenderer(const std::shared_ptr<sge::Renderer>& rendere
         }
     };
 
-    m_pipeline_id = render_context->AddPipelineConfig(pipelineConfig);
+    m_pipeline = render_context->CreatePipelineState(pipelineConfig);
 
     LLGL::PipelineLayoutDescriptor compute_pipeline_layout_desc;
     compute_pipeline_layout_desc.heapBindings = sge::BindingLayout(
@@ -163,21 +157,22 @@ ParticleRenderer::ParticleRenderer(const std::shared_ptr<sge::Renderer>& rendere
         }
     );
 
-    LLGL::PipelineLayout* compute_pipeline_layout = context->CreatePipelineLayout(compute_pipeline_layout_desc);
+    m_compute_pipeline_layout = render_context->CreatePipelineLayout(compute_pipeline_layout_desc);
+    m_compute_resource_heap = render_context->CreateResourceHeap(m_compute_pipeline_layout, {
+        m_renderer->GlobalUniformBuffer().Get(),
+        m_transform_buffer.Get(),
+        m_position_buffer.Get(),
+        m_rotation_buffer.Get(),
+        m_scale_buffer.Get()
+    });
 
-    const LLGL::ResourceViewDescriptor resource_views[] = {
-        m_renderer->GlobalUniformBuffer(), m_transform_buffer.get(), m_position_buffer.get(), m_rotation_buffer.get(), m_scale_buffer.get()
-    };
+    sge::Ref<LLGL::Shader> computeShader = Assets::GetComputeShader(ComputeShaderAsset::ParticleComputeTransformShader);
 
-    m_compute_resource_heap = context->CreateResourceHeap(compute_pipeline_layout, resource_views);
+    sge::ComputePipelineConfig compute_pipeline_desc;
+    compute_pipeline_desc.pipelineLayout = m_compute_pipeline_layout.Get();
+    compute_pipeline_desc.computeShader = computeShader.Get();
 
-    LLGL::Shader* computeShader = Assets::GetComputeShader(ComputeShaderAsset::ParticleComputeTransformShader);
-
-    LLGL::ComputePipelineDescriptor compute_pipeline_desc;
-    compute_pipeline_desc.pipelineLayout = compute_pipeline_layout;
-    compute_pipeline_desc.computeShader = computeShader;
-
-    m_compute_pipeline = context->CreatePipelineState(compute_pipeline_desc);
+    m_compute_pipeline = render_context->CreateComputePipelineState(compute_pipeline_desc);
     if (const LLGL::Report* report = m_compute_pipeline->GetReport()) {
         if (report->HasErrors()) SGE_LOG_ERROR("{}", report->GetText());
     }
@@ -238,28 +233,28 @@ void ParticleRenderer::compute() {
 
     ZoneScoped;
 
-    const auto& context = m_renderer->GetRenderContext()->Context();
-    auto* const commands = m_renderer->CommandBuffer();
+    const auto& context = m_renderer->GetRenderContext()->GetLLGLContext();
+    const auto& commands = m_renderer->CommandBuffer();
 
-    ptrdiff_t size = (uint8_t*) m_position_buffer_data_ptr - (uint8_t*) m_position_buffer_data;
+    ptrdiff_t size = (uint8_t*) m_position_buffer_data_ptr - (uint8_t*) m_position_buffer_data.data();
     if (size < (1 << 16)) {
-        commands->UpdateBuffer(*m_position_buffer, 0, m_position_buffer_data, size);
+        commands->UpdateBuffer(*m_position_buffer, 0, m_position_buffer_data.data(), size);
     } else {
-        context->WriteBuffer(*m_position_buffer, 0, m_position_buffer_data, size);
+        context->WriteBuffer(*m_position_buffer, 0, m_position_buffer_data.data(), size);
     }
 
-    size = (uint8_t*) m_rotation_buffer_data_ptr - (uint8_t*) m_rotation_buffer_data;
+    size = (uint8_t*) m_rotation_buffer_data_ptr - (uint8_t*) m_rotation_buffer_data.data();
     if (size < (1 << 16)) {
-        commands->UpdateBuffer(*m_rotation_buffer, 0, m_rotation_buffer_data, size);
+        commands->UpdateBuffer(*m_rotation_buffer, 0, m_rotation_buffer_data.data(), size);
     } else {
-        context->WriteBuffer(*m_rotation_buffer, 0, m_rotation_buffer_data, size);
+        context->WriteBuffer(*m_rotation_buffer, 0, m_rotation_buffer_data.data(), size);
     }
 
-    size = (uint8_t*) m_scale_buffer_data_ptr - (uint8_t*) m_scale_buffer_data;
+    size = (uint8_t*) m_scale_buffer_data_ptr - (uint8_t*) m_scale_buffer_data.data();
     if (size < (1 << 16)) {
-        commands->UpdateBuffer(*m_scale_buffer, 0, m_scale_buffer_data, size);
+        commands->UpdateBuffer(*m_scale_buffer, 0, m_scale_buffer_data.data(), size);
     } else {
-        context->WriteBuffer(*m_scale_buffer, 0, m_scale_buffer_data, size);
+        context->WriteBuffer(*m_scale_buffer, 0, m_scale_buffer_data.data(), size);
     }
 
     commands->PushDebugGroup("CS ComputeTransform");
@@ -284,24 +279,24 @@ void ParticleRenderer::compute() {
 void ParticleRenderer::prepare() {
     ZoneScoped;
 
-    const auto& context = m_renderer->GetRenderContext()->Context();
-    auto* const commands = m_renderer->CommandBuffer();
+    const auto& context = m_renderer->GetRenderContext()->GetLLGLContext();
+    const auto& commands = m_renderer->CommandBuffer();
 
     if (m_particle_count > 0) {
-        const ptrdiff_t size = (uint8_t*) m_instance_buffer_data_ptr - (uint8_t*) m_instance_buffer_data;
+        const ptrdiff_t size = (uint8_t*) m_instance_buffer_data_ptr - (uint8_t*) m_instance_buffer_data.data();
         if (size < (1 << 16)) {
-            commands->UpdateBuffer(*m_instance_buffer, 0, m_instance_buffer_data, size);
+            commands->UpdateBuffer(*m_instance_buffer, 0, m_instance_buffer_data.data(), size);
         } else {
-            context->WriteBuffer(*m_instance_buffer, 0, m_instance_buffer_data, size);
+            context->WriteBuffer(*m_instance_buffer, 0, m_instance_buffer_data.data(), size);
         }
     }
 
     if (m_world_particle_count > 0) {
-        const ptrdiff_t size = (uint8_t*) m_instance_buffer_data_world_ptr - (uint8_t*) m_instance_buffer_data_world;
+        const ptrdiff_t size = (uint8_t*) m_instance_buffer_data_world_ptr - (uint8_t*) m_instance_buffer_data_world.data();
         if (size < (1 << 16)) {
-            commands->UpdateBuffer(*m_instance_buffer, m_particle_count * sizeof(ParticleInstance), m_instance_buffer_data_world, size);
+            commands->UpdateBuffer(*m_instance_buffer, m_particle_count * sizeof(ParticleInstance), m_instance_buffer_data_world.data(), size);
         } else {
-            context->WriteBuffer(*m_instance_buffer, m_particle_count * sizeof(ParticleInstance), m_instance_buffer_data_world, size);
+            context->WriteBuffer(*m_instance_buffer, m_particle_count * sizeof(ParticleInstance), m_instance_buffer_data_world.data(), size);
         }
     }
 }
@@ -311,10 +306,10 @@ void ParticleRenderer::render() {
 
     ZoneScoped;
 
-    auto* const commands = m_renderer->CommandBuffer();
+    const auto& commands = m_renderer->CommandBuffer();
 
     commands->SetVertexBufferArray(*m_buffer_array);
-    commands->SetPipelineState(m_renderer->GetRenderContext()->GetOrCreatePipeline(m_pipeline_id));
+    commands->SetPipelineState(m_renderer->GetRenderContext()->GetOrCreatePipeline(m_pipeline));
 
     commands->SetResourceHeap(*m_resource_heap);
 
@@ -326,10 +321,10 @@ void ParticleRenderer::render_world() {
 
     ZoneScoped;
 
-    auto* const commands = m_renderer->CommandBuffer();
+    const auto& commands = m_renderer->CommandBuffer();
 
     commands->SetVertexBufferArray(*m_buffer_array);
-    commands->SetPipelineState(m_renderer->GetRenderContext()->GetOrCreatePipeline(m_pipeline_id));
+    commands->SetPipelineState(m_renderer->GetRenderContext()->GetOrCreatePipeline(m_pipeline));
 
     commands->SetResourceHeap(*m_resource_heap);
 
@@ -337,36 +332,16 @@ void ParticleRenderer::render_world() {
 }
 
 void ParticleRenderer::reset() {
-    m_instance_buffer_data_ptr = m_instance_buffer_data;
-    m_instance_buffer_data_world_ptr = m_instance_buffer_data_world;
-    m_rotation_buffer_data_ptr = m_rotation_buffer_data;
-    m_position_buffer_data_ptr = m_position_buffer_data;
-    m_scale_buffer_data_ptr = m_scale_buffer_data;
+    m_instance_buffer_data_ptr = m_instance_buffer_data.data();
+    m_instance_buffer_data_world_ptr = m_instance_buffer_data_world.data();
+    m_rotation_buffer_data_ptr = m_rotation_buffer_data.data();
+    m_position_buffer_data_ptr = m_position_buffer_data.data();
+    m_scale_buffer_data_ptr = m_scale_buffer_data.data();
     m_particle_count = 0;
     m_world_particle_count = 0;
     m_particle_id = 0;
 }
 
 ParticleRenderer::~ParticleRenderer() {
-    const auto& context = m_renderer->GetRenderContext()->Context();
-
-    SGE_RESOURCE_RELEASE(m_buffer_array);
-    SGE_RESOURCE_RELEASE(m_instance_buffer);
-    SGE_RESOURCE_RELEASE(m_vertex_buffer);
-
-    SGE_RESOURCE_RELEASE(m_position_buffer);
-    SGE_RESOURCE_RELEASE(m_rotation_buffer);
-    SGE_RESOURCE_RELEASE(m_scale_buffer);
-
-    SGE_RESOURCE_RELEASE(m_transform_buffer);
-
-    m_renderer->GetRenderContext()->DeletePipeline(m_pipeline_id);
-
-    SGE_RESOURCE_RELEASE(m_compute_pipeline);
-
-    delete[] m_instance_buffer_data;
-    delete[] m_instance_buffer_data_world;
-    delete[] m_position_buffer_data;
-    delete[] m_rotation_buffer_data;
-    delete[] m_scale_buffer_data;
+    m_renderer->GetRenderContext()->DeletePipeline(m_pipeline);
 }

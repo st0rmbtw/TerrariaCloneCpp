@@ -144,7 +144,7 @@ bool TileRule::matches_relaxed(uint32_t neighbors_mask, uint32_t blend_mask) con
     return true;
 }
 
-void init_tile_rules() {
+void InitTileRules() {
     state.base_rules[0].emplace_front("D10", "D12");// None
     state.base_rules[1].emplace_front("A10", "C10");// Right
     state.base_rules[2].emplace_front("D7", "D9");  // Top

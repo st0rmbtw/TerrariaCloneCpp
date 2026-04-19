@@ -21,16 +21,17 @@ struct UiRectangleData {
     sge::LinearRgba color;
 };
 
-TestUI::TestUI(const std::shared_ptr<sge::Renderer>& renderer) :
-    m_camera(renderer->GetRenderContext()->Backend(), sge::CameraOrigin::TopLeft),
+TestUI::TestUI(const std::shared_ptr<sge::Renderer>& renderer, uint8_t samples) :
+    m_camera(sge::CameraConfig {
+        .origin = sge::CameraOrigin::TopLeft,
+        .samples = samples
+    }),
     m_batch(*renderer, {
         .font_shader = Assets::GetShader(ShaderAsset::FontShader).ps,
         .enable_scissor = true
     }),
     m_renderer(renderer)
 {
-    m_camera.set_zoom(1.0f);
-    
     m_batch.SetIsUi(true);
 }
 

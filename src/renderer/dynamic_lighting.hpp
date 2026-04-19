@@ -16,25 +16,17 @@ public:
     virtual void update(World& world) = 0;
     virtual void compute_light(const sge::Camera& camera, const World& world) = 0;
 
-    virtual void destroy() = 0;
-
-    virtual void set_light_texture(LLGL::Texture*) noexcept {}
+    virtual void set_light_texture(const sge::Ref<LLGL::Texture>&) noexcept {}
 
     virtual ~IDynamicLighting() = default;
 };
 
 class DynamicLighting : public IDynamicLighting {
 public:
-    DynamicLighting(std::shared_ptr<sge::Renderer> renderer, const WorldData& world, LLGL::Texture* light_texture);
+    DynamicLighting(std::shared_ptr<sge::Renderer> renderer, const WorldData& world, sge::Ref<LLGL::Texture> light_texture);
 
     void update(World& world) override;
     void compute_light(const sge::Camera& camera, const World& world) override;
-
-    void destroy() override {}
-
-    ~DynamicLighting() override {
-        destroy();
-    }
 private:
     std::vector<sge::IRect> m_areas;
 
@@ -45,7 +37,7 @@ private:
     LightMap m_dynamic_lightmap;
 
     std::shared_ptr<sge::Renderer> m_renderer = nullptr;
-    sge::LLGLResource<LLGL::Texture> m_light_texture = nullptr;
+    sge::Ref<LLGL::Texture> m_light_texture = nullptr;
 };
 
 class AcceleratedDynamicLighting : public IDynamicLighting {
@@ -57,13 +49,13 @@ private:
     };
 
 public:
-    AcceleratedDynamicLighting(std::shared_ptr<sge::Renderer> renderer, const WorldData& world, LLGL::Texture* light_texture);
+    AcceleratedDynamicLighting(std::shared_ptr<sge::Renderer> renderer, const WorldData& world, sge::Ref<LLGL::Texture> light_texture);
 
-    void set_light_texture(LLGL::Texture* light_texture) noexcept override {
-        SGE_ASSERT(light_texture != nullptr);
-        const auto& context = m_renderer->GetRenderContext()->Context();
-        context->WriteResourceHeap(*m_light_blur_resource_heap, 2, { light_texture });
-        context->WriteResourceHeap(*m_light_init_resource_heap, 2, { light_texture });
+    void set_light_texture(const sge::Ref<LLGL::Texture>& light_texture) noexcept override {
+        SGE_ASSERT(light_texture.IsValid());
+        const auto& context = m_renderer->GetRenderContext()->GetLLGLContext();
+        context->WriteResourceHeap(*m_light_blur_resource_heap, 2, { light_texture.Get() });
+        context->WriteResourceHeap(*m_light_init_resource_heap, 2, { light_texture.Get() });
         m_light_texture = light_texture;
     }
 
@@ -72,8 +64,6 @@ public:
     }
 
     void compute_light(const sge::Camera& camera, const World& world) override;
-
-    void destroy() override;
 private:
     void init_textures(const WorldData& world);
 
@@ -83,17 +73,20 @@ private:
 private:
     std::shared_ptr<sge::Renderer> m_renderer = nullptr;
 
-    sge::LLGLResource<LLGL::Buffer> m_light_buffer = nullptr;
-    sge::LLGLResource<LLGL::Buffer> m_uniform_buffer = nullptr;
-    sge::LLGLResource<LLGL::Texture> m_tile_texture = nullptr;
-    sge::LLGLResource<LLGL::ResourceHeap> m_light_init_resource_heap = nullptr;
-    sge::LLGLResource<LLGL::ResourceHeap> m_light_blur_resource_heap = nullptr;
+    sge::Unique<LLGL::Buffer> m_light_buffer = nullptr;
+    sge::Unique<LLGL::Buffer> m_uniform_buffer = nullptr;
+    sge::Unique<LLGL::Texture> m_tile_texture = nullptr;
+    sge::Unique<LLGL::ResourceHeap> m_light_init_resource_heap = nullptr;
+    sge::Unique<LLGL::ResourceHeap> m_light_blur_resource_heap = nullptr;
 
-    sge::LLGLResource<LLGL::Texture> m_light_texture = nullptr;
+    sge::Unique<LLGL::PipelineLayout> m_light_init_pipeline_layout = nullptr;
+    sge::Unique<LLGL::PipelineLayout> m_light_blur_pipeline_layout = nullptr;
 
-    sge::LLGLResource<LLGL::PipelineState> m_light_set_light_sources_pipeline = nullptr;
-    sge::LLGLResource<LLGL::PipelineState> m_light_vertical_pipeline = nullptr;
-    sge::LLGLResource<LLGL::PipelineState> m_light_horizontal_pipeline = nullptr;
+    sge::Ref<LLGL::Texture> m_light_texture = nullptr;
+
+    sge::Unique<LLGL::PipelineState> m_light_set_light_sources_pipeline = nullptr;
+    sge::Unique<LLGL::PipelineState> m_light_vertical_pipeline = nullptr;
+    sge::Unique<LLGL::PipelineState> m_light_horizontal_pipeline = nullptr;
 
     uint32_t m_workgroup_size = 16;
 

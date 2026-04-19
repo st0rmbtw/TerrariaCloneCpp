@@ -55,10 +55,10 @@ public:
 };
 
 enum class NodeFlags : uint8_t {
-    Render = (1 << 0),
-    TextNode = (1 << 1),
-    Hoverable = (1 << 2),
-    Scrollable = (1 << 3),
+    Render = 0,
+    TextNode,
+    Hoverable,
+    Scrollable,
 };
 
 struct Node {
@@ -83,7 +83,7 @@ struct Node {
     float gap = 0.0f;
     float scroll_max = 0.0f;
     
-    uint32_t type_id = 0;
+    uint32_t type_id = -1;
     uint32_t z_index = 0;
     uint32_t text_data_index = 0;
     
@@ -300,7 +300,7 @@ static inline std::string_view CopyStringToArena(std::string_view string) {
 }
 
 static bool CheckIfPressed(const NodeID id, const sge::Rect element_rect, const sge::MouseButton button) noexcept {
-    const bool hovered = element_rect.contains(sge::Input::MouseScreenPosition());
+    const bool hovered = element_rect.contains(sge::Input::CursorPosition());
 
     if (state.clicked_clickable_id.id == 0) {
         if (hovered && sge::Input::JustPressed(button)) {
@@ -319,7 +319,7 @@ static bool CheckIfPressed(const NodeID id, const sge::Rect element_rect, const 
 }
 
 static bool CheckIfFocused(const NodeID id, const sge::Rect element_rect) {
-    const bool hovered = element_rect.contains(sge::Input::MouseScreenPosition());
+    const bool hovered = element_rect.contains(sge::Input::CursorPosition());
 
     if (state.clicked_focusable_id.id == 0) {
         if (hovered && sge::Input::JustPressed(sge::MouseButton::Left)) {
@@ -366,7 +366,7 @@ void UI::Update() {
             continue;
 
         const sge::Rect element_rect = sge::Rect::from_top_left(current_node->pos, current_node->size);
-        const bool hovered = element_rect.contains(sge::Input::MouseScreenPosition());
+        const bool hovered = element_rect.contains(sge::Input::CursorPosition());
 
         const bool clickable = current_node->clickable();
 

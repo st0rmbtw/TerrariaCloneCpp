@@ -61,7 +61,7 @@ struct BackgroundInstance {
     glm::vec2 tex_size;
     glm::vec2 speed;
     uint32_t id;
-    int flags;
+    uint32_t flags;
 };
 
 #endif

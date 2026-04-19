@@ -7,6 +7,7 @@
 #include <SGE/engine.hpp>
 #include <SGE/profile.hpp>
 #include <SGE/renderer/macros.hpp>
+#include <SGE/renderer/types.hpp>
 #include <SGE/types/binding_layout.hpp>
 
 #include "types.hpp"
@@ -16,7 +17,7 @@ constexpr uint32_t MAX_QUADS = 500;
 namespace BackgroundFlags {
     enum : uint8_t {
         IgnoreCameraZoom = 0,
-        IsUI = 1
+        IsUI
     };
 };
 
@@ -25,18 +26,14 @@ BackgroundRenderer::BackgroundRenderer(const std::shared_ptr<sge::Renderer>& ren
 
     const sge::RenderBackend backend = m_renderer->GetRenderContext()->Backend();
     const auto& render_context = m_renderer->GetRenderContext();
-    const auto& context = m_renderer->GetRenderContext()->Context();
-
-    // const uint32_t samples = swap_chain->GetSamples();
-    const uint32_t samples = 1;
 
     const sge::Texture& backgrounds_texture = Assets::GetTexture(TextureAsset::Backgrounds);
 
-    m_buffer = new BackgroundInstance[MAX_QUADS];
-    m_buffer_ptr = m_buffer;
+    m_buffer = HeapArray<BackgroundInstance>(MAX_QUADS);
+    m_buffer_ptr = m_buffer.data();
 
-    m_world_buffer = new BackgroundInstance[MAX_QUADS];
-    m_world_buffer_ptr = m_world_buffer;
+    m_world_buffer = HeapArray<BackgroundInstance>(MAX_QUADS);
+    m_world_buffer_ptr = m_world_buffer.data();
 
     const BackgroundVertex vertices[] = {
         BackgroundVertex(glm::vec2(0.0f, 0.0f), backgrounds_texture.size()),
@@ -45,18 +42,12 @@ BackgroundRenderer::BackgroundRenderer(const std::shared_ptr<sge::Renderer>& ren
         BackgroundVertex(glm::vec2(1.0f, 1.0f), backgrounds_texture.size()),
     };
 
-    m_vertex_buffer = render_context->CreateVertexBufferInit(sizeof(vertices), vertices, Assets::GetVertexFormat(VertexFormatAsset::BackgroundVertex), "BackgroundRenderer VertexBuffer");
+    m_vertex_buffer = render_context->CreateVertexBuffer(vertices, Assets::GetVertexFormat(VertexFormatAsset::BackgroundVertex), "BackgroundRenderer VertexBuffer");
     m_instance_buffer = render_context->CreateVertexBuffer(MAX_QUADS * sizeof(BackgroundInstance), Assets::GetVertexFormat(VertexFormatAsset::BackgroundInstance), "BackgroundRenderer InstanceBuffer");
     m_world_instance_buffer = render_context->CreateVertexBuffer(MAX_QUADS * sizeof(BackgroundInstance), Assets::GetVertexFormat(VertexFormatAsset::BackgroundInstance), "BackgroundRenderer InstanceBuffer");
 
-    {
-        LLGL::Buffer* buffers[] = { m_vertex_buffer.get(), m_instance_buffer.get() };
-        m_buffer_array = context->CreateBufferArray(2, buffers);
-    }
-    {
-        LLGL::Buffer* buffers[] = { m_vertex_buffer.get(), m_world_instance_buffer.get() };
-        m_world_buffer_array = context->CreateBufferArray(2, buffers);
-    }
+    m_buffer_array = render_context->CreateBufferArray({ m_vertex_buffer.Get(), m_instance_buffer.Get() });
+    m_world_buffer_array = render_context->CreateBufferArray({ m_vertex_buffer.Get(), m_world_instance_buffer.Get() });
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.heapBindings = sge::BindingLayout({
@@ -64,109 +55,72 @@ BackgroundRenderer::BackgroundRenderer(const std::shared_ptr<sge::Renderer>& ren
         sge::BindingLayoutItem::Texture(3, "Texture", LLGL::StageFlags::FragmentStage),
     });
     pipelineLayoutDesc.staticSamplers = {
-        LLGL::StaticSamplerDescriptor("Sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4), backgrounds_texture.sampler().descriptor()),
+        LLGL::StaticSamplerDescriptor("Sampler", LLGL::StageFlags::FragmentStage, LLGL::BindingSlot(backend.IsOpenGL() ? 3 : 4), backgrounds_texture.sampler()->descriptor()),
     };
     pipelineLayoutDesc.combinedTextureSamplers = {
         LLGL::CombinedTextureSamplerDescriptor{ "Texture", "Texture", "Sampler", 3 }
     };
 
-    m_pipeline_layout = context->CreatePipelineLayout(pipelineLayoutDesc);
-
-    const LLGL::ResourceViewDescriptor resource_views[] = {
-        m_renderer->GlobalUniformBuffer(), backgrounds_texture
-    };
-    m_resource_heap = context->CreateResourceHeap(m_pipeline_layout.get(), resource_views);
+    m_pipeline_layout = render_context->CreatePipelineLayout(pipelineLayoutDesc);
+    m_resource_heap = render_context->CreateResourceHeap(m_pipeline_layout, {
+        m_renderer->GlobalUniformBuffer().Get(),
+        backgrounds_texture
+    });
 
     const sge::ShaderPipeline& background_shader = Assets::GetShader(ShaderAsset::BackgroundShader);
 
-    LLGL::RenderPassDescriptor render_pass;
-    render_pass.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Load;
-    render_pass.colorAttachments[0].storeOp = LLGL::AttachmentStoreOp::Store;
-    render_pass.colorAttachments[0].format = LLGL::Format::RGBA8UNorm;
-    render_pass.samples = samples;
+    sge::GraphicsPipelineConfig pipelineConfig;
+    pipelineConfig.debugName = "BackgroundRenderer Pipeline";
+    pipelineConfig.vertexShader = background_shader.vs;
+    pipelineConfig.pixelShader = background_shader.ps;
+    pipelineConfig.layout = m_pipeline_layout;
+    pipelineConfig.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
 
-    LLGL::GraphicsPipelineDescriptor pipelineDesc;
-    pipelineDesc.debugName = "BackgroundRenderer Pipeline";
-    pipelineDesc.vertexShader = background_shader.vs;
-    pipelineDesc.fragmentShader = background_shader.ps;
-    pipelineDesc.pipelineLayout = m_pipeline_layout.get();
-    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
-    pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
-    pipelineDesc.renderPass = context->CreateRenderPass(render_pass);
-    pipelineDesc.rasterizer.frontCCW = true;
-    pipelineDesc.rasterizer.multiSampleEnabled = (samples > 1);
-
-    m_pipeline = context->CreatePipelineState(pipelineDesc);
-
-    if (const LLGL::Report* report = m_pipeline->GetReport()) {
-        if (report->HasErrors()) SGE_LOG_ERROR("{}", report->GetText());
-    }
+    m_pipeline = render_context->CreatePipelineState(pipelineConfig);
 }
 
 void BackgroundRenderer::init_targets(LLGL::Extent2D resolution) {
-    const auto& context = m_renderer->GetRenderContext()->Context();
-    // const auto* swap_chain = m_renderer->SwapChain();
+    const auto& context = m_renderer->GetRenderContext();
 
-    // const uint32_t samples = swap_chain->GetSamples();
-    const uint32_t samples = 1;
-
-    SGE_RESOURCE_RELEASE(m_background_render_target);
-    SGE_RESOURCE_RELEASE(m_background_render_texture);
+    context->DeleteRenderTarget(m_background_render_target);
 
     LLGL::TextureDescriptor texture_desc;
     texture_desc.extent.width = resolution.width;
     texture_desc.extent.height = resolution.height;
-    // texture_desc.format = swap_chain->GetColorFormat();
     texture_desc.format = LLGL::Format::RGBA8UNorm;
     texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
     texture_desc.miscFlags = LLGL::MiscFlags::FixedSamples;
     texture_desc.cpuAccessFlags = 0;
     texture_desc.mipLevels = 1;
-
     m_background_render_texture = context->CreateTexture(texture_desc);
 
-    LLGL::RenderTargetDescriptor background_target_desc;
-    background_target_desc.resolution = resolution;
-    background_target_desc.samples = samples;
-    if (samples > 1) {
-        background_target_desc.colorAttachments[0] = m_background_render_texture->GetFormat();
-        background_target_desc.resolveAttachments[0] = m_background_render_texture.get();
-    } else {
-        background_target_desc.colorAttachments[0] = m_background_render_texture.get();
-    }
-    m_background_render_target = context->CreateRenderTarget(background_target_desc);
+    sge::RenderTargetConfig backgroundTargetConfig;
+    backgroundTargetConfig.resolution = resolution;
+    backgroundTargetConfig.colorAttachments[0] = m_background_render_texture->GetFormat();
+    backgroundTargetConfig.format = LLGL::Format::RGBA8UNorm;
+    m_background_render_target = context->CreateRenderTarget(backgroundTargetConfig);
 }
 
 void BackgroundRenderer::init_world(WorldRenderer& world_renderer) {
-    const auto& context = m_renderer->GetRenderContext()->Context();
-
-    // const uint32_t samples = swap_chain->GetSamples();
-    const uint32_t samples = 1;
+    const auto& context = m_renderer->GetRenderContext();
 
     const sge::ShaderPipeline& background_shader = Assets::GetShader(ShaderAsset::BackgroundShader);
 
-    LLGL::GraphicsPipelineDescriptor pipelineDesc;
+    sge::GraphicsPipelineConfig pipelineDesc;
     pipelineDesc.debugName = "BackgroundRenderer Pipeline World";
     pipelineDesc.vertexShader = background_shader.vs;
-    pipelineDesc.fragmentShader = background_shader.ps;
-    pipelineDesc.pipelineLayout = m_pipeline_layout.get();
-    pipelineDesc.indexFormat = LLGL::Format::R16UInt;
+    pipelineDesc.pixelShader = background_shader.ps;
+    pipelineDesc.layout = m_pipeline_layout;
     pipelineDesc.primitiveTopology = LLGL::PrimitiveTopology::TriangleStrip;
     pipelineDesc.renderPass = world_renderer.render_pass();
-    pipelineDesc.rasterizer.frontCCW = true;
-    pipelineDesc.rasterizer.multiSampleEnabled = (samples > 1);
 
     m_pipeline_world = context->CreatePipelineState(pipelineDesc);
-
-    if (const LLGL::Report* report = m_pipeline_world->GetReport()) {
-        if (report->HasErrors()) SGE_LOG_ERROR("{}", report->GetText());
-    }
 }
 
 void BackgroundRenderer::reset() {
-    m_buffer_ptr = m_buffer;
+    m_buffer_ptr = m_buffer.data();
     m_layer_count = 0;
-    m_world_buffer_ptr = m_world_buffer;
+    m_world_buffer_ptr = m_world_buffer.data();
     m_world_layer_count = 0;
 }
 
@@ -176,7 +130,7 @@ void BackgroundRenderer::draw_layer_internal(const BackgroundLayer& layer, Backg
     const glm::vec2 offset = layer.anchor().to_vec2();
     const glm::vec2 pos = layer.position() - layer.size() * offset;
 
-    int flags = 0;
+    uint32_t flags = 0;
     flags |= layer.nonscale() << BackgroundFlags::IgnoreCameraZoom;
     flags |= layer.is_ui() << BackgroundFlags::IsUI;
 
@@ -196,19 +150,19 @@ void BackgroundRenderer::render() {
 
     if (m_layer_count == 0) return;
 
-    auto* const commands = m_renderer->CommandBuffer();
+    const auto& commands = m_renderer->CommandBuffer();
 
-    const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer;
-    commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer, size);
+    const ptrdiff_t size = (uint8_t*) m_buffer_ptr - (uint8_t*) m_buffer.data();
+    commands->UpdateBuffer(*m_instance_buffer, 0, m_buffer.data(), size);
 
     commands->SetVertexBufferArray(*m_buffer_array);
 
-    commands->SetPipelineState(*m_pipeline);
+    commands->SetPipelineState(m_renderer->GetRenderContext()->GetOrCreatePipeline(m_pipeline));
     commands->SetResourceHeap(*m_resource_heap);
 
     commands->DrawInstanced(4, 0, m_layer_count);
 
-    m_buffer_ptr = m_buffer;
+    m_buffer_ptr = m_buffer.data();
     m_layer_count = 0;
 }
 
@@ -217,32 +171,19 @@ void BackgroundRenderer::render_world() {
 
     if (m_world_layer_count == 0) return;
 
-    auto* const commands = m_renderer->CommandBuffer();
+    const auto& render_context = m_renderer->GetRenderContext();
+    const auto& commands = m_renderer->CommandBuffer();
 
-    const ptrdiff_t size = (uint8_t*) m_world_buffer_ptr - (uint8_t*) m_world_buffer;
-    commands->UpdateBuffer(*m_world_instance_buffer, 0, m_world_buffer, size);
+    const ptrdiff_t size = (uint8_t*) m_world_buffer_ptr - (uint8_t*) m_world_buffer.data();
+    commands->UpdateBuffer(*m_world_instance_buffer, 0, m_world_buffer.data(), size);
 
     commands->SetVertexBufferArray(*m_world_buffer_array);
 
-    commands->SetPipelineState(*m_pipeline_world);
+    commands->SetPipelineState(render_context->GetOrCreatePipeline(m_pipeline_world));
     commands->SetResourceHeap(*m_resource_heap);
 
     commands->DrawInstanced(4, 0, m_world_layer_count);
 
-    m_world_buffer_ptr = m_world_buffer;
+    m_world_buffer_ptr = m_world_buffer.data();
     m_world_layer_count = 0;
-}
-
-BackgroundRenderer::~BackgroundRenderer() {
-    const auto& context = m_renderer->GetRenderContext()->Context();
-
-    SGE_RESOURCE_RELEASE(m_vertex_buffer);
-    SGE_RESOURCE_RELEASE(m_instance_buffer);
-    SGE_RESOURCE_RELEASE(m_world_instance_buffer);
-    SGE_RESOURCE_RELEASE(m_world_buffer_array);
-    SGE_RESOURCE_RELEASE(m_buffer_array);
-    SGE_RESOURCE_RELEASE(m_pipeline);
-
-    delete[] m_buffer;
-    delete[] m_world_buffer;
 }

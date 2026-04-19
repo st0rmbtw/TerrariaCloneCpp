@@ -20,7 +20,11 @@ struct AppConfig {
 
 class App final : public sge::IEngine {
 public:
-    App(AppConfig config, int16_t world_width, int16_t world_height);
+    App(AppConfig config, int16_t world_width, int16_t world_height) : m_config(config) {
+    }
+
+    bool Init() override;
+
     ~App();
 protected:
     void OnFixedUpdate() override;
@@ -43,6 +47,7 @@ private:
     std::unique_ptr<BaseState> m_current_state;
     std::shared_ptr<sge::Renderer> m_renderer;
     std::shared_ptr<sge::GlfwWindow> m_primary_window;
+    AppConfig m_config;
 };
 
 #endif

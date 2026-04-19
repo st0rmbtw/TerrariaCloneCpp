@@ -792,7 +792,7 @@ void Player::use_item(const sge::Camera& camera, World& world) {
     if (m_use_cooldown > 0) return;
     m_use_cooldown = item->use_cooldown;
 
-    const glm::vec2& screen_pos = sge::Input::MouseScreenPosition();
+    const glm::vec2& screen_pos = sge::Input::CursorPosition();
     const glm::vec2 world_pos = camera.screen_to_world(screen_pos);
 
     const TilePos tile_pos = TilePos::from_world_pos(world_pos);
@@ -885,7 +885,7 @@ void Player::use_item(const sge::Camera& camera, World& world) {
 }
 
 void Player::interact(const sge::Camera& camera, World& world) {
-    const glm::vec2& screen_pos = sge::Input::MouseScreenPosition();
+    const glm::vec2& screen_pos = sge::Input::CursorPosition();
     const glm::vec2 world_pos = camera.screen_to_world(screen_pos);
     const TilePos tile_pos = TilePos::from_world_pos(world_pos);
 

@@ -103,7 +103,9 @@ int main(int argc, char** argv) {
     }
 
     App app(config, world_width, world_height);
-    app.Run();
+    if (app.Init()) {
+        app.Run();
+    }
 
     return 0;
 }

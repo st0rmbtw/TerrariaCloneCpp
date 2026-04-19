@@ -31,39 +31,38 @@ public:
     void draw_particle_world(const glm::vec2& position, const glm::quat& rotation, float scale, Particle::Type type, uint8_t variant, sge::Order order);
 
 private:
+    sge::TextureAtlas m_atlas;
+
     std::shared_ptr<sge::Renderer> m_renderer = nullptr;
 
-    uint32_t m_pipeline_id = -1;
-    sge::LLGLResource<LLGL::PipelineState> m_compute_pipeline = nullptr;
-    sge::LLGLResource<LLGL::ResourceHeap> m_resource_heap = nullptr;
-    sge::LLGLResource<LLGL::ResourceHeap> m_compute_resource_heap = nullptr;
+    sge::Unique<LLGL::PipelineState> m_compute_pipeline = nullptr;
+    sge::Unique<LLGL::PipelineLayout> m_compute_pipeline_layout = nullptr;
+    sge::Unique<LLGL::ResourceHeap> m_resource_heap = nullptr;
+    sge::Unique<LLGL::ResourceHeap> m_compute_resource_heap = nullptr;
 
-    sge::LLGLResource<LLGL::BufferArray> m_buffer_array = nullptr;
-    sge::LLGLResource<LLGL::Buffer> m_instance_buffer = nullptr;
-    sge::LLGLResource<LLGL::Buffer> m_vertex_buffer = nullptr;
+    sge::Unique<LLGL::BufferArray> m_buffer_array = nullptr;
+    sge::Unique<LLGL::Buffer> m_instance_buffer = nullptr;
+    sge::Unique<LLGL::Buffer> m_vertex_buffer = nullptr;
 
-    sge::LLGLResource<LLGL::Buffer> m_position_buffer = nullptr;
-    sge::LLGLResource<LLGL::Buffer> m_rotation_buffer = nullptr;
-    sge::LLGLResource<LLGL::Buffer> m_scale_buffer = nullptr;
+    sge::Unique<LLGL::Buffer> m_position_buffer = nullptr;
+    sge::Unique<LLGL::Buffer> m_rotation_buffer = nullptr;
+    sge::Unique<LLGL::Buffer> m_scale_buffer = nullptr;
 
-    sge::LLGLResource<LLGL::Buffer> m_transform_buffer = nullptr;
+    sge::Unique<LLGL::Buffer> m_transform_buffer = nullptr;
 
-    ParticleInstance* m_instance_buffer_data = nullptr;
+    HeapArray<ParticleInstance> m_instance_buffer_data;
+    HeapArray<ParticleInstance> m_instance_buffer_data_world;
+    HeapArray<glm::vec2> m_position_buffer_data;
+    HeapArray<glm::quat> m_rotation_buffer_data;
+    HeapArray<float> m_scale_buffer_data;
+
     ParticleInstance* m_instance_buffer_data_ptr = nullptr;
-
-    ParticleInstance* m_instance_buffer_data_world = nullptr;
     ParticleInstance* m_instance_buffer_data_world_ptr = nullptr;
-
-    glm::vec2* m_position_buffer_data = nullptr;
     glm::vec2* m_position_buffer_data_ptr = nullptr;
-
-    glm::quat* m_rotation_buffer_data = nullptr;
     glm::quat* m_rotation_buffer_data_ptr = nullptr;
-
-    float* m_scale_buffer_data = nullptr;
     float* m_scale_buffer_data_ptr = nullptr;
 
-    sge::TextureAtlas m_atlas;
+    sge::Handle<LLGL::PipelineState> m_pipeline;
 
     uint32_t m_particle_count;
     uint32_t m_world_particle_count;
