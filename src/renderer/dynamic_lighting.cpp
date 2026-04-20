@@ -403,12 +403,13 @@ void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
     auto& context = m_renderer->GetRenderContext();
 
     LLGL::TextureDescriptor tile_texture_desc;
-    tile_texture_desc.type      = LLGL::TextureType::Texture2D;
-    tile_texture_desc.format    = LLGL::Format::R8UInt;
-    tile_texture_desc.extent    = LLGL::Extent3D(world.area.width(), world.area.height(), 1);
-    tile_texture_desc.miscFlags = 0;
-    tile_texture_desc.bindFlags = LLGL::BindFlags::Sampled;
-    tile_texture_desc.mipLevels = 1;
+    tile_texture_desc.type          = LLGL::TextureType::Texture2D;
+    tile_texture_desc.format        = LLGL::Format::R8UInt;
+    tile_texture_desc.extent.width  = world.area.width();
+    tile_texture_desc.extent.height = world.area.height();
+    tile_texture_desc.miscFlags     = 0;
+    tile_texture_desc.bindFlags     = LLGL::BindFlags::Sampled;
+    tile_texture_desc.mipLevels     = 1;
 
     {
         HeapArray<uint8_t> pixels(world.area.width() * world.area.height());
@@ -434,9 +435,10 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
     ZoneScoped;
 
     using Constants::TILE_SIZE;
-    using Constants::SUBDIVISION;
-    using Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE;
     using Constants::CAMERA_MIN_ZOOM;
+    using Constants::SUBDIVISION;
+
+    static constexpr float OFFSCREEN_RANGE_PIXELS = Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE * TILE_SIZE;
 
     if (world.light_count() == 0) return;
 
@@ -447,8 +449,8 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
 
     const sge::Rect& proj_area = camera.get_projection_area();
 
-    const glm::ivec2 blur_min = glm::ivec2((camera.position() + proj_area.min) / (TILE_SIZE / SUBDIVISION)) - DYNAMIC_LIGHT_OFFSCREEN_RANGE * SUBDIVISION;
-    const glm::ivec2 blur_max = glm::ivec2((camera.position() + proj_area.max) / (TILE_SIZE / SUBDIVISION)) + DYNAMIC_LIGHT_OFFSCREEN_RANGE * SUBDIVISION;
+    const glm::ivec2 blur_min = glm::vec2((camera.position() + proj_area.min - OFFSCREEN_RANGE_PIXELS) / (TILE_SIZE / SUBDIVISION));
+    const glm::ivec2 blur_max = glm::vec2((camera.position() + proj_area.max + OFFSCREEN_RANGE_PIXELS) / (TILE_SIZE / SUBDIVISION));
     const glm::ivec2 blur_size = blur_max - blur_min;
 
     const uint32_t grid_w = blur_size.x / m_workgroup_size;
@@ -457,8 +459,9 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
     if (grid_w * grid_h == 0) return;
 
     {
-        const glm::vec2 texture_size = glm::vec2(camera.viewport()) * CAMERA_MIN_ZOOM;
-        const glm::uvec2 texture_offset = glm::uvec2(((texture_size - proj_area.size()) * 0.5f - DYNAMIC_LIGHT_OFFSCREEN_RANGE * TILE_SIZE) / (TILE_SIZE / SUBDIVISION));
+        const glm::vec2 texture_size = glm::vec2(camera.viewport());
+        glm::uvec2 texture_offset = glm::uvec2(((texture_size * CAMERA_MIN_ZOOM - proj_area.size()) * 0.5f - OFFSCREEN_RANGE_PIXELS) / (TILE_SIZE / SUBDIVISION));
+        texture_offset -= glm::ivec2(texture_size) % (SUBDIVISION * 2);
 
         UniformBuffer uniform_buffer {
             .texture_offset = texture_offset,

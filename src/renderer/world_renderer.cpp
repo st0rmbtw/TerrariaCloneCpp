@@ -246,8 +246,8 @@ void WorldRenderer::init_textures(LLGL::Extent2D viewport) {
     if (m_dynamic_light_texture_target.IsValid())
         context->Release(m_dynamic_light_texture_target);
 
-    const uint32_t width = (viewport.width / 16 * Constants::CAMERA_MIN_ZOOM) * Constants::SUBDIVISION;
-    const uint32_t height = (viewport.height / 16 * Constants::CAMERA_MIN_ZOOM) * Constants::SUBDIVISION;
+    const uint32_t width = (viewport.width / 16) * (Constants::SUBDIVISION * Constants::CAMERA_MIN_ZOOM);
+    const uint32_t height = (viewport.height / 16) * (Constants::SUBDIVISION * Constants::CAMERA_MIN_ZOOM);
 
     {
         LLGL::TextureDescriptor light_texture_desc;
