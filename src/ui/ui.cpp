@@ -59,6 +59,7 @@ enum class NodeFlags : uint8_t {
     TextNode,
     Hoverable,
     Scrollable,
+    TextInputNode
 };
 
 struct Node {
@@ -77,6 +78,8 @@ struct Node {
     glm::vec2 max_size = glm::vec2(FLT_MAX);
     glm::vec2 offset = glm::vec2(0.0f);
     
+    TextInputData* text_input_data = nullptr;
+
     void* custom_data = nullptr;
     size_t custom_data_size = 0;
     
@@ -117,6 +120,11 @@ struct Node {
     }
 
     [[nodiscard]]
+    inline bool is_text_input_node() const noexcept {
+        return flags[NodeFlags::TextInputNode];
+    }
+
+    [[nodiscard]]
     inline bool clickable() const noexcept {
         return on_click_callback != nullptr;
     }
@@ -154,19 +162,23 @@ static struct {
     NodeID clicked_focusable_id{};
     NodeID focused_id{};
 
+    sge::Timer bar_timer = sge::Timer::from_seconds(0.5f, sge::TimerMode::Repeating);
+
     std::vector<Node*> clickable_stack{};
     std::vector<Node*> focusable_stack{};
 
     sge::SwapbackVector<Node*> growable_nodes{};
     
-    std::vector<TextData> text_data{};
+    std::vector<TextNodeData> text_data{};
+    std::vector<TextInputNodeData> text_input_data{};
     std::vector<UiElement> render_elements{};
 
     Arena arena{ ARENA_CAPACITY };
-    
+
     size_t node_stack_size = 0;
 
     bool any_hovered = false;
+    bool bar_visible = false;
 } state;
 
 static inline Node& GetNode(uint32_t id) noexcept {
@@ -341,6 +353,10 @@ void UI::Update() {
     state.hovered_ids.clear();
     state.any_hovered = false;
 
+    if (state.bar_timer.tick(sge::Time::Delta()).finished()) {
+        state.bar_visible = !state.bar_visible;
+    }
+
     if (state.nodes.empty())
         return;
 
@@ -361,6 +377,37 @@ void UI::Update() {
         }
 
         state.search_visited.insert(current_node->unique_id);
+
+        if (current_node->is_text_input_node()) {
+            TextInputData& input_data = *current_node->text_input_data;
+
+            if (state.bar_timer.finished()) {
+                input_data.set_bar_visible(state.bar_visible);
+            }
+
+            input_data.update();
+            input_data.set_active(state.focused_id == current_node->unique_id);
+
+            TextInputNodeData& text_data = state.text_input_data[current_node->text_data_index];
+
+            // glm::vec2 text_size = sge::calculate_text_bounds(text_data.font, text_data.text_size, input_data.text());
+            // current_node->size = glm::clamp(text_size, current_node->min_size, current_node->max_size);
+
+            input_data.set_window_begin(std::min(input_data.text().size(), input_data.display_begin()));
+
+            auto begin = input_data.text().begin() + input_data.display_begin();
+            auto end = input_data.text().begin() + input_data.text().size();
+
+            sge::FitResult fit_result = sge::chars_fit_in_line_from_end(text_data.font, text_data.text_size, std::string_view{ begin, end }, current_node->size.x);
+
+            if (input_data.cursor_position() == input_data.text().size()) {
+                input_data.set_window_begin(input_data.cursor_position() - fit_result.bytes);
+            } else if (input_data.cursor_position() < input_data.display_begin()) {
+                input_data.set_window_begin(input_data.cursor_position());
+            } else if (input_data.cursor_position() > input_data.display_begin() + fit_result.bytes) {
+                input_data.set_window_begin(input_data.cursor_position() - fit_result.bytes);
+            }
+        }
 
         if (current_node->is_text_node())
             continue;
@@ -403,6 +450,11 @@ void UI::Update() {
 
         if (CheckIfFocused(node.unique_id, element_rect)) {
             state.focused_id = node.unique_id;
+            if (node.is_text_input_node()) {
+                node.text_input_data->set_active(true);
+                node.text_input_data->set_bar_visible(true);
+                state.bar_timer.reset();
+            }
             break;
         }
     }
@@ -438,6 +490,7 @@ void UI::Start(const RootDesc& desc) {
     state.nodes.clear();
     state.render_elements.clear();
     state.text_data.clear();
+    state.text_input_data.clear();
 
     state.node_stack_size = 0;
 
@@ -448,6 +501,8 @@ void UI::Start(const RootDesc& desc) {
         node.size = desc.size();
         node.padding = desc.padding();
         node.sizing = UiSize::Fixed(desc.size().x, desc.size().y);
+        node.min_size = desc.size();
+        node.max_size = desc.size();
         node.gap = desc.gap();
         node.orientation = desc.orientation();
         node.horizontal_alignment = desc.horizontal_alignment();
@@ -790,7 +845,7 @@ void UI::Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSectio
     }
 
     const size_t text_data_index = state.text_data.size();
-    state.text_data.push_back(TextData {
+    state.text_data.push_back(TextNodeData {
         .font = font,
         .sections = arena_sections,
         .sections_count = count
@@ -817,6 +872,43 @@ void UI::Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSectio
         new_node.flags.set(NodeFlags::TextNode, true);
         new_node.self_alignment = desc.self_alignment;
     }
+    NodeAddElement(parent, std::move(new_node));
+}
+
+void UI::TextInput(uint32_t type_id, TextInputData& data, const sge::Font& font, const TextInputElementDesc& desc) {
+    const size_t text_input_data_index = state.text_input_data.size();
+    state.text_input_data.push_back(TextInputNodeData {
+        .color = desc.color,
+        .font = font,
+        .data = data,
+        .text_size = desc.text_size
+    });
+
+    Node& parent = TopNode();
+
+    NodeID id = desc.id;
+    if (id.id == 0) {
+        id = GenerateId(parent);
+    }
+    Node new_node(state.arena);
+    {
+        new_node.unique_id = id;
+        // new_node.offset = desc.offset;
+        new_node.sizing = desc.size;
+        new_node.text_data_index = text_input_data_index;
+        new_node.type_id = type_id;
+        new_node.text_input_data = &data;
+        new_node.z_index = parent.z_index + 1;
+        new_node.flags.set(NodeFlags::Render, true);
+        new_node.flags.set(NodeFlags::TextInputNode, true);
+        new_node.self_alignment = desc.self_alignment;
+    }
+
+    if (!data.empty()) {
+        const glm::vec2 measured_size = sge::calculate_text_bounds(font, desc.text_size, data.text());
+        new_node.size = glm::min(measured_size, parent.size);
+    }
+
     NodeAddElement(parent, std::move(new_node));
 }
 
@@ -1014,30 +1106,33 @@ static void FinalizeLayout() {
                 scissor_data->area = sge::IRect::from_top_left(child.pos, glm::round(child.size));
 
                 state.render_elements.push_back(UiElement {
+                    .text_data = nullptr,
                     .scissor_data = scissor_data,
                     .scissor_start = true,
-                    .scissor_end = false
+                    .scissor_end = false,
                 });
             }
 
             if (child.render() && parent_rect.intersects(child_rect)) {
-                TextData* text_data = nullptr;
+                UiElement element;
+                element.unique_id = child.unique_id;
+                element.position = child.pos + child.offset;
+                element.size = child.size;
+                element.custom_data = child.custom_data;
+                element.custom_data_size = child.custom_data_size;
+                element.text_data = nullptr;
+                element.type_id = child.type_id;
+                element.z_index = child.z_index;
+                element.scissor_start = false;
+                element.scissor_end = false;
+
                 if (child.is_text_node()) {
-                    text_data = &state.text_data[child.text_data_index];
+                    element.text_data = &state.text_data[child.text_data_index];
+                } else if (child.is_text_input_node()) {
+                    element.text_input_data = &state.text_input_data[child.text_data_index];
                 }
 
-                state.render_elements.push_back(UiElement {
-                    .unique_id = child.unique_id,
-                    .position = child.pos + child.offset,
-                    .size = child.size,
-                    .custom_data = child.custom_data,
-                    .custom_data_size = child.custom_data_size,
-                    .text_data = text_data,
-                    .type_id = child.type_id,
-                    .z_index = child.z_index,
-                    .scissor_start = false,
-                    .scissor_end = false
-                });
+                state.render_elements.push_back(element);
             }
 
             state.search_stack_frame.push_back(SearchStackFrame{ &child, 0, SearchState::Done });
@@ -1050,6 +1145,7 @@ static void FinalizeLayout() {
 
             if (child.scrollable()) {
                 state.render_elements.push_back(UiElement {
+                    .text_data = nullptr,
                     .scissor_start = false,
                     .scissor_end = true
                 });
@@ -1078,7 +1174,7 @@ void UI::SetCustomData(const void* custom_data_ptr, size_t custom_data_size, siz
     node.custom_data_size = custom_data_size;
 }
 
-void UI::OnClick(std::function<void(sge::MouseButton)>&& on_press) {
+void UI::OnClick(std::function<void(sge::MouseButton)> on_press) {
     Node& node = TopNode();
     node.on_click_callback = std::move(on_press);
 }
@@ -1111,7 +1207,7 @@ const glm::vec2 UI::GetContentSize() noexcept {
     const auto it = state.previous_nodes.find(id.id);
 
     if (it == state.previous_nodes.end())
-        return glm::vec2(0.0f);
+        return TopNode().size;
 
     const Node& node = it->second;
     return glm::max(node.size - glm::vec2(node.padding.width(), node.padding.height()), glm::vec2(0.0f));

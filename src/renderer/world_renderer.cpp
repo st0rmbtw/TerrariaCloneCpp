@@ -11,6 +11,7 @@
 #include <LLGL/Container/DynamicArray.h>
 
 #include <SGE/engine.hpp>
+#include <SGE/renderer/types.hpp>
 #include <SGE/renderer/macros.hpp>
 #include <SGE/types/binding_layout.hpp>
 #include <SGE/defines.hpp>
@@ -53,9 +54,9 @@ WorldRenderer::WorldRenderer(const std::shared_ptr<sge::Renderer>& renderer) : m
         const glm::vec2 wall_tex_size = glm::vec2(Assets::GetTexture(TextureAsset::Walls).size());
         const glm::vec2 wall_padding = glm::vec2(Constants::WALL_TEXTURE_PADDING) / wall_tex_size;
 
-        const glm::vec2 trees_size = Assets::GetTextureAtlas(TextureAsset::Tiles5).size();
-        const glm::vec2 tree_tops_size = Assets::GetTextureAtlas(TextureAsset::TreeTops).size();
-        const glm::vec2 tree_branches_size = Assets::GetTextureAtlas(TextureAsset::TreeBranches).size();
+        const glm::vec2 trees_size = glm::vec2(Assets::GetTextureAtlas(TextureAsset::Tiles5).size());
+        const glm::vec2 tree_tops_size = glm::vec2(Assets::GetTextureAtlas(TextureAsset::TreeTops).size());
+        const glm::vec2 tree_branches_size = glm::vec2(Assets::GetTextureAtlas(TextureAsset::TreeBranches).size());
 
         TileTextureData texture_data[TileType::Count];
         texture_data[TileType::Block] = TileTextureData{tile_tex_size, tile_padding, glm::vec2(0.0f), glm::vec2(TILE_SIZE),  glm::vec2(0.0f), TILE_DEPTH}; // Tile
@@ -92,7 +93,7 @@ WorldRenderer::WorldRenderer(const std::shared_ptr<sge::Renderer>& renderer) : m
 
         sge::Ref<LLGL::PipelineLayout> pipelineLayout = render_context->CreatePipelineLayout(pipelineLayoutDesc);
 
-        m_resource_heap = render_context->CreateResourceHeap(pipelineLayout.Get(), {
+        m_resource_heap = render_context->CreateResourceHeap(pipelineLayout, {
             m_renderer->GlobalUniformBuffer().Get(), m_tile_texture_data_buffer.Get()
         });
 
@@ -142,7 +143,7 @@ WorldRenderer::WorldRenderer(const std::shared_ptr<sge::Renderer>& renderer) : m
 
         sge::Ref<LLGL::PipelineLayout> lightmapPipelineLayout = render_context->CreatePipelineLayout(lightmapPipelineLayoutDesc);
 
-        m_lightmap_resource_heap = render_context->CreateResourceHeap(lightmapPipelineLayout.Get(), {
+        m_lightmap_resource_heap = render_context->CreateResourceHeap(lightmapPipelineLayout, {
             m_renderer->GlobalUniformBuffer().Get()
         });
 
@@ -191,8 +192,6 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
     m_static_lightmap_texture = context->CreateTexture(texture_desc);
 
     LLGL::TextureDescriptor depth_texture_desc = texture_desc;
-    depth_texture_desc.extent.width = resolution.width;
-    depth_texture_desc.extent.height = resolution.height;
     depth_texture_desc.format = LLGL::Format::D24UNormS8UInt;
     depth_texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::DepthStencilAttachment;
     m_depth_texture = context->CreateTexture(depth_texture_desc);
@@ -221,8 +220,8 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
         sge::RenderTargetConfig targetConfig;
         targetConfig.renderPass = m_render_pass;
         targetConfig.resolution = resolution;
-        targetConfig.colorAttachments[0] = m_target_texture.Get();
-        targetConfig.depthStencilAttachment = m_depth_texture.Get();
+        targetConfig.colorAttachments[0] = sge::AttachmentConfig(m_target_texture);
+        targetConfig.depthStencilAttachment = sge::AttachmentConfig(m_depth_texture);
         targetConfig.format = LLGL::Format::RGBA8UNorm;
         m_target = context->CreateRenderTarget(targetConfig);
     }
@@ -230,7 +229,7 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
         sge::RenderTargetConfig targetConfig;
         targetConfig.renderPass = m_static_lightmap_render_pass;
         targetConfig.resolution = resolution;
-        targetConfig.colorAttachments[0] = m_static_lightmap_texture.Get();
+        targetConfig.colorAttachments[0] = sge::AttachmentConfig(m_static_lightmap_texture);
         targetConfig.format = LLGL::Format::RGBA8UNorm;
         m_static_lightmap_target = context->CreateRenderTarget(targetConfig);
     }
@@ -264,7 +263,7 @@ void WorldRenderer::init_textures(LLGL::Extent2D viewport) {
     sge::RenderTargetConfig lightTextureRenderTargetConfig;
     lightTextureRenderTargetConfig.resolution.width = width;
     lightTextureRenderTargetConfig.resolution.height = height;
-    lightTextureRenderTargetConfig.colorAttachments[0].texture = m_dynamic_light_texture.Get();
+    lightTextureRenderTargetConfig.colorAttachments[0] = sge::AttachmentConfig(m_dynamic_light_texture);
     lightTextureRenderTargetConfig.format = LLGL::Format::RGBA8UNorm;
     m_dynamic_light_texture_target = context->CreateRenderTarget(lightTextureRenderTargetConfig);
 

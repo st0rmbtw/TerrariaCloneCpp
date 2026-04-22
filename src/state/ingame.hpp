@@ -21,6 +21,7 @@ public:
     void Render(const std::shared_ptr<sge::GlfwWindow>& window) override;
     void PreUpdate() override;
     void Update() override;
+    void OnPreFixedUpdate() override;
     void FixedUpdate() override;
     void OnWindowSizeChanged(LLGL::Extent2D size) override {
         m_renderer->ResizeTextures(size);
@@ -33,7 +34,6 @@ public:
         Background::UpdateInGame(m_camera, m_world);
     }
     BaseState* GetNextState() override;
-    ~InGameState();
 
 private:
     void update_ui() noexcept;

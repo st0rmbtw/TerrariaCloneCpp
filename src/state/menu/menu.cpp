@@ -33,14 +33,6 @@ static constexpr float LOGO_ANIM_MIN_ROTATION = -5.0f;
 static constexpr float LOGO_ANIM_MAX_ROTATION = 5.0f;
 
 MainMenuState::MainMenuState(const std::shared_ptr<sge::Renderer>& renderer, uint8_t samples) :
-    m_camera(sge::CameraConfig {
-        .origin = sge::CameraOrigin::Center,
-        .coordinateSystem = sge::CoordinateSystem {
-            .up = sge::CoordinateDirectionY::Negative,
-            .forward = sge::CoordinateDirectionZ::Negative,
-        },
-        .samples = samples
-    }),
     m_batch(*renderer, {
         .font_shader = Assets::GetShader(ShaderAsset::FontShader).ps,
         .enable_scissor = true
@@ -48,6 +40,15 @@ MainMenuState::MainMenuState(const std::shared_ptr<sge::Renderer>& renderer, uin
     m_background_renderer(renderer),
     m_renderer(renderer)
 {
+    m_camera = sge::Camera(sge::CameraConfig {
+        .origin = sge::CameraOrigin::Center,
+        .coordinateSystem = sge::CoordinateSystem {
+            .up = sge::CoordinateDirectionY::Negative,
+            .forward = sge::CoordinateDirectionZ::Negative,
+        },
+        .samples = samples
+    });
+
     m_cursor.SetForegroundColor(sge::LinearRgba(1.0, 0.08, 0.58));
     m_cursor.SetBackgroundColor(sge::LinearRgba(0.9, 0.9, 0.9));
 
@@ -76,7 +77,7 @@ void MainMenuState::setup_background() {
             .set_is_ui(true)
     );
 
-    const float pos = m_camera.viewport().y;
+    const float pos = m_camera.viewport().height;
 
     m_background_layers.push_back(
         BackgroundLayer(BackgroundAsset::Background7, 1.5f)
@@ -125,14 +126,14 @@ void MainMenuState::Update() {
 
     m_cursor.Update(sge::Input::CursorPosition());
 
-    m_camera.set_position(m_camera.position() + glm::vec2(50.0f, 0.0f) * sge::Time::DeltaSeconds());
+    m_camera.set_position(m_camera.position() + glm::vec2(50.0f, 0.0f) * float(sge::Time::DeltaSeconds()));
 
     for (BackgroundLayer& layer : m_background_layers) {
         if (layer.fill_screen_height()) {
-            layer.set_height(m_camera.viewport().y);
+            layer.set_height(m_camera.viewport().height);
         }
         if (layer.fill_screen_width()) {
-            layer.set_width(m_camera.viewport().x);
+            layer.set_width(m_camera.viewport().width);
         }
     }
 
@@ -149,13 +150,11 @@ void MainMenuState::Update() {
             if (m_prev_position != m_nav_manager.top().index()) {
                 m_substate = MenuSubstateSelectWorld();
             }
-            unsafe_get<MenuSubstateSelectWorld>(m_substate).update();
             break;
         case variant_index<NavItem, CreateWorld>:
             if (m_prev_position != m_nav_manager.top().index()) {
                 m_substate = MenuSubstateCreateWorld();
             }
-            unsafe_get<MenuSubstateCreateWorld>(m_substate).update();
             break;
         default:
             break;
@@ -229,7 +228,7 @@ void MainMenuState::draw_main_menu() {
 }
 
 void MainMenuState::draw_ui() {
-    UI::Start(RootDesc(m_camera.viewport()));
+    UI::Start(RootDesc(glm::vec2(m_camera.viewport())));
 
     UI::Container({
         .size = UiSize::Fill(),
@@ -238,7 +237,7 @@ void MainMenuState::draw_ui() {
         .horizontal_alignment = Alignment::Center
     }, [&] {
         UI::AddElement<widgets::UiTypeID::Logo>({
-            .size = UiSize::Fixed(Assets::GetTexture(TextureAsset::UiLogo).size()),
+            .size = UiSize::Fixed(glm::vec2(Assets::GetTexture(TextureAsset::UiLogo).size())),
         });
 
         UI::Container({
@@ -284,7 +283,7 @@ void MainMenuState::draw_ui() {
 
         switch (element.type_id) {
             case widgets::UiTypeID::Text: {
-                const TextData* data = element.text_data;
+                const TextNodeData* data = element.text_data;
                 m_batch.DrawText(data->sections, data->sections_count, element.position, data->font, order);
             } break;
 
@@ -379,16 +378,15 @@ BaseState* MainMenuState::GetNextState() {
     if (m_exit)
         return nullptr;
 
-    if (m_nav_manager.is<WorldSelected>()) {
-        const WorldSelected& opts = m_nav_manager.get<WorldSelected>();
+    if (const WorldSelected* opts = m_nav_manager.get<WorldSelected>()) {
         WorldData world_data;
-        load_world(world_data, opts.path);
+        load_world(world_data, opts->path);
         return new InGameState(m_renderer, m_camera.samples(), std::move(world_data));
     }
 
-    if (m_nav_manager.is<WorldCreated>()) {
+    if (const WorldCreating* opts = m_nav_manager.get<WorldCreating>()) {
         WorldData world_data;
-        world_generate(world_data, 200, 500, 0);
+        world_generate(world_data, opts->world_width, opts->world_height, 0);
         return new InGameState(m_renderer, m_camera.samples(), std::move(world_data));
     }
 

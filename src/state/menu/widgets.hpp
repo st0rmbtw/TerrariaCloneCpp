@@ -54,9 +54,6 @@ struct UiIconData {
 
 struct UiTextInputData {
     sge::LinearRgba color;
-    const sge::Font& font;
-    TextInputData& data;
-    float size;
     bool bar_visible;
 };
 
@@ -122,7 +119,7 @@ inline void IconButton(TextureAsset icon, F&& on_click) {
     }, [&] {
         UI::AddElement<UiTypeID::Icon>(
             {
-                .size = UiSize::Fixed(Assets::GetTexture(icon).size())
+                .size = UiSize::Fixed(glm::vec2(Assets::GetTexture(icon).size()))
             },
             UiIconData {
                 .icon = icon
@@ -170,7 +167,7 @@ inline void WorldListItem(const sge::Font& font, const std::string_view name, Te
                 .orientation = LayoutOrientation::Horizontal,
             }, [&] {
                 UI::AddElement<UiTypeID::Icon>({
-                    .size = UiSize::Fixed(Assets::GetTexture(icon).size()),
+                    .size = UiSize::Fixed(glm::vec2(Assets::GetTexture(icon).size())),
                     .self_alignment = Alignment::Center
                 }, UiIconData {
                     .icon = icon
@@ -199,36 +196,35 @@ struct TextInputDesc {
 };
 
 template <size_t PrefixSize = 1>
-inline void TextInput(TextInputData& data, bool bar_visible, const sge::Font& font, const TextInputDesc<PrefixSize>& desc) {
+inline void TextInput(TextInputData& data, const sge::Font& font, const TextInputDesc<PrefixSize>& desc) {
     UI::Element<UiTypeID::CategoryPanel>({
         .size = desc.size,
         .padding = UiRect::Horizontal(8.0f),
         .orientation = LayoutOrientation::Horizontal,
         .vertical_alignment = Alignment::Center
     }, [&] {
-        data.set_active(UI::IsFocused());
+        data.set_active(data.active() || UI::IsFocused());
 
-        const float cursor_height = Assets::GetTexture(TextureAsset::UiSliderHandle).size().y;
+        const float cursor_height = Assets::GetTexture(TextureAsset::UiSliderHandle).size().height;
         const float text_height = sge::calculate_text_height(font, 24.0f, data.text());
 
         if (desc.prefix) {
             UI::Text<UiTypeID::Text>(font, desc.prefix.value());
         }
 
-        UI::Element<UiTypeID::TextInput>({
+        UI::TextInput<UiTypeID::TextInput>(data, font, {
             .size = UiSize::Fill(),
-            .min_height = glm::max(text_height, cursor_height)
-        }, [&] {
-            data.set_active(data.active() || UI::IsFocused());
-
-            UI::SetCustomData(UiTextInputData {
-                .color = sge::LinearRgba::white(),
-                .font = font,
-                .data = data,
-                .size = 24.0f,
-                .bar_visible = bar_visible
-            });
-        });
+            .text_size = 24.0f,
+            // .min_height = glm::max(text_height, cursor_height)
+        });//, [&] {
+            // UI::SetCustomData(UiTextInputData {
+            //     .color = sge::LinearRgba::white(),
+            //     .font = font,
+            //     .data = data,
+            //     .size = 24.0f,
+            //     .bar_visible = bar_visible
+            // });
+        //});
 
         UI::SetCustomData(UiCategoryPanelData {
             .background_color = sge::LinearRgba(63, 82, 151),
@@ -287,45 +283,37 @@ inline void DrawCategoryPanel(const UiElement& element, sge::Batch& batch, sge::
 inline void DrawTextInput(const UiElement& element, sge::Batch& batch) {
     ZoneScoped;
 
-    const UiTextInputData* custom_data = static_cast<const UiTextInputData*>(element.custom_data);
-    const sge::Font& font = custom_data->font;
-    TextInputData& data = custom_data->data;
-    const sge::LinearRgba color = custom_data->color;
-    const float text_size = custom_data->size;
-    const bool bar_visible = custom_data->bar_visible;
+    const TextInputNodeData* text_input_data = element.text_input_data;
+
+    const TextInputData& data = text_input_data->data;
+    const sge::Font& font = text_input_data->font;
+    const sge::LinearRgba color = text_input_data->color;
+    const float text_size = text_input_data->text_size;
     const float bar_height = text_size;
+
+    const bool bar_visible = data.bar_visible();
     
     const float line_width = element.size.x;
-
-    std::string::iterator begin = data.text().begin();
-    std::string::iterator end = data.text().begin() + data.cursor_position();
-    sge::FitResult fit_result;
     float x = 0.0f;
 
     if (!data.empty()) {
-        fit_result = sge::chars_fit_in_line_from_end(font, text_size, std::string_view{ begin, end }, line_width);
-
-        if (data.cursor_position() == data.size()) {
-            data.set_window_begin(data.cursor_position() - fit_result.bytes);
-        } else if ( !(data.display_begin() <= data.cursor_position() && data.cursor_position() < data.display_begin() + fit_result.bytes) ) {
-            data.set_window_begin(std::max(static_cast<int>(data.cursor_position() - fit_result.bytes), 0));
-        } 
-
-        begin = data.text().begin() + data.display_begin();
-        end = data.text().end();
-        fit_result = sge::chars_fit_in_line_from_start(font, text_size, std::string_view{ begin, end }, line_width);
+        auto begin = data.text().begin() + data.display_begin();
+        auto end = data.text().end();
+        sge::FitResult fit_result = sge::chars_fit_in_line_from_start(font, text_size, std::string_view{ begin, end }, line_width);
 
         // Draw text before cursor
-        const auto from = begin;
-        const auto to = data.text().begin() + data.cursor_position();
-        const std::string_view string = std::string_view{ from, to };
+        const auto to = begin + fit_result.bytes;
+        const std::string_view string = std::string_view{ begin, to };
 
-        const glm::vec2 bounds = sge::calculate_text_bounds(font, text_size, string);
+        const glm::vec2 pre_cursor_bounds = sge::calculate_text_bounds(font, text_size, std::string_view{ begin, begin + (data.cursor_position() - data.display_begin()) });
+        const float text_height = sge::calculate_text_height(font, text_size, string);
 
         const sge::RichText text = sge::rich_text(string, text_size, color);
-        const glm::vec2 position = glm::vec2(element.position.x + x, element.position.y + (element.size.y - bounds.y) * 0.5f);
+        const glm::vec2 position = glm::vec2(element.position.x + x, element.position.y + (element.size.y - text_height) * 0.5f);
         batch.DrawText(text.sections, text.size(), position, font, sge::Order(element.z_index));
-        x += bounds.x;
+
+        
+        x += pre_cursor_bounds.x;
     }
 
     if (data.active() && bar_visible) {
@@ -334,22 +322,6 @@ inline void DrawTextInput(const UiElement& element, sge::Batch& batch) {
             .color = sge::LinearRgba::white(),
             .anchor = sge::Anchor::TopLeft
         });
-    }
-
-    // Draw text after
-    if (!data.empty()) {
-        const auto from = data.text().begin() + data.cursor_position();
-        const auto to = begin + fit_result.bytes;
-
-        if (from < to) {
-            const std::string_view string = std::string_view{ from, to };
-
-            const glm::vec2 bounds = sge::calculate_text_bounds(font, text_size, string);
-
-            const sge::RichText text = sge::rich_text(string, text_size, color);
-            const glm::vec2 position = glm::vec2(element.position.x + x, element.position.y + (element.size.y - bounds.y) * 0.5f);
-            batch.DrawText(text.sections, text.size(), position, font, sge::Order(element.z_index));
-        }
     }
 }
 

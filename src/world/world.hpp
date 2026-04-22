@@ -237,7 +237,9 @@ public:
         using Constants::WORLD_MAX_LIGHT_COUNT;
 
         m_lights[m_light_count] = light;
-        m_light_count = (m_light_count + 1) % WORLD_MAX_LIGHT_COUNT;
+        if (m_light_count < WORLD_MAX_LIGHT_COUNT - 1) {
+            m_light_count += 1;
+        }
     }
 
     inline void drop_item(const glm::vec2& position, const glm::vec2& velocity, const Item& item, bool set_timer = false) {

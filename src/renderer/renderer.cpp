@@ -170,7 +170,7 @@ void GameRenderer::Begin(const sge::Camera& camera, World& world) {
         camera.position() + camera.get_nozoom_projection_area().min,
         camera.position() + camera.get_nozoom_projection_area().max
     );
-    const sge::Rect ui_frustum = sge::Rect::from_corners(glm::vec2(0.0), camera.viewport());
+    const sge::Rect ui_frustum = sge::Rect::from_corners(glm::vec2(0.0), glm::vec2(camera.viewport()));
 
     m_camera_frustums[CAMERA_FRUSTUM] = camera_frustum;
     m_camera_frustums[NOZOOM_CAMERA_FRUSTUM] = nozoom_camera_frustum;

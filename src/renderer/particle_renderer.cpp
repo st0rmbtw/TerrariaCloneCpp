@@ -41,11 +41,13 @@ ParticleRenderer::ParticleRenderer(const std::shared_ptr<sge::Renderer>& rendere
     m_rotation_buffer_data = HeapArray<glm::quat>(MAX_PARTICLES_COUNT);
     m_scale_buffer_data = HeapArray<float>(MAX_PARTICLES_COUNT);
 
+    const glm::vec2 texture_size = glm::vec2(m_atlas.texture().size());
+
     const ParticleVertex vertices[] = {
-        ParticleVertex(0.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size()), glm::vec2(m_atlas.texture().size())),
-        ParticleVertex(0.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size()), glm::vec2(m_atlas.texture().size())),
-        ParticleVertex(1.0, 0.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size()), glm::vec2(m_atlas.texture().size())),
-        ParticleVertex(1.0, 1.0, PARTICLE_SIZE / glm::vec2(m_atlas.texture().size()), glm::vec2(m_atlas.texture().size())),
+        ParticleVertex(0.0, 0.0, PARTICLE_SIZE / texture_size, texture_size),
+        ParticleVertex(0.0, 1.0, PARTICLE_SIZE / texture_size, texture_size),
+        ParticleVertex(1.0, 0.0, PARTICLE_SIZE / texture_size, texture_size),
+        ParticleVertex(1.0, 1.0, PARTICLE_SIZE / texture_size, texture_size),
     };
 
     m_vertex_buffer = render_context->CreateVertexBuffer(vertices, Assets::GetVertexFormat(VertexFormatAsset::ParticleVertex), "ParticleRenderer VertexBuffer");

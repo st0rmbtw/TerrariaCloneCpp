@@ -28,9 +28,6 @@ int main(int argc, char** argv) {
         config.backend = sge::RenderBackend::Vulkan;
     #endif
 
-    int16_t world_width = 200;
-    int16_t world_height = 500;
-
     for (int i = 1; i < argc; i++) {
         if (str_eq(argv[i], "--wait-key")) {
             fmt::println("Press any key to continue...");
@@ -83,26 +80,10 @@ int main(int argc, char** argv) {
 
             const char* arg = argv[i + 1];
             config.samples = std::stoul(arg);
-        } else if (str_eq(argv[i], "--world-width")) {
-            if (i >= argc-1) {
-                fmt::println("Specify the width of the world.");
-                return 1;
-            }
-
-            const char* arg = argv[i + 1];
-            world_width = std::stoul(arg);
-        } else if (str_eq(argv[i], "--world-height")) {
-            if (i >= argc-1) {
-                fmt::println("Specify the height of the world.");
-                return 1;
-            }
-
-            const char* arg = argv[i + 1];
-            world_height = std::stoul(arg);
         }
     }
 
-    App app(config, world_width, world_height);
+    App app(config);
     if (app.Init()) {
         app.Run();
     }

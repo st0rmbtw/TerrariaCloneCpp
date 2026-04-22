@@ -20,14 +20,14 @@ struct AppConfig {
 
 class App final : public sge::IEngine {
 public:
-    App(AppConfig config, int16_t world_width, int16_t world_height) : m_config(config) {
+    App(AppConfig config) : m_config(config) {
     }
-
-    bool Init() override;
-
     ~App();
 protected:
+    bool OnInit() override;
+    void OnPreFixedUpdate() override;
     void OnFixedUpdate() override;
+    void OnPostFixedUpdate() override;
     void OnPreUpdate() override;
     void OnPostUpdate() override;
     void OnUpdate() override;

@@ -31,10 +31,10 @@ public:
     void init_targets(LLGL::Extent2D resolution);
 
     inline sge::Handle<LLGL::RenderTarget> target() { return m_target; }
-    inline const sge::Unique<LLGL::Texture>& target_texture() { return m_target_texture; }
+    inline const sge::Ref<LLGL::Texture>& target_texture() { return m_target_texture; }
 
     inline sge::Handle<LLGL::RenderTarget> static_lightmap_target() { return m_static_lightmap_target; }
-    inline const sge::Unique<LLGL::Texture>& static_lightmap_texture() { return m_static_lightmap_texture; }
+    inline const sge::Ref<LLGL::Texture>& static_lightmap_texture() { return m_static_lightmap_texture; }
 
     [[nodiscard]]
     inline sge::Handle<LLGL::RenderPass> render_pass() const { return m_render_pass; }
@@ -50,10 +50,12 @@ private:
     sge::Unique<LLGL::ResourceHeap> m_lightmap_resource_heap = nullptr;
     
     sge::Ref<LLGL::Texture> m_dynamic_light_texture = nullptr;
-    sge::Unique<LLGL::Texture> m_static_lightmap_texture = nullptr;
-    sge::Unique<LLGL::Texture> m_target_texture = nullptr;
-    sge::Unique<LLGL::Texture> m_depth_texture = nullptr;
+    sge::Ref<LLGL::Texture> m_target_texture = nullptr;
+    sge::Ref<LLGL::Texture> m_depth_texture = nullptr;
+    sge::Ref<LLGL::Texture> m_static_lightmap_texture = nullptr;
     
+    std::unique_ptr<IDynamicLighting> m_dynamic_lighting = nullptr;
+
     sge::Handle<LLGL::RenderPass> m_static_lightmap_render_pass;
     sge::Handle<LLGL::RenderPass> m_render_pass;
     sge::Handle<LLGL::RenderTarget> m_target;
@@ -62,8 +64,6 @@ private:
     
     sge::Handle<LLGL::PipelineState> m_pipeline;
     sge::Handle<LLGL::PipelineState> m_lightmap_pipeline;
-
-    std::unique_ptr<IDynamicLighting> m_dynamic_lighting = nullptr;
 };
 
 #endif

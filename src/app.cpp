@@ -27,10 +27,7 @@
 #include "assets.hpp"
 #include "constants.hpp"
 
-bool App::Init() {
-    if (!IEngine::Init()) {
-        return false;
-    }
+bool App::OnInit() {
     if (!InitRenderContext(m_config.backend)) {
         return false;
     }
@@ -98,8 +95,16 @@ void App::OnPreUpdate() {
     m_current_state->PreUpdate();
 }
 
+void App::OnPreFixedUpdate() {
+    m_current_state->OnPreFixedUpdate();
+}
+
 void App::OnFixedUpdate() {
     m_current_state->FixedUpdate();
+}
+
+void App::OnPostFixedUpdate() {
+    m_current_state->OnPostFixedUpdate();
 }
 
 void App::OnUpdate() {

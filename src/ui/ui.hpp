@@ -13,6 +13,8 @@
 #include <SGE/types/font.hpp>
 #include <SGE/math/rect.hpp>
 
+#include "text_input_data.hpp"
+
 class UiRect {
 public:
     UiRect() = default;
@@ -177,7 +179,7 @@ public:
     }
 
     [[nodiscard]]
-    inline static UiSize Fixed(const glm::vec2& size) {
+    inline static UiSize Fixed(glm::vec2 size) {
         return UiSize(Sizing::Fixed(size.x), Sizing::Fixed(size.y));
     }
 
@@ -233,44 +235,44 @@ enum class Alignment : uint8_t {
     End,
 
     /**
-     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
-     * @note Alias for \see Alignment::Start
+     * @warning Only works for \ref ElementDesc.self_alignment in a \ref LayoutOrientation::Stack container.
+     * @note Alias for \ref Alignment::Start
      */
     TopLeft,
     /**
-     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
+     * @warning Only works for \ref ElementDesc.self_alignment in a \ref LayoutOrientation::Stack container.
      */
     TopCenter,
     /**
-     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
-     * @note Alias for \see Alignment::End
+     * @warning Only works for \ref ElementDesc.self_alignment in a \ref LayoutOrientation::Stack container.
+     * @note Alias for \ref Alignment::End
      */
     TopRight,
     /**
-     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
+     * @warning Only works for \ref ElementDesc.self_alignment in a \ref LayoutOrientation::Stack container.
      */
     CenterLeft,
     /**
-     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
+     * @warning Only works for \ref ElementDesc.self_alignment in a \ref LayoutOrientation::Stack container.
      */
     CenterRight,
     /**
-     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
+     * @warning Only works for \ref ElementDesc.self_alignment in a \ref LayoutOrientation::Stack container.
      */
     BottomLeft,
     /**
-     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
+     * @warning Only works for \ref ElementDesc.self_alignment in a \ref LayoutOrientation::Stack container.
      */
     BottomCenter,
     /**
-     * @warning Only works for \see ElementDesc.self_alignment in a \see LayoutOrientation::Stack container.
+     * @warning Only works for \ref ElementDesc.self_alignment in a \ref LayoutOrientation::Stack container.
      */
     BottomRight
 };
 
 class RootDesc {
 public:
-    RootDesc(const glm::vec2 dimensions) : m_size(dimensions) {}
+    RootDesc(glm::vec2 dimensions) : m_size(dimensions) {}
 
     inline RootDesc& with_gap(float gap) noexcept {
         m_gap = gap;
@@ -323,13 +325,13 @@ public:
     }
 
     [[nodiscard]]
-    inline const glm::vec2 size() const noexcept {
+    inline glm::vec2 size() const noexcept {
         return m_size;
     }
 
 private:
     UiRect m_padding{};
-    glm::vec2 m_size{ 0.0f, 0.0f };
+    glm::vec2 m_size{ 0, 0 };
     float m_gap{ 0.0f };
     LayoutOrientation m_orientation{ LayoutOrientation::Horizontal };
     Alignment m_horizontal_alignment{ Alignment::Start };
@@ -368,7 +370,7 @@ struct ElementDesc {
     std::optional<Alignment> self_alignment{ std::nullopt };
     Alignment horizontal_alignment{ Alignment::Start };
     Alignment vertical_alignment{ Alignment::Start };
-    /// This only affects the value returned by UI::IsMouseOverUi. UI::IsHovered will work as usual.
+    /// This only affects the value returned by \ref UI::IsMouseOverUi. \ref UI::IsHovered will work as usual.
     bool hoverable = false;
     bool scrollable = false;
 };
@@ -379,10 +381,25 @@ struct TextElementDesc {
     std::optional<Alignment> self_alignment{ std::nullopt };
 };
 
-struct TextData {
+struct TextInputElementDesc {
+    ElementID id{};
+    UiSize size{ UiSize::Fit() };
+    sge::LinearRgba color = sge::LinearRgba::white();
+    float text_size = 0.0f;
+    std::optional<Alignment> self_alignment{ std::nullopt };
+};
+
+struct TextNodeData {
     const sge::Font& font;
     const sge::RichTextSection* sections;
     size_t sections_count;
+};
+
+struct TextInputNodeData {
+    sge::LinearRgba color = sge::LinearRgba::white();
+    const sge::Font& font;
+    const TextInputData& data;
+    float text_size;
 };
 
 struct ScissorData {
@@ -398,7 +415,10 @@ struct UiElement {
     const void* custom_data = nullptr;
     size_t custom_data_size = 0;
 
-    const TextData* text_data = nullptr;
+    union {
+        const TextNodeData* text_data = nullptr;
+        const TextInputNodeData* text_input_data;
+    };
     const ScissorData* scissor_data = nullptr;
 
     uint32_t type_id = -1;
@@ -416,14 +436,20 @@ namespace UI {
     void EndElement();
 
     void Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSection* sections, const size_t count, const TextElementDesc& desc = {});
+    void TextInput(uint32_t type_id, TextInputData& text_input_data, const sge::Font& font, const TextInputElementDesc& desc = {});
     
-    void OnClick(std::function<void(sge::MouseButton)>&& on_press);
+    void OnClick(std::function<void(sge::MouseButton)> on_press);
 
     void SetCustomData(const void* custom_data, size_t custom_data_size, size_t custom_data_alignment = alignof(std::max_align_t));
 
     template <uint32_t TypeID, size_t Size>
     inline void Text(const sge::Font& font, const sge::RichText<Size>& text, const TextElementDesc& desc = {}) {
         Text(TypeID, font, text.data(), text.size(), desc);
+    }
+
+    template <uint32_t TypeID>
+    inline void TextInput(TextInputData& text_input_data, const sge::Font& font, const TextInputElementDesc& desc = {}) {
+        TextInput(TypeID, text_input_data, font, desc);
     }
 
     inline void BeginContainer(const ElementDesc& desc) {

@@ -94,7 +94,7 @@ void Background::SetupWorldBackground(const World& world) {
 void Background::UpdateInGame(const sge::Camera &camera, const World& world) {
     ZoneScoped;
 
-    const float offset = (camera.viewport().y - 600.0f) * 0.5f;
+    const float offset = (camera.viewport().height - 600.0f) * 0.5f;
 
     for (BackgroundLayer& layer : state.layers) {
         glm::vec2 new_position = layer.position();
@@ -108,10 +108,10 @@ void Background::UpdateInGame(const sge::Camera &camera, const World& world) {
         layer.set_position(new_position);
 
         if (layer.fill_screen_height()) {
-            layer.set_height(camera.viewport().y);
+            layer.set_height(camera.viewport().height);
         }
         if (layer.fill_screen_width()) {
-            layer.set_width(camera.viewport().x);
+            layer.set_width(camera.viewport().width);
         }
     }
 }

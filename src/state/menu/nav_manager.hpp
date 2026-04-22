@@ -16,9 +16,12 @@ struct CreateWorld {};
 struct WorldSelected {
     std::filesystem::path path;
 };
-struct WorldCreated {};
+struct WorldCreating {
+    uint32_t world_width = 0;
+    uint32_t world_height = 0;
+};
 
-using NavItem = std::variant<MainMenu, Settings, SelectWorld, CreateWorld, WorldSelected, WorldCreated>;
+using NavItem = std::variant<MainMenu, Settings, SelectWorld, CreateWorld, WorldSelected, WorldCreating>;
 
 class NavManager {
 public:
@@ -49,8 +52,13 @@ public:
     }
 
     template <typename T>
+    constexpr const T* get() const noexcept {
+        return std::get_if<T>(&top());
+    }
+
+    template <typename T>
     [[nodiscard]]
-    constexpr const T& get() const noexcept {
+    constexpr const T& get_unsafe() const noexcept {
         SGE_ASSERT(is<T>());
         return unsafe_get<T>(top());
     }

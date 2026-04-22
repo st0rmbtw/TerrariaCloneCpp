@@ -21,6 +21,31 @@ static std::array WORLD_NAME_NOUNS = std::to_array<std::string_view>({
     "'Merica", "Ability", "Absurdity", "Accidents", "Acne", "Acorns", "Adamantite", "Adoration", "Adulthood", "Advantage", "Adventure", "Agony", "Alarm", "Alcohol", "Ale", "Allergies", "Amazement", "Angels", "Anger", "Angry Gamers", "Anguish", "Animal Carcasses", "Annoyance", "Anvils", "Anxiety", "Apples", "Apricots", "Argon", "Arrows", "Arsenic", "Arson", "Arthritis", "Asbestos", "Ash", "Assassins", "Assault", "Atrophy", "Awareness", "Awe", "Bacon", "Bad Advice", "Bad Decisions", "Bad Jokes", "Bad Luck", "Bad Omens", "Bad Times", "Bad Timing", "Balance", "Balloons", "Bamboo", "Bananas", "Bandits", "Bankruptcy", "Bark", "Bats", "Beauty", "Beenades", "Bees", "Beggars", "Beheadings", "Belief", "Betrayers", "Birds", "Birthdays", "Bitterness", "Bladders", "Blasphemy", "Blindness", "Blinkroot", "Blocks", "Blood", "Bloodletting", "Bloodshed", "Blossoms", "Bodies", "Bone", "Bone Spurs", "Bones", "Boom-Boom", "Boomers", "Boots", "Boredom", "Boulders", "Bragging Rights", "Brains", "Branches", "Bravery", "Bribery", "Bridges", "Brilliance", "Broken Bones", "Broken Dreams", "Broken Glass", "Broken Promises", "Bronies", "Bubbles", "Buckets", "Bugs", "Bums", "Bunnies", "Burglars", "Burnination", "Burning Hair", "Burnt Flesh", "Burnt Offerings", "Butchery", "Buttercups", "Butterflies", "Cacti", "Calmness", "Candy", "Care", "Carnage", "Carrion", "Casualty", "Cats", "Cattails", "Caves", "Celebration", "Cenx", "Chainsaws", "Change", "Chaos", "Charity", "Cheats", "Cherries", "Chests", "Childhood", "Children", "Chlorophyte", "Cilantro", "Clarity", "Clay", "Clentamination", "Cleverness", "Clouds", "Cobalt", "Coconuts", "Coffee", "Coins", "Coldness", "Comfort", "Compassion", "Compost", "Concern", "Confidence", "Confinement", "Confusion", "Contentment", "Convicts", "Copper", "Corpses", "Corruption", "Courage", "Creation", "Creatures", "Creepers", "Crests", "Crime", "Criminals", "Crimtane", "Crippling Depression", "Crooks", "Crows", "Crystals", "Cthulhu", "Curiosity", "Cursed Flames", "Cyborgs", "Dabbing", "Daisies", "Dank Memes", "Darkness", "Darts", "Daughters", "Dawn", "Daybloom", "Dead Bodies", "Deadbeats", "Death", "Deathweed", "Debauchery", "Debt", "Decapitation", "Decaying Meat", "Deceit", "Deception", "Dedication", "Defeat", "Defecation", "Degradation", "Delay", "Delusion", "Dementia", "Demilogic", "Demonite", "Demons", "Derangement", "Despair", "Desperation", "Destruction", "Diamond Hands", "Dijon Mustard", "Dillweeds", "Ding Dongs", "Dirt", "Dirt Blocks", "Disappointment", "Disgust", "Dishonesty", "Dismay", "Distortion", "Distribution", "Divorce", "Dogs", "Doom", "Dragonfruit", "Dragons", "Dread", "Dreams", "Drills", "Drums", "Ducks", "Dusk", "Dust", "Duty", "Dysphoria", "Ears", "Education", "Eggs", "Elderberries", "Elegance", "Envy", "Evasion", "Evil", "Exile", "Exploits", "Explosives", "Extortion", "Eyes", "FOMO", "Fable", "Face Monsters", "Facts", "Failures", "Fairies", "Faith", "Falling Stars", "False Idols", "False Imprisonment", "Falsehood", "Fame", "Famine", "Fantasy", "Fascination", "Fatality", "Fear", "Feathers", "Feces", "Felons", "Ferns", "Fiction", "Fiends", "Fingers", "Fireblossom", "Fireflies", "Fish", "Flails", "Flatulence", "Flatus", "Flesh", "Floof", "Flowers", "Flying Fish", "Flying Saucers", "Foam", "Food Poisoning", "Forgery", "Forgiveness", "Forks", "Fortitude", "Fraud", "Freaks", "Freckles", "Freedom", "Friendship", "Fright", "Frogs", "Frost", "Fruit", "Gangsters", "Garbage", "Garlic Bread", "Gears", "Gel", "Gemcorns", "Gen-Xers", "Gen-Yers", "Generation", "Ghosts", "Giggles", "Gingers", "Girls", "Glass", "Gloom", "Gluttony", "Goals", "Goblins", "Gold", "Goldfish", "Good Advice", "Good Times", "Gossip", "Grain", "Grandfathers", "Grandmothers", "Granite", "Grapefruit", "Grapes", "Grass", "Grasshoppers", "Graves", "Greed", "Grief", "Griefers", "Guitars", "Guts", "Hair", "Hamburgers", "Hammers", "Hands", "Happiness", "Happy Endings", "Hardship", "Harmony", "Harpies", "Hate", "Hatred", "Heart", "Heartache", "Hearts", "Heels", "Hellstone", "Herbs", "Heresy", "Hoiks", "Homicide", "Honey", "Hoodlums", "Hooks", "Hooligans", "Hope", "Hopelessness", "Hornets", "Horns", "Hornswoggle", "Horror", "Horrors", "Houses", "Humanity", "Humiliation", "Hurt", "Hysteria", "Ice", "Ichor", "Illness", "Imposter Syndrome", "Indictments", "Indigestion", "Indignity", "Infancy", "Infections", "Inflammation", "Inflation", "Injury", "Insanity", "Insects", "Intelligence", "Intestines", "Invasions", "Iron", "Irritation", "Isolation", "Item Duping", "Ivy", "Jaws", "Jealousy", "Jellyfish", "Joy", "Justice", "Karens", "Kidneys", "Kindness", "Kittens", "Knives", "Krypton", "Lamps", "Larceny", "Laughter", "Lava", "Lawsuits", "Lawyers", "Lead", "Learning", "Leaves", "Legend", "Legends", "Leggings", "Legs", "Lemons", "Leprosy", "Letdown", "Lethargy", "Liberty", "Lies", "Life", "Lightning Bugs", "Lilies", "Lilith", "Lilypads", "Lips", "Listening", "Litigation", "Livers", "Loathing", "Lombago", "Loneliness", "Loot", "Lore", "Losers", "Loss", "Love", "Luck", "Luggage", "Luminite", "Lungs", "Luxury", "Lyrics", "Mad Cow Disease", "Madness", "Maggots", "Man", "Mana", "Mangos", "Mania", "Mankind", "Manslaughter", "Marble", "Markets", "Marvel", "Mastication", "Maturity", "Medicine", "Melancholy", "Melodies", "Meme Lords", "Memes", "Mercy", "Meteorite", "Mice", "Microtransactions", "Midnight", "Midnight Ramen", "Milk", "Millennials", "Mimics", "Miracles", "Mirrors", "Misery", "Misfortune", "Missing Limbs", "Models", "Mom's Spaghetti", "Money", "Monotony", "Moonglow", "Moonlight", "Morons", "Mortality", "Moss", "Mourning", "Mouths", "Movement", "Muckers", "Mucus", "Mud", "Muggers", "Murder", "Murderers", "Mushrooms", "Music", "Mystery", "Myth", "Mythril", "Nausea", "Necromancers", "Necromancy", "Night", "Nightcrawlers", "Nightmares", "No Remorse", "Nocram", "Nostalgia", "Nudity", "Obscurity", "Obsidian", "Odor", "Ogres", "Oopsie Daisy", "Ooze", "Open Wounds", "Opportunity", "Options", "Oranges", "Orchids", "Organs", "Orichalcum", "Outlaws", "Over Confidence", "Owls", "Pad Thai", "Pain", "Palladium", "Panhandlers", "Panic", "Pansies", "Parasites", "Parties", "Party Time", "Partying", "Patience", "Peace", "Penguins", "Peril", "Perjury", "Perspiration", "Pickaxes", "Pickpockets", "Pineapples", "Pinky", "Piranha", "Piranhas", "Pirates", "Pixies", "Pizza", "Plantero", "Plants", "Platinum", "Pleasure", "Plums", "Politicians", "Ponies", "Potions", "Poverty", "Power", "Pride", "Prisms", "Privacy", "Promises", "Prophecy", "Psychology", "Public Speaking", "Puppies", "Purity", "Pus", "Rain", "Rainbows", "Ramen", "Rats", "Reality", "Redemption", "Regret", "Regurgitation", "Relaxation", "Relief", "Remorse", "Repugnance", "Rich Mahogany", "Riches", "Rocks", "Rope", "Roses", "Rotten Fruit", "Rotting Flesh", "Ruination", "Rumours", "Sacrifice", "Sacrilege", "Sadness", "Salesmen", "Sand", "Sandstone", "Sanity", "Sap", "Saplings", "Sashimi", "Sassages", "Satisfaction", "Sauce", "Scandal", "Scorpions", "Screams", "Seasons", "Seaweed", "Seclusion", "Secrecy", "Secrets", "Seeds", "Self-control", "Self-disgust", "Self-loathing", "Services", "Severed Heads", "Sewage", "Shade", "Shadows", "Shattered Hope", "Shenanigans", "Shivers", "Shiverthorn", "Shock", "Shrimp", "Silliness", "Silt", "Silver", "Sin", "Skeletons", "Skill", "Skin", "Skulls", "Sleep", "Slime", "Sloth", "Sloths", "Smiles", "Smoke", "Snails", "Snake Oil", "Snakes", "Snatchers", "Snow", "Solicitation", "Songs", "Sorrow", "Souls", "Sounds", "Spaghetti", "Sparkles", "Spears", "Speed", "Spicy Ramen", "Spikes", "Spirits", "Splinters", "Sponges", "Sprinkles", "Spurs", "Squid", "Squirrels", "Stagnant Water", "Starfruit", "Starvation", "Statues", "Stink Bugs", "Stone", "Stonks", "Strength", "Stress", "Strictness", "Stumps", "Suffering", "Sunflowers", "Sunshine", "Superstition", "Surprise", "Swagger", "Swindlers", "Swords", "Talent", "Tan Suits", "Taxation", "Taxes", "Teamwork", "Teddy's Bread", "Teeth", "Terror", "The Torch God", "Thieves", "Thinking", "Thorns", "Thunder", "Time", "Tin", "Tingling", "Tiredness", "Titanium", "Tombstones", "Torches", "Torment", "Torn Muscles", "Torture", "Traitors", "Tramps", "Tranquility", "Traps", "Trash", "Treasure", "Trees", "Trends", "Trouble", "Truffles", "Trunks", "Trust", "Trypophobia", "Tulips", "Tungsten", "Twigs", "Twilight", "Twisted Ankles", "Umbrellas", "Understanding", "Unjust Prices", "Upchuck", "Vagabonds", "Vampires", "Vanity", "Venom", "Victims", "Victory", "Villains", "Vines", "Violets", "Voilence", "Vomit", "Vultures", "Wands", "Wariness", "Warmth", "Wasps", "Waterleaf", "Weakness", "Wealth", "Webs", "Weeds", "Werewolves", "Whoopsies", "Wings", "Winners", "Winning", "Wires", "Wisdom", "Wizards", "Woe", "Wolves", "Wonder", "Wood", "Worlds", "Worms", "Worries", "Wrath", "Wrenches", "Wyverns", "Xenon", "Yoyos", "Zombies", "Zoomers", "the Ancients", "the Angler", "the Apple", "the Archer", "the Aunt", "the Axe", "the Baby", "the Ball", "the Balloon", "the Bat", "the Beast", "the Betrayed", "the Blender", "the Blood Moon", "the Bow", "the Bride", "the Brony", "the Bubble", "the Bunghole", "the Bunny", "the Cactus", "the Cloud", "the Coma", "the Corruptor", "the Crab", "the Dance", "the Dark", "the Dead", "the Demogorgon", "the Devourer", "the Drax", "the Ducks", "the Eclipse", "the Elderly", "the Fairy", "the Father", "the Fellow Kids", "the Flu", "the Fool", "the Foot", "the Frozen", "the Gift", "the Ginger", "the Goat", "the Goblin", "the Golem", "the Greatest Generation", "the Groom", "the Guest", "the Hammer", "the Hammush", "the Head", "the Heavens", "the Hipster", "the Hobo", "the Homeless", "the King", "the Law", "the Library", "the Lihzahrd", "the Lilith", "the Lizard King", "the Lost Generation", "the Manager", "the Merchant", "the Mirror", "the Monster", "the Moon", "the Mother", "the Mummy", "the Mushroom", "the Narc", "the Needy", "the Nude", "the Old One", "the Pandemic", "the Pickaxe", "the Picksaw", "the Pigron", "the Po Boy", "the Porcelain God", "the Princess", "the Prism", "the Prodigy", "the Prophecy", "the Pwnhammer", "the Queen", "the Ramen", "the Right", "the Scholar", "the Shark", "the Sickle", "the Sky", "the Snap", "the Snitch", "the Spelunker", "the Spirits", "the Staff", "the Stars", "the Stench", "the Stooge", "the Sun", "the Sword", "the Tooth", "the Tortoise", "the Tree", "the Trend", "the Undead", "the Unicorn", "the Union", "the Unknown", "the Varmint", "the Waraxe", "the Wise", "the World", "the Yoyo", "the Zoologist",
 });
 
+MenuSubstateCreateWorld::MenuSubstateCreateWorld() {
+    set_random_name();
+    set_random_seed();
+
+    m_world_width_input_data.set_filter([](uint32_t codepoint) {
+        return isdigit(codepoint);
+    });
+    m_world_height_input_data.set_filter([](uint32_t codepoint) {
+        return isdigit(codepoint);
+    });
+
+    m_world_width_input_data.set_text("200");
+    m_world_height_input_data.set_text("500");
+};
+
+bool MenuSubstateCreateWorld::validate_input() {
+    uint32_t width;
+    auto width_parse_result = m_world_width_input_data.from_chars(width);
+
+    uint32_t height;
+    auto height_parse_result = m_world_width_input_data.from_chars(height);
+
+    return width_parse_result.ec == std::errc() && height_parse_result.ec == std::errc();
+}
+
 void MenuSubstateCreateWorld::draw(NavManager& nav_manager) {
     using namespace widgets;
 
@@ -59,7 +84,7 @@ void MenuSubstateCreateWorld::draw(NavManager& nav_manager) {
                             set_random_name();
                         });
 
-                        TextInput(m_name_input_data, m_text_input_bar_visible, font, {
+                        TextInput(m_name_input_data, font, {
                             .prefix = sge::rich_text("Name: ", 24.0f, sge::LinearRgba::white()),
                             .size = UiSize::Fill(),
                         });
@@ -75,7 +100,7 @@ void MenuSubstateCreateWorld::draw(NavManager& nav_manager) {
                             set_random_seed();
                         });
 
-                        TextInput(m_seed_input_data, m_text_input_bar_visible, font, {
+                        TextInput(m_seed_input_data, font, {
                             .prefix = sge::rich_text("Seed: ", 24.0f, sge::LinearRgba::white()),
                             .size = UiSize::Fill()
                         });
@@ -84,6 +109,22 @@ void MenuSubstateCreateWorld::draw(NavManager& nav_manager) {
 
                 UI::AddElement<UiTypeID::WorldPreview>({
                     .size = UiSize::Fixed(94.0f, 94.0f),
+                });
+            });
+
+            UI::Container({
+                .size = UiSize(Sizing::Fill(), Sizing::Fixed(45.0f)),
+                .gap = 6.0f,
+                .orientation = LayoutOrientation::Horizontal
+            }, [&] {
+                TextInput(m_world_width_input_data, font, {
+                    .prefix = sge::rich_text("Width: ", 24.0f, sge::LinearRgba::white()),
+                    .size = UiSize::Fill(),
+                });
+
+                TextInput(m_world_height_input_data, font, {
+                    .prefix = sge::rich_text("Height: ", 24.0f, sge::LinearRgba::white()),
+                    .size = UiSize::Fill(),
                 });
             });
 
@@ -101,21 +142,21 @@ void MenuSubstateCreateWorld::draw(NavManager& nav_manager) {
                 nav_manager.pop();
             });
             Button(font, UiSize::Width(Sizing::Fill()), "Create", [&] {
-                nav_manager.push<WorldCreated>();
+                if (!validate_input()) return;
+
+                uint32_t width;
+                m_world_width_input_data.from_chars(width);
+
+                uint32_t height;
+                m_world_height_input_data.from_chars(height);
+
+                nav_manager.push(WorldCreating {
+                    .world_width = width,
+                    .world_height = height
+                });
             });
         });
     });
-}
-
-void MenuSubstateCreateWorld::update() {
-    m_name_input_data.update();
-    m_seed_input_data.update();
-
-    if (m_name_input_data.active() || m_seed_input_data.active()) {
-        if (m_bar_timer.tick(sge::Time::Delta()).finished()) {
-            m_text_input_bar_visible = !m_text_input_bar_visible;
-        }
-    }
 }
 
 void MenuSubstateCreateWorld::set_random_seed() {

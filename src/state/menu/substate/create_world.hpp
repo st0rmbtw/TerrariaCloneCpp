@@ -3,32 +3,32 @@
 #ifndef STATE_MENU_SUBSTATE_CREATE_WORLD_HPP_
 #define STATE_MENU_SUBSTATE_CREATE_WORLD_HPP_
 
-#include "../../common.hpp"
 #include "../nav_manager.hpp"
+
+#include "../../../ui/text_input_data.hpp"
 
 class MenuSubstateCreateWorld {
 public:
     static constexpr uint32_t SEED_LENGTH = 40;
 
-    MenuSubstateCreateWorld() {
-        set_random_name();
-        set_random_seed();
-    };
+    MenuSubstateCreateWorld();
 
     void draw(NavManager& nav_manager);
-    void update();
 
 private:
     void set_random_seed();
     void set_random_name();
 
+    bool validate_input();
+
 private:
     TextInputData m_name_input_data{ 255 };
     TextInputData m_seed_input_data{ SEED_LENGTH };
 
+    TextInputData m_world_width_input_data{ 10 };
+    TextInputData m_world_height_input_data{ 10 };
+
     sge::Timer m_backspace_timer = sge::Timer::from_seconds(0.5f, sge::TimerMode::Once);
-    sge::Timer m_bar_timer = sge::Timer::from_seconds(0.5f, sge::TimerMode::Repeating);
-    bool m_text_input_bar_visible = true;
 };
 
 #endif

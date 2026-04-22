@@ -21,7 +21,6 @@ public:
     MenuSubstateSelectWorld();
 
     void draw(NavManager& nav_manager);
-    void update() {}
 
 private:
     void get_worlds();

@@ -36,10 +36,10 @@ BackgroundRenderer::BackgroundRenderer(const std::shared_ptr<sge::Renderer>& ren
     m_world_buffer_ptr = m_world_buffer.data();
 
     const BackgroundVertex vertices[] = {
-        BackgroundVertex(glm::vec2(0.0f, 0.0f), backgrounds_texture.size()),
-        BackgroundVertex(glm::vec2(0.0f, 1.0f), backgrounds_texture.size()),
-        BackgroundVertex(glm::vec2(1.0f, 0.0f), backgrounds_texture.size()),
-        BackgroundVertex(glm::vec2(1.0f, 1.0f), backgrounds_texture.size()),
+        BackgroundVertex(glm::vec2(0.0f, 0.0f), glm::vec2(backgrounds_texture.size())),
+        BackgroundVertex(glm::vec2(0.0f, 1.0f), glm::vec2(backgrounds_texture.size())),
+        BackgroundVertex(glm::vec2(1.0f, 0.0f), glm::vec2(backgrounds_texture.size())),
+        BackgroundVertex(glm::vec2(1.0f, 1.0f), glm::vec2(backgrounds_texture.size())),
     };
 
     m_vertex_buffer = render_context->CreateVertexBuffer(vertices, Assets::GetVertexFormat(VertexFormatAsset::BackgroundVertex), "BackgroundRenderer VertexBuffer");
@@ -96,7 +96,7 @@ void BackgroundRenderer::init_targets(LLGL::Extent2D resolution) {
 
     sge::RenderTargetConfig backgroundTargetConfig;
     backgroundTargetConfig.resolution = resolution;
-    backgroundTargetConfig.colorAttachments[0] = m_background_render_texture->GetFormat();
+    backgroundTargetConfig.colorAttachments[0] = sge::AttachmentConfig(m_background_render_texture);
     backgroundTargetConfig.format = LLGL::Format::RGBA8UNorm;
     m_background_render_target = context->CreateRenderTarget(backgroundTargetConfig);
 }

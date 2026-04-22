@@ -49,16 +49,17 @@ struct UiInventorySlotIndexData {
 
 InGameState::InGameState(const std::shared_ptr<sge::Renderer>& renderer, uint8_t samples, WorldData world) :
     m_renderer(std::make_shared<GameRenderer>(renderer)),
-    m_world(m_renderer),
-    m_camera(sge::CameraConfig {
+    m_world(m_renderer)
+{
+    m_camera = sge::Camera(sge::CameraConfig {
         .origin = sge::CameraOrigin::Center,
         .coordinateSystem = sge::CoordinateSystem {
             .up = sge::CoordinateDirectionY::Negative,
             .forward = sge::CoordinateDirectionZ::Negative,
         },
         .samples = samples
-    })
-{
+    });
+
     m_fps_update_timer = sge::Timer::from_seconds(0.5f, sge::TimerMode::Repeating);
     m_fps_update_timer.set_finished();
 
@@ -89,10 +90,6 @@ InGameState::InGameState(const std::shared_ptr<sge::Renderer>& renderer, uint8_t
 
     m_cursor.SetForegroundColor(sge::LinearRgba(1.0f, 0.08f, 0.58f));
     m_cursor.SetBackgroundColor(sge::LinearRgba(0.9f, 0.9f, 0.9f));
-}
-
-InGameState::~InGameState() {
-    // m_world.data().lightmap_tasks_wait();
 }
 
 glm::vec2 InGameState::camera_follow_player() noexcept {
@@ -150,10 +147,7 @@ void InGameState::PreUpdate() {
     }
 #endif
 
-    ParticleManager::DeleteExpired();
-
     m_player.pre_update();
-    m_world.clear_lights();
 
 #if DEBUG_TOOLS
     if (sge::Input::JustPressed(sge::Key::F)) m_free_camera = !m_free_camera;
@@ -231,6 +225,11 @@ void InGameState::Update() {
         }
     }
 #endif
+}
+
+void InGameState::OnPreFixedUpdate() {
+    ParticleManager::DeleteExpired();
+    m_world.clear_lights();
 }
 
 void InGameState::FixedUpdate() {
@@ -408,8 +407,8 @@ void InGameState::draw_inventory() noexcept {
                     const bool item_is_taken = inventory.taken_item().has_item();
 
                     TextureAsset texture = TextureAsset::UiInventoryBackground;
-                    glm::vec2 back_size = glm::vec2(0.0f);
-                    glm::vec2 item_size = glm::vec2(0.0f);
+                    glm::vec2 back_size = glm::vec2(0);
+                    glm::vec2 item_size = glm::vec2(0);
                     
                     for (uint32_t i = 0; i < CELLS_IN_ROW; ++i) {
                         const uint32_t index = j * CELLS_IN_ROW + i;
@@ -417,8 +416,8 @@ void InGameState::draw_inventory() noexcept {
                         const bool selected = inventory.selected_slot() == index;
                         
                         if (item.has_value()) {
-                            item_size = Assets::GetItemTexture(item->id).size();
-                            item_size = glm::min(item_size, glm::vec2(32.0f));
+                            item_size = glm::vec2(Assets::GetItemTexture(item->id).size());
+                            item_size = glm::min(item_size, glm::vec2(32));
                         }
                         
                         float text_size = 14.0f;
@@ -530,7 +529,7 @@ void InGameState::draw_inventory() noexcept {
 void InGameState::draw_ui() noexcept {
     ZoneScoped;
 
-    UI::Start(RootDesc(m_camera.viewport())
+    UI::Start(RootDesc(glm::vec2(m_camera.viewport()))
         .with_padding(UiRect::Horizontal(UI_PADDING))
     );
 
@@ -598,7 +597,7 @@ void InGameState::draw_ui() noexcept {
             } break;
 
             case UiTypeID::Text: {
-                const TextData* data = element.text_data;
+                const TextNodeData* data = element.text_data;
                 m_renderer->DrawTextUI(data->sections, data->sections_count, element.position, data->font, order);
             } break;
         }

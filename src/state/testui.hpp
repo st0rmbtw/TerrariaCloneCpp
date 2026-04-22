@@ -19,8 +19,6 @@ public:
         m_camera.update();
     }
 
-    ~TestUI() override;
-
 private:
     sge::Camera m_camera;
     sge::Batch m_batch;

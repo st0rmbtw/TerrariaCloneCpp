@@ -44,7 +44,7 @@ void TestUI::Render(const std::shared_ptr<sge::GlfwWindow>& window) {
 
     const sge::Font& font = Assets::GetFont(FontAsset::AndyBold);
 
-    UI::Start(RootDesc(m_camera.viewport()));
+    UI::Start(RootDesc(glm::vec2(m_camera.viewport())));
 
     UI::Element<UiTypeID::Rectangle>({
         .size = UiSize::Fill(),
@@ -128,7 +128,7 @@ void TestUI::Render(const std::shared_ptr<sge::GlfwWindow>& window) {
             } break;
 
             case UiTypeID::Text: {
-                const TextData* data = element.text_data;
+                const TextNodeData* data = element.text_data;
                 m_batch.DrawText(data->sections, data->sections_count, element.position, data->font, order);
             } break;
         }
@@ -149,8 +149,4 @@ void TestUI::Render(const std::shared_ptr<sge::GlfwWindow>& window) {
     m_renderer->Present(window);
 
     m_batch.Reset();
-}
-
-TestUI::~TestUI() {
-
 }
