@@ -304,14 +304,28 @@ bool Assets::Load(sge::RenderContext& context) {
     InitSamplers(context);
 
     const uint8_t data[] = { 0xFF, 0xFF, 0xFF, 0xFF };
-    state.textures[TextureAsset::Stub] = context.CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, 1, 1, 1, Assets::GetSampler(sge::TextureSampler::Nearest), data);
+
+    sge::TextureConfig textureConfig;
+    textureConfig.textureType = LLGL::TextureType::Texture2D;
+    textureConfig.extent.width = 1;
+    textureConfig.extent.height = 1;
+    textureConfig.extent.depth = 1;
+    textureConfig.sampler = Assets::GetSampler(sge::TextureSampler::Nearest);
+
+    LLGL::ImageView imageView;
+    imageView.dataType = LLGL::DataType::UInt8;
+    imageView.format = LLGL::ImageFormat::RGBA;
+    imageView.dataSize = sizeof(data);
+    imageView.data = data;
+
+    state.textures[TextureAsset::Stub] = context.CreateTexture(textureConfig, &imageView);
 
     // There are some glitches in mipmaps on Metal
     const bool mip_maps = !context.Backend().IsMetal();
 
     for (const auto& [key, asset] : TEXTURE_ASSETS) {
         sge::Texture texture;
-        const uint8_t sampler = !mip_maps ? sge::TextureSampler::DisableMips(asset.sampler) : asset.sampler;
+        const uint8_t sampler = !mip_maps ? sge::TextureSampler::WithoutMipMaps(asset.sampler) : asset.sampler;
         if (!load_texture(context, asset.path.c_str(), sampler, &texture)) {
             return false;
         }
@@ -550,7 +564,22 @@ static bool load_texture(sge::RenderContext& context, const char* path, int samp
     }
 
     const bool generate_mips = sampler == sge::TextureSampler::NearestMips || sampler == sge::TextureSampler::LinearMips;
-    *texture = context.CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::RGBA, width, height, 1, Assets::GetSampler(sampler), data, generate_mips);
+
+    sge::TextureConfig textureConfig;
+    textureConfig.textureType = LLGL::TextureType::Texture2D;
+    textureConfig.extent.width = width;
+    textureConfig.extent.height = height;
+    textureConfig.extent.depth = 1;
+    textureConfig.sampler = Assets::GetSampler(sampler);
+    textureConfig.generateMipMaps = generate_mips;
+
+    LLGL::ImageView imageView;
+    imageView.dataType = LLGL::DataType::UInt8;
+    imageView.format = LLGL::ImageFormat::RGBA;
+    imageView.dataSize = width * height * 4;
+    imageView.data = data;
+
+    *texture = context.CreateTexture(textureConfig, &imageView);
 
     stbi_image_free(data);
 
@@ -602,7 +631,22 @@ static sge::Texture load_texture_array(sge::RenderContext& render_context, const
         stbi_image_free(layer_data.data);
     }
 
-    return render_context.CreateTexture(LLGL::TextureType::Texture2DArray, LLGL::ImageFormat::RGBA, LLGL::DataType::UInt8, width, height, layers_count, Assets::GetSampler(sampler), pixels.data(), generate_mip_maps);
+    sge::TextureConfig textureConfig;
+    textureConfig.textureType = LLGL::TextureType::Texture2DArray;
+    textureConfig.extent.width = width;
+    textureConfig.extent.height = height;
+    textureConfig.extent.depth = 1;
+    textureConfig.arrayLayers = layers_count;
+    textureConfig.sampler = Assets::GetSampler(sampler);
+    textureConfig.generateMipMaps = generate_mip_maps;
+
+    LLGL::ImageView imageView;
+    imageView.dataType = LLGL::DataType::UInt8;
+    imageView.format = LLGL::ImageFormat::RGBA;
+    imageView.dataSize = pixels.size();
+    imageView.data = pixels.data();
+
+    return render_context.CreateTexture(textureConfig, &imageView);
 }
 
 template <typename T>
@@ -654,8 +698,20 @@ static bool load_font(sge::RenderContext& render_context, sge::Font& font, const
     int w, h;
     stbi_uc* data = stbi_load(atlas_file_path, &w, &h, nullptr, 1);
 
-    const sge::Ref<sge::Sampler>& linear_sampler = Assets::GetSampler(sge::TextureSampler::Linear);
-    font.texture = render_context.CreateTexture(LLGL::TextureType::Texture2D, LLGL::ImageFormat::R, LLGL::DataType::UInt8, texture_width, texture_height, 1, linear_sampler, data);
+    sge::TextureConfig textureConfig;
+    textureConfig.textureType = LLGL::TextureType::Texture2D;
+    textureConfig.extent.width = texture_width;
+    textureConfig.extent.height = texture_height;
+    textureConfig.extent.depth = 1;
+    textureConfig.sampler = Assets::GetSampler(sge::TextureSampler::Linear);
+
+    LLGL::ImageView imageView;
+    imageView.dataType = LLGL::DataType::UInt8;
+    imageView.format = LLGL::ImageFormat::R;
+    imageView.dataSize = texture_width * texture_height;
+    imageView.data = data;
+
+    font.texture = render_context.CreateTexture(textureConfig, &imageView);
     stbi_image_free(data);
 
     font.font_size = font_size;

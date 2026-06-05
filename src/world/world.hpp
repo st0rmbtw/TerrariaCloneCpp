@@ -11,6 +11,7 @@
 #include <SGE/time/time.hpp>
 #include <SGE/types/sprite.hpp>
 #include <SGE/utils/containers/swapbackvector.hpp>
+#include <SGE/utils/containers/heaparray.hpp>
 
 #include "../types/block.hpp"
 #include "../types/wall.hpp"
@@ -32,8 +33,8 @@ struct TileDigAnimation {
 };
 
 struct UpdateLightMapTaskResult {
-    HeapArray<Color> colors;
-    HeapArray<LightMask> masks;
+    sge::HeapArray<Color> colors;
+    sge::HeapArray<LightMask> masks;
     sge::IRect area;
     uint32_t width = 0;
     uint32_t height = 0;

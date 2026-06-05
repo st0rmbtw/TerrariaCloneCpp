@@ -34,12 +34,12 @@ ParticleRenderer::ParticleRenderer(const std::shared_ptr<sge::Renderer>& rendere
 
     m_atlas = Assets::GetTextureAtlas(TextureAsset::Particles);
 
-    m_instance_buffer_data = HeapArray<ParticleInstance>(MAX_PARTICLES_COUNT);
-    m_instance_buffer_data_world = HeapArray<ParticleInstance>(MAX_PARTICLES_COUNT);
+    m_instance_buffer_data = sge::HeapArray<ParticleInstance>(MAX_PARTICLES_COUNT);
+    m_instance_buffer_data_world = sge::HeapArray<ParticleInstance>(MAX_PARTICLES_COUNT);
 
-    m_position_buffer_data = HeapArray<glm::vec2>(MAX_PARTICLES_COUNT);
-    m_rotation_buffer_data = HeapArray<glm::quat>(MAX_PARTICLES_COUNT);
-    m_scale_buffer_data = HeapArray<float>(MAX_PARTICLES_COUNT);
+    m_position_buffer_data = sge::HeapArray<glm::vec2>(MAX_PARTICLES_COUNT);
+    m_rotation_buffer_data = sge::HeapArray<glm::quat>(MAX_PARTICLES_COUNT);
+    m_scale_buffer_data = sge::HeapArray<float>(MAX_PARTICLES_COUNT);
 
     const glm::vec2 texture_size = glm::vec2(m_atlas.texture().size());
 

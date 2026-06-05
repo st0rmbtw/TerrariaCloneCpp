@@ -330,8 +330,8 @@ void World::update(const sge::Camera& camera) {
 
     if (m_anim_timer.tick(sge::Time::Delta()).just_finished()) {
         for (glm::vec2& offset : m_offsets) {
-            offset.x = sge::random::rand_int(-10, 11) * 0.15f;
-            offset.y = sge::random::rand_int(-10, 1) * 0.35f;
+            offset.x = sge::Random::Int(-10, 11) * 0.15f;
+            offset.y = sge::Random::Int(-10, 1) * 0.35f;
         }
     }
 

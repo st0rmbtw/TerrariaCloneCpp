@@ -29,10 +29,10 @@ BackgroundRenderer::BackgroundRenderer(const std::shared_ptr<sge::Renderer>& ren
 
     const sge::Texture& backgrounds_texture = Assets::GetTexture(TextureAsset::Backgrounds);
 
-    m_buffer = HeapArray<BackgroundInstance>(MAX_QUADS);
+    m_buffer = sge::HeapArray<BackgroundInstance>(MAX_QUADS);
     m_buffer_ptr = m_buffer.data();
 
-    m_world_buffer = HeapArray<BackgroundInstance>(MAX_QUADS);
+    m_world_buffer = sge::HeapArray<BackgroundInstance>(MAX_QUADS);
     m_world_buffer_ptr = m_world_buffer.data();
 
     const BackgroundVertex vertices[] = {

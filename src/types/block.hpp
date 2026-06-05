@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <optional>
 
+#include <SGE/utils/random.hpp>
+
 #include "texture_atlas_pos.hpp"
 #include "neighbors.hpp"
 #include "tool_flags.hpp"
@@ -129,7 +131,7 @@ struct Block {
         atlas_pos(),
         hp(block_hp(tile_type)),
         type(tile_type),
-        variant(static_cast<uint8_t>(rand() % 3)) {}
+        variant(static_cast<uint8_t>(sge::Random::UInt(0, 2))) {}
 
     static Block Tree(TreeType type, TreeFrameType frame) {
         Block tile = Block(BlockType::Tree);

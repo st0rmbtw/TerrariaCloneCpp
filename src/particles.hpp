@@ -8,6 +8,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include <SGE/math/quat.hpp>
+#include <SGE/utils/random.hpp>
 #include <SGE/assert.hpp>
 
 #include "world/world.hpp"
@@ -86,7 +87,7 @@ private:
         m_type(type) {}
 public:
     static ParticleBuilder create(Particle::Type type, glm::vec2 position, glm::vec2 velocity, float lifetime) noexcept {
-        return ParticleBuilder(type, position, velocity, 1.0f, lifetime, 0.0f, false, static_cast<uint8_t>(rand() % 3));
+        return ParticleBuilder(type, position, velocity, 1.0f, lifetime, 0.0f, false, static_cast<uint8_t>(sge::Random::UInt(0, 2)));
     }
 
     ParticleBuilder& with_gravity(bool gravity) noexcept {
@@ -118,7 +119,7 @@ public:
     ParticleData build() const noexcept {
         return ParticleData {
             .rotation       = glm::mat4(1.0f),
-            .rotation_speed = Quat::from_rotation_z(m_rotation_speed),
+            .rotation_speed = sge::Quat::from_rotation_z(m_rotation_speed),
             .light_color    = m_light_color,
             .position       = m_position,
             .velocity       = m_velocity,

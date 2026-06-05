@@ -56,7 +56,7 @@ DynamicLighting::DynamicLighting(std::shared_ptr<sge::Renderer> renderer, const 
     using Constants::SUBDIVISION;
     m_dynamic_lightmap = LightMap(world.area.size() * SUBDIVISION);
 
-    m_line = HeapArray<Color>(Constants::LIGHT_AIR_DECAY_STEPS);
+    m_line = sge::HeapArray<Color>(Constants::LIGHT_AIR_DECAY_STEPS);
 
     for (int64_t y = 0; y < m_dynamic_lightmap.height; ++y) {
         for (int64_t x = 0; x < m_dynamic_lightmap.width; ++x) {
@@ -104,7 +104,7 @@ inline static void blur_vertical(LightMap& lightmap, const sge::IRect& area) {
     }
 }
 
-static uint32_t count_steps(const LightMap& lightmap, HeapArray<Color>& line, glm::vec3& prev_light, float& prev_decay, int start_index, int stride) {
+static uint32_t count_steps(const LightMap& lightmap, sge::HeapArray<Color>& line, glm::vec3& prev_light, float& prev_decay, int start_index, int stride) {
     using Constants::LIGHT_EPSILON;
 
     int index = start_index;
@@ -146,7 +146,7 @@ static uint32_t count_steps(const LightMap& lightmap, HeapArray<Color>& line, gl
     return i;
 }
 
-static sge::IRect calculate_light_area(const LightMap& lightmap, HeapArray<Color>& line, glm::ivec2 pos, const glm::vec3& color) {
+static sge::IRect calculate_light_area(const LightMap& lightmap, sge::HeapArray<Color>& line, glm::ivec2 pos, const glm::vec3& color) {
     glm::vec3 prev_light = glm::vec3(0.0f);
     float prev_decay = 0.0f;
     int length = 0;
@@ -292,11 +292,11 @@ void DynamicLighting::compute_light(const sge::Camera& camera, const World& worl
 
 // -------------------- AcceleratedDynamicLighting --------------------
 
-static SGE_FORCE_INLINE void blur_dispatch(const sge::Unique<LLGL::CommandBuffer>& commands, uint32_t width) {
+static SGE_FORCE_INLINE void blur_dispatch(LLGL::CommandBuffer* commands, uint32_t width) {
     commands->Dispatch(width, 1, 1);
 }
 
-static SGE_FORCE_INLINE void blur_dispatch_metal(const sge::Unique<LLGL::CommandBuffer>& commands, uint32_t width) {
+static SGE_FORCE_INLINE void blur_dispatch_metal(LLGL::CommandBuffer* commands, uint32_t width) {
     const uint32_t h = (width + 512 - 1) / 512;
     const uint32_t w = std::min(512u, width);
     commands->Dispatch(w, h, 1);
@@ -412,7 +412,7 @@ void AcceleratedDynamicLighting::init_textures(const WorldData& world) {
     tile_texture_desc.mipLevels     = 1;
 
     {
-        HeapArray<uint8_t> pixels(world.area.width() * world.area.height());
+        sge::HeapArray<uint8_t> pixels(world.area.width() * world.area.height());
 
         for (int y = 0; y < world.area.height(); ++y) {
             for (int x = 0; x < world.area.width(); ++x) {
@@ -442,7 +442,7 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
 
     if (world.light_count() == 0) return;
 
-    const auto& commands = m_renderer->CommandBuffer();
+    auto* commands = m_renderer->CommandBuffer();
 
     const size_t size = world.light_count() * sizeof(Light);
     commands->UpdateBuffer(*m_light_buffer, 0, world.lights(), size);

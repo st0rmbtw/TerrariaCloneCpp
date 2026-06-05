@@ -23,7 +23,6 @@
 #include "../particles.hpp"
 
 using Constants::TILE_SIZE;
-using namespace sge::random;
 
 static constexpr float GRAVITY = 0.4f;
 static constexpr float ACCELERATION = 0.1f;
@@ -46,12 +45,12 @@ static const glm::vec2 ITEM_HOLD_POINTS[] = {
 static constexpr float ITEM_ROTATION = 1.7;
 
 static void spawn_particles_on_dig(const glm::vec2& position, Particle::Type particle, bool broken) {
-    const int count = broken ? rand_int(7, 15) : rand_int(3, 8);
+    const int count = broken ? sge::Random::Int(7, 15) : sge::Random::Int(7, 15);
 
     for (int i = 0; i < count; i++) {
-        const float rotation_speed = rand_float(0.0f, sge::consts::PI / 12.0f);
+        const float rotation_speed = sge::Random::Float(0.0f, sge::consts::PI / 12.0f);
 
-        const glm::vec2 velocity = glm::vec2(rand_float(-1.0f, 1.0f), rand_float(-2.0f, 2.0f));
+        const glm::vec2 velocity = glm::vec2(sge::Random::Float(-1.0f, 1.0f), sge::Random::Float(-2.0f, 2.0f));
         const glm::vec2 offset = particle == Particle::Type::Torch ? glm::diskRand(10.0f) : glm::vec2(0.0f);
         const float min_scale = broken ? 0.6f : 0.3f;
         const float scale = glm::linearRand(min_scale, 1.0f);
@@ -370,7 +369,7 @@ void Player::update_using_item_anim() {
     rotation = rotation * 2.0 - 1.;
 
     m_using_item.set_position(item_position);
-    m_using_item.set_rotation(Quat::from_rotation_z(rotation * direction * ITEM_ROTATION + direction * 0.5f));
+    m_using_item.set_rotation(sge::Quat::from_rotation_z(rotation * direction * ITEM_ROTATION + direction * 0.5f));
     m_using_item.set_anchor(m_direction == Direction::Left ? sge::Anchor::BottomRight : sge::Anchor::BottomLeft);
     m_using_item.set_flip_x(m_direction == Direction::Left);
 
@@ -505,7 +504,7 @@ void Player::spawn_particles_on_walk() const {
     const float direction = get_direction_value(m_direction);
     const glm::vec2 position = draw_position() + glm::vec2(0., PLAYER_HEIGHT_HALF);
     const glm::vec2 velocity = random_point_cone(glm::vec2(direction, 0.0f), 45.0f);
-    const float scale = rand_float(0.0f, 1.0f);
+    const float scale = sge::Random::Float(0.0f, 1.0f);
     const float rotation_speed = sge::consts::PI / 12.0f;
 
     ParticleManager::SpawnParticle(
@@ -532,7 +531,7 @@ void Player::spawn_particles_grounded() const {
 
     if (!m_prev_grounded && m_collision.down() && fall_distance > TILE_SIZE * 1.5) {
         for (int i = 0; i < 10; i++) {
-            const float scale = rand_float(0.0f, 1.0f);
+            const float scale = sge::Random::Float(0.0f, 1.0f);
             const glm::vec2 point = random_point_circle(1.0f, 0.5f) * PLAYER_WIDTH_HALF;
             const glm::vec2 velocity = glm::vec2(glm::normalize(point).x, -0.5f);
 
@@ -835,7 +834,7 @@ void Player::use_item(const sge::Camera& camera, World& world) {
         if (wall->hp <= 0) {
             world.remove_wall(tile_pos);
         } else {
-            uint8_t new_variant = rand() % 3;
+            uint8_t new_variant = sge::Random::UInt(0, 2);
 
             world.update_wall(tile_pos, wall->type, new_variant);
             world.create_wall_cracks(tile_pos, map_range(wall_hp(wall->type), 0, 0, 3, wall->hp) * 6 + (rand() % 6));
@@ -861,7 +860,7 @@ void Player::use_item(const sge::Camera& camera, World& world) {
                     world.remove_block(tile_pos);
                 }
             } else {
-                uint8_t new_variant = rand() % 3;
+                uint8_t new_variant = sge::Random::UInt(0, 2);
                 BlockType new_tile_type;
                 switch (block->type) {
                     case BlockType::Grass: new_tile_type = BlockType::Dirt; break;

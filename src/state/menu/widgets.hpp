@@ -6,13 +6,13 @@
 #include <optional>
 #include <SGE/types/font.hpp>
 #include <SGE/types/color.hpp>
+#include <SGE/types/nine_patch.hpp>
 #include <SGE/time/timer.hpp>
 #include <SGE/utils/text.hpp>
+#include <SGE/renderer/batch.hpp>
 
 #include "../../assets.hpp"
 #include "../../ui/ui.hpp"
-
-#include "../common.hpp"
 
 namespace widgets {
 
@@ -50,11 +50,6 @@ struct UiSeparatorData {
 
 struct UiIconData {
     TextureAsset icon;
-};
-
-struct UiTextInputData {
-    sge::LinearRgba color;
-    bool bar_visible;
 };
 
 template <typename F>
@@ -205,9 +200,6 @@ inline void TextInput(TextInputData& data, const sge::Font& font, const TextInpu
     }, [&] {
         data.set_active(data.active() || UI::IsFocused());
 
-        const float cursor_height = Assets::GetTexture(TextureAsset::UiSliderHandle).size().height;
-        const float text_height = sge::calculate_text_height(font, 24.0f, data.text());
-
         if (desc.prefix) {
             UI::Text<UiTypeID::Text>(font, desc.prefix.value());
         }
@@ -215,16 +207,7 @@ inline void TextInput(TextInputData& data, const sge::Font& font, const TextInpu
         UI::TextInput<UiTypeID::TextInput>(data, font, {
             .size = UiSize::Fill(),
             .text_size = 24.0f,
-            // .min_height = glm::max(text_height, cursor_height)
-        });//, [&] {
-            // UI::SetCustomData(UiTextInputData {
-            //     .color = sge::LinearRgba::white(),
-            //     .font = font,
-            //     .data = data,
-            //     .size = 24.0f,
-            //     .bar_visible = bar_visible
-            // });
-        //});
+        });
 
         UI::SetCustomData(UiCategoryPanelData {
             .background_color = sge::LinearRgba(63, 82, 151),
@@ -294,14 +277,13 @@ inline void DrawTextInput(const UiElement& element, sge::Batch& batch) {
     const bool bar_visible = data.bar_visible();
     
     const float line_width = element.size.x;
-    float x = 0.0f;
+    float cursor_offset = 0.0f;
 
     if (!data.empty()) {
         auto begin = data.text().begin() + data.display_begin();
         auto end = data.text().end();
         sge::FitResult fit_result = sge::chars_fit_in_line_from_start(font, text_size, std::string_view{ begin, end }, line_width);
 
-        // Draw text before cursor
         const auto to = begin + fit_result.bytes;
         const std::string_view string = std::string_view{ begin, to };
 
@@ -309,15 +291,14 @@ inline void DrawTextInput(const UiElement& element, sge::Batch& batch) {
         const float text_height = sge::calculate_text_height(font, text_size, string);
 
         const sge::RichText text = sge::rich_text(string, text_size, color);
-        const glm::vec2 position = glm::vec2(element.position.x + x, element.position.y + (element.size.y - text_height) * 0.5f);
+        const glm::vec2 position = glm::vec2(element.position.x, element.position.y + (element.size.y - text_height) * 0.5f);
         batch.DrawText(text.sections, text.size(), position, font, sge::Order(element.z_index));
-
         
-        x += pre_cursor_bounds.x;
+        cursor_offset = pre_cursor_bounds.x;
     }
 
     if (data.active() && bar_visible) {
-        batch.DrawRect(element.position + glm::vec2(x, (element.size.y - bar_height) * 0.5f), sge::Order(element.z_index + 1), {
+        batch.DrawRect(element.position + glm::vec2(cursor_offset, (element.size.y - bar_height) * 0.5f), sge::Order(element.z_index + 1), {
             .size = glm::vec2(2.0f, bar_height),
             .color = sge::LinearRgba::white(),
             .anchor = sge::Anchor::TopLeft

@@ -5,8 +5,8 @@
 
 #include <cstdint>
 #include <SGE/math/rect.hpp>
+#include <SGE/utils/containers/heaparray.hpp>
 
-#include "../utils/data/heap_array.hpp"
 #include "../constants.hpp"
 
 struct WorldData;
@@ -35,8 +35,8 @@ using LightPos = glm::i64vec2;
 using LightMask = bool;
 
 struct LightMap {
-    HeapArray<Color> colors;
-    HeapArray<LightMask> masks;
+    sge::HeapArray<Color> colors;
+    sge::HeapArray<LightMask> masks;
     int64_t width = 0;
     int64_t height = 0;
 
@@ -45,8 +45,8 @@ struct LightMap {
     LightMap(glm::ivec2 size) : LightMap(size.x, size.y) {}
     
     LightMap(uint32_t width, uint32_t height) : width(width), height(height) {
-        colors = HeapArray<Color>(width * height);
-        masks = HeapArray<LightMask>(width * height);
+        colors = sge::HeapArray<Color>(width * height);
+        masks = sge::HeapArray<LightMask>(width * height);
     }
 
     LightMap(const LightMap& other) = delete;

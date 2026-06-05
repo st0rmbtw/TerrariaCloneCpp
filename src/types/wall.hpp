@@ -4,7 +4,8 @@
 #define TYPES_WALL_HPP_
 
 #include <cstdint>
-#include <cstdlib>
+
+#include <SGE/utils/random.hpp>
 
 #include "texture_atlas_pos.hpp"
 
@@ -28,7 +29,7 @@ struct Wall {
         atlas_pos(0, 0),
         hp(wall_hp(wall_type)),
         type(wall_type),
-        variant(static_cast<uint8_t>(rand() % 3)) {}
+        variant(static_cast<uint8_t>(sge::Random::UInt(0, 2))) {}
 };
 
 #endif

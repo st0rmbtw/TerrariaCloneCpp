@@ -8,6 +8,7 @@
 #include <LLGL/PipelineLayout.h>
 
 #include <SGE/renderer/renderer.hpp>
+#include <SGE/utils/containers/heaparray.hpp>
 
 #include "world_renderer.hpp"
 
@@ -64,8 +65,8 @@ private:
     
     sge::Ref<LLGL::Texture> m_background_render_texture = nullptr;
 
-    HeapArray<BackgroundInstance> m_buffer;
-    HeapArray<BackgroundInstance> m_world_buffer;
+    sge::HeapArray<BackgroundInstance> m_buffer;
+    sge::HeapArray<BackgroundInstance> m_world_buffer;
     
     BackgroundInstance* m_buffer_ptr = nullptr;
     BackgroundInstance* m_world_buffer_ptr = nullptr;

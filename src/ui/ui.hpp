@@ -385,7 +385,7 @@ struct TextInputElementDesc {
     ElementID id{};
     UiSize size{ UiSize::Fit() };
     sge::LinearRgba color = sge::LinearRgba::white();
-    float text_size = 0.0f;
+    float text_size = 12.0f;
     std::optional<Alignment> self_alignment{ std::nullopt };
 };
 

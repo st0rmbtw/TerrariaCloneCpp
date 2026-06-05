@@ -26,7 +26,7 @@ public:
     void OnWindowSizeChanged(LLGL::Extent2D size) override {
         m_renderer->ResizeTextures(size);
 
-        m_camera.set_viewport({size.width, size.height});
+        m_camera.set_viewport(size);
         m_camera.update();
 
         m_world.chunk_manager().manage_chunks(m_world.data(), m_camera);

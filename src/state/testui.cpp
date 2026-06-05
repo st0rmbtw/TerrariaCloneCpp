@@ -146,7 +146,5 @@ void TestUI::Render(const std::shared_ptr<sge::GlfwWindow>& window) {
 
     m_renderer->End();
 
-    m_renderer->Present(window);
-
     m_batch.Reset();
 }

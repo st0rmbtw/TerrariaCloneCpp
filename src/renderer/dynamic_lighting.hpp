@@ -5,9 +5,10 @@
 
 #include <cstdint>
 
+#include <SGE/engine.hpp>
 #include <SGE/renderer/camera.hpp>
 #include <SGE/renderer/renderer.hpp>
-#include <SGE/engine.hpp>
+#include <SGE/utils/containers/heaparray.hpp>
 
 #include "../world/world.hpp"
 
@@ -32,7 +33,7 @@ private:
 
     std::vector<std::pair<size_t, size_t>> m_indices;
 
-    HeapArray<Color> m_line;
+    sge::HeapArray<Color> m_line;
 
     LightMap m_dynamic_lightmap;
 

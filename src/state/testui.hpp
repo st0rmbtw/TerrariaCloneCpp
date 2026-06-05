@@ -15,7 +15,7 @@ public:
     void Render(const std::shared_ptr<sge::GlfwWindow>& window) override;
 
     void OnWindowSizeChanged(LLGL::Extent2D size) override {
-        m_camera.set_viewport({size.width, size.height});
+        m_camera.set_viewport(size);
         m_camera.update();
     }
 

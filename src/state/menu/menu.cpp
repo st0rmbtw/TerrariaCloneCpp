@@ -167,7 +167,7 @@ void MainMenuState::update_logo() {
     m_logo_animation.tick(sge::Time::DeltaSeconds());
 
     m_logo_scale = LOGO_ANIM_MIN_SCALE + (LOGO_ANIM_MAX_SCALE - LOGO_ANIM_MIN_SCALE) * m_logo_animation.progress();
-    m_logo_rotation = Quat::from_rotation_z(glm::radians(LOGO_ANIM_MIN_ROTATION + (LOGO_ANIM_MAX_ROTATION - LOGO_ANIM_MIN_ROTATION) * m_logo_animation.progress()));
+    m_logo_rotation = sge::Quat::from_rotation_z(glm::radians(LOGO_ANIM_MIN_ROTATION + (LOGO_ANIM_MAX_ROTATION - LOGO_ANIM_MIN_ROTATION) * m_logo_animation.progress()));
 }
 
 void MainMenuState::Render(const std::shared_ptr<sge::GlfwWindow>& window) {
@@ -192,8 +192,6 @@ void MainMenuState::Render(const std::shared_ptr<sge::GlfwWindow>& window) {
             m_renderer->RenderBatch(m_batch);
         m_renderer->EndPass();
     m_renderer->End();
-
-    m_renderer->Present(window);
 }
 
 void MainMenuState::draw_main_menu() {

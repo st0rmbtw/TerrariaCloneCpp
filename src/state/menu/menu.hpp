@@ -29,7 +29,7 @@ public:
     void Render(const std::shared_ptr<sge::GlfwWindow>& window) override;
 
     void OnWindowSizeChanged(LLGL::Extent2D size) override {
-        m_camera.set_viewport({size.width, size.height});
+        m_camera.set_viewport(size);
         m_camera.update();
         setup_background();
     }
@@ -58,7 +58,7 @@ private:
 
     NavManager m_nav_manager;
 
-    glm::quat m_logo_rotation = Quat::from_rotation_z(glm::radians(-5.0f));
+    glm::quat m_logo_rotation = sge::Quat::from_rotation_z(glm::radians(-5.0f));
     sge::Animation m_logo_animation{ sge::Duration::SecondsFloat(10.0f), sge::RepeatStrategy::MirroredRepeat };
 
     std::shared_ptr<sge::Renderer> m_renderer;

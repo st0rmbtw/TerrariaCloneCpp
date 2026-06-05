@@ -8,8 +8,9 @@
 #include <LLGL/PipelineState.h>
 
 #include <SGE/types/texture_atlas.hpp>
-#include <SGE/renderer/renderer.hpp>
 #include <SGE/types/order.hpp>
+#include <SGE/renderer/renderer.hpp>
+#include <SGE/utils/containers/heaparray.hpp>
 
 #include "../particles.hpp"
 
@@ -50,11 +51,11 @@ private:
 
     sge::Unique<LLGL::Buffer> m_transform_buffer = nullptr;
 
-    HeapArray<ParticleInstance> m_instance_buffer_data;
-    HeapArray<ParticleInstance> m_instance_buffer_data_world;
-    HeapArray<glm::vec2> m_position_buffer_data;
-    HeapArray<glm::quat> m_rotation_buffer_data;
-    HeapArray<float> m_scale_buffer_data;
+    sge::HeapArray<ParticleInstance> m_instance_buffer_data;
+    sge::HeapArray<ParticleInstance> m_instance_buffer_data_world;
+    sge::HeapArray<glm::vec2> m_position_buffer_data;
+    sge::HeapArray<glm::quat> m_rotation_buffer_data;
+    sge::HeapArray<float> m_scale_buffer_data;
 
     ParticleInstance* m_instance_buffer_data_ptr = nullptr;
     ParticleInstance* m_instance_buffer_data_world_ptr = nullptr;

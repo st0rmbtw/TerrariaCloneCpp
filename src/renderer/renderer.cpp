@@ -159,7 +159,7 @@ void GameRenderer::Begin(const sge::Camera& camera, World& world) {
 
     const auto& render_context = m_renderer->GetRenderContext();
 
-    const auto& commands = m_renderer->CommandBuffer();
+    auto* const commands = m_renderer->CommandBuffer();
     auto* const command_queue = m_renderer->CommandQueue();
 
     const sge::Rect camera_frustum = sge::Rect::from_corners(
@@ -215,7 +215,7 @@ void GameRenderer::Render(const std::shared_ptr<sge::GlfwWindow>& window, const 
     ZoneScoped;
 
     const auto& render_context = m_renderer->GetRenderContext();
-    const auto& commands = m_renderer->CommandBuffer();
+    auto* commands = m_renderer->CommandBuffer();
 
     m_particle_renderer.compute();
     m_particle_renderer.prepare();
@@ -269,8 +269,6 @@ void GameRenderer::Render(const std::shared_ptr<sge::GlfwWindow>& window, const 
     m_renderer->EndPass();
 
     m_renderer->End();
-
-    m_renderer->Present(window);
 
     m_particle_renderer.reset();
     m_background_renderer.reset();

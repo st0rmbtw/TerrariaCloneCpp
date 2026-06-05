@@ -231,13 +231,11 @@ static void world_remove_walls_from_surface(WorldData& world) {
 }
 
 static void world_place_tree(WorldData& world, TreeType tree_type, TilePos pos) {
-    using namespace sge::random;
-
     if (pos.x >= world.playable_area.max.x - 2 || pos.x <= world.playable_area.min.x + 2) {
         return;
     }
 
-    int height = rand_int(5, 16);
+    int height = sge::Random::Int(5, 16);
 
     for (int x = pos.x - 2; x <= pos.x + 2; ++x) {
         for (int y = pos.y - height; y < pos.y; ++y) {
@@ -253,8 +251,8 @@ static void world_place_tree(WorldData& world, TreeType tree_type, TilePos pos) 
     const bool right_block = world.block_exists_with_type(pos.offset(TileOffset::BottomRight), BlockType::Dirt) || 
                              world.block_exists_with_type(pos.offset(TileOffset::BottomRight), BlockType::Grass);
 
-    const bool left_root = rand_bool() && left_block;
-    const bool right_root = rand_bool() && right_block;
+    const bool left_root = sge::Random::Bool() && left_block;
+    const bool right_root = sge::Random::Bool() && right_block;
 
     // Base
     if (left_root)
@@ -275,41 +273,41 @@ static void world_place_tree(WorldData& world, TreeType tree_type, TilePos pos) 
 
     TreeFrameType frame_type = TreeFrameType::TopLeaves;
 
-    if (rand_bool(1.0f / 3.0f))
+    if (sge::Random::Bool(1.0f / 3.0f))
         frame_type = TreeFrameType::TopBareJagged;
-    else if (rand_bool(1.0f / 5.0f))
+    else if (sge::Random::Bool(1.0f / 5.0f))
         frame_type = TreeFrameType::TopBare;
     else
         height -= 2;
 
     set_block(world, pos, Block::Tree(tree_type, frame));
     for (int y = pos.y - height; y < pos.y; ++y) {
-        const bool branch_left = rand_bool(1.0f / 7.0f);
-        const bool branch_right = rand_bool(1.0f / 7.0f);
+        const bool branch_left = sge::Random::Bool(1.0f / 7.0f);
+        const bool branch_right = sge::Random::Bool(1.0f / 7.0f);
 
         if (branch_left && !world.block_exists({pos.x - 1, y - 1})) {
-            const bool bare = rand_bool(1.0f / 5.0f);
+            const bool bare = sge::Random::Bool(1.0f / 5.0f);
             const TreeFrameType frame_type = bare ? TreeFrameType::BranchLeftBare : TreeFrameType::BranchLeftLeaves;
             set_block(world, {pos.x - 1, y}, Block::Tree(tree_type, frame_type));
         }
 
         if (branch_right && !world.block_exists({pos.x + 1, y - 1})) {
-            const bool bare = rand_bool(1.0f / 5.0f);
+            const bool bare = sge::Random::Bool(1.0f / 5.0f);
             const TreeFrameType frame_type = bare ? TreeFrameType::BranchRightBare : TreeFrameType::BranchRightLeaves;
             set_block(world, {pos.x + 1, y}, Block::Tree(tree_type, frame_type));
         }
 
         // Hollow to the left
-        if (!branch_left && rand_bool(1.0f / 10.0f)) {
+        if (!branch_left && sge::Random::Bool(1.0f / 10.0f)) {
             set_block(world, {pos.x, y}, Block::Tree(tree_type, TreeFrameType::TrunkHollowLeft));
         // Hollow to the right
-        } else if (!branch_right && rand_bool(1.0f / 10.0f)) {
+        } else if (!branch_right && sge::Random::Bool(1.0f / 10.0f)) {
             set_block(world, {pos.x, y}, Block::Tree(tree_type, TreeFrameType::TrunkHollowRight));
         // Branch collar to the left
-        } else if (!branch_left && rand_bool(1.0f / 10.0f)) {
+        } else if (!branch_left && sge::Random::Bool(1.0f / 10.0f)) {
             set_block(world, {pos.x, y}, Block::Tree(tree_type, TreeFrameType::TrunkBranchCollarLeft));
         // Branch collar to the right
-        } else if (!branch_right && rand_bool(1.0f / 10.0f)) {
+        } else if (!branch_right && sge::Random::Bool(1.0f / 10.0f)) {
             set_block(world, {pos.x, y}, Block::Tree(tree_type, TreeFrameType::TrunkBranchCollarRight));
         // Regular trunk
         } else {
@@ -323,15 +321,13 @@ static void world_place_tree(WorldData& world, TreeType tree_type, TilePos pos) 
 }
 
 static void world_grow_trees(WorldData& world) {
-    using namespace sge::random;
-
     const int playable_area_min_x = world.playable_area.min.x;
     const int playable_area_max_x = world.playable_area.max.x;
 
     for (int x = playable_area_min_x; x < playable_area_max_x; ++x) {
         int y = get_surface_block(world, x);
         for (; y < world.playable_area.max.y; ++y) {
-            const bool grow = rand_bool(1.0f / 10.0f);
+            const bool grow = sge::Random::Bool(1.0f / 10.0f);
 
             if (grow) {
                 // Trees can only grow on dirt or grass
@@ -356,7 +352,7 @@ static void world_make_hills(WorldData& world) {
     fbm.SetFractalGain(2.0);
     fbm.SetFractalLacunarity(0.5);
     fbm.SetFrequency(0.005);
-    fbm.SetSeed(rand());
+    fbm.SetSeed(sge::Random::NextRaw());
 
     // FastNoiseLite gradient;
     // gradient.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
@@ -365,7 +361,7 @@ static void world_make_hills(WorldData& world) {
     // gradient.SetFrequency(0.05);
     // gradient.SetFractalGain(2.5);
     // gradient.SetFractalLacunarity(0.48);
-    // gradient.SetSeed(rand());
+    // gradient.SetSeed(sge::Random::NextRaw());
 
     FastNoiseLite gradient;
     gradient.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
@@ -375,7 +371,7 @@ static void world_make_hills(WorldData& world) {
     gradient.SetFractalLacunarity(0.4);
     gradient.SetFractalGain(2.7);
     gradient.SetFractalWeightedStrength(-1.);
-    gradient.SetSeed(rand());
+    gradient.SetSeed(sge::Random::NextRaw());
 
     const int min_x = world.playable_area.min.x;
     const int max_x = world.playable_area.max.x;
@@ -473,7 +469,7 @@ static void world_rough_cavern_layer_border(WorldData& world) {
     fbm.SetFractalLacunarity(0.5);
     fbm.SetFractalGain(1.5);
     fbm.SetFractalWeightedStrength(-2.);
-    fbm.SetSeed(rand());
+    fbm.SetSeed(sge::Random::NextRaw());
 
     constexpr float ROUGHNESS = 10.;
     const int min_x = world.playable_area.min.x;
@@ -619,6 +615,7 @@ void world_generate(WorldData& world, uint32_t width, uint32_t height, uint32_t 
     world.destroy();
 
     srand(seed);
+    sge::Random::Seed(seed);
 
     SGE_ASSERT(height >= 500);
 
