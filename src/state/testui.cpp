@@ -21,7 +21,7 @@ struct UiRectangleData {
     sge::LinearRgba color;
 };
 
-TestUI::TestUI(const std::shared_ptr<sge::Renderer>& renderer, uint8_t samples) :
+TestUI::TestUI(const std::shared_ptr<sge::Renderer2D>& renderer, uint8_t samples) :
     m_camera(sge::CameraConfig {
         .origin = sge::CameraOrigin::TopLeft,
         .samples = samples

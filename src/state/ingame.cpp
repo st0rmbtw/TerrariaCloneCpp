@@ -47,16 +47,12 @@ struct UiInventorySlotIndexData {
     FontAsset font;
 };
 
-InGameState::InGameState(const std::shared_ptr<sge::Renderer>& renderer, uint8_t samples, WorldData world) :
+InGameState::InGameState(const std::shared_ptr<sge::Renderer2D>& renderer, uint8_t samples, WorldData world) :
     m_renderer(std::make_shared<GameRenderer>(renderer)),
     m_world(m_renderer)
 {
     m_camera = sge::Camera(sge::CameraConfig {
         .origin = sge::CameraOrigin::Center,
-        .coordinateSystem = sge::CoordinateSystem {
-            .up = sge::CoordinateDirectionY::Negative,
-            .forward = sge::CoordinateDirectionZ::Negative,
-        },
         .samples = samples
     });
 
@@ -118,7 +114,7 @@ glm::vec2 InGameState::camera_follow_player() noexcept {
 #if DEBUG_TOOLS
 glm::vec2 InGameState::camera_free() noexcept {
     const float dt = sge::Time::DeltaSeconds();
-    glm::vec2 position = m_camera.position();
+    glm::vec2 position = m_camera.transform().translation;
 
     float speed = 2000.0f;
 
@@ -149,9 +145,30 @@ void InGameState::PreUpdate() {
 
     m_player.pre_update();
 
+    m_world.clear_lights();
+
 #if DEBUG_TOOLS
     if (sge::Input::JustPressed(sge::Key::F)) m_free_camera = !m_free_camera;
 #endif
+}
+
+void InGameState::OnPreFixedUpdate() {
+    ParticleManager::DeleteExpired();
+}
+
+void InGameState::FixedUpdate() {
+    ZoneScoped;
+
+#if DEBUG_TOOLS
+    const bool handle_input = !m_free_camera;
+#else
+    constexpr bool handle_input = true;
+#endif
+
+    m_player.fixed_update(m_camera, m_world, handle_input);
+    m_world.fixed_update(m_player.rect(), m_player.inventory());
+
+    ParticleManager::Update();
 }
 
 void InGameState::Update() {
@@ -183,7 +200,6 @@ void InGameState::Update() {
 
     m_camera.set_position(position);
 
-    m_camera.update();
     m_world.update(m_camera);
 
     Background::UpdateInGame(m_camera, m_world);
@@ -210,7 +226,7 @@ void InGameState::Update() {
         m_world.add_light(light);
     }
 
-#if DEBUG_TOOLS
+// #if DEBUG_TOOLS
     if (sge::Input::Pressed(sge::Key::K)) {
         const glm::vec2 position = m_camera.screen_to_world(sge::Input::CursorPosition());
 
@@ -224,29 +240,12 @@ void InGameState::Update() {
             );
         }
     }
-#endif
-}
+// #endif
 
-void InGameState::OnPreFixedUpdate() {
-    ParticleManager::DeleteExpired();
-    m_world.clear_lights();
-}
-
-void InGameState::FixedUpdate() {
-    ZoneScoped;
-
-#if DEBUG_TOOLS
-    const bool handle_input = !m_free_camera;
-#else
-    constexpr bool handle_input = true;
-#endif
-
-    m_player.fixed_update(m_camera, m_world, handle_input);
-    m_world.fixed_update(m_player.rect(), m_player.inventory());
-
-    m_renderer->UpdateLight();
-
-    ParticleManager::Update(m_world);
+    if (m_light_update_timer.tick(sge::Time::Delta()).just_finished()) {
+        m_renderer->UpdateLight();
+        ParticleManager::SetLights(m_world);
+    }
 }
 
 void InGameState::Render(const std::shared_ptr<sge::GlfwWindow>& window) {
@@ -254,7 +253,7 @@ void InGameState::Render(const std::shared_ptr<sge::GlfwWindow>& window) {
 
     m_renderer->Begin(m_camera, m_world);
 
-    Background::Draw(*m_renderer);
+    Background::Draw(*m_renderer, m_camera);
 
     m_world.draw(*m_renderer, m_camera);
     m_player.draw(*m_renderer);

@@ -58,7 +58,7 @@ namespace Constants {
     constexpr uint32_t LIGHTMAP_CHUNK_TILE_SIZE = 50;
     constexpr uint32_t LIGHTMAP_CHUNK_SIZE = LIGHTMAP_CHUNK_TILE_SIZE * SUBDIVISION;
 
-    static constexpr std::size_t WORLD_MAX_LIGHT_COUNT = 2000;
+    static constexpr std::size_t WORLD_MAX_LIGHT_COUNT = 100000;
 };
 
 #endif

@@ -7,6 +7,7 @@
 
 #include <SGE/assert.hpp>
 #include <SGE/input.hpp>
+#include <SGE/math/math.hpp>
 #include <SGE/math/rect.hpp>
 #include <SGE/utils/containers/swapbackvector.hpp>
 #include <SGE/types/rich_text.hpp>
@@ -619,7 +620,7 @@ static void GrowElementsHorizontally(Node& parent) {
             for (size_t i = 0; i < state.growable_nodes.size(); i++) {
                 Node* node = state.growable_nodes[i];
 
-                if (sge::approx_equals(node->size.x, smallest)) {
+                if (sge::ApproxEquals(node->size.x, smallest)) {
                     node->size.x += width_to_add;
                     if (node->size.x > node->max_size.x) {
                         node->size.x = node->max_size.x;
@@ -686,7 +687,7 @@ static void GrowElementsVertically(Node& parent) {
             for (size_t i = 0; i < state.growable_nodes.size(); i++) {
                 Node* node = state.growable_nodes[i];
 
-                if (sge::approx_equals(node->size.y, smallest)) {
+                if (sge::ApproxEquals(node->size.y, smallest)) {
                     node->size.y += height_to_add;
                     if (node->size.y > node->max_size.y) {
                         node->size.y = node->max_size.y;

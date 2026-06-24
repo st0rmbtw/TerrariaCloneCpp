@@ -31,21 +31,15 @@ protected:
     void OnPreUpdate() override;
     void OnPostUpdate() override;
     void OnUpdate() override;
-    void OnRender(const std::shared_ptr<sge::GlfwWindow> &window) override;
-    void OnPostRender(const std::shared_ptr<sge::GlfwWindow> &window) override;
+    void OnRender(const std::shared_ptr<sge::GlfwWindow>& window) override;
+    void OnPostRender() override;
 
     void OnWindowResized(const std::shared_ptr<sge::GlfwWindow> &window, int width, int height) override;
     void OnFramebufferResize(const std::shared_ptr<sge::GlfwWindow> &window, int width, int height) override;
 
-    void OnWindowDestroy(sge::GlfwWindow& window) override {
-        if (window.GetID() == m_primary_window->GetID()) {
-            Stop();
-        }
-    }
-
 private:
     std::unique_ptr<BaseState> m_current_state;
-    std::shared_ptr<sge::Renderer> m_renderer;
+    std::shared_ptr<sge::Renderer2D> m_renderer;
     std::shared_ptr<sge::GlfwWindow> m_primary_window;
     AppConfig m_config;
 };

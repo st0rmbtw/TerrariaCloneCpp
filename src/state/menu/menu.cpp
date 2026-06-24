@@ -5,7 +5,7 @@
 #include <SGE/input.hpp>
 #include <SGE/time/time.hpp>
 #include <SGE/types/anchor.hpp>
-#include <SGE/math/quat.hpp>
+#include <SGE/math/quaternion.hpp>
 #include <SGE/utils/text.hpp>
 #include <SGE/utils/utf8.hpp>
 #include <SGE/assert.hpp>
@@ -32,7 +32,7 @@ static constexpr float LOGO_ANIM_MAX_SCALE = 1.1f;
 static constexpr float LOGO_ANIM_MIN_ROTATION = -5.0f;
 static constexpr float LOGO_ANIM_MAX_ROTATION = 5.0f;
 
-MainMenuState::MainMenuState(const std::shared_ptr<sge::Renderer>& renderer, uint8_t samples) :
+MainMenuState::MainMenuState(const std::shared_ptr<sge::Renderer2D>& renderer, uint8_t samples) :
     m_batch(*renderer, {
         .font_shader = Assets::GetShader(ShaderAsset::FontShader).ps,
         .enable_scissor = true
@@ -42,10 +42,6 @@ MainMenuState::MainMenuState(const std::shared_ptr<sge::Renderer>& renderer, uin
 {
     m_camera = sge::Camera(sge::CameraConfig {
         .origin = sge::CameraOrigin::Center,
-        .coordinateSystem = sge::CoordinateSystem {
-            .up = sge::CoordinateDirectionY::Negative,
-            .forward = sge::CoordinateDirectionZ::Negative,
-        },
         .samples = samples
     });
 
@@ -126,7 +122,7 @@ void MainMenuState::Update() {
 
     m_cursor.Update(sge::Input::CursorPosition());
 
-    m_camera.set_position(m_camera.position() + glm::vec2(50.0f, 0.0f) * float(sge::Time::DeltaSeconds()));
+    m_camera.set_position(glm::vec2(m_camera.transform().translation) + glm::vec2(50.0f, 0.0f) * float(sge::Time::DeltaSeconds()));
 
     for (BackgroundLayer& layer : m_background_layers) {
         if (layer.fill_screen_height()) {
@@ -136,8 +132,6 @@ void MainMenuState::Update() {
             layer.set_width(m_camera.viewport().width);
         }
     }
-
-    m_camera.update();
 
     if (sge::Input::JustPressed(sge::Key::Escape)) {
         m_nav_manager.pop();
@@ -167,7 +161,7 @@ void MainMenuState::update_logo() {
     m_logo_animation.tick(sge::Time::DeltaSeconds());
 
     m_logo_scale = LOGO_ANIM_MIN_SCALE + (LOGO_ANIM_MAX_SCALE - LOGO_ANIM_MIN_SCALE) * m_logo_animation.progress();
-    m_logo_rotation = sge::Quat::from_rotation_z(glm::radians(LOGO_ANIM_MIN_ROTATION + (LOGO_ANIM_MAX_ROTATION - LOGO_ANIM_MIN_ROTATION) * m_logo_animation.progress()));
+    m_logo_rotation = sge::Quaternion::FromRotationZ(glm::radians(LOGO_ANIM_MIN_ROTATION + (LOGO_ANIM_MAX_ROTATION - LOGO_ANIM_MIN_ROTATION) * m_logo_animation.progress()));
 }
 
 void MainMenuState::Render(const std::shared_ptr<sge::GlfwWindow>& window) {
@@ -309,7 +303,7 @@ void MainMenuState::draw_ui() {
                 sprite.set_texture(Assets::GetTexture(data->icon));
                 sprite.set_position(element.position);
                 sprite.set_custom_size(element.size);
-                sprite.set_rotation(glm::identity<glm::quat>());
+                sprite.set_rotation(sge::Quaternion());
                 sprite.set_scale(1.0f);
                 m_batch.DrawSprite(sprite, order);
             } break;
@@ -330,7 +324,7 @@ void MainMenuState::draw_ui() {
                 sprite.set_position(element.position + glm::vec2(4.0f));
                 sprite.set_custom_size(element.size - glm::vec2(4.0f));
                 sprite.set_color(sge::LinearRgba::white());
-                sprite.set_rotation(glm::identity<glm::quat>());
+                sprite.set_rotation(sge::Quaternion());
                 
                 sprite.set_texture(Assets::GetTexture(TextureAsset::UiWorldPreviewDifficultyNormal1));
                 m_batch.DrawSprite(sprite, sge::Order(order.value + 1));
@@ -355,7 +349,7 @@ void MainMenuState::draw_ui() {
                 sprite.set_position(element.position);
                 sprite.set_custom_size(element.size);
                 sprite.set_color(sge::LinearRgba::white());
-                sprite.set_rotation(glm::identity<glm::quat>());
+                sprite.set_rotation(sge::Quaternion());
                 sprite.set_texture(Assets::GetTexture(TextureAsset::UiSliderHandle));
                 m_batch.DrawSprite(sprite, order);
             } break;

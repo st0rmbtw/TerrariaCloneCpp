@@ -53,7 +53,7 @@ void DroppedItem::apply_air_drag() {
 void DroppedItem::update_rotation() {
     const glm::vec2 direction = glm::normalize(glm::vec2(m_velocity.x / MAX_HORIZONTAL_SPEED, 1.0f));
     const float angle = glm::atan(direction.x, direction.y);
-    m_sprite.set_rotation(glm::angleAxis(angle, glm::vec3(0.0f, 0.0f, 1.0f)));
+    m_sprite.set_rotation(sge::Quaternion::FromRotationZ(angle));
 }
 
 void DroppedItem::keep_in_world_bounds(const WorldData& world) {

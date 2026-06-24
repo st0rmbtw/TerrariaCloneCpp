@@ -25,6 +25,12 @@ struct VSOutput
 
 static const float2 PARTICLE_SIZE = float2(8.0, 8.0);
 
+[vk::binding(3)]
+Texture2D Texture : register(t3);
+
+[vk::binding(4)]
+SamplerState Sampler : register(s4);
+
 [vk::binding(5)]
 RWStructuredBuffer<float4> TransformBuffer : register(u5);
 
@@ -64,7 +70,7 @@ VSOutput VS(VSInput inp)
 [numthreads(64, 1, 1)]
 void CSComputeTransform(uint3 thread_id : SV_DispatchThreadID)
 {
-    const uint id = thread_id.x;
+    const uint id = thread_id.y * 64 + thread_id.x;
 
     const float2 position = PositionBuffer[id];
     const float4 rotation = RotationBuffer[id];
@@ -123,12 +129,6 @@ void CSComputeTransform(uint3 thread_id : SV_DispatchThreadID)
     TransformBuffer[id * 4 + 2] = mvp[2];
     TransformBuffer[id * 4 + 3] = mvp[3];
 }
-
-[vk::binding(3)]
-Texture2D Texture : register(t3);
-
-[vk::binding(4)]
-SamplerState Sampler : register(s4);
 
 [shader("fragment")]
 float4 PS(VSOutput inp) : SV_Target

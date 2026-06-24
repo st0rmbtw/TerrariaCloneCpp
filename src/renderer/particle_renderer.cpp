@@ -65,38 +65,9 @@ ParticleRenderer::ParticleRenderer(const std::shared_ptr<sge::Renderer>& rendere
         m_transform_buffer = render_context->CreateBuffer(bufferDesc);
     }
 
-    {
-        long bindFlags = LLGL::BindFlags::Sampled;
-        LLGL::BufferDescriptor bufferDesc;
-        bufferDesc.debugName = "Particle PositionBuffer";
-        bufferDesc.size         = sizeof(glm::vec2) * MAX_PARTICLES_COUNT;
-        bufferDesc.bindFlags    = bindFlags;
-        bufferDesc.format       = LLGL::Format::RG32Float;
-
-        m_position_buffer = render_context->CreateBuffer(bufferDesc);
-    }
-
-    {
-        long bindFlags = LLGL::BindFlags::Sampled;
-        LLGL::BufferDescriptor bufferDesc;
-        bufferDesc.debugName = "Particle RotationBuffer";
-        bufferDesc.size         = sizeof(glm::vec4) * MAX_PARTICLES_COUNT;
-        bufferDesc.bindFlags    = bindFlags;
-        bufferDesc.format       = LLGL::Format::RGBA32Float;
-
-        m_rotation_buffer = render_context->CreateBuffer(bufferDesc);
-    }
-
-    {
-        long bindFlags = LLGL::BindFlags::Sampled;
-        LLGL::BufferDescriptor bufferDesc;
-        bufferDesc.debugName = "Particle ScaleBuffer";
-        bufferDesc.size         = sizeof(float) * MAX_PARTICLES_COUNT;
-        bufferDesc.bindFlags    = bindFlags;
-        bufferDesc.format       = LLGL::Format::R32Float;
-
-        m_scale_buffer = render_context->CreateBuffer(bufferDesc);
-    }
+    m_position_buffer = render_context->CreateStructuredBuffer<glm::vec2>(MAX_PARTICLES_COUNT);
+    m_rotation_buffer = render_context->CreateStructuredBuffer<glm::vec4>(MAX_PARTICLES_COUNT, "Particle RotationBuffer");
+    m_scale_buffer = render_context->CreateStructuredBuffer<glm::vec2>(MAX_PARTICLES_COUNT, "Particle ScaleBuffer");
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.heapBindings = sge::BindingLayout({
@@ -235,29 +206,16 @@ void ParticleRenderer::compute() {
 
     ZoneScoped;
 
-    const auto& context = m_renderer->GetRenderContext()->GetLLGLContext();
     const auto& commands = m_renderer->CommandBuffer();
 
     ptrdiff_t size = (uint8_t*) m_position_buffer_data_ptr - (uint8_t*) m_position_buffer_data.data();
-    if (size < (1 << 16)) {
-        commands->UpdateBuffer(*m_position_buffer, 0, m_position_buffer_data.data(), size);
-    } else {
-        context->WriteBuffer(*m_position_buffer, 0, m_position_buffer_data.data(), size);
-    }
+    commands->UpdateBuffer(*m_position_buffer, 0, m_position_buffer_data.data(), size);
 
     size = (uint8_t*) m_rotation_buffer_data_ptr - (uint8_t*) m_rotation_buffer_data.data();
-    if (size < (1 << 16)) {
-        commands->UpdateBuffer(*m_rotation_buffer, 0, m_rotation_buffer_data.data(), size);
-    } else {
-        context->WriteBuffer(*m_rotation_buffer, 0, m_rotation_buffer_data.data(), size);
-    }
+    commands->UpdateBuffer(*m_rotation_buffer, 0, m_rotation_buffer_data.data(), size);
 
     size = (uint8_t*) m_scale_buffer_data_ptr - (uint8_t*) m_scale_buffer_data.data();
-    if (size < (1 << 16)) {
-        commands->UpdateBuffer(*m_scale_buffer, 0, m_scale_buffer_data.data(), size);
-    } else {
-        context->WriteBuffer(*m_scale_buffer, 0, m_scale_buffer_data.data(), size);
-    }
+    commands->UpdateBuffer(*m_scale_buffer, 0, m_scale_buffer_data.data(), size);
 
     commands->PushDebugGroup("CS ComputeTransform");
     {
@@ -266,14 +224,9 @@ void ParticleRenderer::compute() {
 
         const size_t particle_count = m_particle_id;
 
-        if (m_is_metal) {
-            uint32_t y = (particle_count + 512 - 1) / 512;
-            commands->Dispatch(512, y, 1);
-        } else {
-            // particles_count < 1_000_000, 1_000_000 / 64 = 15625 < 65535
-            const uint32_t x = (particle_count + 64 - 1) / 64;
-            commands->Dispatch(x, 1, 1);
-        }
+        // particles_count < 1_000_000, 1_000_000 / 64 = 15625 < 65535
+        const uint32_t y = (particle_count + 64 - 1) / 64;
+        commands->Dispatch(64, y, 1);
     }
     commands->PopDebugGroup();
 }
@@ -281,25 +234,16 @@ void ParticleRenderer::compute() {
 void ParticleRenderer::prepare() {
     ZoneScoped;
 
-    const auto& context = m_renderer->GetRenderContext()->GetLLGLContext();
     const auto& commands = m_renderer->CommandBuffer();
 
     if (m_particle_count > 0) {
         const ptrdiff_t size = (uint8_t*) m_instance_buffer_data_ptr - (uint8_t*) m_instance_buffer_data.data();
-        if (size < (1 << 16)) {
-            commands->UpdateBuffer(*m_instance_buffer, 0, m_instance_buffer_data.data(), size);
-        } else {
-            context->WriteBuffer(*m_instance_buffer, 0, m_instance_buffer_data.data(), size);
-        }
+        commands->UpdateBuffer(*m_instance_buffer, 0, m_instance_buffer_data.data(), size);
     }
 
     if (m_world_particle_count > 0) {
         const ptrdiff_t size = (uint8_t*) m_instance_buffer_data_world_ptr - (uint8_t*) m_instance_buffer_data_world.data();
-        if (size < (1 << 16)) {
-            commands->UpdateBuffer(*m_instance_buffer, m_particle_count * sizeof(ParticleInstance), m_instance_buffer_data_world.data(), size);
-        } else {
-            context->WriteBuffer(*m_instance_buffer, m_particle_count * sizeof(ParticleInstance), m_instance_buffer_data_world.data(), size);
-        }
+        commands->UpdateBuffer(*m_instance_buffer, m_particle_count * sizeof(ParticleInstance), m_instance_buffer_data_world.data(), size);
     }
 }
 

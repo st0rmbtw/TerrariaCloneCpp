@@ -8,15 +8,15 @@
 #include <LLGL/RenderingDebugger.h>
 #include <LLGL/Format.h>
 
-#include <SGE/types/sprite.hpp>
+#include <SGE/renderer/camera.hpp>
+#include <SGE/renderer/renderer2d.hpp>
+#include <SGE/types/binding_layout.hpp>
+#include <SGE/types/blend_mode.hpp>
+#include <SGE/types/color.hpp>
 #include <SGE/types/nine_patch.hpp>
 #include <SGE/types/order.hpp>
 #include <SGE/types/rich_text.hpp>
-#include <SGE/renderer/camera.hpp>
-#include <SGE/types/color.hpp>
-#include <SGE/types/blend_mode.hpp>
-#include <SGE/renderer/renderer.hpp>
-#include <SGE/types/binding_layout.hpp>
+#include <SGE/types/sprite.hpp>
 
 #include "../types/background_layer.hpp"
 
@@ -31,7 +31,7 @@
 
 class GameRenderer {
 public:
-    GameRenderer(const std::shared_ptr<sge::Renderer>& renderer);
+    GameRenderer(const std::shared_ptr<sge::Renderer2D>& renderer);
     ~GameRenderer();
 
     void InitWorldRenderer(const WorldData& world);
@@ -102,7 +102,7 @@ public:
     [[nodiscard]] const sge::Unique<LLGL::Buffer>& ChunkVertexBuffer();
 
     [[nodiscard]]
-    const std::shared_ptr<sge::Renderer> GetRenderer() const {
+    const std::shared_ptr<sge::Renderer2D> GetRenderer() const {
         return m_renderer;
     }
 
@@ -114,7 +114,7 @@ private:
     sge::Rect m_camera_frustums[2];
     sge::Rect m_ui_frustum;
 
-    std::shared_ptr<sge::Renderer> m_renderer = nullptr;
+    std::shared_ptr<sge::Renderer2D> m_renderer = nullptr;
 
     std::unique_ptr<sge::Batch> m_main_batch = nullptr;
     std::unique_ptr<sge::Batch> m_world_batch = nullptr;
@@ -126,6 +126,8 @@ private:
     sge::Unique<LLGL::Buffer> m_postprocess_uniform_buffer = nullptr;
 
     sge::Handle<LLGL::PipelineState> m_postprocess_pipeline;
+
+    LLGL::Extent2D m_current_resolution;
 
     bool m_update_light = false;
 };

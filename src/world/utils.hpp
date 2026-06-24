@@ -10,7 +10,7 @@
 
 namespace utils {
     inline sge::Rect get_camera_fov(const sge::Camera& camera) noexcept {
-        const glm::vec2& camera_pos = camera.position();
+        const glm::vec2& camera_pos = camera.transform().translation;
         const sge::Rect& projection_area = camera.get_projection_area();
         return {camera_pos + projection_area.min, camera_pos + projection_area.max};
     }

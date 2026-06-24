@@ -76,9 +76,10 @@ bool App::OnInit() {
 
     ParticleManager::Init();
 
-    m_renderer = std::make_shared<sge::Renderer>(GetRenderContext());
+    m_renderer = std::make_shared<sge::Renderer2D>(GetRenderContext());
     m_current_state = std::make_unique<MainMenuState>(m_renderer, m_config.samples);
     m_current_state->OnWindowSizeChanged(m_primary_window->GetSize());
+    m_current_state->OnFramebufferSizeChanged(m_primary_window->GetContentSize());
 
     m_primary_window->ShowWindow();
 
@@ -120,6 +121,7 @@ void App::OnPostUpdate() {
     } else if (new_state != m_current_state.get()) {
         m_current_state.reset(new_state);
         m_current_state->OnWindowSizeChanged(m_primary_window->GetSize());
+        m_current_state->OnFramebufferSizeChanged(m_primary_window->GetContentSize());
     }
 }
 
@@ -127,7 +129,7 @@ void App::OnRender(const std::shared_ptr<sge::GlfwWindow>& window) {
     m_current_state->Render(window);
 }
 
-void App::OnPostRender(const std::shared_ptr<sge::GlfwWindow>&) {
+void App::OnPostRender() {
     m_current_state->PostRender();
 #if DEBUG
     if (sge::Input::Pressed(sge::Key::C)) {
@@ -142,7 +144,6 @@ void App::OnWindowResized(const std::shared_ptr<sge::GlfwWindow>&, int width, in
     m_current_state->OnWindowSizeChanged(LLGL::Extent2D(width, height));
 }
 
-void App::OnFramebufferResize(const std::shared_ptr<sge::GlfwWindow>& window, int width, int height) {
+void App::OnFramebufferResize(const std::shared_ptr<sge::GlfwWindow>&, int width, int height) {
     m_current_state->OnFramebufferSizeChanged(LLGL::Extent2D(width, height));
-    OnRender(window);
 }

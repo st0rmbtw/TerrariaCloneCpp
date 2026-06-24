@@ -7,7 +7,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include <SGE/math/quat.hpp>
+#include <SGE/math/quaternion.hpp>
 #include <SGE/utils/random.hpp>
 #include <SGE/assert.hpp>
 
@@ -55,8 +55,8 @@ namespace Particle {
 }
 
 struct ParticleData {
-    glm::quat rotation;
-    glm::quat rotation_speed;
+    sge::Quaternion rotation;
+    sge::Quaternion rotation_speed;
     std::optional<glm::vec3> light_color;
     glm::vec2 position;
     glm::vec2 velocity;
@@ -118,8 +118,8 @@ public:
     [[nodiscard]] 
     ParticleData build() const noexcept {
         return ParticleData {
-            .rotation       = glm::mat4(1.0f),
-            .rotation_speed = sge::Quat::from_rotation_z(m_rotation_speed),
+            .rotation       = sge::Quaternion(),
+            .rotation_speed = sge::Quaternion::FromRotationZ(m_rotation_speed),
             .light_color    = m_light_color,
             .position       = m_position,
             .velocity       = m_velocity,
@@ -150,7 +150,8 @@ namespace ParticleManager {
     void Init();
 
     void Draw(GameRenderer& renderer);
-    void Update(World& world);
+    void Update();
+    void SetLights(World& world);
     void DeleteExpired();
 
     void SpawnParticle(const ParticleBuilder& builder);

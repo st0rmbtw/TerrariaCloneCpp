@@ -17,9 +17,10 @@
 #endif
 
 struct Light {
-    float4 color;
+    float3 color;
     uint2 pos;
     uint2 size;
+    float _padding;
 };
 
 [vk::binding(4)]
@@ -72,13 +73,18 @@ cbuffer UniformBuffer : register(b2) {
     uint2 texture_offset;
     uint2 blur_offset;
     uint2 blur_size;
+    uint lights_count;
 }
 
 [shader("compute")]
 [numthreads(1, 1, 1)]
 void CSComputeLightSetLightSources(uint3 thread_id : SV_DispatchThreadID)
 {
-    const Light light = LightBuffer[thread_id.x];
+    const uint index = thread_id.y * 64 + thread_id.x;
+    if (index >= lights_count)
+        return;
+
+    const Light light = LightBuffer[index];
     const uint width = light.size.x;
     const uint height = light.size.y;
 
@@ -86,7 +92,8 @@ void CSComputeLightSetLightSources(uint3 thread_id : SV_DispatchThreadID)
 
     for (uint x = 0; x < width; ++x) {
         for (uint y = 0; y < height; ++y) {
-            LightTexture[pos + uint2(x, y)] = float4(light.color.rgb, 1.0);
+            float3 current_color = LightTexture[pos + uint2(x, y)].rgb;
+            LightTexture[pos + uint2(x, y)] = float4(max(light.color, current_color), 1.0);
         }
     }
 }

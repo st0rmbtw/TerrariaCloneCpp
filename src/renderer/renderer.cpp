@@ -14,8 +14,9 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include <SGE/engine.hpp>
-#include <SGE/renderer/macros.hpp>
 #include <SGE/renderer/batch.hpp>
+#include <SGE/renderer/camera.hpp>
+#include <SGE/renderer/macros.hpp>
 #include <SGE/types/binding_layout.hpp>
 #include <SGE/types/blend_mode.hpp>
 #include <SGE/profile.hpp>
@@ -38,7 +39,7 @@ uint32_t GameRenderer::GetMainOrderIndex() { return m_main_batch->Order(); }
 uint32_t GameRenderer::GetWorldOrderIndex() { return m_world_batch->Order(); }
 const sge::Unique<LLGL::Buffer>& GameRenderer::ChunkVertexBuffer() { return m_chunk_vertex_buffer; }
 
-GameRenderer::GameRenderer(const std::shared_ptr<sge::Renderer>& renderer) :
+GameRenderer::GameRenderer(const std::shared_ptr<sge::Renderer2D>& renderer) :
     m_particle_renderer(renderer),
     m_world_renderer(renderer),
     m_background_renderer(renderer),
@@ -129,6 +130,10 @@ GameRenderer::GameRenderer(const std::shared_ptr<sge::Renderer>& renderer) :
 }
 
 void GameRenderer::ResizeTextures(LLGL::Extent2D size) {
+    if (m_current_resolution == size)
+        return;
+    m_current_resolution = size;
+
     const auto& context = m_renderer->GetRenderContext()->GetLLGLContext();
 
     m_world_renderer.init_targets(size);
@@ -162,14 +167,13 @@ void GameRenderer::Begin(const sge::Camera& camera, World& world) {
     auto* const commands = m_renderer->CommandBuffer();
     auto* const command_queue = m_renderer->CommandQueue();
 
+    glm::vec2 camera_position = camera.transform().translation;
+
     const sge::Rect camera_frustum = sge::Rect::from_corners(
-        camera.position() + camera.get_projection_area().min,
-        camera.position() + camera.get_projection_area().max
+        camera_position + camera.get_projection_area().min,
+        camera_position + camera.get_projection_area().max
     );
-    const sge::Rect nozoom_camera_frustum = sge::Rect::from_corners(
-        camera.position() + camera.get_nozoom_projection_area().min,
-        camera.position() + camera.get_nozoom_projection_area().max
-    );
+    const sge::Rect nozoom_camera_frustum = sge::Rect::from_corners(glm::vec2(0.f), glm::vec2(camera.viewport()));
     const sge::Rect ui_frustum = sge::Rect::from_corners(glm::vec2(0.0), glm::vec2(camera.viewport()));
 
     m_camera_frustums[CAMERA_FRUSTUM] = camera_frustum;
@@ -302,7 +306,7 @@ uint32_t GameRenderer::DrawSprite(const sge::Sprite& sprite, sge::Order order) {
     ZoneScoped;
 
     const sge::Rect aabb = sprite.calculate_aabb();
-    if (!m_camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
+    if (!m_camera_frustums[CAMERA_FRUSTUM].intersects(aabb)) return 0;
 
     return m_main_batch->DrawSprite(sprite, order);
 }
@@ -311,7 +315,7 @@ uint32_t GameRenderer::DrawSpriteWorld(const sge::Sprite& sprite, sge::Order ord
     ZoneScoped;
 
     const sge::Rect aabb = sprite.calculate_aabb();
-    if (!m_camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
+    if (!m_camera_frustums[CAMERA_FRUSTUM].intersects(aabb)) return 0;
 
     return m_world_batch->DrawSprite(sprite, order);
 }
@@ -329,7 +333,7 @@ uint32_t GameRenderer::DrawAtlasSprite(const sge::TextureAtlasSprite& sprite, sg
     ZoneScoped;
 
     const sge::Rect aabb = sprite.calculate_aabb();
-    if (!m_camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
+    if (!m_camera_frustums[CAMERA_FRUSTUM].intersects(aabb)) return 0;
 
     return m_main_batch->DrawAtlasSprite(sprite, order);
 }
@@ -338,7 +342,7 @@ uint32_t GameRenderer::DrawAtlasSpriteWorld(const sge::TextureAtlasSprite& sprit
     ZoneScoped;
 
     const sge::Rect aabb = sprite.calculate_aabb();
-    if (!m_camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
+    if (!m_camera_frustums[CAMERA_FRUSTUM].intersects(aabb)) return 0;
 
     return m_world_batch->DrawAtlasSprite(sprite, order);
 }
@@ -347,7 +351,7 @@ uint32_t GameRenderer::DrawAtlasSpriteWorldPremultiplied(const sge::TextureAtlas
     ZoneScoped;
 
     const sge::Rect aabb = sprite.calculate_aabb();
-    if (!m_camera_frustums[sprite.ignore_camera_zoom()].intersects(aabb)) return 0;
+    if (!m_camera_frustums[CAMERA_FRUSTUM].intersects(aabb)) return 0;
 
     m_world_batch->BeginBlendMode(sge::BlendMode::PremultipliedAlpha);
     uint32_t ordr = m_world_batch->DrawAtlasSprite(sprite, order);

@@ -231,8 +231,10 @@ void DynamicLighting::compute_light(const sge::Camera& camera, const World& worl
 
     LightMap& lightmap = m_dynamic_lightmap;
 
-    const glm::ivec2 proj_area_min = glm::ivec2((camera.position() + camera.get_projection_area().min) / Constants::TILE_SIZE) - Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE;
-    const glm::ivec2 proj_area_max = glm::ivec2((camera.position() + camera.get_projection_area().max) / Constants::TILE_SIZE) + Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE;
+    const glm::vec2 camera_position = glm::vec2(camera.transform().translation);
+
+    const glm::ivec2 proj_area_min = glm::ivec2((camera_position + camera.get_projection_area().min) / Constants::TILE_SIZE) - Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE;
+    const glm::ivec2 proj_area_max = glm::ivec2((camera_position + camera.get_projection_area().max) / Constants::TILE_SIZE) + Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE;
 
     const sge::URect screen_blur_area = sge::URect(
         glm::uvec2(glm::max(proj_area_min * Constants::SUBDIVISION, glm::ivec2(0))),
@@ -323,19 +325,8 @@ void AcceleratedDynamicLighting::init_pipeline() {
 
     const auto& render_context = m_renderer->GetRenderContext();
 
-    {
-        LLGL::BufferDescriptor light_buffer;
-        light_buffer.bindFlags = LLGL::BindFlags::Sampled;
-        light_buffer.stride = sizeof(Light);
-        light_buffer.size = sizeof(Light) * WORLD_MAX_LIGHT_COUNT;
-        m_light_buffer = render_context->CreateBuffer(light_buffer);
-    }
-    {
-        LLGL::BufferDescriptor uniform_buffer;
-        uniform_buffer.bindFlags = LLGL::BindFlags::ConstantBuffer;
-        uniform_buffer.size = sizeof(UniformBuffer);
-        m_uniform_buffer = render_context->CreateBuffer(uniform_buffer);
-    }
+    m_light_buffer = render_context->CreateStructuredBuffer<Light>(WORLD_MAX_LIGHT_COUNT);
+    m_uniform_buffer = render_context->CreateConstantBuffer(sizeof(UniformBuffer));
 
     {
         LLGL::PipelineLayoutDescriptor lightInitPipelineLayoutDesc;
@@ -449,8 +440,10 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
 
     const sge::Rect& proj_area = camera.get_projection_area();
 
-    const glm::ivec2 blur_min = glm::vec2((camera.position() + proj_area.min - OFFSCREEN_RANGE_PIXELS) / (TILE_SIZE / SUBDIVISION));
-    const glm::ivec2 blur_max = glm::vec2((camera.position() + proj_area.max + OFFSCREEN_RANGE_PIXELS) / (TILE_SIZE / SUBDIVISION));
+    const glm::vec2 camera_position = glm::vec2(camera.transform().translation);
+
+    const glm::ivec2 blur_min = glm::vec2((camera_position + proj_area.min - OFFSCREEN_RANGE_PIXELS) / (TILE_SIZE / SUBDIVISION));
+    const glm::ivec2 blur_max = glm::vec2((camera_position + proj_area.max + OFFSCREEN_RANGE_PIXELS) / (TILE_SIZE / SUBDIVISION));
     const glm::ivec2 blur_size = blur_max - blur_min;
 
     const uint32_t grid_w = blur_size.x / m_workgroup_size;
@@ -467,15 +460,18 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
             .texture_offset = texture_offset,
             .blur_offset = blur_min,
             .blur_size = blur_size,
+            .light_count = world.light_count()
         };
         commands->UpdateBuffer(*m_uniform_buffer, 0, &uniform_buffer, sizeof(uniform_buffer));
     }
 
     commands->PushDebugGroup("CS Light SetLightSources");
     {
+        const uint32_t y = (world.light_count() + 64 - 1) / 64;
+
         commands->SetPipelineState(*m_light_set_light_sources_pipeline);
         commands->SetResourceHeap(*m_light_init_resource_heap);
-        commands->Dispatch(world.light_count(), 1, 1);
+        commands->Dispatch(64, y, 1);
     }
     commands->PopDebugGroup();
 

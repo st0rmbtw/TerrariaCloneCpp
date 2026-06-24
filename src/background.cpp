@@ -96,13 +96,15 @@ void Background::UpdateInGame(const sge::Camera &camera, const World& world) {
 
     const float offset = (camera.viewport().height - 600.0f) * 0.5f;
 
+    const glm::vec2 camera_position = camera.transform().translation;
+
     for (BackgroundLayer& layer : state.layers) {
         glm::vec2 new_position = layer.position();
 
         const float layer_y = layer.is_surface_layer() ? layer.y() + offset : layer.y();
-        const float off = (camera.position().y - world.layers().underground * TILE_SIZE) * (1.0f - layer.speed().y);
+        const float off = (camera_position.y - world.layers().underground * TILE_SIZE) * (1.0f - layer.speed().y);
 
-        new_position.x = layer.follow_camera() ? camera.position().x : layer.x();
+        new_position.x = layer.follow_camera() ? camera_position.x : layer.x();
         new_position.y = layer_y + off;
 
         layer.set_position(new_position);
@@ -116,10 +118,15 @@ void Background::UpdateInGame(const sge::Camera &camera, const World& world) {
     }
 }
 
-void Background::Draw(GameRenderer& renderer) {
+void Background::Draw(GameRenderer& renderer, const sge::Camera& camera) {
     ZoneScoped;
 
-    for (const BackgroundLayer& layer : state.layers) {
+    const glm::vec2 topleft = glm::vec2(camera.transform().translation) - glm::vec2(camera.viewport()) * 0.5f;
+
+    for (BackgroundLayer layer : state.layers) {
+        if (layer.nonscale()) {
+            layer.set_position(layer.position() - topleft);
+        }
         renderer.DrawBackground(layer);
     }
 }

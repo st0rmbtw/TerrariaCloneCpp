@@ -47,6 +47,7 @@ private:
         glm::uvec2 texture_offset;
         glm::uvec2 blur_offset;
         glm::uvec2 blur_size;
+        uint32_t light_count;
     };
 
 public:

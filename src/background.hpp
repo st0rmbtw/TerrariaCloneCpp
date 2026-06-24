@@ -12,7 +12,7 @@ namespace Background {
     
     void UpdateInGame(const sge::Camera& camera, const World& world);
     void UpdateMainMenu(const sge::Camera& camera);
-    void Draw(GameRenderer& renderer);
+    void Draw(GameRenderer& renderer, const sge::Camera& camera);
 };
 
 #endif

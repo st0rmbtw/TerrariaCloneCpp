@@ -378,15 +378,14 @@ bool Assets::LoadShaders(sge::RenderContext& context, const std::vector<sge::Sha
     for (const auto& [key, asset] : SHADER_ASSETS) {
         sge::ShaderPipeline shader_pipeline;
 
-        std::vector<LLGL::VertexAttribute> attributes;
-
+        sge::ShaderConfig shaderConfig;
         for (const VertexFormatAsset asset : asset.vertex_format_assets) {
             const LLGL::VertexFormat& vertex_format = Assets::GetVertexFormat(asset);
-            attributes.insert(attributes.end(), vertex_format.attributes.begin(), vertex_format.attributes.end());
+            shaderConfig.vertex.inputAttribs.append_range(vertex_format.attributes);
         }
 
         if (BITFLAG_CHECK(asset.stages, ShaderStages::Vertex)) {
-            if (!(shader_pipeline.vs = context.LoadShaderFromFile(sge::ShaderPath(sge::ShaderType::Vertex, asset.file_name), shader_defs, attributes).AsRef()))
+            if (!(shader_pipeline.vs = context.LoadShaderFromFile(sge::ShaderPath(sge::ShaderType::Vertex, asset.file_name), shader_defs, shaderConfig).AsRef()))
                 return false;
         }
 
@@ -437,52 +436,60 @@ bool Assets::LoadFonts(sge::RenderContext& context) {
 }
 
 void Assets::InitVertexFormats(sge::RenderBackend backend) {
-    LLGL::VertexFormat tilemap_vertex_format = sge::Attributes(backend, {
-        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_position", "Position"),
+    LLGL::VertexFormat tilemap_vertex_format;
+    tilemap_vertex_format.attributes = sge::VertexAttributes(backend, {
+        sge::Attribute::Vertex(sge::VertexFormat::Float32x2, "a_position", "Position"),
     });
 
-    LLGL::VertexFormat tilemap_instance_format = sge::Attributes(backend, tilemap_vertex_format.attributes.size(), {
-        sge::Attribute::Instance(LLGL::Format::RG32Float, "i_atlas_pos", "I_AtlasPos", 1),
-        sge::Attribute::Instance(LLGL::Format::RG32Float, "i_world_pos", "I_WorldPos", 1),
-        sge::Attribute::Instance(LLGL::Format::R16UInt, "i_position", "I_Position", 1),
-        sge::Attribute::Instance(LLGL::Format::R16UInt, "i_tile_data", "I_TileData", 1),
+    LLGL::VertexFormat tilemap_instance_format;
+    tilemap_instance_format.attributes = sge::VertexAttributes(backend, tilemap_vertex_format.attributes.size(), {
+        sge::Attribute::Instance(sge::VertexFormat::Float32x2, "i_atlas_pos", "I_AtlasPos", 1),
+        sge::Attribute::Instance(sge::VertexFormat::Float32x2, "i_world_pos", "I_WorldPos", 1),
+        sge::Attribute::Instance(sge::VertexFormat::Uint16, "i_position", "I_Position", 1),
+        sge::Attribute::Instance(sge::VertexFormat::Uint16, "i_tile_data", "I_TileData", 1),
     });
 
-    LLGL::VertexFormat background_vertex_format = sge::Attributes(backend, {
-        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_position", "Position"),
-        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_texture_size", "TextureSize")
+    LLGL::VertexFormat background_vertex_format;
+    background_vertex_format.attributes = sge::VertexAttributes(backend, {
+        sge::Attribute::Vertex(sge::VertexFormat::Float32x2, "a_position", "Position"),
+        sge::Attribute::Vertex(sge::VertexFormat::Float32x2, "a_texture_size", "TextureSize")
     });
 
-    LLGL::VertexFormat background_instance_format = sge::Attributes(backend, background_vertex_format.attributes.size(), {
-        sge::Attribute::Instance(LLGL::Format::RG32Float, "i_position", "I_Position", 1),
-        sge::Attribute::Instance(LLGL::Format::RG32Float, "i_size", "I_Size", 1),
-        sge::Attribute::Instance(LLGL::Format::RG32Float, "i_tex_size", "I_TexSize", 1),
-        sge::Attribute::Instance(LLGL::Format::RG32Float, "i_speed", "I_Speed", 1),
-        sge::Attribute::Instance(LLGL::Format::R32UInt, "i_id", "I_ID", 1),
-        sge::Attribute::Instance(LLGL::Format::R32UInt, "i_flags", "I_Flags", 1),
+    LLGL::VertexFormat background_instance_format;
+    background_instance_format.attributes = sge::VertexAttributes(backend, background_vertex_format.attributes.size(), {
+        sge::Attribute::Instance(sge::VertexFormat::Float32x2, "i_position", "I_Position", 1),
+        sge::Attribute::Instance(sge::VertexFormat::Float32x2, "i_size", "I_Size", 1),
+        sge::Attribute::Instance(sge::VertexFormat::Float32x2, "i_tex_size", "I_TexSize", 1),
+        sge::Attribute::Instance(sge::VertexFormat::Float32x2, "i_speed", "I_Speed", 1),
+        sge::Attribute::Instance(sge::VertexFormat::Uint32, "i_id", "I_ID", 1),
+        sge::Attribute::Instance(sge::VertexFormat::Uint32, "i_flags", "I_Flags", 1),
     });
 
-    LLGL::VertexFormat particle_vertex_format = sge::Attributes(backend, {
-        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_position", "Position"),
-        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_inv_tex_size", "InvTexSize"),
-        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_tex_size", "TexSize"),
+    LLGL::VertexFormat particle_vertex_format;
+    particle_vertex_format.attributes = sge::VertexAttributes(backend, {
+        sge::Attribute::Vertex(sge::VertexFormat::Float32x2, "a_position", "Position"),
+        sge::Attribute::Vertex(sge::VertexFormat::Float32x2, "a_inv_tex_size", "InvTexSize"),
+        sge::Attribute::Vertex(sge::VertexFormat::Float32x2, "a_tex_size", "TexSize"),
     });
 
-    LLGL::VertexFormat particle_instance_format = sge::Attributes(backend, particle_vertex_format.attributes.size(), {
-        sge::Attribute::Instance(LLGL::Format::RG32Float, "i_uv", "I_UV", 1),
-        sge::Attribute::Instance(LLGL::Format::R32Float, "i_depth", "I_Depth", 1),
-        sge::Attribute::Instance(LLGL::Format::R32UInt, "i_id", "I_ID", 1),
-        sge::Attribute::Instance(LLGL::Format::R32UInt, "I_is_world", "I_IsWorld", 1),
+    LLGL::VertexFormat particle_instance_format;
+    particle_instance_format.attributes =  sge::VertexAttributes(backend, particle_vertex_format.attributes.size(), {
+        sge::Attribute::Instance(sge::VertexFormat::Float32x2, "i_uv", "I_UV", 1),
+        sge::Attribute::Instance(sge::VertexFormat::Float32, "i_depth", "I_Depth", 1),
+        sge::Attribute::Instance(sge::VertexFormat::Uint32, "i_id", "I_ID", 1),
+        sge::Attribute::Instance(sge::VertexFormat::Uint32, "I_is_world", "I_IsWorld", 1),
     });
 
-    LLGL::VertexFormat postprocess_vertex_format = sge::Attributes(backend, {
-        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_position", "Position"),
-        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_uv", "UV"),
+    LLGL::VertexFormat postprocess_vertex_format;
+    postprocess_vertex_format.attributes = sge::VertexAttributes(backend, {
+        sge::Attribute::Vertex(sge::VertexFormat::Float32x2, "a_position", "Position"),
+        sge::Attribute::Vertex(sge::VertexFormat::Float32x2, "a_uv", "UV"),
     });
 
-    LLGL::VertexFormat static_lightmap_vertex_format = sge::Attributes(backend, {
-        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_position", "Position"),
-        sge::Attribute::Vertex(LLGL::Format::RG32Float, "a_uv", "UV"),
+    LLGL::VertexFormat static_lightmap_vertex_format;
+    static_lightmap_vertex_format.attributes = sge::VertexAttributes(backend, {
+        sge::Attribute::Vertex(sge::VertexFormat::Float32x2, "a_position", "Position"),
+        sge::Attribute::Vertex(sge::VertexFormat::Float32x2, "a_uv", "UV"),
     });
 
     state.vertex_formats[VertexFormatAsset::TilemapVertex] = tilemap_vertex_format;

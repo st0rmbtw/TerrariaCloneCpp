@@ -2,9 +2,10 @@
 
 #include <glm/gtc/random.hpp>
 
-#include <SGE/math/quat.hpp>
-#include <SGE/math/rect.hpp>
 #include <SGE/math/consts.hpp>
+#include <SGE/math/math.hpp>
+#include <SGE/math/quaternion.hpp>
+#include <SGE/math/rect.hpp>
 #include <SGE/input.hpp>
 #include <SGE/time/time.hpp>
 #include <SGE/time/timer.hpp>
@@ -369,7 +370,7 @@ void Player::update_using_item_anim() {
     rotation = rotation * 2.0 - 1.;
 
     m_using_item.set_position(item_position);
-    m_using_item.set_rotation(sge::Quat::from_rotation_z(rotation * direction * ITEM_ROTATION + direction * 0.5f));
+    m_using_item.set_rotation(sge::Quaternion::FromRotationZ(rotation * direction * ITEM_ROTATION + direction * 0.5f));
     m_using_item.set_anchor(m_direction == Direction::Left ? sge::Anchor::BottomRight : sge::Anchor::BottomLeft);
     m_using_item.set_flip_x(m_direction == Direction::Left);
 
@@ -388,7 +389,7 @@ void Player::update_hold_item() {
     m_using_item.set_texture(Assets::GetItemTexture(selected_item->id));
     m_using_item.set_anchor(m_direction == Direction::Left ? sge::Anchor::BottomRight : sge::Anchor::BottomLeft);
     m_using_item.set_flip_x(m_direction == Direction::Left);
-    m_using_item.set_rotation(glm::identity<glm::quat>());
+    m_using_item.set_rotation(sge::Quaternion());
 
     glm::vec2 offset;
     if (hold_style == HoldStyle::HoldFront) {
@@ -629,11 +630,11 @@ void Player::update(World& world) {
 void Player::keep_in_world_bounds(const World& world) noexcept {
     const glm::vec2 new_pos = world.keep_in_world_bounds(m_position, glm::vec2{ PLAYER_WIDTH_HALF, PLAYER_HEIGHT_HALF });
 
-    if (!sge::approx_equals(m_position.x, new_pos.x)) {
+    if (!sge::ApproxEquals(m_position.x, new_pos.x)) {
         m_velocity.x = 0.0f;
     }
 
-    if (!sge::approx_equals(m_position.y, new_pos.y)) {
+    if (!sge::ApproxEquals(m_position.y, new_pos.y)) {
         m_velocity.y = 0.0f;
     }
 

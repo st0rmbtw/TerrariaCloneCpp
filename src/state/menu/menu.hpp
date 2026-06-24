@@ -7,7 +7,7 @@
 #include <SGE/renderer/camera.hpp>
 #include <SGE/renderer/batch.hpp>
 #include <SGE/renderer/renderer.hpp>
-#include <SGE/math/quat.hpp>
+#include <SGE/math/quaternion.hpp>
 #include <SGE/types/animation.hpp>
 #include <SGE/time/stopwatch.hpp>
 #include <SGE/time/timer.hpp>
@@ -24,13 +24,12 @@
 
 class MainMenuState : public BaseState {
 public:
-    MainMenuState(const std::shared_ptr<sge::Renderer>& renderer, uint8_t samples);
+    MainMenuState(const std::shared_ptr<sge::Renderer2D>& renderer, uint8_t samples);
     void Update() override;
     void Render(const std::shared_ptr<sge::GlfwWindow>& window) override;
 
     void OnWindowSizeChanged(LLGL::Extent2D size) override {
         m_camera.set_viewport(size);
-        m_camera.update();
         setup_background();
     }
 
@@ -58,10 +57,10 @@ private:
 
     NavManager m_nav_manager;
 
-    glm::quat m_logo_rotation = sge::Quat::from_rotation_z(glm::radians(-5.0f));
+    sge::Quaternion m_logo_rotation = sge::Quaternion::FromRotationZ(glm::radians(-5.0f));
     sge::Animation m_logo_animation{ sge::Duration::SecondsFloat(10.0f), sge::RepeatStrategy::MirroredRepeat };
 
-    std::shared_ptr<sge::Renderer> m_renderer;
+    std::shared_ptr<sge::Renderer2D> m_renderer;
 
     float m_logo_scale = 0.9f;
 

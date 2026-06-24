@@ -31,7 +31,6 @@ public:
         const glm::vec2 size = id == 0 ? glm::yx(rect_size) : rect_size;
 
         m_id = id;
-        m_scale = scale;
         m_size = size * scale;
         m_texture_size = rect_size;
     }
@@ -53,6 +52,11 @@ public:
 
     inline BackgroundLayer& set_speed(float x, float y) {
         m_speed = glm::vec2(x, y);
+        return *this;
+    }
+
+    inline BackgroundLayer& set_scale(float scale) {
+        m_scale = scale;
         return *this;
     }
 
@@ -108,7 +112,9 @@ public:
 
     [[nodiscard]] inline const glm::vec2& position() const { return m_position; }
     [[nodiscard]] inline const glm::vec2& speed() const { return m_speed; }
-    [[nodiscard]] inline const glm::vec2& size() const { return m_size; }
+    [[nodiscard]] inline glm::vec2 size() const {
+        return m_size;
+    }
     [[nodiscard]] inline glm::vec2 texture_size() const {
         return m_id == 0 ? glm::yx(m_texture_size) : m_texture_size;
     }
@@ -130,7 +136,7 @@ private:
     glm::vec2 m_speed = glm::vec2(0.0f);
     glm::vec2 m_size = glm::vec2(0.0f);
     glm::vec2 m_texture_size = glm::vec2(0.0f);
-    float m_scale = 0.0f;
+    float m_scale = 1.0f;
     float m_x = 0.0f;
     float m_y = 0.0f;
     uint16_t m_id = 0;

@@ -51,7 +51,6 @@ private:
     
     sge::Ref<LLGL::Texture> m_dynamic_light_texture = nullptr;
     sge::Ref<LLGL::Texture> m_target_texture = nullptr;
-    sge::Ref<LLGL::Texture> m_depth_texture = nullptr;
     sge::Ref<LLGL::Texture> m_static_lightmap_texture = nullptr;
     
     std::unique_ptr<IDynamicLighting> m_dynamic_lighting = nullptr;

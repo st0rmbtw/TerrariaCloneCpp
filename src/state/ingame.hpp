@@ -17,22 +17,24 @@
 
 class InGameState : public BaseState {
 public:
-    InGameState(const std::shared_ptr<sge::Renderer>& renderer, uint8_t samples, WorldData world);
+    InGameState(const std::shared_ptr<sge::Renderer2D>& renderer, uint8_t samples, WorldData world);
     void Render(const std::shared_ptr<sge::GlfwWindow>& window) override;
     void PreUpdate() override;
     void Update() override;
     void OnPreFixedUpdate() override;
     void FixedUpdate() override;
     void OnWindowSizeChanged(LLGL::Extent2D size) override {
-        m_renderer->ResizeTextures(size);
-
         m_camera.set_viewport(size);
-        m_camera.update();
 
         m_world.chunk_manager().manage_chunks(m_world.data(), m_camera);
 
         Background::UpdateInGame(m_camera, m_world);
     }
+
+    void OnFramebufferSizeChanged(LLGL::Extent2D size) override {
+        m_renderer->ResizeTextures(size);
+    }
+
     BaseState* GetNextState() override;
 
 private:
@@ -65,6 +67,8 @@ private:
 
     std::string m_ui_fps_text;
     sge::Timer m_fps_update_timer;
+
+    sge::Timer m_light_update_timer = sge::Timer::from_seconds(1.0 / 120.0, sge::TimerMode::Repeating);
 
     std::vector<Light> m_lights;
 

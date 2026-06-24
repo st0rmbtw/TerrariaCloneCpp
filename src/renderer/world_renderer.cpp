@@ -66,10 +66,7 @@ WorldRenderer::WorldRenderer(const std::shared_ptr<sge::Renderer>& renderer) : m
         texture_data[TileType::TreeCrown] = TileTextureData{tile_tex_size, glm::vec2(0.0f), glm::vec2(0.0f), tree_tops_size, -tree_tops_size * 0.5f + glm::vec2(10.0f, 10.0f), TILE_DEPTH}; // Tree tops
         texture_data[TileType::TreeBranch] = TileTextureData{tile_tex_size, tile_padding, tile_offset, tree_branches_size, glm::vec2(-15.0f), TILE_DEPTH}; // Tree branches
 
-        LLGL::BufferDescriptor desc;
-        desc.size = sizeof(texture_data);
-        desc.bindFlags = LLGL::BindFlags::ConstantBuffer;
-        m_tile_texture_data_buffer = render_context->CreateBuffer(desc, texture_data);
+        m_tile_texture_data_buffer = render_context->CreateConstantBuffer(texture_data);
     }
 
     {
@@ -191,11 +188,6 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
     m_target_texture = context->CreateTexture(texture_desc);
     m_static_lightmap_texture = context->CreateTexture(texture_desc);
 
-    LLGL::TextureDescriptor depth_texture_desc = texture_desc;
-    depth_texture_desc.format = LLGL::Format::D24UNormS8UInt;
-    depth_texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::DepthStencilAttachment;
-    m_depth_texture = context->CreateTexture(depth_texture_desc);
-
     if (!m_render_pass.IsValid()) {
         sge::RenderPassConfig renderPassConfig;
         renderPassConfig.colorAttachments[0].loadOp = LLGL::AttachmentLoadOp::Load;
@@ -221,7 +213,7 @@ void WorldRenderer::init_targets(LLGL::Extent2D resolution) {
         targetConfig.renderPass = m_render_pass;
         targetConfig.resolution = resolution;
         targetConfig.colorAttachments[0] = sge::AttachmentConfig(m_target_texture);
-        targetConfig.depthStencilAttachment = sge::AttachmentConfig(m_depth_texture);
+        targetConfig.depthStencilAttachment.format = LLGL::Format::D24UNormS8UInt;
         targetConfig.format = LLGL::Format::RGBA8UNorm;
         m_target = context->CreateRenderTarget(targetConfig);
     }

@@ -128,7 +128,8 @@ void BackgroundRenderer::draw_layer_internal(const BackgroundLayer& layer, Backg
     ZoneScoped;
 
     const glm::vec2 offset = layer.anchor().to_vec2();
-    const glm::vec2 pos = layer.position() - layer.size() * offset;
+    const glm::vec2 size = layer.size() * layer.scale();
+    const glm::vec2 pos = layer.position() - size * offset;
 
     uint32_t flags = 0;
     flags |= layer.nonscale() << BackgroundFlags::IgnoreCameraZoom;
@@ -137,7 +138,7 @@ void BackgroundRenderer::draw_layer_internal(const BackgroundLayer& layer, Backg
     BackgroundInstance* buffer = *p_buffer;
 
     buffer->position = pos;
-    buffer->size = layer.size();
+    buffer->size = size;
     buffer->tex_size = layer.texture_size();
     buffer->speed = layer.speed();
     buffer->flags = flags;

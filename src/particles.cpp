@@ -106,15 +106,17 @@ void ParticleManager::SpawnParticle(const ParticleBuilder& builder) {
     state.custom_scale[index] = particle_data.custom_scale;
     state.scale[index] = particle_data.scale;
 
-    state.rotation_speed[index * 4 + 0] = particle_data.rotation_speed.x;
-    state.rotation_speed[index * 4 + 1] = particle_data.rotation_speed.y;
-    state.rotation_speed[index * 4 + 2] = particle_data.rotation_speed.z;
-    state.rotation_speed[index * 4 + 3] = particle_data.rotation_speed.w;
+    const glm::quat rotation_speed = glm::quat(particle_data.rotation_speed);
+    state.rotation_speed[index * 4 + 0] = rotation_speed.x;
+    state.rotation_speed[index * 4 + 1] = rotation_speed.y;
+    state.rotation_speed[index * 4 + 2] = rotation_speed.z;
+    state.rotation_speed[index * 4 + 3] = rotation_speed.w;
 
-    state.rotation[index * 4 + 0] = particle_data.rotation.x;
-    state.rotation[index * 4 + 1] = particle_data.rotation.y;
-    state.rotation[index * 4 + 2] = particle_data.rotation.z;
-    state.rotation[index * 4 + 3] = particle_data.rotation.w;
+    const glm::quat rotation = glm::quat(particle_data.rotation);
+    state.rotation[index * 4 + 0] = rotation.x;
+    state.rotation[index * 4 + 1] = rotation.y;
+    state.rotation[index * 4 + 2] = rotation.z;
+    state.rotation[index * 4 + 3] = rotation.w;
 
     const bool emits_light = particle_data.light_color.has_value();
 
@@ -159,7 +161,7 @@ void ParticleManager::Draw(GameRenderer& renderer) {
     }
 }
 
-void ParticleManager::Update(World& world) {
+void ParticleManager::Update() {
     ZoneScoped;
 
     for (size_t i = 0; i < state.active_count; ++i) {
@@ -238,7 +240,9 @@ void ParticleManager::Update(World& world) {
         rotation *= rotation_speed;
     }
 #endif
+}
 
+void ParticleManager::SetLights(World& world) {
     for (size_t i = 0; i < state.active_count; ++i) {
         const bool emits_light = BITFLAG_CHECK(state.flags[i], ParticleFlags::EmitsLight);
         if (!emits_light) continue;
