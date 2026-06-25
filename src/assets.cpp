@@ -88,15 +88,15 @@ struct AssetComputeShader {
 };
 
 static const std::pair<TextureAsset, AssetTexture> TEXTURE_ASSETS[] = {
-    { TextureAsset::PlayerHair,         AssetTexture("assets/sprites/player/Player_Hair_1.png", sge::TextureSampler::NearestMips) },
-    { TextureAsset::PlayerHead,         AssetTexture("assets/sprites/player/Player_0_0.png", sge::TextureSampler::NearestMips) },
-    { TextureAsset::PlayerChest,        AssetTexture("assets/sprites/player/Player_Body.png", sge::TextureSampler::NearestMips) },
-    { TextureAsset::PlayerLegs,         AssetTexture("assets/sprites/player/Player_0_11.png", sge::TextureSampler::NearestMips) },
-    { TextureAsset::PlayerLeftHand,     AssetTexture("assets/sprites/player/Player_Left_Hand.png", sge::TextureSampler::NearestMips) },
-    { TextureAsset::PlayerLeftShoulder, AssetTexture("assets/sprites/player/Player_Left_Shoulder.png", sge::TextureSampler::NearestMips) },
-    { TextureAsset::PlayerRightArm,     AssetTexture("assets/sprites/player/Player_Right_Arm.png", sge::TextureSampler::NearestMips) },
-    { TextureAsset::PlayerLeftEye,      AssetTexture("assets/sprites/player/Player_0_1.png", sge::TextureSampler::NearestMips) },
-    { TextureAsset::PlayerRightEye,     AssetTexture("assets/sprites/player/Player_0_2.png", sge::TextureSampler::NearestMips) },
+    { TextureAsset::PlayerHair,         AssetTexture("assets/sprites/player/Player_Hair_1.png", sge::TextureSampler::Nearest) },
+    { TextureAsset::PlayerHead,         AssetTexture("assets/sprites/player/Player_0_0.png", sge::TextureSampler::Nearest) },
+    { TextureAsset::PlayerChest,        AssetTexture("assets/sprites/player/Player_Body.png", sge::TextureSampler::Nearest) },
+    { TextureAsset::PlayerLegs,         AssetTexture("assets/sprites/player/Player_0_11.png", sge::TextureSampler::Nearest) },
+    { TextureAsset::PlayerLeftHand,     AssetTexture("assets/sprites/player/Player_Left_Hand.png", sge::TextureSampler::Nearest) },
+    { TextureAsset::PlayerLeftShoulder, AssetTexture("assets/sprites/player/Player_Left_Shoulder.png", sge::TextureSampler::Nearest) },
+    { TextureAsset::PlayerRightArm,     AssetTexture("assets/sprites/player/Player_Right_Arm.png", sge::TextureSampler::Nearest) },
+    { TextureAsset::PlayerLeftEye,      AssetTexture("assets/sprites/player/Player_0_1.png", sge::TextureSampler::Nearest) },
+    { TextureAsset::PlayerRightEye,     AssetTexture("assets/sprites/player/Player_0_2.png", sge::TextureSampler::Nearest) },
 
     { TextureAsset::UiCursorForeground,        AssetTexture("assets/sprites/ui/Cursor_0.png", sge::TextureSampler::Linear) },
     { TextureAsset::UiCursorBackground,        AssetTexture("assets/sprites/ui/Cursor_11.png", sge::TextureSampler::Linear) },

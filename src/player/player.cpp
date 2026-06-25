@@ -43,7 +43,7 @@ static const glm::vec2 ITEM_HOLD_POINTS[] = {
     glm::vec2(7.0f, 4.0f) // HoldFront
 };
 
-static constexpr float ITEM_ROTATION = 1.7;
+static constexpr float ITEM_ROTATION = 1.5;
 
 static void spawn_particles_on_dig(const glm::vec2& position, Particle::Type particle, bool broken) {
     const int count = broken ? sge::Random::Int(7, 15) : sge::Random::Int(7, 15);
@@ -370,11 +370,9 @@ void Player::update_using_item_anim() {
     rotation = rotation * 2.0 - 1.;
 
     m_using_item.set_position(item_position);
-    m_using_item.set_rotation(sge::Quaternion::FromRotationZ(rotation * direction * ITEM_ROTATION + direction * 0.5f));
+    m_using_item.set_rotation(sge::Quaternion::FromRotationZ(-rotation * direction * ITEM_ROTATION - direction * 0.5f));
     m_using_item.set_anchor(m_direction == Direction::Left ? sge::Anchor::BottomRight : sge::Anchor::BottomLeft);
     m_using_item.set_flip_x(m_direction == Direction::Left);
-
-    m_using_item_visible = true;
 }
 
 void Player::update_hold_item() {
@@ -698,7 +696,7 @@ void Player::draw(GameRenderer& renderer) const {
         renderer.DrawAtlasSpriteWorld(m_right_eye.sprite);
     renderer.EndOrderMode();
 
-    if (m_using_item_visible) {
+    if (m_using_item_visible || m_swing_anim) {
         renderer.DrawSpriteWorld(m_using_item);
     }
 

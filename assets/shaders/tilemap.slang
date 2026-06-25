@@ -96,7 +96,7 @@ float4 PS(VSOutput inp) : SV_Target
 {
     const float4 color = TextureArray.Sample(Sampler, float3(inp.uv, float(inp.tile_id)));
 
-    if (color.a <= 0.5)
+    if (color.a <= 0.05)
         discard;
 
     return float4(color.rgb, 1.0f);

@@ -245,7 +245,7 @@ void WorldRenderer::init_textures(LLGL::Extent2D viewport) {
         light_texture_desc.type      = LLGL::TextureType::Texture2D;
         light_texture_desc.format    = LLGL::Format::RGBA8UNorm;
         light_texture_desc.extent    = LLGL::Extent3D(width, height, 1);
-        light_texture_desc.miscFlags = 0;
+        light_texture_desc.miscFlags = LLGL::MiscFlags::FixedSamples;
         light_texture_desc.bindFlags = LLGL::BindFlags::Storage | LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
         light_texture_desc.mipLevels = 1;
 

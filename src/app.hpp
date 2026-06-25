@@ -25,17 +25,18 @@ public:
     ~App();
 protected:
     bool OnInit() override;
-    void OnPreFixedUpdate() override;
     void OnFixedUpdate() override;
-    void OnPostFixedUpdate() override;
     void OnPreUpdate() override;
-    void OnPostUpdate() override;
     void OnUpdate() override;
     void OnRender(const std::shared_ptr<sge::GlfwWindow>& window) override;
     void OnPostRender() override;
 
-    void OnWindowResized(const std::shared_ptr<sge::GlfwWindow> &window, int width, int height) override;
-    void OnFramebufferResize(const std::shared_ptr<sge::GlfwWindow> &window, int width, int height) override;
+    void OnWindowResized(const std::shared_ptr<sge::GlfwWindow>&, int width, int height) override {
+        m_current_state->OnWindowSizeChanged(LLGL::Extent2D(width, height));
+    }
+    void OnFramebufferResize(const std::shared_ptr<sge::GlfwWindow>&, int width, int height) override {
+        m_current_state->OnFramebufferSizeChanged(LLGL::Extent2D(width, height));
+    }
 
 private:
     std::unique_ptr<BaseState> m_current_state;

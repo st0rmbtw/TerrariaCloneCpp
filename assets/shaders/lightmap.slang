@@ -36,6 +36,6 @@ SamplerState Sampler : register(s4);
 [shader("fragment")]
 float4 PS(VSOutput inp) : SV_Target
 {
-    const float4 color = StaticLightMapChunk.Sample(Sampler, inp.uv);
+    const float4 color = StaticLightMapChunk.SampleLevel(Sampler, inp.uv, 0);
     return float4(color.rgb, 1.0f);
 };

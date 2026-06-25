@@ -33,10 +33,10 @@ bool App::OnInit() {
     }
     
     if (!Assets::Load(*GetRenderContext()))
-        std::abort();
+        return false;
 
     if (!Assets::LoadFonts(*GetRenderContext()))
-        std::abort();
+        return false;
 
     const std::vector<sge::ShaderDef> shader_defs = {
         sge::ShaderDef("TILE_SIZE", std::to_string(Constants::TILE_SIZE)),
@@ -47,8 +47,7 @@ bool App::OnInit() {
     };
 
     if (!Assets::LoadShaders(*GetRenderContext(), shader_defs))
-        std::abort();
-
+        return false;
 
     sge::WindowSettings window_settings;
     window_settings.title = "TerrariaClone";
@@ -94,9 +93,6 @@ void App::OnPreUpdate() {
     FrameTime::Update(sge::Time::DeltaSeconds());
 
     m_current_state->PreUpdate();
-}
-
-void App::OnPreFixedUpdate() {
     m_current_state->OnPreFixedUpdate();
 }
 
@@ -104,15 +100,9 @@ void App::OnFixedUpdate() {
     m_current_state->FixedUpdate();
 }
 
-void App::OnPostFixedUpdate() {
-    m_current_state->OnPostFixedUpdate();
-}
-
 void App::OnUpdate() {
+    m_current_state->OnPostFixedUpdate();
     m_current_state->Update();
-}
-
-void App::OnPostUpdate() {
     m_current_state->PostUpdate();
 
     BaseState* new_state = m_current_state->GetNextState();
@@ -131,19 +121,11 @@ void App::OnRender(const std::shared_ptr<sge::GlfwWindow>& window) {
 
 void App::OnPostRender() {
     m_current_state->PostRender();
-#if DEBUG
+#if SGE_DEBUG_LAYER_ENABLED
     if (sge::Input::Pressed(sge::Key::C)) {
         LLGL::FrameProfile profile;
-        m_renderer->GetRenderContext()->GetDebugInfo(&profile);
+        m_renderer->GetRenderContext()->GetFrameProfile(&profile);
         SGE_LOG_DEBUG("Draw commands count: {}", profile.commandBufferRecord.drawCommands);
     }
 #endif
-}
-
-void App::OnWindowResized(const std::shared_ptr<sge::GlfwWindow>&, int width, int height) {
-    m_current_state->OnWindowSizeChanged(LLGL::Extent2D(width, height));
-}
-
-void App::OnFramebufferResize(const std::shared_ptr<sge::GlfwWindow>&, int width, int height) {
-    m_current_state->OnFramebufferSizeChanged(LLGL::Extent2D(width, height));
 }
