@@ -8,10 +8,9 @@
 #include "tile_pos.hpp"
 
 struct Light {
-    glm::vec3 color;
+    glm::vec3 color; alignas(16)
     TilePos pos;
     glm::uvec2 size;
-    float _padding = 0.0f;
 };
 
 #endif

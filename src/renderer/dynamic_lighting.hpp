@@ -90,9 +90,7 @@ private:
     sge::Unique<LLGL::PipelineState> m_light_vertical_pipeline = nullptr;
     sge::Unique<LLGL::PipelineState> m_light_horizontal_pipeline = nullptr;
 
-    uint32_t m_workgroup_size = 16;
-
-    bool is_metal = false;
+    uint32_t m_workgroup_size = 32;
 };
 
 #endif

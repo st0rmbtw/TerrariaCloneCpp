@@ -55,24 +55,23 @@ ParticleRenderer::ParticleRenderer(const std::shared_ptr<sge::Renderer>& rendere
     m_buffer_array = render_context->CreateBufferArray({ m_vertex_buffer.Get(), m_instance_buffer.Get() });
 
     {
-        long bindFlags = LLGL::BindFlags::Storage;
         LLGL::BufferDescriptor bufferDesc;
-        bufferDesc.debugName = "Particle TransformBuffer";
+        bufferDesc.debugName    = "Particle TransformBuffer";
         bufferDesc.size         = sizeof(glm::mat4) * MAX_PARTICLES_COUNT;
-        bufferDesc.bindFlags    = bindFlags;
+        bufferDesc.bindFlags    = LLGL::BindFlags::Storage | LLGL::BindFlags::Sampled;
         bufferDesc.format       = LLGL::Format::RGBA32Float;
 
         m_transform_buffer = render_context->CreateBuffer(bufferDesc);
     }
 
-    m_position_buffer = render_context->CreateStructuredBuffer<glm::vec2>(MAX_PARTICLES_COUNT);
+    m_position_buffer = render_context->CreateStructuredBuffer<glm::vec2>(MAX_PARTICLES_COUNT, "Particle PositionBuffer");
     m_rotation_buffer = render_context->CreateStructuredBuffer<glm::vec4>(MAX_PARTICLES_COUNT, "Particle RotationBuffer");
     m_scale_buffer = render_context->CreateStructuredBuffer<glm::vec2>(MAX_PARTICLES_COUNT, "Particle ScaleBuffer");
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.heapBindings = sge::BindingLayout({
         sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer", LLGL::StageFlags::VertexStage),
-        sge::BindingLayoutItem::StorageBuffer(5, "TransformBuffer", LLGL::StageFlags::VertexStage),
+        sge::BindingLayoutItem::Buffer(5, "TransformBuffer", LLGL::StageFlags::VertexStage),
         sge::BindingLayoutItem::Texture(3, "Texture", LLGL::StageFlags::FragmentStage),
     });
     pipelineLayoutDesc.staticSamplers = {
@@ -222,11 +221,9 @@ void ParticleRenderer::compute() {
         commands->SetPipelineState(*m_compute_pipeline);
         commands->SetResourceHeap(*m_compute_resource_heap);
 
-        const size_t particle_count = m_particle_id;
-
-        // particles_count < 1_000_000, 1_000_000 / 64 = 15625 < 65535
-        const uint32_t y = (particle_count + 64 - 1) / 64;
-        commands->Dispatch(64, y, 1);
+        // particles count <= 1_000_000, 1_000_000 / 64 = 31250 < 65535
+        const uint32_t x = (m_particle_id + 32 - 1) / 32;
+        commands->Dispatch(x, 1, 1);
     }
     commands->PopDebugGroup();
 }

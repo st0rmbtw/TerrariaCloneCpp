@@ -294,16 +294,6 @@ void DynamicLighting::compute_light(const sge::Camera& camera, const World& worl
 
 // -------------------- AcceleratedDynamicLighting --------------------
 
-static SGE_FORCE_INLINE void blur_dispatch(LLGL::CommandBuffer* commands, uint32_t width) {
-    commands->Dispatch(width, 1, 1);
-}
-
-static SGE_FORCE_INLINE void blur_dispatch_metal(LLGL::CommandBuffer* commands, uint32_t width) {
-    const uint32_t h = (width + 512 - 1) / 512;
-    const uint32_t w = std::min(512u, width);
-    commands->Dispatch(w, h, 1);
-}
-
 AcceleratedDynamicLighting::AcceleratedDynamicLighting(std::shared_ptr<sge::Renderer> renderer, const WorldData& world, sge::Ref<LLGL::Texture> light_texture) :
     m_renderer(std::move(renderer)),
     m_light_texture(std::move(light_texture))
@@ -311,7 +301,6 @@ AcceleratedDynamicLighting::AcceleratedDynamicLighting(std::shared_ptr<sge::Rend
     using Constants::TILE_SIZE;
 
     const sge::RenderBackend backend = m_renderer->GetRenderContext()->Backend();
-    is_metal = backend.IsMetal();
 
     if (backend.IsMetal())
         m_workgroup_size = 1;
@@ -446,15 +435,17 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
     const glm::ivec2 blur_max = glm::vec2((camera_position + proj_area.max + OFFSCREEN_RANGE_PIXELS) / (TILE_SIZE / SUBDIVISION));
     const glm::ivec2 blur_size = blur_max - blur_min;
 
-    const uint32_t grid_w = blur_size.x / m_workgroup_size;
-    const uint32_t grid_h = blur_size.y / m_workgroup_size;
+    const uint32_t grid_w = (blur_size.x + m_workgroup_size - 1u) / m_workgroup_size;
+    const uint32_t grid_h = (blur_size.y + m_workgroup_size - 1u) / m_workgroup_size;
 
     if (grid_w * grid_h == 0) return;
 
     {
         const glm::vec2 texture_size = glm::vec2(camera.viewport());
-        glm::uvec2 texture_offset = glm::uvec2(((texture_size * CAMERA_MIN_ZOOM - proj_area.size()) * 0.5f - OFFSCREEN_RANGE_PIXELS) / (TILE_SIZE / SUBDIVISION));
+        glm::ivec2 texture_offset = glm::ivec2(((texture_size * CAMERA_MIN_ZOOM - proj_area.size()) * 0.5f - OFFSCREEN_RANGE_PIXELS) / (TILE_SIZE / SUBDIVISION));
         texture_offset -= glm::ivec2(texture_size) % (SUBDIVISION * 2);
+
+        SGE_ASSERT(texture_offset.x >= 0 && texture_offset.y >= 0);
 
         UniformBuffer uniform_buffer {
             .texture_offset = texture_offset,
@@ -467,40 +458,40 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
 
     commands->PushDebugGroup("CS Light SetLightSources");
     {
-        const uint32_t y = (world.light_count() + 64 - 1) / 64;
+        const uint32_t groupCount = (world.light_count() + m_workgroup_size - 1u) / m_workgroup_size;
+        const uint32_t groupsX = std::min(groupCount, 512u);
+        const uint32_t groupsY = (groupCount + 512u - 1u) / 512u;
 
         commands->SetPipelineState(*m_light_set_light_sources_pipeline);
         commands->SetResourceHeap(*m_light_init_resource_heap);
-        commands->Dispatch(64, y, 1);
+        commands->Dispatch(groupsX, groupsY, 1);
     }
     commands->PopDebugGroup();
 
-    const auto blur_horizontal = [&commands, grid_w, this] {
+    const auto blur_horizontal = [&commands, grid_h, this] {
         commands->PushDebugGroup("CS Light BlurHorizontal");
         {
+            const uint32_t groupsX = std::min(grid_h, 512u);
+            const uint32_t groupsY = (grid_h + 512u - 1u) / 512u;
+
             commands->SetPipelineState(*m_light_horizontal_pipeline);
             commands->SetResourceHeap(*m_light_blur_resource_heap);
 
-            if (is_metal) {
-                blur_dispatch_metal(commands, grid_w);
-            } else {
-                blur_dispatch(commands, grid_w);
-            }
+            commands->Dispatch(groupsX, groupsY, 1);
         }
         commands->PopDebugGroup();
     };
 
-    const auto blur_vertical = [&commands, grid_h, this] {
+    const auto blur_vertical = [&commands, grid_w, this] {
         commands->PushDebugGroup("CS Light BlurVertical");
         {
+            const uint32_t groupsX = std::min(grid_w, 512u);
+            const uint32_t groupsY = (grid_w + 512u - 1u) / 512u;
+
             commands->SetPipelineState(*m_light_vertical_pipeline);
             commands->SetResourceHeap(*m_light_blur_resource_heap);
 
-            if (is_metal) {
-                blur_dispatch_metal(commands, grid_h);
-            } else {
-                blur_dispatch(commands, grid_h);
-            }
+            commands->Dispatch(groupsX, groupsY, 1);
         }
         commands->PopDebugGroup();
     };

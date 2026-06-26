@@ -317,10 +317,6 @@ void WorldRenderer::render_lightmap(const ChunkManager& chunk_manager) {
     }
 }
 
-void WorldRenderer::compute_light(const sge::Camera& camera, const World& world) {
-    m_dynamic_lighting->compute_light(camera, world);
-}
-
 WorldRenderer::~WorldRenderer() {
     const auto& context = m_renderer->GetRenderContext();
 

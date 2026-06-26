@@ -23,7 +23,9 @@ public:
     
     void update(World& world);
 
-    void compute_light(const sge::Camera& camera, const World& world);
+    void compute_light(const sge::Camera& camera, const World& world) {
+        m_dynamic_lighting->compute_light(camera, world);
+    }
 
     void render(const ChunkManager& chunk_manager);
     void render_lightmap(const ChunkManager& chunk_manager);
