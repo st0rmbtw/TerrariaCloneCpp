@@ -470,7 +470,7 @@ void InGameState::draw_inventory() noexcept {
                                     }
                                     const char index = '0' + (i + 1) % 10;
 
-                                    const glm::vec2 size = sge::calculate_text_bounds(font, index_size, &index, 1);
+                                    const glm::vec2 size = sge::MeasureText(font, index_size, &index, 1);
                                     UI::AddElement<UiTypeID::InventorySlotIndex>(
                                         {
                                             .size = UiSize::Fixed(size),

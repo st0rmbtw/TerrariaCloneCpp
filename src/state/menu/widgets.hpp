@@ -4,6 +4,7 @@
 #define STATE_MENU_WIDGETS_HPP_
 
 #include <optional>
+#include <SGE/profile.hpp>
 #include <SGE/types/font.hpp>
 #include <SGE/types/color.hpp>
 #include <SGE/types/nine_patch.hpp>
@@ -282,13 +283,13 @@ inline void DrawTextInput(const UiElement& element, sge::Batch& batch) {
     if (!data.empty()) {
         auto begin = data.text().begin() + data.display_begin();
         auto end = data.text().end();
-        sge::FitResult fit_result = sge::chars_fit_in_line_from_start(font, text_size, std::string_view{ begin, end }, line_width);
+        sge::FitResult fit_result = sge::CharsFitInLineFromStart(font, text_size, std::string_view{ begin, end }, line_width);
 
         const auto to = begin + fit_result.bytes;
         const std::string_view string = std::string_view{ begin, to };
 
-        const glm::vec2 pre_cursor_bounds = sge::calculate_text_bounds(font, text_size, std::string_view{ begin, begin + (data.cursor_position() - data.display_begin()) });
-        const float text_height = sge::calculate_text_height(font, text_size, string);
+        const glm::vec2 pre_cursor_bounds = sge::MeasureText(font, text_size, std::string_view{ begin, begin + (data.cursor_position() - data.display_begin()) });
+        const float text_height = sge::MeasureTextHeight(font, text_size, string);
 
         const sge::RichText text = sge::rich_text(string, text_size, color);
         const glm::vec2 position = glm::vec2(element.position.x, element.position.y + (element.size.y - text_height) * 0.5f);

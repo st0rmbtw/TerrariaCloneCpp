@@ -391,7 +391,7 @@ void UI::Update() {
 
             TextInputNodeData& text_data = state.text_input_data[current_node->text_data_index];
 
-            // glm::vec2 text_size = sge::calculate_text_bounds(text_data.font, text_data.text_size, input_data.text());
+            // glm::vec2 text_size = sge::MeasureText(text_data.font, text_data.text_size, input_data.text());
             // current_node->size = glm::clamp(text_size, current_node->min_size, current_node->max_size);
 
             input_data.set_window_begin(std::min(input_data.text().size(), input_data.display_begin()));
@@ -399,7 +399,7 @@ void UI::Update() {
             auto begin = input_data.text().begin() + input_data.display_begin();
             auto end = input_data.text().begin() + input_data.text().size();
 
-            sge::FitResult fit_result = sge::chars_fit_in_line_from_end(text_data.font, text_data.text_size, std::string_view{ begin, end }, current_node->size.x);
+            sge::FitResult fit_result = sge::CharsFitInLineFromEnd(text_data.font, text_data.text_size, std::string_view{ begin, end }, current_node->size.x);
 
             if (input_data.cursor_position() == input_data.text().size()) {
                 input_data.set_window_begin(input_data.cursor_position() - fit_result.bytes);
@@ -834,7 +834,7 @@ void UI::EndElement() {
 void UI::Text(uint32_t type_id, const sge::Font& font, const sge::RichTextSection* sections, const size_t count, const TextElementDesc& desc) {
     ZoneScoped;
 
-    const glm::vec2 measured_size = sge::calculate_text_bounds(font, sections, count);
+    const glm::vec2 measured_size = sge::MeasureText(font, sections, count);
 
     // Copy section contents
     sge::RichTextSection* arena_sections = state.arena.allocate<sge::RichTextSection>(count);
@@ -906,7 +906,7 @@ void UI::TextInput(uint32_t type_id, TextInputData& data, const sge::Font& font,
     }
 
     if (!data.empty()) {
-        const glm::vec2 measured_size = sge::calculate_text_bounds(font, desc.text_size, data.text());
+        const glm::vec2 measured_size = sge::MeasureText(font, desc.text_size, data.text());
         new_node.size = glm::min(measured_size, parent.size);
     }
 
