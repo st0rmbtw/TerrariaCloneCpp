@@ -27,7 +27,7 @@ struct VSOutput
     nointerpolation float2 tex_size : TexSize;
     nointerpolation float2 speed : Speed;
     nointerpolation float2 offset : Offset;
-    nointerpolation uint id : I_ID;
+    nointerpolation uint id : ID;
     nointerpolation int nonscale : NonScale;
 };
 

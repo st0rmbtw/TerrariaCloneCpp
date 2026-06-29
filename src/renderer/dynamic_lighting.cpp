@@ -300,11 +300,6 @@ AcceleratedDynamicLighting::AcceleratedDynamicLighting(std::shared_ptr<sge::Rend
 {
     using Constants::TILE_SIZE;
 
-    const sge::RenderBackend backend = m_renderer->GetRenderContext()->Backend();
-
-    if (backend.IsMetal())
-        m_workgroup_size = 1;
-
     init_textures(world);
     init_pipeline();
 }
@@ -419,6 +414,7 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
     using Constants::SUBDIVISION;
 
     static constexpr float OFFSCREEN_RANGE_PIXELS = Constants::DYNAMIC_LIGHT_OFFSCREEN_RANGE * TILE_SIZE;
+    static constexpr uint32_t WORKGROUP_SIZE = 32;
 
     if (world.light_count() == 0) return;
 
@@ -435,8 +431,8 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
     const glm::ivec2 blur_max = glm::vec2((camera_position + proj_area.max + OFFSCREEN_RANGE_PIXELS) / (TILE_SIZE / SUBDIVISION));
     const glm::ivec2 blur_size = blur_max - blur_min;
 
-    const uint32_t grid_w = (blur_size.x + m_workgroup_size - 1u) / m_workgroup_size;
-    const uint32_t grid_h = (blur_size.y + m_workgroup_size - 1u) / m_workgroup_size;
+    const uint32_t grid_w = (blur_size.x + WORKGROUP_SIZE - 1u) / WORKGROUP_SIZE;
+    const uint32_t grid_h = (blur_size.y + WORKGROUP_SIZE - 1u) / WORKGROUP_SIZE;
 
     if (grid_w * grid_h == 0) return;
 
@@ -444,8 +440,7 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
         const glm::vec2 texture_size = glm::vec2(camera.viewport());
         glm::ivec2 texture_offset = glm::ivec2(((texture_size * CAMERA_MIN_ZOOM - proj_area.size()) * 0.5f - OFFSCREEN_RANGE_PIXELS) / (TILE_SIZE / SUBDIVISION));
         texture_offset -= glm::ivec2(texture_size) % (SUBDIVISION * 2);
-
-        SGE_ASSERT(texture_offset.x >= 0 && texture_offset.y >= 0);
+        texture_offset = glm::max(texture_offset, glm::ivec2(0, 0));
 
         UniformBuffer uniform_buffer {
             .texture_offset = texture_offset,
@@ -458,7 +453,7 @@ void AcceleratedDynamicLighting::compute_light(const sge::Camera& camera, const 
 
     commands->PushDebugGroup("CS Light SetLightSources");
     {
-        const uint32_t groupCount = (world.light_count() + m_workgroup_size - 1u) / m_workgroup_size;
+        const uint32_t groupCount = (world.light_count() + WORKGROUP_SIZE - 1u) / WORKGROUP_SIZE;
         const uint32_t groupsX = std::min(groupCount, 512u);
         const uint32_t groupsY = (groupCount + 512u - 1u) / 512u;
 

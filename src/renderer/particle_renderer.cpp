@@ -221,7 +221,7 @@ void ParticleRenderer::compute() {
         commands->SetPipelineState(*m_compute_pipeline);
         commands->SetResourceHeap(*m_compute_resource_heap);
 
-        // particles count <= 1_000_000, 1_000_000 / 64 = 31250 < 65535
+        // particles count <= 1_000_000, 1_000_000 / 32 = 31250 < 65535
         const uint32_t x = (m_particle_id + 32 - 1) / 32;
         commands->Dispatch(x, 1, 1);
     }

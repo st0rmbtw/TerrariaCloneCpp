@@ -36,28 +36,19 @@ VSOutput VS(VSInput inp)
 }
 
 [vk::binding(4)]
-Texture2D BackgroundTexture : register(t4);
+Texture2D WorldTexture : register(t4);
 [vk::binding(5)]
-SamplerState BackgroundSampler : register(s5);
+SamplerState WorldSampler : register(s5);
 
 [vk::binding(6)]
-Texture2D WorldTexture : register(t6);
+Texture2D LightMapTexture : register(t6);
 [vk::binding(7)]
-SamplerState WorldSampler : register(s7);
+SamplerState LightMapSampler : register(s7);
 
 [vk::binding(8)]
-Texture2D LightMapTexture : register(t8);
+Texture2D LightTexture : register(t8);
 [vk::binding(9)]
-SamplerState LightMapSampler : register(s9);
-
-[vk::binding(10)]
-Texture2D LightTexture : register(t10);
-[vk::binding(11)]
-SamplerState LightSampler : register(s11);
-
-static float4 blend(float4 foreground, float4 background) {
-    return foreground * foreground.a + background * (1.0 - foreground.a);
-}
+SamplerState LightSampler : register(s9);
 
 [shader("fragment")]
 float4 PS(VSOutput inp) : SV_Target
@@ -68,9 +59,8 @@ float4 PS(VSOutput inp) : SV_Target
     const float4 final_light = float4(max(lightmap, light), 1.0f);
     // const float4 final_light = float4(1.0f);
 
-    const float4 background = BackgroundTexture.SampleLevel(BackgroundSampler, inp.uv, 0);
     const float4 world = WorldTexture.SampleLevel(WorldSampler, inp.uv, 0) * final_light;
 
-    return blend(world, background);
+    return world;
 };
 

@@ -58,24 +58,21 @@ GameRenderer::GameRenderer(const std::shared_ptr<sge::Renderer2D>& renderer) :
 
     LLGL::PipelineLayoutDescriptor pipelineLayoutDesc;
     pipelineLayoutDesc.staticSamplers = {
-        LLGL::StaticSamplerDescriptor("BackgroundTextureSampler", LLGL::StageFlags::FragmentStage, 5, Assets::GetSampler(sge::TextureSampler::Nearest)->descriptor()),
-        LLGL::StaticSamplerDescriptor("WorldTextureSampler", LLGL::StageFlags::FragmentStage, 7, Assets::GetSampler(sge::TextureSampler::Nearest)->descriptor()),
-        LLGL::StaticSamplerDescriptor("LightMapSampler", LLGL::StageFlags::FragmentStage, 9, Assets::GetSampler(sge::TextureSampler::Nearest)->descriptor()),
-        LLGL::StaticSamplerDescriptor("LightSampler", LLGL::StageFlags::FragmentStage, 11, Assets::GetSampler(sge::TextureSampler::Nearest)->descriptor()),
+        LLGL::StaticSamplerDescriptor("WorldTextureSampler", LLGL::StageFlags::FragmentStage, 5, Assets::GetSampler(sge::TextureSampler::Nearest)->descriptor()),
+        LLGL::StaticSamplerDescriptor("LightMapSampler", LLGL::StageFlags::FragmentStage, 7, Assets::GetSampler(sge::TextureSampler::Nearest)->descriptor()),
+        LLGL::StaticSamplerDescriptor("LightSampler", LLGL::StageFlags::FragmentStage, 9, Assets::GetSampler(sge::TextureSampler::Nearest)->descriptor()),
     };
     pipelineLayoutDesc.combinedTextureSamplers = {
-        LLGL::CombinedTextureSamplerDescriptor{ "BackgroundTexture", "BackgroundTexture", "BackgroundTextureSampler", 4 },
-        LLGL::CombinedTextureSamplerDescriptor{ "WorldTexture", "WorldTexture", "WorldTextureSampler", 6 },
-        LLGL::CombinedTextureSamplerDescriptor{ "LightMap", "LightMap", "LightMapSampler", 8 },
-        LLGL::CombinedTextureSamplerDescriptor{ "Light", "Light", "LightSampler", 10 },
+        LLGL::CombinedTextureSamplerDescriptor{ "WorldTexture", "WorldTexture", "WorldTextureSampler", 4 },
+        LLGL::CombinedTextureSamplerDescriptor{ "LightMapTexture", "LightMapTexture", "LightMapSampler", 6 },
+        LLGL::CombinedTextureSamplerDescriptor{ "LightTexture", "LightTexture", "LightSampler", 8 },
     };
     pipelineLayoutDesc.heapBindings = sge::BindingLayout({
         sge::BindingLayoutItem::ConstantBuffer(2, "GlobalUniformBuffer", LLGL::StageFlags::VertexStage),
         sge::BindingLayoutItem::ConstantBuffer(3, "UniformBuffer", LLGL::StageFlags::VertexStage),
-        sge::BindingLayoutItem::Texture(4, "BackgroundTexture", LLGL::StageFlags::FragmentStage),
-        sge::BindingLayoutItem::Texture(6, "WorldTexture", LLGL::StageFlags::FragmentStage),
-        sge::BindingLayoutItem::Texture(8, "LightMap", LLGL::StageFlags::FragmentStage),
-        sge::BindingLayoutItem::Texture(10, "Light", LLGL::StageFlags::FragmentStage),
+        sge::BindingLayoutItem::Texture(4, "WorldTexture", LLGL::StageFlags::FragmentStage),
+        sge::BindingLayoutItem::Texture(6, "LightMapTexture", LLGL::StageFlags::FragmentStage),
+        sge::BindingLayoutItem::Texture(8, "LightTexture", LLGL::StageFlags::FragmentStage),
     });
 
     sge::Ref<LLGL::PipelineLayout> pipelineLayout = render_context->CreatePipelineLayout(pipelineLayoutDesc);
@@ -93,7 +90,6 @@ GameRenderer::GameRenderer(const std::shared_ptr<sge::Renderer2D>& renderer) :
     m_resource_heap = render_context->CreateResourceHeap(pipelineLayout, {
         m_renderer->GlobalUniformBuffer().Get(),
         m_postprocess_uniform_buffer.Get(),
-        m_background_renderer.target_texture().Get(),
         m_world_renderer.target_texture().Get(),
         m_world_renderer.static_lightmap_texture().Get(),
         m_world_renderer.light_texture().Get()
@@ -137,12 +133,10 @@ void GameRenderer::ResizeTextures(LLGL::Extent2D size) {
     const auto& context = m_renderer->GetRenderContext()->GetLLGLContext();
 
     m_world_renderer.init_targets(size);
-    m_background_renderer.init_targets(size);
     m_world_renderer.init_textures(size);
 
     if (m_resource_heap.IsValid()) {
         context->WriteResourceHeap(*m_resource_heap, 2, {
-            m_background_renderer.target_texture().Get(),
             m_world_renderer.target_texture().Get(),
             m_world_renderer.static_lightmap_texture().Get(),
             m_world_renderer.light_texture().Get()

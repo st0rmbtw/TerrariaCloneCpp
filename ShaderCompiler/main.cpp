@@ -368,13 +368,8 @@ static bool CompileSlangShaders(const fs::path& shaders_dir, const fs::path& out
     sessionDesc.preprocessorMacros = preprocessorMacroDesc.data();
     sessionDesc.preprocessorMacroCount = preprocessorMacroDesc.size();
 
-#if DEBUG
-    static constexpr int DEBUG_INFO = SLANG_DEBUG_INFO_LEVEL_MAXIMAL;
-    static constexpr int OPTIMIZATION = SLANG_OPTIMIZATION_LEVEL_NONE;
-#else
     static constexpr int DEBUG_INFO = SLANG_DEBUG_INFO_LEVEL_NONE;
     static constexpr int OPTIMIZATION = SLANG_OPTIMIZATION_LEVEL_HIGH;
-#endif
 
     std::array options = std::to_array<slang::CompilerOptionEntry>({
         {
@@ -546,7 +541,7 @@ static std::optional<std::string> TranslateSpirvToGlsl(const fs::path& file_path
         options.es = false;
         options.enable_420pack_extension = false;
         options.emit_line_directives = false;
-        options.enable_row_major_load_workaround = false;
+        options.enable_row_major_load_workaround = true;
     }
     compiler.set_common_options(options);
 

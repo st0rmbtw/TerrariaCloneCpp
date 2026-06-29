@@ -89,8 +89,6 @@ private:
     sge::Unique<LLGL::PipelineState> m_light_set_light_sources_pipeline = nullptr;
     sge::Unique<LLGL::PipelineState> m_light_vertical_pipeline = nullptr;
     sge::Unique<LLGL::PipelineState> m_light_horizontal_pipeline = nullptr;
-
-    uint32_t m_workgroup_size = 32;
 };
 
 #endif

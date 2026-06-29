@@ -79,28 +79,6 @@ BackgroundRenderer::BackgroundRenderer(const std::shared_ptr<sge::Renderer>& ren
     m_pipeline = render_context->CreatePipelineState(pipelineConfig);
 }
 
-void BackgroundRenderer::init_targets(LLGL::Extent2D resolution) {
-    const auto& context = m_renderer->GetRenderContext();
-
-    context->DeleteRenderTarget(m_background_render_target);
-
-    LLGL::TextureDescriptor texture_desc;
-    texture_desc.extent.width = resolution.width;
-    texture_desc.extent.height = resolution.height;
-    texture_desc.format = LLGL::Format::RGBA8UNorm;
-    texture_desc.bindFlags = LLGL::BindFlags::Sampled | LLGL::BindFlags::ColorAttachment;
-    texture_desc.miscFlags = LLGL::MiscFlags::FixedSamples;
-    texture_desc.cpuAccessFlags = 0;
-    texture_desc.mipLevels = 1;
-    m_background_render_texture = context->CreateTexture(texture_desc);
-
-    sge::RenderTargetConfig backgroundTargetConfig;
-    backgroundTargetConfig.resolution = resolution;
-    backgroundTargetConfig.colorAttachments[0] = sge::AttachmentConfig(m_background_render_texture);
-    backgroundTargetConfig.format = LLGL::Format::RGBA8UNorm;
-    m_background_render_target = context->CreateRenderTarget(backgroundTargetConfig);
-}
-
 void BackgroundRenderer::init_world(WorldRenderer& world_renderer) {
     const auto& context = m_renderer->GetRenderContext();
 
